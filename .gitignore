@@ -1,0 +1,39 @@
+# ops/ is the REAL host: box, user, key, hostname, deploy script, unit file.
+# It never enters the repo; publishable generic versions go in DEPLOYING.md.
+ops/
+
+# owner's decision log and other user-local files — kept out of the public repo
+dev-prompts.md
+dev-questions.md
+agent-chat.md
+resume.txt
+.agent-mail/
+.agent-mail.bak-*/
+
+# personal Claude Code permissions (a shared hook, if any, lives in .claude/settings.json)
+.claude/settings.local.json
+
+# runtime output
+saves/
+crashdumps/
+*.log
+data/autosave.json
+
+# regenerated test/sim artifacts
+reports/sweeps/
+debugging/logs/
+debugging/sim/
+debugging/jobs/
+test-results/
+playwright-report/
+
+# tooling
+node_modules/
+__pycache__/
+.DS_Store
+
+# WSL cross-filesystem metadata
+*:Zone.Identifier
+
+# archives never belong in the repo
+**/*.zip
