@@ -126,7 +126,7 @@ test('nothing fires at a friend, however close', () => {
   a.y = 1000 * 256;
   b.x = a.x + 50 * 256;
   b.y = a.y;
-  stepWeapons(state, state.params.hitRadiusUnit, state.params.hitRadiusCarrier);
+  stepWeapons(state, state.params);
   assert.equal(state.shots.length, 0);
 });
 

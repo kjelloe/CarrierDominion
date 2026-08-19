@@ -40,7 +40,8 @@
     "beamMetres": 72,
     "armourLossPermil": 500,
     "materialsCapacity": 8000,
-    "repairPointsPer100Ticks": 8
+    "repairPointsPer100Ticks": 8,
+    "startChassis": 0
   },
   "manta": {
     "hull": 60,

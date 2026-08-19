@@ -328,6 +328,34 @@ function buildShot(teamColour) {
   return group;
 }
 
+// An island battery: a squat base and a barrel, so it reads as a gun from the
+// air without pretending to be a model. Missile batteries get the taller box.
+function buildTurret(teamColour, missile) {
+  const group = new THREE.Group();
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(9, 12, 7, 6),
+    new THREE.MeshLambertMaterial({ color: 0x4a4f55 }),
+  );
+  base.position.y = 3.5;
+  group.add(base);
+  const mount = new THREE.Mesh(
+    missile ? new THREE.BoxGeometry(12, 10, 12) : new THREE.CylinderGeometry(5, 5, 6, 6),
+    new THREE.MeshLambertMaterial({ color: teamColour }),
+  );
+  mount.position.y = 11;
+  group.add(mount);
+  if (!missile) {
+    const barrel = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.6, 1.6, 18, 5),
+      new THREE.MeshLambertMaterial({ color: 0x8fa4b8 }),
+    );
+    barrel.geometry.rotateZ(-Math.PI / 2);
+    barrel.position.set(8, 12, 0);
+    group.add(barrel);
+  }
+  return group;
+}
+
 const NEUTRAL_NODE_COLOUR = 0xb9b3a4;
 
 // The command node: a mast on a plinth, tall enough to spot from the air,
@@ -384,6 +412,7 @@ export {
   buildWalrus,
   buildLighter,
   buildShot,
+  buildTurret,
   buildCommandNode,
   updateCommandNode,
   NEUTRAL_NODE_COLOUR,

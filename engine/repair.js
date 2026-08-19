@@ -13,7 +13,7 @@ import { floorDiv, mulDiv } from '../shared/fixed.js';
 import { EVT_HULL_REPLACED, EVT_REPAIRED, pushEvent } from './events.js';
 import { repairSections, sectionsIntact } from './damage.js';
 import { hangarOpen } from './damage.js';
-import { UNIT_LOST, UNIT_STOWED } from './units.js';
+import { KIND_LIGHTER, KIND_MANTA, KIND_WALRUS, UNIT_LOST, UNIT_STOWED } from './units.js';
 import { createArms } from './weapons.js';
 
 // Points of repair earned this tick, given the rate per 100 ticks. The
@@ -82,9 +82,30 @@ function replaceHull(state, carrier) {
   if (carrier.hull <= 0 || !hangarOpen(carrier)) return 0;
   const cost = state.economy.chassisPerHull;
   if (cost <= 0 || carrier.chassis < cost) return 0;
+  // The lighter comes first, and while there is no boat at all it is the ONLY
+  // thing the yard will build. Everything the ship needs - fuel, munitions,
+  // materials, more parts - arrives in one, so a side that has lost every boat
+  // cannot be resupplied, and would never receive the parts to fix that. A
+  // reserve spent on an aircraft instead is a war lost to bookkeeping.
+  if (assembleKind(state, carrier, KIND_LIGHTER, cost) === 1) return 1;
+  if (!hasBoat(state, carrier)) return 0;
+  if (assembleKind(state, carrier, KIND_MANTA, cost) === 1) return 1;
+  return assembleKind(state, carrier, KIND_WALRUS, cost);
+}
+
+function hasBoat(state, carrier) {
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
-    if (unit.carrierId !== carrier.id || unit.state !== UNIT_LOST) continue;
+    if (unit.carrierId !== carrier.id || unit.kind !== KIND_LIGHTER) continue;
+    if (unit.state !== UNIT_LOST) return true;
+  }
+  return false;
+}
+
+function assembleKind(state, carrier, kind, cost) {
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.carrierId !== carrier.id || unit.kind !== kind || unit.state !== UNIT_LOST) continue;
     carrier.chassis = carrier.chassis - cost;
     unit.state = UNIT_STOWED;
     unit.hp = unit.maxHp;
@@ -109,7 +130,7 @@ function replaceHull(state, carrier) {
     unit.heatAccum = 0;
     unit.overheated = 0;
     unit.cooldown = 0;
-    if (unit.kind === 1) unit.pod = 1;
+    if (unit.kind === KIND_WALRUS) unit.pod = 1;
     pushEvent(state.events, EVT_HULL_REPLACED, unit.id, unit.team, unit.kind);
     return 1;
   }

@@ -13,7 +13,8 @@
 import { floorDiv, mulDiv } from '../shared/fixed.js';
 import { KIND_MANTA, copyArms, unitEngageable } from './units.js';
 import { gunCooldown } from './damage.js';
-import { launchShot, stepShots, TARGET_CARRIER, TARGET_UNIT } from './shots.js';
+import { sweepTurrets } from './turret.js';
+import { launchShot, stepShots, TARGET_CARRIER, TARGET_TURRET, TARGET_UNIT } from './shots.js';
 import { aimFor, carrierAim } from './targeting.js';
 
 // Where the carrier's loadout sits in state.loadouts. The first three entries
@@ -88,9 +89,18 @@ function copyWeapons(weapons) {
   return out;
 }
 
+// Indexed so that state.loadouts[unit.kind] is a unit's loadout, with the
+// carrier and then the two turret types after the three unit kinds.
 function createLoadouts(rulesWeapons) {
   const source = rulesWeapons.loadouts;
-  const rows = [source.manta, source.walrus, source.lighter, source.carrier];
+  const rows = [
+    source.manta,
+    source.walrus,
+    source.lighter,
+    source.carrier,
+    source.turretLaser,
+    source.turretMissile,
+  ];
   const out = [];
   for (let i = 0; i < rows.length; i++) {
     const row = [];
@@ -190,6 +200,7 @@ function distSq(ax, ay, az, bx, by, bz) {
 
 // The nearest thing this weapon may shoot at, as { kind, id, x, y, z }, or -1.
 // Enemy hulls only, inside weapon range, and only classes it can engage.
+// Turrets count on both sides of that: they shoot, and they are shot at.
 function pickTarget(state, team, x, y, z, weapon) {
   if (weapon.range <= 0) return -1;
   const reach = weapon.range * weapon.range;
@@ -213,6 +224,15 @@ function pickTarget(state, team, x, y, z, weapon) {
     if (distance > reach || distance >= bestDistance) continue;
     bestDistance = distance;
     best = { kind: TARGET_UNIT, id: unit.id, x: unit.x, y: unit.y, z: unit.z };
+  }
+  for (let i = 0; i < state.turrets.length; i++) {
+    const turret = state.turrets[i];
+    if (turret.team === team || turret.hp <= 0) continue;
+    if (weapon.hitsSurface !== 1) continue;
+    const distance = distSq(x, y, z, turret.x, turret.y, turret.z);
+    if (distance > reach || distance >= bestDistance) continue;
+    bestDistance = distance;
+    best = { kind: TARGET_TURRET, id: turret.id, x: turret.x, y: turret.y, z: turret.z };
   }
   return best;
 }
@@ -260,6 +280,18 @@ function serveWeapon(state, team, x, y, z, holder, cooldownOverride, aim) {
   holder.cooldown = cooldownOverride > 0 ? cooldownOverride : weapon.cooldown;
   addHeat(holder, weapon);
   return 1;
+}
+
+// A turret is a hull that cannot move, so it needs no aim rules and no trigger
+// question: it defends its island.
+function fireTurrets(state) {
+  for (let i = 0; i < state.turrets.length; i++) {
+    const turret = state.turrets[i];
+    if (turret.hp <= 0 || turret.arms.length === 0) continue;
+    const weapon = state.weapons[turret.weapon];
+    coolDown(turret, weapon);
+    serveWeapon(state, turret.team, turret.x, turret.y, turret.z, turret, 0);
+  }
 }
 
 function fireAll(state) {
@@ -357,9 +389,11 @@ function reloadCarrier(carrier, weapon) {
   return taken;
 }
 
-function stepWeapons(state, hitUnitRadius, hitCarrierRadius) {
+function stepWeapons(state, params) {
   fireAll(state);
-  stepShots(state, hitUnitRadius, hitCarrierRadius);
+  fireTurrets(state);
+  stepShots(state, params);
+  sweepTurrets(state);
 }
 
 export {
@@ -381,6 +415,7 @@ export {
   coolDown,
   serveWeapon,
   fireAll,
+  fireTurrets,
   fireUnit,
   rearm,
   reloadCarrier,

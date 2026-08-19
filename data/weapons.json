@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "comment": "The 1988 weapon sets. `list` is indexed by weapon id; `loadouts` says which ids each hull carries, in the order the weapon-select key cycles them. Speeds are units per tick (256 units = 1 m, 20 ticks = 1 s): 3840 = 300 m/s. Range decides how long a shot lives - life = range / speed - so a shot that misses runs out of flight rather than being deleted by a special case. hitsAir/hitsSurface classify by KIND, not altitude: a Manta is air whether at cruise or on the deck. splash=1 damages everything inside the blast rather than only what it struck. trigger=1 is a mine: it does not fly, it waits. Heat is added per shot against heatMax and shed at heatCoolPer100Ticks; a mount that reaches the maximum is out until it has cooled to heatReadyPermil of it.",
+  "comment": "The 1988 weapon sets. `list` is indexed by weapon id; `loadouts` says which ids each hull and each turret type carries, in the order the weapon-select key cycles them. Speeds are units per tick (256 units = 1 m, 20 ticks = 1 s): 3840 = 300 m/s. Range decides how long a shot lives - life = range / speed - so a shot that misses runs out of flight rather than being deleted by a special case. hitsAir/hitsSurface classify by KIND, not altitude: a Manta is air whether at cruise or on the deck. splash=1 damages everything inside the blast rather than only what it struck. trigger=1 is a mine: it does not fly, it waits. Heat is added per shot against heatMax and shed at heatCoolPer100Ticks; a mount that reaches the maximum is out until it has cooled to heatReadyPermil of it.",
   "list": [
     {
       "key": "mantaLaser",
@@ -155,12 +155,72 @@
       "heatCoolPer100Ticks": 320,
       "heatReadyPermil": 400,
       "ordnancePerRound": 1
+    },
+    {
+      "key": "turretLaser",
+      "comment": "An island laser battery. Longer-ranged than the ship mount because it is not trying to fit on a deck, and it overheats for the same reason a ship laser does.",
+      "guided": 0,
+      "rangeMetres": 1800,
+      "damage": 22,
+      "cooldownTicks": 20,
+      "magazine": 500,
+      "speedUnitsPerTick": 12800,
+      "turnRateBamPerTick": 0,
+      "blastRadiusMetres": 10,
+      "hitsAir": 1,
+      "hitsSurface": 1,
+      "splash": 0,
+      "trigger": 0,
+      "lifeTicks": 0,
+      "heatPerShot": 80,
+      "heatMax": 1000,
+      "heatCoolPer100Ticks": 300,
+      "heatReadyPermil": 350,
+      "ordnancePerRound": 1
+    },
+    {
+      "key": "turretMissile",
+      "comment": "An island missile battery: the thing that makes a defence island something a carrier has to plan around rather than sail past.",
+      "guided": 1,
+      "rangeMetres": 3500,
+      "damage": 45,
+      "cooldownTicks": 90,
+      "magazine": 16,
+      "speedUnitsPerTick": 3584,
+      "turnRateBamPerTick": 700,
+      "blastRadiusMetres": 24,
+      "hitsAir": 1,
+      "hitsSurface": 1,
+      "splash": 0,
+      "trigger": 0,
+      "lifeTicks": 0,
+      "heatPerShot": 0,
+      "heatMax": 0,
+      "heatCoolPer100Ticks": 0,
+      "heatReadyPermil": 0,
+      "ordnancePerRound": 25
     }
   ],
   "loadouts": {
-    "manta": [0, 1, 2, 3],
-    "walrus": [4, 5],
+    "manta": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "walrus": [
+      4,
+      5
+    ],
     "lighter": [],
-    "carrier": [6]
+    "carrier": [
+      6
+    ],
+    "turretLaser": [
+      7
+    ],
+    "turretMissile": [
+      8
+    ]
   }
 }

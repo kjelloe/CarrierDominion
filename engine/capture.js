@@ -66,7 +66,7 @@ function stepCapture(state, podBuildTicks) {
     // A new command centre means a new plan. The command centre itself is what
     // you took the island FOR, but the previous owner's works are theirs: the
     // new owner starts from bare ground and decides what it is for.
-    clearWorks(island);
+    clearWorks(state, island);
     pushEvent(state.events, EVT_ISLAND_CAPTURED, island.id, island.owner, 0);
   }
 }

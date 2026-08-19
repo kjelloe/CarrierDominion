@@ -19,8 +19,10 @@
 // free switch you flip whenever the front moves.
 
 import { mulDiv } from '../shared/fixed.js';
-import { EVT_ISLAND_ROLE, EVT_ISLAND_BUILT, pushEvent } from './events.js';
+import { EVT_ISLAND_ROLE, EVT_ISLAND_BUILT, EVT_TURRET_BUILT, pushEvent } from './events.js';
 import { KIND_FACTORY, KIND_FORTRESS, KIND_RESOURCE } from './worldgen.js';
+import { clearTurretsOn, createTurret, loadoutForTurret, turretsOn } from './turret.js';
+import { createArms } from './weapons.js';
 
 const ROLE_NONE = -1;
 const ROLE_RESOURCE = 0;
@@ -141,15 +143,39 @@ function stepBuild(state) {
     if (island.buildTicks > 0) continue;
     addBuilt(island, island.building);
     pushEvent(state.events, EVT_ISLAND_BUILT, island.id, island.owner, island.building);
+    // A finished turret is a gun on the ground, not a number on a report.
+    if (island.building === BUILD_TURRET) raiseTurret(state, island);
     island.building = BUILD_NONE;
     island.buildTicks = 0;
   }
 }
 
+// Put an actual gun on the ring. The index is which slot it fills, which is
+// also what decides whether it is a laser or a missile battery.
+function raiseTurret(state, island) {
+  const index = turretsOn(state, island.id);
+  const kind = index % 2;
+  const loadout = state.loadouts[loadoutForTurret(kind)];
+  const turret = createTurret(
+    state,
+    island,
+    index,
+    state.params,
+    state.weapons,
+    state.loadouts,
+    createArms(loadout, state.weapons),
+  );
+  state.nextTurret = state.nextTurret + 1;
+  state.turrets.push(turret);
+  pushEvent(state.events, EVT_TURRET_BUILT, turret.id, turret.team, island.id);
+  return turret;
+}
+
 // Everything an island loses when it changes hands. The command centre stays -
 // that is the point of taking it rather than levelling it - but the work is
 // the previous owner's, and the new owner starts from the ground.
-function clearWorks(island) {
+function clearWorks(state, island) {
+  clearTurretsOn(state, island.id);
   island.role = ROLE_NONE;
   island.factories = 0;
   island.warehouses = 0;
@@ -174,6 +200,7 @@ export {
   terrainPermil,
   stockCapOf,
   setRole,
+  raiseTurret,
   payForBuild,
   startBuild,
   stepBuild,

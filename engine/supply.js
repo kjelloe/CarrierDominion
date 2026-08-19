@@ -20,8 +20,11 @@ import {
   ORDER_DELIVER,
   ORDER_LOAD,
   UNIT_ACTIVE,
+  UNIT_LOST,
   UNIT_RETURNING,
 } from './units.js';
+import { EVT_HULL_REPLACED } from './events.js';
+import { createArms } from './weapons.js';
 
 // Where a lighter works cargo: off the island's shore, on the side facing the
 // carrier, so the run is as short as the geometry allows.
@@ -173,6 +176,55 @@ function runLighter(state, unit, carrier, depot) {
   }
 }
 
+// A side that has lost every boat cannot be resupplied - and cannot receive the
+// parts to build a boat, because parts arrive in a boat. That deadlock ended
+// two AI wars in a permanent drift, both carriers afloat and immobile at zero
+// fuel, and no amount of reserve aboard fixes it: a reserve runs out once.
+//
+// The answer is that boats are not only built at sea. A depot with the parts
+// launches one itself, and it sails out to the ship - which is what a supply
+// network is FOR, and is the same rule as ruling #3 rather than an exception to
+// it: the fuel is still carried, by a boat, from the stockpile.
+function dispatchBoat(state, carrier, depot) {
+  if (depot.stockChassis < state.economy.chassisPerHull) return -1;
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.carrierId !== carrier.id || unit.kind !== KIND_LIGHTER) continue;
+    if (unit.state !== UNIT_LOST) return -1; // there is still a boat; no need
+  }
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.carrierId !== carrier.id || unit.kind !== KIND_LIGHTER) continue;
+    if (unit.state !== UNIT_LOST) continue;
+    depot.stockChassis = depot.stockChassis - state.economy.chassisPerHull;
+    const station = loadingStation(depot, carrier);
+    unit.state = UNIT_ACTIVE;
+    unit.order = ORDER_LOAD;
+    unit.hp = unit.maxHp;
+    unit.fuel = unit.fuelCapacity;
+    unit.fuelAccum = 0;
+    unit.speed = 0;
+    unit.throttle = 0;
+    unit.rudder = 0;
+    unit.blocked = 0;
+    unit.control = -1;
+    unit.x = station.x;
+    unit.y = station.y;
+    unit.z = 0;
+    unit.targetX = station.x;
+    unit.targetY = station.y;
+    unit.cargoFuel = 0;
+    unit.cargoMaterials = 0;
+    unit.cargoOrdnance = 0;
+    unit.cargoChassis = 0;
+    unit.arms = createArms(state.loadouts[unit.kind], state.weapons);
+    unit.weapon = unit.arms.length > 0 ? unit.arms[0].w : -1;
+    pushEvent(state.events, EVT_HULL_REPLACED, unit.id, unit.team, unit.kind);
+    return unit;
+  }
+  return -1;
+}
+
 function stepSupply(state) {
   for (let i = 0; i < state.carriers.length; i++) {
     const carrier = state.carriers[i];
@@ -191,7 +243,11 @@ function stepSupply(state) {
 
     if (unit === -1) {
       const ready = readyToLaunch(state, carrier.id, KIND_LIGHTER);
-      if (ready === -1) continue; // no boat left; the run waits
+      if (ready === -1) {
+        // Nothing aboard: the depot builds one and sends it out.
+        dispatchBoat(state, carrier, depot);
+        continue;
+      }
       launchUnit(ready, carrier, state.params.deckHeight);
       pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
       ready.order = ORDER_LOAD;
@@ -210,4 +266,5 @@ export {
   unloadToCarrier,
   lighterFor,
   laden,
+  dispatchBoat,
 };

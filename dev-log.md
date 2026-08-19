@@ -5,6 +5,50 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — Defence islands, and the deadlock they exposed
+
+276 tests + smoke gate green. Turrets were a number on a report; now they are
+guns on the ground.
+
+### A turret is a hull that cannot move
+
+That is the whole design. It has a position, health, a magazine and a mount that
+overheats, so it goes through the same firing, aiming and damage machinery as
+everything else - no special case anywhere. They sit on a ring around the
+command node, **alternating laser and missile**, so a defence island is
+dangerous at both ranges: the missiles make a carrier plan around it, the lasers
+make the approach cost something.
+
+Turrets belong to the ISLAND. Take it and the previous owner's guns go with the
+rest of their works: the reason to storm a defence island is to stop it
+shooting, not to acquire it.
+
+### The ratio that has to be legible
+
+One mine could not feed a three-factory plant, so the AI built a plant and then
+starved it. Two changes: a mine yields 60 materials (a resource-rich one 96,
+against the 90 that three factories eat), and the AI only builds its third
+factory when materials are actually piling up. The rule to remember is now
+written into `data/economy.json`: **three factories need one rich mine, or two
+plain ones.**
+
+### The deadlock
+
+An AI-vs-AI war ran to a permanent stop: both carriers afloat, both immobile at
+zero fuel, neither able to win. Both sides had lost every lighter - and **the
+parts to build a lighter arrive in a lighter**. No amount of reserve aboard
+fixes that; a reserve runs out once, and it also silently resurrected the first
+loss of the war for free.
+
+The answer is that boats are not only built at sea. A depot holding the parts
+launches one and it sails out to the ship. That is not an exception to ruling #3
+- the fuel is still carried, by a boat, from the stockpile - it is what a supply
+network is for. With it, a side that loses its whole logistics train recovers if
+it still holds the industry, and the war resolves again: tick 396,491, won by
+sinking.
+
+---
+
 ## 2026-08-20 — Islands become something: roles, works, and replacement hulls
 
 267 tests + smoke gate green. The largest untouched system in the game, and the

@@ -235,6 +235,24 @@ function shotView(shot) {
   };
 }
 
+// A turret is a building: visible to anyone who can see the island, because a
+// gun emplacement is not a secret. Its magazine is.
+function turretView(turret, team) {
+  const mine = turret.team === team;
+  return {
+    id: turret.id,
+    island: turret.island,
+    team: turret.team,
+    kind: turret.kind,
+    x: turret.x,
+    y: turret.y,
+    z: turret.z,
+    hp: mine ? turret.hp : -1,
+    maxHp: turret.maxHp,
+    overheated: mine ? turret.overheated : 0,
+  };
+}
+
 function buildView(state, team) {
   const carriers = [];
   for (let i = 0; i < state.carriers.length; i++) {
@@ -258,6 +276,9 @@ function buildView(state, team) {
     const shot = state.shots[i];
     if (shot.team === team || detectedBy(state, team, shot)) shots.push(shotView(shot));
   }
+
+  const turrets = [];
+  for (let i = 0; i < state.turrets.length; i++) turrets.push(turretView(state.turrets[i], team));
 
   const islands = [];
   for (let i = 0; i < state.islands.length; i++) islands.push(islandView(state.islands[i], team));
@@ -320,6 +341,7 @@ function buildView(state, team) {
     carriers: carriers,
     units: units,
     shots: shots,
+    turrets: turrets,
     islands: islands,
     events: events,
   };

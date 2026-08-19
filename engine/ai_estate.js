@@ -44,18 +44,46 @@ function countRole(state, team, role) {
 function planFor(state, team, island) {
   const mines = countRole(state, team, ROLE_RESOURCE);
   const plants = countRole(state, team, ROLE_FACTORY);
+  const guns = countRole(state, team, ROLE_DEFENCE);
   if (mines > 0 && plants < 1) return ROLE_FACTORY;
-  if (island.kind === KIND_RESOURCE) return ROLE_RESOURCE;
   if (island.kind === KIND_FORTRESS && plants > 0) return ROLE_DEFENCE;
+  // Mine, plant, guns: the third island is the defended one. At "second mine
+  // first" the AI never raised a gun at all in a whole war - it kept finding a
+  // better use for every island it took, and there is always a better use.
+  if (mines >= 1 && plants > 0 && guns < 1) return ROLE_DEFENCE;
+  if (island.kind === KIND_RESOURCE) return ROLE_RESOURCE;
   return ROLE_RESOURCE;
+}
+
+// A plant is only worth what it can be fed. Two factories are within reach of a
+// single mine; the third is only worth building when materials are actually
+// piling up, or the AI builds a plant it then starves - which is exactly what
+// the first version did, and both sides drifted to a stop with full warehouses
+// of nothing.
+const FED_PERMIL = 400;
+
+function materialsPermil(state, team) {
+  let have = 0;
+  let cap = 0;
+  for (let i = 0; i < state.islands.length; i++) {
+    const island = state.islands[i];
+    if (island.owner !== team) continue;
+    have = have + island.stockMaterials;
+    cap = cap + state.economy.stockCap;
+  }
+  if (cap <= 0) return 0;
+  return Math.floor((have * 1000) / cap);
 }
 
 // What to put up next on an island that already has a purpose. Factories first
 // on a factory island - the plant is the point - then storage; a defence island
 // simply keeps adding guns.
-function nextBuild(island, economy) {
+function nextBuild(state, island, economy) {
   if (island.role === ROLE_FACTORY) {
-    if (builtCount(island, BUILD_FACTORY) < economy.builds[BUILD_FACTORY].max) return BUILD_FACTORY;
+    const built = builtCount(island, BUILD_FACTORY);
+    const room = built < economy.builds[BUILD_FACTORY].max;
+    const fed = built < 2 || materialsPermil(state, island.owner) > FED_PERMIL;
+    if (room && fed) return BUILD_FACTORY;
     return BUILD_WAREHOUSE;
   }
   if (island.role === ROLE_DEFENCE) return BUILD_TURRET;
@@ -74,7 +102,7 @@ function manageIslands(state, brain) {
       continue;
     }
     if (island.building !== -1) continue;
-    const what = nextBuild(island, state.economy);
+    const what = nextBuild(state, island, state.economy);
     if (what === -1) continue;
     startBuild(state, island, what, state.economy);
   }

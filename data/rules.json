@@ -21,5 +21,8 @@
   "timeCapTicks": 0,
   "pointsPerIslandPer100Ticks": 1,
   "pointsPerUnitKill": 40,
-  "pointsPerCarrierSunk": 600
+  "pointsPerCarrierSunk": 600,
+  "hitRadiusTurretMetres": 14,
+  "turretRingPermil": 620,
+  "turretHull": 260
 }

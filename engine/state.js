@@ -25,6 +25,7 @@ import {
 } from './weapons.js';
 import { copyShot } from './shots.js';
 import { copySections, createSections } from './damage.js';
+import { copyTurrets } from './turret.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
 
 const PHASE_RUNNING = 0;
@@ -181,6 +182,9 @@ function copyState(state) {
       pointsPerCarrier: state.params.pointsPerCarrier,
       hitRadiusUnit: state.params.hitRadiusUnit,
       hitRadiusCarrier: state.params.hitRadiusCarrier,
+      hitRadiusTurret: state.params.hitRadiusTurret,
+      turretRing: state.params.turretRing,
+      turretHull: state.params.turretHull,
     },
     weapons: copyWeapons(state.weapons),
     loadouts: copyLoadouts(state.loadouts),
@@ -192,6 +196,8 @@ function copyState(state) {
     ai: ai,
     shots: shots,
     nextShot: state.nextShot,
+    turrets: copyTurrets(state.turrets),
+    nextTurret: state.nextTurret,
     events: events,
   };
 }
@@ -255,9 +261,12 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     // spends them.
     materials: 0,
     materialsCapacity: carrierRules.materialsCapacity,
-    // Replacement hulls, in parts. A factory island makes them; the boat
-    // brings them; the hangar assembles one when there is a gap to fill.
-    chassis: 0,
+    // Replacement hulls, in parts. A factory island makes them, the boat brings
+    // them, and the hangar assembles one when there is a gap to fill. The ship
+    // sails with none: a reserve aboard only resurrected the first loss for
+    // free, and the deadlock it was meant to cover is handled ashore instead
+    // (engine/supply.js dispatchBoat).
+    chassis: carrierRules.startChassis,
     repairRate: carrierRules.repairPointsPer100Ticks,
     repairAccum: 0,
     repairReported: 0,
@@ -364,6 +373,9 @@ function createInitialState(seed, rules) {
       pointsPerCarrier: base.pointsPerCarrierSunk,
       hitRadiusUnit: base.hitRadiusUnitMetres * unitsPerMetre,
       hitRadiusCarrier: base.hitRadiusCarrierMetres * unitsPerMetre,
+      hitRadiusTurret: base.hitRadiusTurretMetres * unitsPerMetre,
+      turretRing: base.turretRingPermil,
+      turretHull: base.turretHull,
     },
     weapons: weapons,
     loadouts: loadouts,
@@ -375,6 +387,8 @@ function createInitialState(seed, rules) {
     ai: ai,
     shots: [],
     nextShot: 0,
+    turrets: [],
+    nextTurret: 0,
     events: [],
   };
 }

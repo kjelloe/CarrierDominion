@@ -145,7 +145,7 @@ test('losing an island loses the works, and the new owner starts from bare groun
   island.building = BUILD_FACTORY;
   island.buildTicks = 500;
 
-  clearWorks(island);
+  clearWorks(state, island);
   assert.equal(island.role, ROLE_NONE);
   assert.equal(island.factories, 0);
   assert.equal(island.warehouses, 0);

@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "comment": "Production happens ON an island and stays there until the network moves it. What an island produces is decided by its ROLE, which its owner sets after capture: 0 resource, 1 factory, 2 defence. worldgen's `kind` is not overridden by that - it is a terrainBonusPermil multiplier when the role suits the ground (resource-rich rock as Resource, natural fortress as Defence). A factory does not produce from nothing: it converts materials, per factory built, which is why a resource island is worth taking first.",
+  "comment": "Production happens ON an island and stays there until the network moves it. What an island produces is decided by its ROLE, which its owner sets after capture: 0 resource, 1 factory, 2 defence. worldgen's `kind` is not overridden by that - it is a terrainBonusPermil multiplier when the role suits the ground (resource-rich rock as Resource, natural fortress as Defence). A factory does not produce from nothing: it converts materials, per factory built, which is why a resource island is worth taking first. The ratio to remember: a factory eats factoryMaterialsIn per factory built per accrual, so three factories need 90 - which is one resource-rich mine, or two plain ones.",
   "incomeEveryTicks": 100,
   "factoryMaterialsIn": 30,
   "factoryFuelOut": 90,
@@ -11,7 +11,7 @@
   "roleIncome": [
     {
       "fuel": 6,
-      "materials": 45,
+      "materials": 60,
       "ordnance": 0
     },
     {

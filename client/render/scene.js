@@ -17,6 +17,7 @@ import {
   buildOcean,
   buildOceanGrid,
   buildShot,
+  buildTurret,
   buildWalrus,
   updateCommandNode,
 } from './world.js';
@@ -102,6 +103,7 @@ function createScene(canvas, preset, sizeMetres, style) {
     carriers: {},
     units: {},
     shots: {},
+    turrets: {},
     strategic: false,
     followUnitId: -1,
     elapsed: 0,
@@ -213,6 +215,27 @@ function syncUnits(view3d, view) {
   }
 }
 
+// Island batteries. They never move, so they are built once and only removed -
+// when they are shot away, or when the island changes hands and the new owner's
+// guns are not the old owner's.
+function syncTurrets(view3d, view) {
+  const seen = {};
+  for (const turret of view.turrets) {
+    seen[turret.id] = true;
+    if (view3d.turrets[turret.id] !== undefined) continue;
+    const group = buildTurret(TEAM_COLOURS[turret.team % TEAM_COLOURS.length], turret.kind === 1);
+    group.position.set(toMetres(turret.x), toMetres(turret.z), -toMetres(turret.y));
+    view3d.turrets[turret.id] = group;
+    view3d.scene.add(group);
+  }
+  for (const id of Object.keys(view3d.turrets)) {
+    if (seen[id] === undefined) {
+      view3d.scene.remove(view3d.turrets[id]);
+      delete view3d.turrets[id];
+    }
+  }
+}
+
 // Shots come and go every few ticks, so they are rebuilt from the view rather
 // than tracked: anything the view no longer lists has either hit something or
 // run out of range, and either way it is gone.
@@ -300,6 +323,7 @@ function renderView(view3d, view, deltaSeconds, podBuildTicks) {
   syncNodes(view3d, view, podBuildTicks);
   syncCarriers(view3d, view);
   syncUnits(view3d, view);
+  syncTurrets(view3d, view);
   syncShots(view3d, view);
   placeCamera(view3d, chaseSubject(view3d, view));
   if (view3d.ocean.material.uniforms !== undefined) {

@@ -308,7 +308,7 @@ function advanceTick(next) {
   }
   stepCarriers(next);
   stepUnits(next);
-  stepWeapons(next, next.params.hitRadiusUnit, next.params.hitRadiusCarrier);
+  stepWeapons(next, next.params);
   stepCapture(next, next.params.podBuildTicks);
   stepBuild(next);
   stepEconomy(next);

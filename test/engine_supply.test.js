@@ -188,3 +188,34 @@ test('the other team cannot order our boats about', () => {
   // checkAuthority - the reducer trusts what the server has already vetted.
   assert.equal(state.carriers[0].supplyRun, 0);
 });
+
+test('a depot with parts launches a replacement boat when every one is lost', (t) => {
+  let { state, depot } = stockedDepot(40000, 0);
+  depot.stockChassis = state.economy.chassisPerHull * 2;
+  // Every boat gone: without a boat the parts to build a boat can never arrive,
+  // which is a deadlock the depot is there to break.
+  for (const unit of state.units) {
+    if (unit.kind === KIND_LIGHTER && unit.carrierId === 0) {
+      unit.state = 3; // UNIT_LOST
+      unit.hp = 0;
+    }
+  }
+  state = apply(state, { type: 'set_supply_run', carrierId: 0, active: 1 });
+
+  const run = driveUntil(state, 4000, (s) => lighterFor(s, 0) !== -1);
+  assert.ok(run.met, 'the depot never sent a boat out');
+  t.diagnostic(`boat afloat again after ${run.ticks} ticks`);
+  const boat = lighterFor(run.state, 0);
+  assert.ok(boat.hp > 0);
+  assert.ok(boat.fuel > 0, 'it was launched with dry tanks');
+  assert.equal(
+    run.state.islands[depot.id].stockChassis,
+    state.economy.chassisPerHull,
+    'the parts were not paid for',
+  );
+
+  // And it does not keep building boats it does not need.
+  const after = drive(run.state, 3000);
+  const afloat = after.units.filter((u) => u.kind === KIND_LIGHTER && u.state !== 3 && u.state !== 0);
+  assert.ok(afloat.length <= 1, 'the depot built a fleet of spares');
+});

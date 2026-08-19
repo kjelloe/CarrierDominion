@@ -31,6 +31,7 @@ import { SCORE_CARRIER, SCORE_KILL, addScore } from './score.js';
 // What a shot is chasing, so a guided round can be re-aimed at the right list.
 const TARGET_UNIT = 0;
 const TARGET_CARRIER = 1;
+const TARGET_TURRET = 2;
 
 function copyShot(shot) {
   return {
@@ -196,12 +197,13 @@ function hitCarrier(state, carrier, damage, x, y, z, byTeam) {
 // fuzing on that would detonate a bomb a hundred metres short of the target,
 // which then misses everything standing behind it. The blast is what it
 // damages, not what sets it off.
-function findHit(state, shot, nx, ny, nz, hitUnitRadius, hitCarrierRadius) {
+function findHit(state, shot, nx, ny, nz, params) {
   let best = -1;
   let bestDistance = 2147483647;
   const fuze = shot.splash === 1 ? 0 : shot.blast;
-  const unitReach = fuze + hitUnitRadius;
-  const carrierReach = fuze + hitCarrierRadius;
+  const unitReach = fuze + params.hitRadiusUnit;
+  const carrierReach = fuze + params.hitRadiusCarrier;
+  const turretReach = fuze + params.hitRadiusTurret;
   for (let i = 0; i < state.carriers.length; i++) {
     const carrier = state.carriers[i];
     if (carrier.team === shot.team || carrier.hull <= 0) continue;
@@ -218,14 +220,34 @@ function findHit(state, shot, nx, ny, nz, hitUnitRadius, hitCarrierRadius) {
     bestDistance = distance;
     best = { kind: TARGET_UNIT, index: i };
   }
+  for (let i = 0; i < state.turrets.length; i++) {
+    const turret = state.turrets[i];
+    if (turret.team === shot.team || turret.hp <= 0) continue;
+    const distance = segmentDistSq(
+      shot.x, shot.y, shot.z, nx, ny, nz, turret.x, turret.y, turret.z,
+    );
+    if (distance > turretReach * turretReach || distance >= bestDistance) continue;
+    bestDistance = distance;
+    best = { kind: TARGET_TURRET, index: i };
+  }
   return best;
+}
+
+// A turret takes damage like anything else; the sweep in turret.js clears the
+// wreck at the end of the tick.
+function hitTurret(state, turret, damage, byTeam) {
+  turret.hp = turret.hp - damage;
+  if (turret.hp < 0) turret.hp = 0;
+  pushEvent(state.events, EVT_UNIT_HIT, turret.id, turret.team, damage);
+  if (turret.hp === 0) addScore(state, byTeam, state.params.pointsPerKill, SCORE_KILL);
 }
 
 // A cluster bomb, a napalm canister or a mine going off: everything hostile
 // inside the blast takes it, not only whatever tripped it.
-function detonate(state, shot, x, y, z, hitUnitRadius, hitCarrierRadius) {
-  const unitReach = shot.blast + hitUnitRadius;
-  const carrierReach = shot.blast + hitCarrierRadius;
+function detonate(state, shot, x, y, z, params) {
+  const unitReach = shot.blast + params.hitRadiusUnit;
+  const carrierReach = shot.blast + params.hitRadiusCarrier;
+  const turretReach = shot.blast + params.hitRadiusTurret;
   for (let i = 0; i < state.carriers.length; i++) {
     const carrier = state.carriers[i];
     if (carrier.team === shot.team || carrier.hull <= 0) continue;
@@ -238,26 +260,32 @@ function detonate(state, shot, x, y, z, hitUnitRadius, hitCarrierRadius) {
     if (distSq3D(x, y, z, unit.x, unit.y, unit.z) > unitReach * unitReach) continue;
     hitUnit(state, unit, shot.damage, shot.team);
   }
+  for (let i = 0; i < state.turrets.length; i++) {
+    const turret = state.turrets[i];
+    if (turret.team === shot.team || turret.hp <= 0) continue;
+    if (distSq3D(x, y, z, turret.x, turret.y, turret.z) > turretReach * turretReach) continue;
+    hitTurret(state, turret, shot.damage, shot.team);
+  }
 }
 
 // A mine sits where it was laid until something that is not its owner comes
 // close enough. Returns 1 when it went off.
-function stepMine(state, shot, hitUnitRadius, hitCarrierRadius) {
-  const hit = findHit(state, shot, shot.x, shot.y, shot.z, hitUnitRadius, hitCarrierRadius);
+function stepMine(state, shot, params) {
+  const hit = findHit(state, shot, shot.x, shot.y, shot.z, params);
   if (hit === -1) return 0;
-  detonate(state, shot, shot.x, shot.y, shot.z, hitUnitRadius, hitCarrierRadius);
+  detonate(state, shot, shot.x, shot.y, shot.z, params);
   return 1;
 }
 
 // Move every shot one tick, resolve what it hit, and keep the survivors. The
 // array is rebuilt rather than spliced: removing from a list while walking it
 // is the kind of thing that works until the day two shots land on one tick.
-function stepShots(state, hitUnitRadius, hitCarrierRadius) {
+function stepShots(state, params) {
   const survivors = [];
   for (let i = 0; i < state.shots.length; i++) {
     const shot = state.shots[i];
     if (shot.trigger === 1) {
-      if (stepMine(state, shot, hitUnitRadius, hitCarrierRadius) === 1) continue;
+      if (stepMine(state, shot, params) === 1) continue;
       shot.life = shot.life - 1;
       if (shot.life > 0) survivors.push(shot);
       continue;
@@ -267,12 +295,14 @@ function stepShots(state, hitUnitRadius, hitCarrierRadius) {
     const nx = shot.x + mulCos(shot.speed, shot.heading);
     const ny = shot.y + mulSin(shot.speed, shot.heading);
     const nz = shot.z + shot.climb;
-    const hit = findHit(state, shot, nx, ny, nz, hitUnitRadius, hitCarrierRadius);
+    const hit = findHit(state, shot, nx, ny, nz, params);
     if (hit !== -1) {
       if (shot.splash === 1) {
-        detonate(state, shot, nx, ny, nz < 0 ? 0 : nz, hitUnitRadius, hitCarrierRadius);
+        detonate(state, shot, nx, ny, nz < 0 ? 0 : nz, params);
       } else if (hit.kind === TARGET_CARRIER) {
         hitCarrier(state, state.carriers[hit.index], shot.damage, nx, ny, nz, shot.team);
+      } else if (hit.kind === TARGET_TURRET) {
+        hitTurret(state, state.turrets[hit.index], shot.damage, shot.team);
       } else {
         hitUnit(state, state.units[hit.index], shot.damage, shot.team);
       }
@@ -286,7 +316,7 @@ function stepShots(state, hitUnitRadius, hitCarrierRadius) {
     // bomb that lands in the sand still throws sand.
     if (shot.life > 0) survivors.push(shot);
     else if (shot.splash === 1 && shot.trigger === 0) {
-      detonate(state, shot, shot.x, shot.y, shot.z, hitUnitRadius, hitCarrierRadius);
+      detonate(state, shot, shot.x, shot.y, shot.z, params);
     }
   }
   state.shots = survivors;
@@ -295,6 +325,7 @@ function stepShots(state, hitUnitRadius, hitCarrierRadius) {
 export {
   TARGET_UNIT,
   TARGET_CARRIER,
+  TARGET_TURRET,
   copyShot,
   distSq3D,
   segmentDistSq,
@@ -303,6 +334,7 @@ export {
   guide,
   hitUnit,
   hitCarrier,
+  hitTurret,
   findHit,
   detonate,
   stepMine,
