@@ -12,6 +12,7 @@ import {
   CMD_DEPLOY_POD,
   CMD_FIRE_UNIT,
   CMD_LAUNCH_UNIT,
+  CMD_ORDER_UNIT_ATTACK,
   CMD_ORDER_UNIT_MOVE,
   CMD_RECALL_UNIT,
   CMD_RELEASE_CONTROL,
@@ -19,6 +20,7 @@ import {
   CMD_SET_RUDDER,
   CMD_SET_THROTTLE,
   CMD_SELECT_WEAPON,
+  CMD_SET_CARRIER_AIM,
   CMD_SET_REPAIR_PRIORITY,
   CMD_SET_STOCKPILE,
   CMD_SET_SUPPLY_RUN,
@@ -52,11 +54,13 @@ import { stepUnits } from './fleet.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import {
+  ORDER_ATTACK,
   ORDER_MOVE,
   UNIT_ACTIVE,
   UNIT_RETURNING,
   findUnit,
 } from './units.js';
+import { designated } from './targeting.js';
 
 function findCarrier(state, carrierId) {
   for (let i = 0; i < state.carriers.length; i++) {
@@ -127,6 +131,41 @@ function applyUnitMove(next, command) {
   unit.targetX = command.x;
   unit.targetY = command.y;
   pushEvent(next.events, EVT_UNIT_ORDERED, unit.id, unit.order, 0);
+  return next;
+}
+
+// The autopilot Attack order: you designate, it closes and engages. Refused
+// for a target that is already gone, so a stale click does not send an aircraft
+// to an empty patch of sea.
+function applyUnitAttack(next, command) {
+  const unit = findUnit(next, command.unitId);
+  if (unit === -1) return reject(next);
+  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
+  const target = designated(next, command.targetKind, command.targetId);
+  if (target === -1) return reject(next);
+  unit.state = UNIT_ACTIVE;
+  unit.order = ORDER_ATTACK;
+  unit.control = -1;
+  unit.orderTargetKind = command.targetKind;
+  unit.orderTargetId = command.targetId;
+  unit.targetX = target.x;
+  unit.targetY = target.y;
+  pushEvent(next.events, EVT_UNIT_ORDERED, unit.id, unit.order, 0);
+  return next;
+}
+
+// Pointer mode for the ship's laser. targetKind -1 clears it.
+function applyCarrierAim(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  if (command.targetKind === -1) {
+    carrier.aimKind = -1;
+    carrier.aimId = -1;
+    return next;
+  }
+  if (designated(next, command.targetKind, command.targetId) === -1) return reject(next);
+  carrier.aimKind = command.targetKind;
+  carrier.aimId = command.targetId;
   return next;
 }
 
@@ -270,6 +309,8 @@ function apply(state, command) {
   if (type === CMD_LAUNCH_UNIT) return applyLaunch(next, command);
   if (type === CMD_RECALL_UNIT) return applyRecall(next, command);
   if (type === CMD_ORDER_UNIT_MOVE) return applyUnitMove(next, command);
+  if (type === CMD_ORDER_UNIT_ATTACK) return applyUnitAttack(next, command);
+  if (type === CMD_SET_CARRIER_AIM) return applyCarrierAim(next, command);
   if (type === CMD_TAKE_CONTROL) return applyTakeControl(next, command);
   if (type === CMD_RELEASE_CONTROL) return applyReleaseControl(next, command);
   if (type === CMD_SET_UNIT_HELM) return applyUnitHelm(next, command);

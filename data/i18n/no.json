@@ -107,5 +107,8 @@
   "weapon.mine": "mine",
   "weapon.carrierLaser": "laser",
   "help.weapons": "V neste våpen - F skyt",
-  "status.overheated": "løpet er for varmt"
+  "status.overheated": "løpet er for varmt",
+  "status.attacking": "angrepsordre mot kontakt #{id}",
+  "status.pointing": "skipslaser låst på kontakt #{id}",
+  "help.targeting": "klikk en fiende for å angripe - uten valgt enhet tar skipslaseren den"
 }

@@ -24,6 +24,9 @@ const ORDER_MOVE = 1;
 const ORDER_RETURN = 2;
 const ORDER_LOAD = 3; // lighter: stand off the stockpile island and take cargo
 const ORDER_DELIVER = 4; // lighter: bring it back to the carrier
+// Sent at something, the way the original's autopilot Attack order worked: you
+// designate, the autopilot closes and engages.
+const ORDER_ATTACK = 5;
 
 function createManta(id, team, carrierId, rules, unitsPerMetre) {
   const stats = rules.units.manta;
@@ -64,6 +67,8 @@ function createManta(id, team, carrierId, rules, unitsPerMetre) {
     avoidTicks: 0,
     avoidHeading: 0,
     pod: 0,
+    orderTargetKind: -1,
+    orderTargetId: -1,
     cargoFuel: 0,
     cargoMaterials: 0,
     cargoOrdnance: 0,
@@ -118,6 +123,8 @@ function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
     avoidTicks: 0,
     avoidHeading: 0,
     pod: 1,
+    orderTargetKind: -1,
+    orderTargetId: -1,
     cargoFuel: 0,
     cargoMaterials: 0,
     cargoOrdnance: 0,
@@ -175,6 +182,8 @@ function createLighter(id, team, carrierId, rules, unitsPerMetre) {
     avoidTicks: 0,
     avoidHeading: 0,
     pod: 0,
+    orderTargetKind: -1,
+    orderTargetId: -1,
     cargoFuel: 0,
     cargoMaterials: 0,
     cargoOrdnance: 0,
@@ -237,6 +246,8 @@ function copyUnit(unit) {
     avoidTicks: unit.avoidTicks,
     avoidHeading: unit.avoidHeading,
     pod: unit.pod,
+    orderTargetKind: unit.orderTargetKind,
+    orderTargetId: unit.orderTargetId,
     cargoFuel: unit.cargoFuel,
     cargoMaterials: unit.cargoMaterials,
     cargoOrdnance: unit.cargoOrdnance,
@@ -325,6 +336,7 @@ export {
   ORDER_RETURN,
   ORDER_LOAD,
   ORDER_DELIVER,
+  ORDER_ATTACK,
   createManta,
   createWalrus,
   createLighter,

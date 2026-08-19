@@ -14,6 +14,7 @@ import { floorDiv, mulDiv } from '../shared/fixed.js';
 import { KIND_MANTA, copyArms, unitEngageable } from './units.js';
 import { gunCooldown } from './damage.js';
 import { launchShot, stepShots, TARGET_CARRIER, TARGET_UNIT } from './shots.js';
+import { aimFor, carrierAim } from './targeting.js';
 
 // Where the carrier's loadout sits in state.loadouts. The first three entries
 // are the unit KIND_* values on purpose, so a unit's loadout is
@@ -237,8 +238,9 @@ function coolDown(holder, weapon) {
 }
 
 // One firing decision for one armed hull. `cooldownOverride` is how a damaged
-// carrier mount fires more slowly than an undamaged one.
-function serveWeapon(state, team, x, y, z, holder, cooldownOverride) {
+// carrier mount fires more slowly than an undamaged one; `aim` is a target the
+// caller has already decided on, for the cases where somebody is aiming.
+function serveWeapon(state, team, x, y, z, holder, cooldownOverride, aim) {
   if (holder.cooldown > 0 || holder.overheated === 1) return 0;
   const weapon = state.weapons[holder.weapon];
   if (weapon === undefined) return 0;
@@ -249,6 +251,7 @@ function serveWeapon(state, team, x, y, z, holder, cooldownOverride) {
   // aim at first.
   let target = -1;
   if (weapon.trigger === 1) target = { kind: TARGET_UNIT, id: -1, x: x, y: y, z: z };
+  else if (aim !== undefined) target = aim;
   else target = pickTarget(state, team, x, y, z, weapon);
   if (target === -1) return 0;
 
@@ -269,7 +272,11 @@ function fireAll(state) {
     // A chewed-up mount fires slowly and a destroyed one not at all.
     const cooldown = gunCooldown(carrier, weapon.cooldown);
     if (cooldown < 0) continue;
-    serveWeapon(state, carrier.team, carrier.x, carrier.y, 0, carrier, cooldown);
+    // Pointer mode: the target the player clicked comes first, while it lives
+    // and is in reach.
+    const nearest = pickTarget(state, carrier.team, carrier.x, carrier.y, 0, weapon);
+    const aim = carrierAim(state, carrier, weapon, nearest);
+    serveWeapon(state, carrier.team, carrier.x, carrier.y, 0, carrier, cooldown, aim);
   }
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
@@ -282,7 +289,8 @@ function fireAll(state) {
     // that happens to be carrying some. Otherwise a Walrus with mines selected
     // seeds the whole beach on its way past.
     if (selected.trigger === 1) continue;
-    serveWeapon(state, unit.team, unit.x, unit.y, unit.z, unit, 0);
+    const nearest = pickTarget(state, unit.team, unit.x, unit.y, unit.z, selected);
+    serveWeapon(state, unit.team, unit.x, unit.y, unit.z, unit, 0, aimFor(state, unit, selected, nearest));
   }
 }
 
@@ -291,7 +299,10 @@ function fireAll(state) {
 // there is nothing in range, the mount is cooling, or it has overheated.
 function fireUnit(state, unit) {
   if (!unitEngageable(unit) || unit.arms.length === 0) return 0;
-  return serveWeapon(state, unit.team, unit.x, unit.y, unit.z, unit, 0);
+  const weapon = state.weapons[unit.weapon];
+  if (weapon === undefined) return 0;
+  const nearest = pickTarget(state, unit.team, unit.x, unit.y, unit.z, weapon);
+  return serveWeapon(state, unit.team, unit.x, unit.y, unit.z, unit, 0, aimFor(state, unit, weapon, nearest));
 }
 
 // Called when a unit comes aboard. Rearming is a withdrawal from the ship's

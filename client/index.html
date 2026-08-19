@@ -34,6 +34,22 @@
       pointer-events: none; user-select: none;
     }
     #gpu { color: var(--hud-dim); opacity: 0.75; }
+    /* The gunsight. Only visible with a hull under direct control, because it
+       is only then that where the nose points decides where the round goes. */
+    #sight {
+      position: fixed; left: 50%; top: 50%; width: 46px; height: 46px;
+      margin: -23px 0 0 -23px; display: none; pointer-events: none;
+    }
+    #sight.on { display: block; }
+    #sight .bar { position: absolute; background: var(--hud-ink); opacity: 0.85; }
+    #sight .h { left: 0; right: 0; top: 50%; height: 1px; }
+    #sight .v { top: 0; bottom: 0; left: 50%; width: 1px; }
+    #sight .gap { background: transparent; }
+    #sight .ring {
+      position: absolute; inset: 12px; border: 1px solid var(--hud-ink);
+      border-radius: 50%; opacity: 0.7;
+    }
+    #sight.lock .ring { border-color: #ff5f3a; opacity: 1; }
     /* The damage control board: hidden until Z, and pointer-active when open -
        it is the one part of the overlay you click rather than read. */
     #damage-panel {
@@ -60,6 +76,7 @@
   <div id="hud"></div>
   <!-- The legend is rendered from the language catalogue by main.js. -->
   <div id="help"></div>
+  <div id="sight"><span class="bar h"></span><span class="bar v"></span><span class="ring"></span></div>
   <div id="damage-panel">
     <div id="damage-title"></div>
     <canvas id="damage-view"></canvas>

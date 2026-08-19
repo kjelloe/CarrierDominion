@@ -107,5 +107,8 @@
   "weapon.mine": "mine",
   "weapon.carrierLaser": "laser",
   "help.weapons": "V next weapon - F fire",
-  "status.overheated": "the mount is too hot to fire"
+  "status.overheated": "the mount is too hot to fire",
+  "status.attacking": "attack ordered on contact #{id}",
+  "status.pointing": "ship laser locked on contact #{id}",
+  "help.targeting": "click an enemy to attack it - with nothing selected, the ship laser takes it"
 }

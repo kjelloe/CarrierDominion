@@ -5,6 +5,41 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — Targeting: the player is back in the loop
+
+252 tests + smoke gate green. The original put the player in the targeting loop
+at three levels, and all three are now here (ruling #21 a, b, c).
+
+**Attack orders.** `order_unit_attack` designates an enemy unit or carrier; the
+autopilot closes and engages it. The order *chases* - it re-aims at the target
+every tick, because a target that is moving is the normal case - and it ENDS
+when the target does, rather than sending an aircraft on to an empty patch of
+sea. An order on something already dead is refused, so a stale click does
+nothing.
+
+**Boresight aiming.** Under direct control the round goes down the nose. A gun
+always fires - aiming is the player's problem and a miss is a legitimate
+outcome - while a missile needs a lock inside a 22-degree seeker cone, exactly
+as a heat-seeker should. The seeker takes the target nearest the NOSE, not the
+nearest target, so pointing the aircraft is the skill.
+
+**Pointer mode.** `set_carrier_aim` gives the ship's laser a target the player
+clicked; it prefers that while it lives and is in reach, and falls back to its
+own judgement when it dies or is cleared. Clicking with a unit selected is an
+attack order; clicking with nothing selected hands the contact to the ship's
+laser.
+
+`engine/targeting.js` holds all three, and the precedence is one function:
+pilot's aim, then the attack order, then whatever the mount would have chosen.
+The engine still picks for a hull nobody has an opinion about - that is what
+makes an unattended Manta defend itself.
+
+Client: an amber gunsight appears when you take the controls and turns red when
+something is in the cone; `V` cycles the loadout; clicking an enemy attacks or
+points the ship's laser.
+
+---
+
 ## 2026-08-20 — The 1988 weapon sets
 
 242 tests + smoke gate green. One weapon per hull kind is gone; each hull now

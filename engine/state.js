@@ -87,6 +87,8 @@ function copyCarrier(carrier) {
     fuelBurnIdle: carrier.fuelBurnIdle,
     arms: copyArms(carrier.arms),
     weapon: carrier.weapon,
+    aimKind: carrier.aimKind,
+    aimId: carrier.aimId,
     cooldown: carrier.cooldown,
     heat: carrier.heat,
     heatAccum: carrier.heatAccum,
@@ -218,6 +220,9 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     fuelBurnIdle: carrierRules.fuelBurnIdlePer100Ticks,
     arms: arms,
     weapon: arms.length > 0 ? arms[0].w : -1,
+    // Pointer mode: what the player last clicked for the ship's laser.
+    aimKind: -1,
+    aimId: -1,
     cooldown: 0,
     heat: 0,
     heatAccum: 0,

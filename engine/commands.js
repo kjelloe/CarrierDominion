@@ -20,6 +20,8 @@ const CMD_SET_SUPPLY_RUN = 'set_supply_run';
 const CMD_FIRE_UNIT = 'fire_unit';
 const CMD_SET_REPAIR_PRIORITY = 'set_repair_priority';
 const CMD_SELECT_WEAPON = 'select_weapon';
+const CMD_ORDER_UNIT_ATTACK = 'order_unit_attack';
+const CMD_SET_CARRIER_AIM = 'set_carrier_aim';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -37,6 +39,7 @@ const UNIT_COMMANDS = [
   CMD_DEPLOY_POD,
   CMD_FIRE_UNIT,
   CMD_SELECT_WEAPON,
+  CMD_ORDER_UNIT_ATTACK,
 ];
 
 function isInt(value) {
@@ -116,6 +119,21 @@ function validateCommand(command) {
     if (command.weapon < 0) return 'no such weapon';
     return '';
   }
+  if (type === CMD_ORDER_UNIT_ATTACK) {
+    if (!isInt(command.unitId)) return 'unitId must be an integer';
+    if (!isInt(command.targetKind)) return 'targetKind must be an integer';
+    if (command.targetKind < 0 || command.targetKind > 1) return 'no such target kind';
+    if (!isInt(command.targetId)) return 'targetId must be an integer';
+    return '';
+  }
+  if (type === CMD_SET_CARRIER_AIM) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.targetKind)) return 'targetKind must be an integer';
+    // -1 clears the pointer and hands the mount back to its own judgement.
+    if (command.targetKind < -1 || command.targetKind > 1) return 'no such target kind';
+    if (!isInt(command.targetId)) return 'targetId must be an integer';
+    return '';
+  }
   if (type === CMD_ORDER_UNIT_MOVE) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
     if (!isInt(command.x) || !isInt(command.y)) return 'target must be integer coordinates';
@@ -150,6 +168,8 @@ export {
   CMD_FIRE_UNIT,
   CMD_SET_REPAIR_PRIORITY,
   CMD_SELECT_WEAPON,
+  CMD_ORDER_UNIT_ATTACK,
+  CMD_SET_CARRIER_AIM,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

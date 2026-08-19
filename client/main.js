@@ -238,6 +238,31 @@ function renderDamageBoard(deltaSeconds) {
 
 // Cycle the selected unit's loadout: laser, cluster, napalm, missile for a
 // Manta; cannon and mines for a Walrus.
+// Anything hostile within this of the clicked point counts as "you clicked
+// that". Generous on purpose: a contact is a small thing on a big ocean.
+const CLICK_PICK_UNITS = 500 * 256;
+
+function enemyNear(x, y) {
+  if (state.view === undefined) return undefined;
+  let best;
+  let bestDistance = CLICK_PICK_UNITS;
+  for (const carrier of state.view.carriers) {
+    if (carrier.team === state.view.team) continue;
+    const distance = Math.hypot(carrier.x - x, carrier.y - y);
+    if (distance > bestDistance) continue;
+    bestDistance = distance;
+    best = { kind: 1, id: carrier.id };
+  }
+  for (const unit of state.view.units) {
+    if (unit.team === state.view.team) continue;
+    const distance = Math.hypot(unit.x - x, unit.y - y);
+    if (distance > bestDistance) continue;
+    bestDistance = distance;
+    best = { kind: 0, id: unit.id };
+  }
+  return best;
+}
+
 function cycleWeapon() {
   const unit = selectedUnit();
   if (unit === undefined || unit.arms === undefined || unit.arms.length < 2) return;
@@ -424,14 +449,42 @@ function bindInput(level) {
   });
   window.addEventListener('blur', () => sendRudder(0));
 
-  // Click the sea to send the selected unit there.
+  // Click an enemy to attack it, the empty sea to move there. The click is
+  // resolved to a point on the water first; whether anything hostile is
+  // standing near that point decides which of the two it was.
   window.addEventListener('pointerdown', (event) => {
-    const unit = selectedUnit();
-    if (unit === undefined || state.piloting) return;
+    if (state.piloting || state.damageOpen) return;
     const ndcX = (event.clientX / window.innerWidth) * 2 - 1;
     const ndcY = -(event.clientY / window.innerHeight) * 2 + 1;
     const target = pickSea(state.scene3d, ndcX, ndcY);
     if (target === -1) return;
+
+    const enemy = enemyNear(target.x, target.y);
+    const unit = selectedUnit();
+    if (enemy !== undefined) {
+      // With a unit selected the click is an attack order; with none, it is the
+      // ship's laser going to pointer mode on that contact.
+      if (unit !== undefined) {
+        state.transport.send({
+          type: 'order_unit_attack',
+          unitId: unit.id,
+          targetKind: enemy.kind,
+          targetId: enemy.id,
+        });
+        setHud(state.hud, 'status', state.t('status.attacking', { id: enemy.id }));
+      } else if (state.carrierId !== -1) {
+        state.transport.send({
+          type: 'set_carrier_aim',
+          carrierId: state.carrierId,
+          targetKind: enemy.kind,
+          targetId: enemy.id,
+        });
+        setHud(state.hud, 'status', state.t('status.pointing', { id: enemy.id }));
+      }
+      return;
+    }
+
+    if (unit === undefined) return;
     const size = state.view.params.sizeUnits;
     if (target.x < 0 || target.y < 0 || target.x > size || target.y > size) return;
     state.transport.send({
@@ -516,12 +569,46 @@ function frame(nowMs) {
   setHud(state.hud, 'stores', describeStores(state.t, state.view));
   setHud(state.hud, 'supply', describeSupply(state.t, state.view));
   renderDamageBoard(deltaSeconds);
+  updateSight();
+}
+
+// The gunsight: shown while flying, and marked when a seeker has something on
+// the nose. Locked is a colour rather than a word - you are busy flying.
+function updateSight() {
+  const sight = document.getElementById('sight');
+  const unit = state.piloting ? selectedUnit() : undefined;
+  sight.classList.toggle('on', unit !== undefined);
+  if (unit === undefined) return;
+  sight.classList.toggle('lock', hasLock(unit));
+}
+
+// A cheap client-side echo of the engine's seeker rule: something hostile
+// within the cone, ahead. The engine decides for real when the trigger goes.
+const SIGHT_CONE = 4096;
+
+function hasLock(unit) {
+  if (state.view === undefined) return false;
+  const contacts = [];
+  for (const carrier of state.view.carriers) {
+    if (carrier.team !== state.view.team) contacts.push(carrier);
+  }
+  for (const other of state.view.units) {
+    if (other.team !== state.view.team) contacts.push(other);
+  }
+  for (const contact of contacts) {
+    const bearing = Math.atan2(contact.y - unit.y, contact.x - unit.x);
+    const bam = Math.round((bearing / (Math.PI * 2)) * 65536) & 65535;
+    let off = (bam - unit.heading) & 65535;
+    if (off > 32768) off -= 65536;
+    if (Math.abs(off) <= SIGHT_CONE) return true;
+  }
+  return false;
 }
 
 function renderHelp(t) {
   const help = document.getElementById('help');
   help.textContent = '';
-  const lines = ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.weapons', 'help.damage', 'help.time'];
+  const lines = ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.weapons', 'help.targeting', 'help.damage', 'help.time'];
   for (const key of lines) {
     const line = document.createElement('div');
     line.textContent = t(key);

@@ -22,7 +22,15 @@ import {
 } from './events.js';
 import { recoverUnit, withinRecoveryRange } from './hangar.js';
 import { hangarOpen } from './damage.js';
-import { KIND_MANTA, UNIT_ACTIVE, UNIT_RETURNING, findCarrierById } from './units.js';
+import {
+  KIND_MANTA,
+  ORDER_ATTACK,
+  ORDER_HOLD,
+  UNIT_ACTIVE,
+  UNIT_RETURNING,
+  findCarrierById,
+} from './units.js';
+import { designated } from './targeting.js';
 
 function stepUnits(state) {
   const sizeUnits = state.params.sizeUnits;
@@ -34,6 +42,20 @@ function stepUnits(state) {
     if (unit.state === UNIT_RETURNING && carrier !== -1) {
       unit.targetX = carrier.x;
       unit.targetY = carrier.y;
+    }
+    // An attack order chases: the thing it was sent at is moving, so aiming
+    // once at the order would send it where the target used to be. When the
+    // target is gone the order is finished - it does not wander on.
+    if (unit.order === ORDER_ATTACK) {
+      const mark = designated(state, unit.orderTargetKind, unit.orderTargetId);
+      if (mark === -1) {
+        unit.order = ORDER_HOLD;
+        unit.orderTargetKind = -1;
+        unit.orderTargetId = -1;
+      } else {
+        unit.targetX = mark.x;
+        unit.targetY = mark.y;
+      }
     }
 
     // A lighter uses the surface drive model, like a Walrus - it simply never
