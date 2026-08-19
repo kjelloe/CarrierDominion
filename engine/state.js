@@ -76,6 +76,10 @@ function copyCarrier(carrier) {
     fuelBurnIdle: carrier.fuelBurnIdle,
     ammo: carrier.ammo,
     cooldown: carrier.cooldown,
+    ordnance: carrier.ordnance,
+    ordnanceCapacity: carrier.ordnanceCapacity,
+    reloadRate: carrier.reloadRate,
+    reloadAccum: carrier.reloadAccum,
   };
 }
 
@@ -175,6 +179,10 @@ function createCarrier(id, team, position, carrierRules, carrierWeapon, unitsPer
     fuelBurnIdle: carrierRules.fuelBurnIdlePer100Ticks,
     ammo: carrierWeapon.magazine,
     cooldown: 0,
+    ordnance: carrierRules.ordnanceCapacity,
+    ordnanceCapacity: carrierRules.ordnanceCapacity,
+    reloadRate: carrierRules.reloadRoundsPer100Ticks,
+    reloadAccum: 0,
   };
 }
 

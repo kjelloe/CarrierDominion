@@ -132,9 +132,11 @@ function manageStrike(state, brain) {
 }
 
 // Below this much hull the carrier breaks off rather than trading to the
-// death. Without it two AIs grind each other to the bottom on the same tick,
-// which is a draw, which is nobody's idea of a war.
-const WITHDRAW_PERMIL = 350;
+// death. Without it two AIs grind each other to the bottom on the same tick.
+// Half was measured, not guessed: at a third, both sides still died together
+// once point defence started reloading from the ordnance store, because a
+// four-Manta wave carries 640 damage and a carrier is 1000.
+const WITHDRAW_PERMIL = 500;
 
 // A carrier makes 8 knots. Opening three kilometres - out of missile reach -
 // takes about this long, which is why the commitment is measured in tens of

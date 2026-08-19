@@ -49,6 +49,7 @@ function weaponFrom(stats, unitsPerMetre) {
     hitsAir: stats.hitsAir,
     hitsSurface: stats.hitsSurface,
     guided: stats.guided,
+    ordnancePerRound: stats.ordnancePerRound,
   };
 }
 
@@ -74,6 +75,7 @@ function copyWeapon(weapon) {
     hitsAir: weapon.hitsAir,
     hitsSurface: weapon.hitsSurface,
     guided: weapon.guided,
+    ordnancePerRound: weapon.ordnancePerRound,
   };
 }
 
@@ -229,7 +231,9 @@ function fireAll(state) {
   for (let i = 0; i < state.carriers.length; i++) {
     const carrier = state.carriers[i];
     if (carrier.hull <= 0) continue;
-    serveWeapon(state, carrier.team, carrier.x, carrier.y, 0, state.weapons[WEAPON_CARRIER], carrier);
+    const weapon = state.weapons[WEAPON_CARRIER];
+    reloadCarrier(carrier, weapon);
+    serveWeapon(state, carrier.team, carrier.x, carrier.y, 0, weapon, carrier);
   }
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
@@ -353,13 +357,50 @@ function stepWeapons(state, hitUnitRadius, hitCarrierRadius) {
   stepShots(state, hitUnitRadius, hitCarrierRadius);
 }
 
-// Called when a unit comes aboard: the hangar rearms it from the ship's own
-// magazines, which are not modelled yet. Ordnance is produced and stockpiled
-// already, so making a rearm draw on it is the obvious next slice.
-function rearm(unit, weapons) {
-  unit.ammo = weapons[unit.kind].magazine;
+// Called when a unit comes aboard. Rearming is a withdrawal from the ship's
+// ordnance store, not a refill from nowhere (ruling #17): a Manta missile costs
+// 25, a gun round costs 1, and a ship with an empty store sends its aircraft
+// back up empty. Partial rearms are normal and deliberate - you take what there
+// is rather than waiting for a full load.
+function rearm(unit, weapons, carrier) {
+  const weapon = weapons[unit.kind];
   unit.cooldown = 0;
+  const wanted = weapon.magazine - unit.ammo;
+  if (wanted <= 0) return unit;
+  if (weapon.ordnancePerRound <= 0) {
+    // Free to arm (or unarmed entirely): nothing to draw.
+    unit.ammo = weapon.magazine;
+    return unit;
+  }
+  const affordable = floorDiv(carrier.ordnance, weapon.ordnancePerRound);
+  const rounds = affordable < wanted ? affordable : wanted;
+  if (rounds <= 0) return unit;
+  carrier.ordnance = carrier.ordnance - rounds * weapon.ordnancePerRound;
+  unit.ammo = unit.ammo + rounds;
   return unit;
+}
+
+// The ready magazine is fed from the store continuously, at a fixed rate: a
+// ship does not teleport shells to the mounts. Per 100 ticks so the rate can be
+// a fraction of a round, exactly like fuel burn.
+function reloadCarrier(carrier, weapon) {
+  const wanted = weapon.magazine - carrier.ammo;
+  if (wanted <= 0) {
+    carrier.reloadAccum = 0;
+    return 0;
+  }
+  const accum = carrier.reloadAccum + carrier.reloadRate;
+  const due = floorDiv(accum, 100);
+  carrier.reloadAccum = accum - due * 100;
+  if (due <= 0) return 0;
+  const rounds = due < wanted ? due : wanted;
+  const perRound = weapon.ordnancePerRound;
+  const affordable = perRound > 0 ? floorDiv(carrier.ordnance, perRound) : rounds;
+  const taken = affordable < rounds ? affordable : rounds;
+  if (taken <= 0) return 0;
+  carrier.ordnance = carrier.ordnance - taken * perRound;
+  carrier.ammo = carrier.ammo + taken;
+  return taken;
 }
 
 export {
@@ -377,4 +418,5 @@ export {
   hitUnit,
   hitCarrier,
   rearm,
+  reloadCarrier,
 };

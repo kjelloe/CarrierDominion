@@ -32,6 +32,8 @@ function ownCarrierView(carrier) {
     maxSpeed: carrier.maxSpeed,
     radar: carrier.radar,
     ammo: carrier.ammo,
+    ordnance: carrier.ordnance,
+    ordnanceCapacity: carrier.ordnanceCapacity,
     contact: 0,
   };
 }
@@ -56,6 +58,8 @@ function contactView(carrier) {
     maxSpeed: 0,
     radar: 0,
     ammo: -1,
+    ordnance: -1,
+    ordnanceCapacity: -1,
     contact: 1,
   };
 }
@@ -85,6 +89,7 @@ function ownUnitView(unit) {
     blocked: unit.blocked,
     cargoFuel: unit.cargoFuel,
     cargoMaterials: unit.cargoMaterials,
+    cargoOrdnance: unit.cargoOrdnance,
     cargoCap: unit.cargoCap,
     ammo: unit.ammo,
     contact: 0,
@@ -116,6 +121,7 @@ function unitContactView(unit) {
     blocked: 0,
     cargoFuel: -1,
     cargoMaterials: -1,
+    cargoOrdnance: -1,
     cargoCap: -1,
     ammo: -1,
     contact: 1,

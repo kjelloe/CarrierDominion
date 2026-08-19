@@ -85,7 +85,7 @@ function recoverUnit(unit, carrier, weapons) {
   unit.fuel = unit.fuelCapacity;
   unit.fuelAccum = 0;
   unit.blocked = 0;
-  rearm(unit, weapons);
+  rearm(unit, weapons, carrier);
   // A Walrus draws a fresh pod from the carrier's stores when it comes aboard.
   if (unit.kind === KIND_WALRUS) unit.pod = 1;
   unit.x = carrier.x;

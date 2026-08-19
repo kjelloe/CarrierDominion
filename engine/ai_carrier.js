@@ -236,7 +236,13 @@ function manageSupply(state, brain, carrier) {
     carrier.supplyRun = 0;
     return;
   }
-  const level = mulDiv(carrier.fuel, 1000, carrier.fuelCapacity);
+  // Whichever is emptier decides. Ordnance was added by ruling #17 and matters
+  // as much as fuel: a ship with a dry magazine is a target, not a warship.
+  const fuelLevel = mulDiv(carrier.fuel, 1000, carrier.fuelCapacity);
+  const ordnanceLevel = carrier.ordnanceCapacity > 0
+    ? mulDiv(carrier.ordnance, 1000, carrier.ordnanceCapacity)
+    : 1000;
+  const level = ordnanceLevel < fuelLevel ? ordnanceLevel : fuelLevel;
   if (carrier.supplyRun === 0 && level < SUPPLY_CALL_PERMIL) {
     carrier.supplyRun = 1;
     pushEvent(state.events, EVT_SUPPLY_RUN, carrier.id, carrier.team, 1);

@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "comment": "One weapon per hull kind. Speeds are units per tick (256 units = 1 m, 20 ticks = 1 s): 3840 = 300 m/s. Range is in metres and decides how long a shot lives - life = range / speed, so a shot that misses simply runs out of flight rather than being deleted by a special case. hitsAir/hitsSurface classify by KIND, not by altitude: a Manta is air whether it is at cruise or on the deck.",
+  "comment": "One weapon per hull kind. Speeds are units per tick (256 units = 1 m, 20 ticks = 1 s): 3840 = 300 m/s. Range is in metres and decides how long a shot lives - life = range / speed, so a shot that misses simply runs out of flight rather than being deleted by a special case. hitsAir/hitsSurface classify by KIND, not by altitude: a Manta is air whether it is at cruise or on the deck. ordnancePerRound is what one round costs out of the carrier's ordnance store when the hull is rearmed: a Manta missile is expensive, a gun round is not.",
   "manta": {
-    "comment": "Guided air-to-anything missiles. Four aboard, and no rearming until it is back on the deck, so a strike is a decision rather than a stream.",
+    "comment": "Guided air-to-anything missiles. Four aboard, and rearming costs ordnance out of the carrier's store, so a strike is a decision rather than a stream.",
     "guided": 1,
     "rangeMetres": 3000,
     "damage": 40,
@@ -12,7 +12,8 @@
     "turnRateBamPerTick": 900,
     "blastRadiusMetres": 22,
     "hitsAir": 1,
-    "hitsSurface": 1
+    "hitsSurface": 1,
+    "ordnancePerRound": 25
   },
   "walrus": {
     "comment": "A surface gun. It cannot elevate onto aircraft, which is what makes a lone Walrus ashore worth escorting.",
@@ -25,7 +26,8 @@
     "turnRateBamPerTick": 0,
     "blastRadiusMetres": 10,
     "hitsAir": 0,
-    "hitsSurface": 1
+    "hitsSurface": 1,
+    "ordnancePerRound": 1
   },
   "lighter": {
     "comment": "Unarmed. The logistics boat is a target, and protecting it is the point.",
@@ -38,10 +40,11 @@
     "turnRateBamPerTick": 0,
     "blastRadiusMetres": 0,
     "hitsAir": 0,
-    "hitsSurface": 0
+    "hitsSurface": 0,
+    "ordnancePerRound": 0
   },
   "carrier": {
-    "comment": "Point defence, not an offensive battery: short-ranged, fast-firing, and effectively unlimited, because a ship that runs out of close-in defence is just a target. 1000 hull against 40-point missiles means a carrier survives 25 hits, which is more than one Manta strike carries.",
+    "comment": "Point defence, not an offensive battery: short-ranged and fast-firing. 600 rounds in the ready magazine, fed from the ship's ordnance store at reloadRoundsPer100Ticks - run the store dry and the ship is a target, which is what makes the depot run matter.",
     "guided": 0,
     "rangeMetres": 1600,
     "damage": 18,
@@ -51,6 +54,7 @@
     "turnRateBamPerTick": 0,
     "blastRadiusMetres": 12,
     "hitsAir": 1,
-    "hitsSurface": 1
+    "hitsSurface": 1,
+    "ordnancePerRound": 1
   }
 }

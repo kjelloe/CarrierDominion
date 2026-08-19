@@ -70,6 +70,6 @@
   "status.noOwnedIsland": "you hold no island to make a depot of",
   "help.supply": "L supply run - K make the nearest island your depot",
   "hud.weapons": "weapons",
-  "weapons.state": "{rounds} rnd - {air} in the air",
+  "weapons.state": "{rounds} rnd / {store} ord - {air} in the air",
   "war.draw": "a draw, both carriers lost"
 }

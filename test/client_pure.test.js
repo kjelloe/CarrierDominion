@@ -141,7 +141,10 @@ test('the supply readout says what is happening', () => {
   const running = describeSupply(t, {
     team: 0,
     carriers: [{ team: 0, contact: 0, supplyRun: 1 }],
-    units: [{ kind: 2, team: 0, state: 1, cargoFuel: 5000, cargoMaterials: 0, cargoCap: 10000 }],
+    units: [{
+      kind: 2, team: 0, state: 1,
+      cargoFuel: 5000, cargoMaterials: 0, cargoOrdnance: 0, cargoCap: 10000,
+    }],
     resources: { stockpileIsland: 3 },
   });
   assert.match(running, /supply\.on/);

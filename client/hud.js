@@ -112,8 +112,9 @@ function describeUnit(t, unit, params) {
 function describeWeapons(t, view) {
   const carrier = view.carriers.find((c) => c.team === view.team && c.contact === 0);
   const rounds = carrier === undefined ? 0 : carrier.ammo;
+  const store = carrier === undefined ? 0 : carrier.ordnance;
   const air = view.shots.filter((s) => s.team === view.team).length;
-  return t('weapons.state', { rounds: rounds, air: air });
+  return t('weapons.state', { rounds: rounds, store: store, air: air });
 }
 
 function describeStores(t, view) {
@@ -130,9 +131,8 @@ function describeSupply(t, view) {
   parts.push(depot < 0 ? t('supply.noDepot') : t('supply.depot', { island: depot }));
   const boat = view.units.find((u) => u.kind === 2 && u.team === view.team && u.state !== 0);
   if (boat !== undefined) {
-    const laden = boat.cargoCap > 0
-      ? Math.round(((boat.cargoFuel + boat.cargoMaterials) * 100) / boat.cargoCap)
-      : 0;
+    const aboard = boat.cargoFuel + boat.cargoMaterials + boat.cargoOrdnance;
+    const laden = boat.cargoCap > 0 ? Math.round((aboard * 100) / boat.cargoCap) : 0;
     parts.push(laden > 0 ? t('supply.laden', { percent: laden }) : t('supply.atSea'));
   }
   return parts.join(' - ');

@@ -6,7 +6,14 @@ import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize, hashState } from '../shared/statehash.js';
 import { buildView } from '../shared/view.js';
-import { pickTarget, segmentDistSq, stepWeapons } from '../engine/weapons.js';
+import {
+  pickTarget,
+  rearm,
+  reloadCarrier,
+  segmentDistSq,
+  stepWeapons,
+} from '../engine/weapons.js';
+import { loadFromDepot, unloadToCarrier } from '../engine/supply.js';
 import { EVT_SHOT_FIRED, EVT_UNIT_HIT, EVT_UNIT_LOST } from '../engine/events.js';
 import { KIND_MANTA, KIND_WALRUS, UNIT_ACTIVE, UNIT_LOST } from '../engine/units.js';
 import { PHASE_OVER, WIN_DRAW, checkVictory } from '../engine/victory.js';
@@ -226,4 +233,69 @@ test('a battered AI carrier breaks contact instead of trading to the death', () 
   const away = atan2B(hurt.y - enemy.y, hurt.x - enemy.x);
   assert.equal(hurt.headingHold, away);
   assert.equal(hurt.supplyRun, 1, 'a retreating carrier should be calling for supply');
+});
+
+test('rearming spends the ship ordnance, and a dry ship sends aircraft up empty', () => {
+  const state = fresh();
+  const carrier = state.carriers[0];
+  const manta = state.units.find((u) => u.team === 0 && u.kind === KIND_MANTA);
+  const perRound = rules.weapons.manta.ordnancePerRound;
+  const magazine = rules.weapons.manta.magazine;
+
+  manta.ammo = 0;
+  const before = carrier.ordnance;
+  rearm(manta, state.weapons, carrier);
+  assert.equal(manta.ammo, magazine);
+  assert.equal(carrier.ordnance, before - magazine * perRound);
+
+  // Enough for one missile and no more.
+  manta.ammo = 0;
+  carrier.ordnance = perRound;
+  rearm(manta, state.weapons, carrier);
+  assert.equal(manta.ammo, 1);
+  assert.equal(carrier.ordnance, 0);
+
+  // And nothing at all when the store is empty: no free missiles.
+  manta.ammo = 0;
+  rearm(manta, state.weapons, carrier);
+  assert.equal(manta.ammo, 0);
+});
+
+test('point defence reloads from the store, and stops when the store is dry', () => {
+  const state = fresh();
+  const carrier = state.carriers[0];
+  const weapon = state.weapons[3];
+  carrier.ammo = weapon.magazine - 50;
+  carrier.ordnance = 20;
+
+  let moved = 0;
+  for (let tick = 0; tick < 400; tick++) moved += reloadCarrier(carrier, weapon);
+  assert.equal(moved, 20, 'the magazine took more rounds than the store held');
+  assert.equal(carrier.ordnance, 0);
+  assert.equal(carrier.ammo, weapon.magazine - 30);
+
+  // A dry store adds nothing, however long it is left.
+  for (let tick = 0; tick < 400; tick++) reloadCarrier(carrier, weapon);
+  assert.equal(carrier.ammo, weapon.magazine - 30);
+});
+
+test('a lighter brings ordnance from the depot into the ship', () => {
+  const state = fresh();
+  const carrier = state.carriers[0];
+  const depot = state.islands[0];
+  const boat = state.units.find((u) => u.team === 0 && u.kind === 2);
+  depot.stockFuel = 0;
+  depot.stockMaterials = 0;
+  depot.stockOrdnance = 900;
+
+  loadFromDepot(state, boat, depot);
+  assert.ok(boat.cargoOrdnance > 0, 'the boat loaded no ordnance');
+  assert.equal(depot.stockOrdnance, 900 - boat.cargoOrdnance);
+
+  const aboardBefore = carrier.ordnance;
+  carrier.ordnance = 0;
+  unloadToCarrier(state, boat, carrier);
+  assert.ok(carrier.ordnance > 0, 'nothing was landed into the magazine');
+  assert.ok(carrier.ordnance <= carrier.ordnanceCapacity);
+  assert.ok(aboardBefore > 0, 'a carrier should start with a full store');
 });

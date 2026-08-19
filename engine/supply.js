@@ -50,41 +50,61 @@ function lighterFor(state, carrierId) {
   return -1;
 }
 
+function laden(unit) {
+  return unit.cargoFuel + unit.cargoMaterials + unit.cargoOrdnance;
+}
+
+// How much of one good moves this tick: never more than there is, never more
+// than the crew can shift, never more than there is room for.
+function moveAmount(available, budget, room) {
+  const want = budget < room ? budget : room;
+  const moved = available < want ? available : want;
+  return moved > 0 ? moved : 0;
+}
+
+// Loaded in priority order, because a lighter is smaller than the ship's
+// appetite: fuel keeps the carrier moving, ordnance keeps it dangerous, and
+// materials - which become hull repair at the other end - ride in what is left.
 function loadFromDepot(state, unit, depot) {
-  const room = unit.cargoCap - unit.cargoFuel - unit.cargoMaterials;
+  const room = unit.cargoCap - laden(unit);
   if (room <= 0) return 0;
   let worked = 0;
-  // Fuel first: it is what the hull is waiting for. Materials ride along in
-  // whatever space is left and become hull repairs at the other end.
-  const wantFuel = unit.workRate < room ? unit.workRate : room;
-  const fuel = depot.stockFuel < wantFuel ? depot.stockFuel : wantFuel;
-  if (fuel > 0) {
-    depot.stockFuel = depot.stockFuel - fuel;
-    unit.cargoFuel = unit.cargoFuel + fuel;
-    worked = worked + fuel;
-  }
-  const left = room - fuel;
-  const wantMaterials = unit.workRate - fuel;
-  const cap = wantMaterials < left ? wantMaterials : left;
-  const materials = depot.stockMaterials < cap ? depot.stockMaterials : cap;
-  if (materials > 0) {
-    depot.stockMaterials = depot.stockMaterials - materials;
-    unit.cargoMaterials = unit.cargoMaterials + materials;
-    worked = worked + materials;
-  }
+
+  const fuel = moveAmount(depot.stockFuel, unit.workRate, room);
+  depot.stockFuel = depot.stockFuel - fuel;
+  unit.cargoFuel = unit.cargoFuel + fuel;
+  worked = worked + fuel;
+
+  const ordnance = moveAmount(depot.stockOrdnance, unit.workRate - worked, room - worked);
+  depot.stockOrdnance = depot.stockOrdnance - ordnance;
+  unit.cargoOrdnance = unit.cargoOrdnance + ordnance;
+  worked = worked + ordnance;
+
+  const materials = moveAmount(depot.stockMaterials, unit.workRate - worked, room - worked);
+  depot.stockMaterials = depot.stockMaterials - materials;
+  unit.cargoMaterials = unit.cargoMaterials + materials;
+  worked = worked + materials;
+
   return worked;
 }
 
 function unloadToCarrier(state, unit, carrier) {
   let worked = 0;
-  const room = carrier.fuelCapacity - carrier.fuel;
-  const wantFuel = unit.workRate < room ? unit.workRate : room;
-  const fuel = unit.cargoFuel < wantFuel ? unit.cargoFuel : wantFuel;
-  if (fuel > 0) {
-    unit.cargoFuel = unit.cargoFuel - fuel;
-    carrier.fuel = carrier.fuel + fuel;
-    worked = worked + fuel;
-  }
+  const fuel = moveAmount(unit.cargoFuel, unit.workRate, carrier.fuelCapacity - carrier.fuel);
+  unit.cargoFuel = unit.cargoFuel - fuel;
+  carrier.fuel = carrier.fuel + fuel;
+  worked = worked + fuel;
+
+  // Ordnance goes into the ship's store, which is what rearms aircraft and
+  // feeds point defence (ruling #17).
+  const ordnance = moveAmount(
+    unit.cargoOrdnance,
+    unit.workRate - worked,
+    carrier.ordnanceCapacity - carrier.ordnance,
+  );
+  unit.cargoOrdnance = unit.cargoOrdnance - ordnance;
+  carrier.ordnance = carrier.ordnance + ordnance;
+  worked = worked + ordnance;
   // Materials become hull repair on arrival - the yard is wherever the ship is.
   const damage = carrier.maxHull - carrier.hull;
   if (damage > 0 && unit.cargoMaterials > 0) {
@@ -111,10 +131,10 @@ function runLighter(state, unit, carrier, depot) {
     const offshore = dist2D(unit.x, unit.y, depot.x, depot.y) - depot.radius;
     if (offshore > unit.loadRange) return;
     const worked = loadFromDepot(state, unit, depot);
-    const full = unit.cargoFuel + unit.cargoMaterials >= unit.cargoCap;
+    const full = laden(unit) >= unit.cargoCap;
     // Nothing left to load is as good a reason to sail as a full hold.
     if (full || worked === 0) {
-      if (unit.cargoFuel + unit.cargoMaterials > 0) {
+      if (laden(unit) > 0) {
         pushEvent(state.events, EVT_SUPPLY_LOADED, unit.id, unit.team, unit.cargoFuel);
         unit.order = ORDER_DELIVER;
       }
@@ -128,12 +148,13 @@ function runLighter(state, unit, carrier, depot) {
     unit.state = UNIT_ACTIVE;
     if (dist2D(unit.x, unit.y, carrier.x, carrier.y) > state.params.recoverRange) return;
     const worked = unloadToCarrier(state, unit, carrier);
-    const empty = unit.cargoFuel <= 0 && unit.cargoMaterials <= 0;
+    const empty = laden(unit) <= 0;
     if (empty || worked === 0) {
       pushEvent(state.events, EVT_SUPPLY_DELIVERED, unit.id, unit.team, 0);
       // Drop anything the ship could not take rather than shuttling it about.
       unit.cargoFuel = 0;
       unit.cargoMaterials = 0;
+      unit.cargoOrdnance = 0;
       if (carrier.supplyRun === 1) unit.order = ORDER_LOAD;
       else orderReturn(unit);
     }
@@ -169,4 +190,12 @@ function stepSupply(state) {
   }
 }
 
-export { stepSupply, runLighter, loadingStation, loadFromDepot, unloadToCarrier, lighterFor };
+export {
+  stepSupply,
+  runLighter,
+  loadingStation,
+  loadFromDepot,
+  unloadToCarrier,
+  lighterFor,
+  laden,
+};
