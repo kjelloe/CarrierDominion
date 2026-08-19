@@ -10,10 +10,14 @@ import { toMetres } from './coords.js';
 
 const SEA_FLOOR_METRES = -60;
 
-function terrainColour(heightMetres, peakMetres, target) {
+// Quantising the height before colouring it is what gives the retro styles
+// their banded, map-like land: the same terrain, painted in four steps instead
+// of a continuum.
+function terrainColour(heightMetres, peakMetres, steps, target) {
   if (heightMetres < 0) return target.setRGB(0.16, 0.22, 0.26);
   if (heightMetres < 6) return target.setRGB(0.78, 0.72, 0.52);
-  const t = Math.min(1, heightMetres / Math.max(1, peakMetres));
+  let t = Math.min(1, heightMetres / Math.max(1, peakMetres));
+  if (steps > 0) t = Math.round(t * steps) / steps;
   if (t < 0.55) return target.setRGB(0.20 + t * 0.16, 0.42 - t * 0.10, 0.18);
   if (t < 0.85) return target.setRGB(0.42, 0.40, 0.36);
   return target.setRGB(0.86, 0.87, 0.90);
@@ -22,7 +26,7 @@ function terrainColour(heightMetres, peakMetres, target) {
 // One island, sampled on a grid across its bounding box. Grid resolution comes
 // from the graphics preset; the geometry itself is identical in shape at every
 // tier, only finer.
-function buildIslandMesh(island, preset) {
+function buildIslandMesh(island, preset, style) {
   const grid = preset.terrainGrid;
   const radius = island.radius;
   const span = radius * 2;
@@ -42,7 +46,7 @@ function buildIslandMesh(island, preset) {
       positions[index * 3] = toMetres(xUnits);
       positions[index * 3 + 1] = clamped;
       positions[index * 3 + 2] = -toMetres(yUnits);
-      terrainColour(heightMetres, peakMetres, colour);
+      terrainColour(heightMetres, peakMetres, style.paletteSteps, colour);
       colours[index * 3] = colour.r;
       colours[index * 3 + 1] = colour.g;
       colours[index * 3 + 2] = colour.b;
@@ -70,7 +74,10 @@ function buildIslandMesh(island, preset) {
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
 
-  const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const material = new THREE.MeshLambertMaterial({
+    vertexColors: true,
+    flatShading: style.flatShading,
+  });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = preset.shadows;
   mesh.castShadow = preset.shadows;
@@ -78,16 +85,22 @@ function buildIslandMesh(island, preset) {
   return mesh;
 }
 
+// Detail smaller than a pixel is not detail, it is noise. A 100 m ripple seen
+// from the strategic camera 7 km up crosses several waves per pixel and turns
+// the whole sea into moire banding, so both the swell and the ripple are faded
+// out with distance instead of being drawn at frequencies the screen cannot
+// carry. Near the ship, where a wave is tens of pixels across, they are intact.
 const OCEAN_VERTEX = `
   uniform float uTime;
   varying vec3 vWorld;
+  varying float vDetail;
   void main() {
-    vec3 p = position;
-    float w = sin(p.x * 0.012 + uTime * 1.1) * 0.9
-            + sin(p.y * 0.017 - uTime * 0.8) * 0.7
-            + sin((p.x + p.y) * 0.006 + uTime * 0.5) * 1.2;
-    p.z += w;
-    vec4 world = modelMatrix * vec4(p, 1.0);
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vDetail = 1.0 - smoothstep(900.0, 3600.0, length(cameraPosition - world.xyz));
+    float w = sin(world.x * 0.012 + uTime * 1.1) * 0.9
+            + sin(world.z * 0.017 - uTime * 0.8) * 0.7
+            + sin((world.x + world.z) * 0.006 + uTime * 0.5) * 1.2;
+    world.y += w * vDetail;
     vWorld = world.xyz;
     gl_Position = projectionMatrix * viewMatrix * world;
   }
@@ -98,8 +111,9 @@ const OCEAN_FRAGMENT = `
   uniform vec3 uDeep;
   uniform float uTime;
   varying vec3 vWorld;
+  varying float vDetail;
   void main() {
-    float ripple = 0.5 + 0.5 * sin(vWorld.x * 0.05 + vWorld.z * 0.04 + uTime * 1.7);
+    float ripple = 0.5 + 0.5 * sin(vWorld.x * 0.014 + vWorld.z * 0.011 + uTime * 1.7) * vDetail;
     vec3 colour = mix(uDeep, uShallow, ripple * 0.35);
     gl_FragColor = vec4(colour, 1.0);
   }
@@ -107,22 +121,22 @@ const OCEAN_FRAGMENT = `
 
 // The ocean is cosmetic: engine sea level is exactly z = 0 and waves never
 // touch the simulation.
-function buildOcean(sizeMetres, preset) {
+function buildOcean(sizeMetres, preset, style) {
   const segments = preset.oceanSegments;
   const geometry = new THREE.PlaneGeometry(sizeMetres * 1.5, sizeMetres * 1.5, segments, segments);
   let material;
-  if (preset.oceanShader) {
+  if (preset.oceanShader && style.oceanShader) {
     material = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
         uShallow: { value: new THREE.Color(0.20, 0.45, 0.55) },
-        uDeep: { value: new THREE.Color(0.04, 0.12, 0.22) },
+        uDeep: { value: new THREE.Color(style.oceanColour) },
       },
       vertexShader: OCEAN_VERTEX,
       fragmentShader: OCEAN_FRAGMENT,
     });
   } else {
-    material = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.07, 0.18, 0.28) });
+    material = new THREE.MeshBasicMaterial({ color: new THREE.Color(style.oceanColour) });
   }
   const mesh = new THREE.Mesh(geometry, material);
   mesh.rotation.x = -Math.PI / 2;
@@ -131,12 +145,74 @@ function buildOcean(sizeMetres, preset) {
   return mesh;
 }
 
+// The 1988 sea was a grid running to a hard horizon. It is also the cheapest
+// possible sense of speed: without it, a flat colour gives the eye nothing to
+// measure motion against.
+function buildOceanGrid(sizeMetres) {
+  // Fixed ~300 m spacing rather than a fixed division count: the map grows
+  // with the island count, and a count would stretch the mesh until it stopped
+  // reading as motion.
+  //
+  // Not GridHelper. Its lines run the full width of the map, so the ones on
+  // either side of the ship have an endpoint far behind the camera - and a
+  // segment with a vertex behind the eye is exactly what line clipping gets
+  // wrong: the whole line disappears. The grid then survives only in the
+  // distance, which is the one place it does nothing, and vanishes from the
+  // near water, which is the only place it sells speed. Cutting every line at
+  // each crossing costs ~40k vertices once and cannot fail that way.
+  const span = sizeMetres * 1.5;
+  const cells = Math.max(40, Math.round(span / 300));
+  const step = span / cells;
+  const origin = sizeMetres / 2 - span / 2;
+  const points = [];
+  for (let line = 0; line <= cells; line += 1) {
+    const fixed = origin + line * step;
+    for (let cell = 0; cell < cells; cell += 1) {
+      const from = origin + cell * step;
+      const to = from + step;
+      points.push(fixed, 6, -from, fixed, 6, -to);
+      points.push(from, 6, -fixed, to, 6, -fixed);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+  // Faded with range, or the far cells pile into a solid slab of blue along
+  // the horizon - which is both ugly and a lie about how far you can see.
+  const material = new THREE.ShaderMaterial({
+    uniforms: { uColour: { value: new THREE.Color(0x4fc3ff) } },
+    vertexShader: `
+      varying float vFade;
+      void main() {
+        vec4 world = modelMatrix * vec4(position, 1.0);
+        vFade = 1.0 - smoothstep(2500.0, 8000.0, length(cameraPosition - world.xyz));
+        gl_Position = projectionMatrix * viewMatrix * world;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uColour;
+      varying float vFade;
+      void main() {
+        if (vFade <= 0.02) discard;
+        gl_FragColor = vec4(uColour, 0.55 * vFade);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+  });
+  const grid = new THREE.LineSegments(geometry, material);
+  grid.name = 'ocean-grid';
+  return grid;
+}
+
 // A placeholder hull: a 330 m box with an island superstructure and a bow
 // wedge, enough to read heading and scale at a glance.
-function buildCarrier(teamColour, preset) {
+function buildCarrier(teamColour, preset, style) {
   const group = new THREE.Group();
   const hullMaterial = new THREE.MeshLambertMaterial({ color: teamColour });
-  const deckMaterial = new THREE.MeshLambertMaterial({ color: 0x424b55 });
+  const deckMaterial = new THREE.MeshLambertMaterial({
+    color: style.deck,
+    flatShading: style.flatShading,
+  });
 
   const hull = new THREE.Mesh(new THREE.BoxGeometry(330, 26, 72), hullMaterial);
   hull.position.y = 8;
@@ -282,6 +358,7 @@ function updateCommandNode(group, ownerColour, podColour, progress) {
 export {
   buildIslandMesh,
   buildOcean,
+  buildOceanGrid,
   buildCarrier,
   buildManta,
   buildWalrus,

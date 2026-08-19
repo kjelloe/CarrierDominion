@@ -15,6 +15,7 @@ import {
   buildLighter,
   buildManta,
   buildOcean,
+  buildOceanGrid,
   buildWalrus,
   updateCommandNode,
 } from './world.js';
@@ -33,9 +34,9 @@ function createRenderer(canvas, preset) {
   return renderer;
 }
 
-function createLights(scene, preset, sizeMetres) {
-  scene.add(new THREE.HemisphereLight(0xbcd8f0, 0x35506a, 1.15));
-  const sun = new THREE.DirectionalLight(0xfff2df, 1.35);
+function createLights(scene, preset, sizeMetres, style) {
+  scene.add(new THREE.HemisphereLight(0xbcd8f0, 0x35506a, style.hemiIntensity));
+  const sun = new THREE.DirectionalLight(0xfff2df, style.sunIntensity);
   // Aim the sun at the middle of the map, not at the scene origin: the origin
   // is the map's south-west CORNER, so a default-target sun lights the sea and
   // leaves every hull in the archipelago as a silhouette.
@@ -66,10 +67,13 @@ function createLights(scene, preset, sizeMetres) {
   return sun;
 }
 
-function createScene(canvas, preset, sizeMetres) {
+function createScene(canvas, preset, sizeMetres, style) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x7ea6c4);
-  scene.fog = new THREE.FogExp2(0x7ea6c4, preset.fogDensity);
+  scene.background = new THREE.Color(style.sky);
+  // A style may switch the haze off entirely: the 1988 look wants a hard
+  // horizon, not distance fading to nothing.
+  const fogDensity = preset.fogDensity * style.fogDensityScale;
+  if (fogDensity > 0) scene.fog = new THREE.FogExp2(style.sky, fogDensity);
 
   const camera = new THREE.PerspectiveCamera(
     58,
@@ -79,10 +83,11 @@ function createScene(canvas, preset, sizeMetres) {
   );
 
   const renderer = createRenderer(canvas, preset);
-  createLights(scene, preset, sizeMetres);
+  createLights(scene, preset, sizeMetres, style);
 
-  const ocean = buildOcean(sizeMetres, preset);
+  const ocean = buildOcean(sizeMetres, preset, style);
   scene.add(ocean);
+  if (style.oceanGrid) scene.add(buildOceanGrid(sizeMetres));
 
   return {
     scene: scene,
@@ -90,6 +95,7 @@ function createScene(canvas, preset, sizeMetres) {
     renderer: renderer,
     ocean: ocean,
     preset: preset,
+    style: style,
     islands: {},
     nodes: {},
     carriers: {},
@@ -105,7 +111,7 @@ function createScene(canvas, preset, sizeMetres) {
 function syncIslands(view3d, view) {
   for (const island of view.islands) {
     if (view3d.islands[island.id] !== undefined) continue;
-    const mesh = buildIslandMesh(island, view3d.preset);
+    const mesh = buildIslandMesh(island, view3d.preset, view3d.style);
     view3d.islands[island.id] = mesh;
     view3d.scene.add(mesh);
   }
@@ -146,7 +152,11 @@ function syncCarriers(view3d, view) {
     seen[carrier.id] = true;
     let group = view3d.carriers[carrier.id];
     if (group === undefined) {
-      group = buildCarrier(TEAM_COLOURS[carrier.team % TEAM_COLOURS.length], view3d.preset);
+      group = buildCarrier(
+        TEAM_COLOURS[carrier.team % TEAM_COLOURS.length],
+        view3d.preset,
+        view3d.style,
+      );
       // A radar contact is a ghost, not a hull: it is drawn dimmed so nobody
       // mistakes a blip for full knowledge of the enemy.
       if (carrier.contact === 1) dimForContact(group);

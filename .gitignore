@@ -1,6 +1,9 @@
-# ops/ is the REAL host: box, user, key, hostname, deploy script, unit file.
+# ops is the REAL host: box, user, key, hostname, deploy script, unit file.
 # It never enters the repo; publishable generic versions go in DEPLOYING.md.
-ops/
+# No trailing slash: ops is a SYMLINK into the private game-ops repo, and
+# "ops/" would not match a symlink, so it would be committed as a dangling
+# link for anyone who clones this without game-ops beside it.
+ops
 
 # owner's decision log and other user-local files — kept out of the public repo
 dev-prompts.md

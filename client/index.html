@@ -5,27 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Carrier Dominion</title>
   <style>
-    :root { color-scheme: dark; }
+    :root {
+      color-scheme: dark;
+      /* Overwritten from client/styles.js so the instruments match the scene. */
+      --hud-ink: #e8f2fb;
+      --hud-dim: #7f9fbb;
+      --hud-panel: rgba(8, 16, 26, 0.72);
+      --hud-font: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
     html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1420; }
     #view { display: block; width: 100vw; height: 100vh; }
     #hud {
       position: fixed; top: 12px; left: 12px; min-width: 220px;
       padding: 10px 12px; border-radius: 6px;
-      background: rgba(8, 16, 26, 0.72); color: #cfe3f5;
-      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: var(--hud-panel); color: var(--hud-ink);
+      font: 12px/1.5 var(--hud-font);
       pointer-events: none; user-select: none;
     }
     .hud-row { display: flex; justify-content: space-between; gap: 18px; }
-    .hud-label { color: #7f9fbb; }
-    .hud-value { color: #e8f2fb; }
+    .hud-label { color: var(--hud-dim); }
+    .hud-value { color: var(--hud-ink); }
     #help {
       position: fixed; bottom: 12px; left: 12px;
       padding: 8px 12px; border-radius: 6px;
-      background: rgba(8, 16, 26, 0.72); color: #9db8d2;
-      font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: var(--hud-panel); color: var(--hud-dim);
+      font: 12px/1.6 var(--hud-font);
       pointer-events: none; user-select: none;
     }
-    #gpu { color: #6f8ba6; }
+    #gpu { color: var(--hud-dim); opacity: 0.75; }
   </style>
   <script type="importmap">
     { "imports": { "three": "/client/vendor/three.module.min.js" } }

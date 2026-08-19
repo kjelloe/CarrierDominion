@@ -10,6 +10,7 @@
 //   ?graphics=low|medium|high   override the auto-detected preset
 //   ?speed=0|1|2|4|8|16         start compressed (0 starts paused)
 //   ?lang=en|no                 override the browser's language
+//   ?style=retro|modern|hybrid  art direction (see client/styles.js)
 
 import { fetchRules } from './rules.js';
 import { createLocalTransport, createWsTransport } from './transport.js';
@@ -18,6 +19,8 @@ import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } 
 import { createScene, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
 import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
 import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.js';
+import { applyStyleToDocument, resolveStyle, styleFor } from './styles.js';
+import { worldSizeMetres } from '../engine/worldgen.js';
 import {
   createHud,
   setHud,
@@ -420,8 +423,18 @@ async function main() {
   setHud(state.hud, 'graphics', `${preset.label} (${resolved.source})`);
   document.getElementById('gpu').textContent = describeGpu(diag);
 
-  const sizeMetres = rules.world.sizeMetres;
-  state.scene3d = createScene(document.getElementById('view'), preset, sizeMetres);
+  const style = styleFor(resolveStyle(params.get('style')));
+  applyStyleToDocument(style, document.documentElement);
+  setHud(state.hud, 'graphics', `${preset.label} / ${style.label} (${resolved.source})`);
+
+  // The map grows with the island count, so the ocean plane, the sun's aim and
+  // the sea grid have to use the SCALED size - the base size leaves the far
+  // corners of a big archipelago outside the water.
+  const sizeMetres = worldSizeMetres(rules.world);
+  state.scene3d = createScene(document.getElementById('view'), preset, sizeMetres, style);
+  // Render probes reach the scene graph through this; nothing in the game uses
+  // it, and it holds no state the client does not already own.
+  window.__scene3d = state.scene3d;
   resize(state.scene3d);
   window.addEventListener('resize', () => resize(state.scene3d));
 

@@ -5,6 +5,60 @@ golden hash and why.
 
 ---
 
+## 2026-08-19 — Art direction as data, and the port claim (rulings #13, #6)
+
+198 tests + smoke gate green. Nothing here touches the simulation: two players
+on different styles see the same war and the same state hash.
+
+### Three styles, switchable, not described
+
+Ruling #13 asked for options and samples. `client/styles.js` holds them as
+data — `retro` (1988), `modern` (the look so far), `hybrid` (a remaster) —
+each a flat record of sky, fog scale, ocean treatment, shading, palette steps,
+light intensities and HUD colour/font tokens. `?style=retro|modern|hybrid`
+picks one; `applyStyleToDocument` pushes the instrument colours into CSS vars
+so the HUD matches the scene. `client/render/world.js` and `scene.js` take the
+style as an argument rather than reading a global.
+
+`debugging/probes/style_shots.mjs` renders three shots per style (open sea,
+closing with land, strategic) into `debugging/shots/styles/`. Passing a style
+name re-shoots just that one while a look is being tuned.
+
+### Three real rendering bugs the samples exposed
+
+- **The sea was moire, not water.** A 100 m ripple seen from 7 km crosses
+  several waves per pixel; the whole ocean turned into banding. Both the swell
+  and the ripple now fade out with camera distance, and the ripple's wavelength
+  went from ~100 m to ~450 m. Detail below a pixel is noise, not detail.
+- **The retro grid only existed in the distance** — the one place it does
+  nothing. `GridHelper` draws lines that span the whole map, so the ones beside
+  the ship have an endpoint far behind the camera, and line clipping drops the
+  whole segment. The grid is now built by hand, cut at every crossing, ~40k
+  vertices once, and fades out at range so the far cells do not pile into a
+  slab of blue along the horizon. This is what makes the 1988 option look like
+  1988; without it, "retro" was just a dark sea.
+- **The client sized the world from `rules.world.sizeMetres`** — the *base*
+  size, not the scaled size from ruling #2. With more islands than the base
+  count, the ocean plane and grid would have stopped short of the map's far
+  corners. Now `worldSizeMetres(rules.world)`, the same function the engine
+  uses. Latent at 8 islands; a visible hole at 16.
+
+`window.__scene3d` now exposes the scene graph for render probes. That is how
+the grid bug was diagnosed — reasoning about it produced four wrong theories in
+a row, and one `page.evaluate` produced the answer.
+
+### Port: 8135, not 8132
+
+8132 is boombrawl's and 8133 is Sunset Runner's. Carrier Dominion claims
+**8135**, recorded in the ledger of record — `game-ops/RetroMultiCiv/
+multi-game-hosting.md` — with 8134 deliberately left free and labelled as such
+so the next game takes it rather than skipping to 8136. `server/index.js` and
+`run.sh` default to 8135; `PORT=` still overrides. `CarrierDominion/ops` is now
+a symlink into the private `game-ops` repo, so the port row and deploy notes
+live with the other games' rather than in a gitignored island of their own.
+
+---
+
 ## 2026-08-19 — Milestone 1: the economy loop closes
 
 Islands now pay for the ship, and the ship takes islands. 149 tests green.
