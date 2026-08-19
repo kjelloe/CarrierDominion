@@ -20,7 +20,7 @@ PORT=9000 SEED=42 ./run.sh
 | `/?mode=solo` | the engine runs **in the browser tab** - no server simulation |
 | `/?mode=lan` | the authoritative Node server simulates, the tab renders |
 | `/?graphics=low\|medium\|high` | override the auto-detected graphics tier |
-| `/?style=retro\|modern\|hybrid` | art direction - cosmetic only, same war, same hash |
+| `/?style=retro\|modern\|hybrid` | art direction (default `retro`) - cosmetic only, same war, same hash |
 | `/healthz` | tick, state hash, seats, rss - for monitoring |
 
 Controls:

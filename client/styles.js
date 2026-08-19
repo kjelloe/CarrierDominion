@@ -73,7 +73,10 @@ const STYLES = {
   },
 };
 
-const DEFAULT_STYLE = 'modern';
+// Owner ruling 2026-08-19: retro is the game's look. The other two stay
+// switchable - they cost nothing to keep, and they are the reference when a
+// new render feature has to be judged against something.
+const DEFAULT_STYLE = 'retro';
 
 function styleNames() {
   return ['retro', 'modern', 'hybrid'];

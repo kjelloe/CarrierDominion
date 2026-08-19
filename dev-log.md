@@ -10,6 +10,11 @@ golden hash and why.
 198 tests + smoke gate green. Nothing here touches the simulation: two players
 on different styles see the same war and the same state hash.
 
+**Ruling, same day:** retro is the game's look and is now the default; the
+other two stay switchable. Scope is **look only** — no instrument rebuild, no
+sea state, no weather, until asked. The carrier stays slow (8 kn) because time
+compression, not speed, is the answer to the waiting.
+
 ### Three styles, switchable, not described
 
 Ruling #13 asked for options and samples. `client/styles.js` holds them as

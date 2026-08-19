@@ -7,13 +7,14 @@
   <style>
     :root {
       color-scheme: dark;
-      /* Overwritten from client/styles.js so the instruments match the scene. */
-      --hud-ink: #e8f2fb;
-      --hud-dim: #7f9fbb;
-      --hud-panel: rgba(8, 16, 26, 0.72);
-      --hud-font: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      /* The retro defaults, overwritten from client/styles.js once the chosen
+         style loads. They match so the first paint is not a blue flash. */
+      --hud-ink: #ffb03a;
+      --hud-dim: #a06a14;
+      --hud-panel: rgba(0, 0, 0, 0.82);
+      --hud-font: ui-monospace, "Courier New", monospace;
     }
-    html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1420; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #05070b; }
     #view { display: block; width: 100vw; height: 100vh; }
     #hud {
       position: fixed; top: 12px; left: 12px; min-width: 220px;
