@@ -33,7 +33,6 @@
   "status.error": "connection error",
   "status.closed": "closed",
   "status.rejected": "rejected: {reason}",
-  "status.speedLocked": "speed is locked while another player is in the war",
   "status.needWalrus": "select a Walrus to deploy a pod",
   "status.noPod": "no pod aboard - go back to the carrier",
   "status.tooFar": "{metres} m from the nearest command node",
@@ -129,5 +128,7 @@
   "build.factory": "factory",
   "build.warehouse": "warehouse",
   "build.turret": "turret",
-  "help.island": "click an island you hold to plan it"
+  "help.island": "click an island you hold to plan it",
+  "status.speedVote": "speed proposed - the clock moves when everybody agrees",
+  "speed.vote": "vote {speed}: {agreed}/{players}"
 }

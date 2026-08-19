@@ -20,6 +20,14 @@ import { createGame, enqueueCommand, stepGame, latestSnapshot } from '../engine/
 import { checkAuthority } from '../engine/authority.js';
 import { createClock, isSpeed, setClockSpeed, startClock, stopClock } from './clock.js';
 import { serveStatic } from './static.js';
+import {
+  NO_VOTE,
+  castVote,
+  clearVotes,
+  openProposal,
+  tally,
+  unanimous,
+} from './vote.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -126,7 +134,7 @@ function createApp(options) {
   app.wss = new WebSocketServer({ server: app.httpServer });
 
   app.wss.on('connection', (socket) => {
-    const seat = { socket: socket, team: claimTeam() };
+    const seat = { socket: socket, team: claimTeam(), vote: NO_VOTE };
     app.seats.push(seat);
     send(socket, {
       type: 'welcome',
@@ -138,6 +146,12 @@ function createApp(options) {
       speed: app.clock.speed,
       speedLocked: playerSeats() > 1 ? 1 : 0,
     });
+    // A seat arriving mid-vote resets it: everybody at the table has to agree,
+    // and this one has not been asked.
+    if (openProposal(app.seats) !== NO_VOTE) {
+      clearVotes(app.seats);
+      broadcastVote();
+    }
     const snapshot = latestSnapshot(app.game);
     if (snapshot !== -1) {
       send(socket, {
@@ -157,19 +171,14 @@ function createApp(options) {
         return;
       }
       if (message !== null && typeof message === 'object' && message.type === 'set_speed') {
-        // Time compression is a table decision, not a private one. One player
-        // alone may run the clock as fast as they like; the moment there are
-        // two, it takes a vote - and the vote is a later slice, so for now the
-        // answer is a clear no rather than a silent last-writer-wins.
-        if (playerSeats() > 1) {
-          send(socket, { type: 'rejected', reason: 'changing speed in a shared war needs a vote' });
+        // Time compression is a table decision (owner ruling 2026-08-20): the
+        // clock moves when every player agrees. Alone, that is you.
+        const problem = castVote(app.seats, seatFor(socket), message.speed);
+        if (problem !== '') {
+          send(socket, { type: 'rejected', reason: problem });
           return;
         }
-        if (!setClockSpeed(app.clock, message.speed)) {
-          send(socket, { type: 'rejected', reason: 'no such speed' });
-          return;
-        }
-        for (const other of app.seats) send(other.socket, { type: 'speed', speed: app.clock.speed });
+        settleVote();
         return;
       }
       if (message === null || typeof message !== 'object' || message.type !== 'command') {
@@ -187,10 +196,43 @@ function createApp(options) {
     const drop = () => {
       const index = app.seats.indexOf(seat);
       if (index >= 0) app.seats.splice(index, 1);
+      // Somebody leaving can complete a vote the rest had already agreed on.
+      settleVote();
     };
     socket.on('close', drop);
     socket.on('error', drop);
   });
+
+  // Tell the table where the vote stands, so a HUD can show "2 of 3 for x4".
+  function broadcastVote() {
+    const proposal = openProposal(app.seats);
+    const count = tally(app.seats, proposal);
+    for (const other of app.seats) {
+      send(other.socket, {
+        type: 'vote',
+        speed: proposal,
+        agreed: proposal === NO_VOTE ? 0 : count.agreed,
+        players: count.players,
+      });
+    }
+  }
+
+  // Carry the vote if it is unanimous, otherwise just report where it stands.
+  function settleVote() {
+    const agreed = unanimous(app.seats);
+    if (agreed === NO_VOTE) {
+      broadcastVote();
+      return;
+    }
+    if (!setClockSpeed(app.clock, agreed)) {
+      clearVotes(app.seats);
+      broadcastVote();
+      return;
+    }
+    clearVotes(app.seats);
+    for (const other of app.seats) send(other.socket, { type: 'speed', speed: app.clock.speed });
+    broadcastVote();
+  }
 
   app.clock = createClock(rules.rules.msPerTick, () => broadcast(stepGame(app.game)), app.speed);
 

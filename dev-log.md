@@ -5,6 +5,32 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — The clock is a table decision
+
+286 tests + smoke gate green. Time compression in a shared war now moves when
+**every player agrees**, and not before (ruling #24.5).
+
+`server/vote.js` is deliberately pure and socket-free - a seat is any object
+with a `team` and a `vote` - so the whole rule is testable without a network.
+Three things fall out of it rather than being written into it:
+
+- **A vote of one is unanimous by definition**, so a solo player still runs the
+  clock as they like with no special case for it.
+- **Spectators do not vote**, and do not block one either. They are watching
+  somebody else's war.
+- **Pausing is a speed like any other**, so stopping the clock takes the same
+  agreement as speeding it up.
+
+A seat arriving mid-vote resets it: everybody at the table has to agree, and
+the newcomer has not been asked. A seat leaving settles it, because their
+departure can complete a vote the rest had already reached.
+
+The table is told where a vote stands (`2/3 for x4`), so nobody is left
+wondering whether their key press did anything. Which is what the old message
+did wrong: it said "refused", when the honest word was "proposed".
+
+---
+
 ## 2026-08-20 — Defence islands, and the deadlock they exposed
 
 276 tests + smoke gate green. Turrets were a number on a report; now they are

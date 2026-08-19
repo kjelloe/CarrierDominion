@@ -33,7 +33,6 @@
   "status.error": "tilkoblingsfeil",
   "status.closed": "lukket",
   "status.rejected": "avvist: {reason}",
-  "status.speedLocked": "tempoet er låst så lenge en annen spiller er med i krigen",
   "status.needWalrus": "velg en Walrus for å sette ut en pod",
   "status.noPod": "ingen pod om bord - dra tilbake til hangarskipet",
   "status.tooFar": "{metres} m fra nærmeste kommandonode",
@@ -129,5 +128,7 @@
   "build.factory": "fabrikk",
   "build.warehouse": "lagerhus",
   "build.turret": "kanontårn",
-  "help.island": "klikk en øy du eier for å planlegge den"
+  "help.island": "klikk en øy du eier for å planlegge den",
+  "status.speedVote": "fart foreslått - klokka endres når alle er enige",
+  "speed.vote": "avstemning {speed}: {agreed}/{players}"
 }

@@ -71,6 +71,7 @@ const state = {
   podBuildTicks: 1200,
   speed: START_SPEED,
   speedLocked: false,
+  voteText: '',
   t: (key) => key,
   transport: undefined,
   scene3d: undefined,
@@ -487,7 +488,8 @@ function deployPod() {
 function requestSpeed(multiplier) {
   if (!isSpeed(multiplier)) return;
   if (state.speedLocked) {
-    setHud(state.hud, 'status', state.t('status.speedLocked'));
+    // Not refused - proposed. The engine's answer arrives as a vote message.
+    setHud(state.hud, 'status', state.t('status.speedVote'));
     return;
   }
   state.transport.setSpeed(multiplier);
@@ -633,6 +635,23 @@ function bindInput(level) {
       type: 'order_unit_move', unitId: unit.id, x: target.x, y: target.y,
     });
   });
+}
+
+// A shared clock moves when everybody agrees (owner ruling 2026-08-20). The
+// HUD says where the table stands so nobody is left wondering whether their
+// key press did anything.
+function onVote(message) {
+  if (message.speed < 0) {
+    state.voteText = '';
+  } else {
+    state.voteText = state.t('speed.vote', {
+      speed: describeSpeed(message.speed),
+      agreed: message.agreed,
+      players: message.players,
+    });
+  }
+  setHud(state.hud, 'speedx', describeSpeed(state.speed)
+    + (state.voteText === '' ? '' : ` - ${state.voteText}`));
 }
 
 function onSpeed(multiplier) {
@@ -822,6 +841,7 @@ async function main() {
     onWelcome: onWelcome,
     onSnapshot: onSnapshot,
     onSpeed: onSpeed,
+    onVote: onVote,
     onRejected: onRejected,
     onClosed: onClosed,
   });

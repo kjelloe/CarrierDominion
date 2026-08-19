@@ -181,7 +181,7 @@ test('rubbish on the wire is answered, not crashed on', async () => {
   });
 });
 
-test('one player alone may compress time; two may not', async () => {
+test('one player alone carries the vote by themselves', async () => {
   await withServer(async (app, _httpUrl, wsUrl) => {
     const first = connect(wsUrl);
     await first.open();
@@ -189,24 +189,70 @@ test('one player alone may compress time; two may not', async () => {
     assert.equal(welcome.speed, 1);
     assert.equal(welcome.speedLocked, 0);
 
+    // A vote of one is unanimous by definition, so this needs no special case.
     first.send({ type: 'set_speed', speed: 8 });
     const confirmed = await first.next((m) => m.type === 'speed');
     assert.equal(confirmed.speed, 8);
     assert.equal(app.clock.speed, 8);
+    first.close();
+  });
+});
 
-    // A second player joins: the clock is now a shared concern.
+test('in a shared war the clock moves only when everybody agrees', async () => {
+  await withServer(async (app, _httpUrl, wsUrl) => {
+    const first = connect(wsUrl);
+    await first.open();
+    await first.next((m) => m.type === 'welcome');
+
     const second = connect(wsUrl);
     await second.open();
     const joined = await second.next((m) => m.type === 'welcome');
-    assert.equal(joined.speedLocked, 1, 'the newcomer should be told it is locked');
+    assert.equal(joined.speedLocked, 1, 'the newcomer should be told the clock is shared');
 
-    second.send({ type: 'set_speed', speed: 1 });
-    const refused = await second.next((m) => m.type === 'rejected');
-    assert.match(refused.reason, /needs a vote/);
-    assert.equal(app.clock.speed, 8, 'the refused change must not have landed');
+    // One voice is not enough - and the table is told where the vote stands.
+    second.send({ type: 'set_speed', speed: 4 });
+    const standing = await first.next((m) => m.type === 'vote');
+    assert.equal(standing.speed, 4);
+    assert.equal(standing.agreed, 1);
+    assert.equal(standing.players, 2);
+    assert.equal(app.clock.speed, 1, 'one vote moved the clock');
+
+    // The other agrees, and it carries.
+    first.send({ type: 'set_speed', speed: 4 });
+    const carried = await second.next((m) => m.type === 'speed');
+    assert.equal(carried.speed, 4);
+    assert.equal(app.clock.speed, 4);
+
+    // And the slate is clean for the next one. Matched on the cleared value
+    // rather than on "the next vote message": the inbox still holds the one
+    // that carried.
+    const cleared = await second.next((m) => m.type === 'vote' && m.speed === -1);
+    assert.equal(cleared.agreed, 0);
 
     first.close();
     second.close();
+  });
+});
+
+test('a vote everybody but one agreed on carries when that one leaves', async () => {
+  await withServer(async (app, _httpUrl, wsUrl) => {
+    const first = connect(wsUrl);
+    await first.open();
+    await first.next((m) => m.type === 'welcome');
+    const second = connect(wsUrl);
+    await second.open();
+    await second.next((m) => m.type === 'welcome');
+
+    first.send({ type: 'set_speed', speed: 16 });
+    await second.next((m) => m.type === 'vote');
+    assert.equal(app.clock.speed, 1);
+
+    // The seat that never voted goes. What is left is unanimous.
+    second.close();
+    const carried = await first.next((m) => m.type === 'speed');
+    assert.equal(carried.speed, 16);
+    assert.equal(app.clock.speed, 16);
+    first.close();
   });
 });
 

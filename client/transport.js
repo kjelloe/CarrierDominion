@@ -87,6 +87,7 @@ function createWsTransport(url) {
         if (message.type === 'welcome') handlers.onWelcome(message);
         else if (message.type === 'snapshot') handlers.onSnapshot(message);
         else if (message.type === 'speed') handlers.onSpeed(message.speed);
+        else if (message.type === 'vote') handlers.onVote(message);
         else if (message.type === 'rejected') handlers.onRejected(message.reason);
       });
       socket.addEventListener('close', () => handlers.onClosed('disconnected'));
