@@ -18,7 +18,7 @@ import { WebSocketServer } from 'ws';
 
 import { createGame, enqueueCommand, stepGame, latestSnapshot } from '../engine/game.js';
 import { checkAuthority } from '../engine/authority.js';
-import { createClock, startClock, stopClock } from './clock.js';
+import { createClock, isSpeed, setClockSpeed, startClock, stopClock } from './clock.js';
 import { serveStatic } from './static.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -30,6 +30,7 @@ function createApp(options) {
   const app = {
     rules: rules,
     seed: seed,
+    speed: isSpeed(options.speed) ? options.speed : 1,
     game: createGame(seed, rules),
     seats: [],
     startedAtMs: Date.now(),
@@ -55,6 +56,12 @@ function createApp(options) {
       if (!taken.includes(t)) return t;
     }
     return -1;
+  }
+
+  function playerSeats() {
+    let count = 0;
+    for (const seat of app.seats) if (seat.team !== -1) count += 1;
+    return count;
   }
 
   function viewFor(seat, snapshot) {
@@ -84,6 +91,7 @@ function createApp(options) {
       stateHash: snapshot === -1 ? '' : snapshot.stateHash,
       rulesHash: app.game.state.rulesHash,
       seats: app.seats.length,
+      speed: app.clock === 0 ? app.speed : app.clock.speed,
       uptimeS: Math.floor((Date.now() - app.startedAtMs) / 1000),
       rssMb: Math.round(process.memoryUsage().rss / 1048576),
     };
@@ -127,6 +135,8 @@ function createApp(options) {
       tickHz: rules.rules.tickHz,
       rulesHash: app.game.state.rulesHash,
       spectator: seat.team === -1,
+      speed: app.clock.speed,
+      speedLocked: playerSeats() > 1 ? 1 : 0,
     });
     const snapshot = latestSnapshot(app.game);
     if (snapshot !== -1) {
@@ -144,6 +154,22 @@ function createApp(options) {
         message = JSON.parse(raw.toString());
       } catch {
         send(socket, { type: 'rejected', reason: 'malformed json' });
+        return;
+      }
+      if (message !== null && typeof message === 'object' && message.type === 'set_speed') {
+        // Time compression is a table decision, not a private one. One player
+        // alone may run the clock as fast as they like; the moment there are
+        // two, it takes a vote - and the vote is a later slice, so for now the
+        // answer is a clear no rather than a silent last-writer-wins.
+        if (playerSeats() > 1) {
+          send(socket, { type: 'rejected', reason: 'changing speed in a shared war needs a vote' });
+          return;
+        }
+        if (!setClockSpeed(app.clock, message.speed)) {
+          send(socket, { type: 'rejected', reason: 'no such speed' });
+          return;
+        }
+        for (const other of app.seats) send(other.socket, { type: 'speed', speed: app.clock.speed });
         return;
       }
       if (message === null || typeof message !== 'object' || message.type !== 'command') {
@@ -166,7 +192,7 @@ function createApp(options) {
     socket.on('error', drop);
   });
 
-  app.clock = createClock(rules.rules.msPerTick, () => broadcast(stepGame(app.game)));
+  app.clock = createClock(rules.rules.msPerTick, () => broadcast(stepGame(app.game)), app.speed);
 
   app.listen = function listen(port, host) {
     return new Promise((resolve) => {

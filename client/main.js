@@ -8,12 +8,16 @@
 //   ?mode=lan    connect to the authoritative server over ws
 //   ?team=1      take the other seat in solo play
 //   ?graphics=low|medium|high   override the auto-detected preset
+//   ?speed=0|1|2|4|8|16         start compressed (0 starts paused)
+//   ?lang=en|no                 override the browser's language
 
 import { fetchRules } from './rules.js';
 import { createLocalTransport, createWsTransport } from './transport.js';
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
 import { createScene, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
+import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
+import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.js';
 import {
   createHud,
   setHud,
@@ -28,6 +32,12 @@ import {
 const params = new URLSearchParams(window.location.search);
 const MODE = params.get('mode') === 'lan' ? 'lan' : 'solo';
 const SEAT = Number(params.get('team') ?? 0);
+// `?speed=0` is a legitimate request to start paused, and Number(null) is 0 -
+// so an ABSENT parameter has to be distinguished from a zero one, or every
+// war without a query string starts frozen.
+const START_SPEED = params.has('speed') && isSpeed(Number(params.get('speed')))
+  ? Number(params.get('speed'))
+  : 1;
 const THROTTLE_STEP = 10;
 
 const KIND_MANTA = 0;
@@ -46,6 +56,9 @@ const state = {
   selectedUnitId: -1,
   piloting: false,
   podBuildTicks: 1200,
+  speed: START_SPEED,
+  speedLocked: false,
+  t: (key) => key,
   transport: undefined,
   scene3d: undefined,
   hud: undefined,
@@ -168,20 +181,42 @@ function nearestNode(unit) {
 function deployPod() {
   const unit = selectedUnit();
   if (unit === undefined || unit.kind !== KIND_WALRUS) {
-    setHud(state.hud, 'status', 'select a Walrus to deploy a pod');
+    setHud(state.hud, 'status', state.t('status.needWalrus'));
     return;
   }
   if (unit.pod !== 1) {
-    setHud(state.hud, 'status', 'no pod aboard - go back to the carrier');
+    setHud(state.hud, 'status', state.t('status.noPod'));
     return;
   }
   const near = nearestNode(unit);
   if (near.island === undefined) return;
   if (near.distance > POD_RANGE_UNITS) {
-    setHud(state.hud, 'status', `${Math.round(near.distance / 256)} m from the nearest node`);
+    setHud(state.hud, 'status', state.t('status.tooFar', {
+      metres: Math.round(near.distance / 256),
+    }));
     return;
   }
   state.transport.send({ type: 'deploy_pod', unitId: unit.id, islandId: near.island.id });
+}
+
+// Compression is a request, not a setting: solo obliges immediately, a shared
+// LAN war refuses until the voting slice exists, and either way the HUD only
+// changes when the transport confirms.
+function requestSpeed(multiplier) {
+  if (!isSpeed(multiplier)) return;
+  if (state.speedLocked) {
+    setHud(state.hud, 'status', state.t('status.speedLocked'));
+    return;
+  }
+  state.transport.setSpeed(multiplier);
+}
+
+function nudgeSpeed(direction) {
+  requestSpeed(stepSpeed(state.speed, direction));
+}
+
+function togglePause() {
+  requestSpeed(state.speed === 0 ? 1 : 0);
 }
 
 function cycleGraphics(currentLevel) {
@@ -209,6 +244,9 @@ function bindInput(level) {
     else if (key === 'r') recallSelected();
     else if (key === 't') togglePiloting();
     else if (key === 'p') deployPod();
+    else if (key === ',') nudgeSpeed(-1);
+    else if (key === '.') nudgeSpeed(1);
+    else if (key === ' ') togglePause();
     else if (key === 'c' || key === 'tab') {
       event.preventDefault();
       state.scene3d.strategic = !state.scene3d.strategic;
@@ -240,11 +278,22 @@ function bindInput(level) {
   });
 }
 
+function onSpeed(multiplier) {
+  state.speed = multiplier;
+  setHud(state.hud, 'speedx', describeSpeed(multiplier));
+}
+
 function onWelcome(message) {
   state.team = message.spectator ? 0 : message.team;
-  setHud(state.hud, 'seat', message.spectator ? 'spectator' : `team ${message.team}`);
+  state.speed = message.speed ?? 1;
+  state.speedLocked = (message.speedLocked ?? 0) === 1;
+  setHud(state.hud, 'speedx', describeSpeed(state.speed)
+    + (state.speedLocked ? ` (${state.t('hud.locked')})` : ''));
+  setHud(state.hud, 'seat', message.spectator
+    ? state.t('seat.spectator')
+    : state.t('seat.team', { team: message.team }));
   setHud(state.hud, 'seed', message.seed);
-  setHud(state.hud, 'status', 'connected');
+  setHud(state.hud, 'status', state.t('status.connected'));
 }
 
 function onSnapshot(message) {
@@ -270,11 +319,17 @@ function onSnapshot(message) {
 }
 
 function onRejected(reason) {
-  setHud(state.hud, 'status', `rejected: ${reason}`);
+  setHud(state.hud, 'status', state.t('status.rejected', { reason: reason }));
 }
 
+const CLOSE_KEYS = {
+  disconnected: 'status.disconnected',
+  'connection error': 'status.error',
+  closed: 'status.closed',
+};
+
 function onClosed(reason) {
-  setHud(state.hud, 'status', reason);
+  setHud(state.hud, 'status', state.t(CLOSE_KEYS[reason] ?? 'status.disconnected'));
 }
 
 function frame(nowMs) {
@@ -287,16 +342,37 @@ function frame(nowMs) {
   setHud(state.hud, 'tick', state.view.tick);
   setHud(state.hud, 'hash', state.stateHash === '' ? '-' : state.stateHash);
   updateCarrierHud(state.hud, ownCarrierOf(state.view), state.view.params);
-  setHud(state.hud, 'hangar', describeHangar(state.view.units, state.view.team));
-  setHud(state.hud, 'unit', describeUnit(selectedUnit(), state.view.params));
-  setHud(state.hud, 'islands', describeIslands(state.view));
-  setHud(state.hud, 'stores', describeStores(state.view));
+  setHud(state.hud, 'hangar', describeHangar(state.t, state.view.units, state.view.team));
+  setHud(state.hud, 'unit', describeUnit(state.t, selectedUnit(), state.view.params));
+  setHud(state.hud, 'islands', describeIslands(state.t, state.view));
+  setHud(state.hud, 'stores', describeStores(state.t, state.view));
+}
+
+function renderHelp(t) {
+  const help = document.getElementById('help');
+  help.textContent = '';
+  for (const key of ['help.helm', 'help.units', 'help.orders', 'help.time']) {
+    const line = document.createElement('div');
+    line.textContent = t(key);
+    help.append(line);
+  }
+  const gpu = document.createElement('div');
+  gpu.id = 'gpu';
+  gpu.textContent = t('gpu.detecting');
+  help.append(gpu);
 }
 
 async function main() {
+  const lang = pickLang(params.get('lang'), window.navigator.language);
+  const catalog = await fetchCatalog(lang);
+  const fallback = lang === DEFAULT_LANG ? undefined : await fetchCatalog(DEFAULT_LANG);
+  state.t = createTranslator(catalog, fallback);
+  document.documentElement.lang = lang;
+
   const hudRoot = document.getElementById('hud');
-  state.hud = createHud(hudRoot);
-  setHud(state.hud, 'status', 'loading rules');
+  state.hud = createHud(hudRoot, state.t);
+  renderHelp(state.t);
+  setHud(state.hud, 'status', state.t('status.loading'));
 
   const rules = await fetchRules();
   state.podBuildTicks = rules.rules.podBuildTicks;
@@ -317,13 +393,14 @@ async function main() {
     state.transport = createWsTransport(`${scheme}://${window.location.host}`);
   } else {
     const seed = Number(params.get('seed') ?? 20260818);
-    state.transport = createLocalTransport(seed, rules, SEAT);
+    state.transport = createLocalTransport(seed, rules, SEAT, START_SPEED);
   }
-  setHud(state.hud, 'transport', MODE === 'lan' ? 'ws (authoritative)' : 'local (solo)');
+  setHud(state.hud, 'transport', state.t(MODE === 'lan' ? 'transport.ws' : 'transport.local'));
   bindInput(resolved.level);
   state.transport.connect({
     onWelcome: onWelcome,
     onSnapshot: onSnapshot,
+    onSpeed: onSpeed,
     onRejected: onRejected,
     onClosed: onClosed,
   });
@@ -332,6 +409,6 @@ async function main() {
 
 main().catch((error) => {
   const hudRoot = document.getElementById('hud');
-  if (hudRoot) hudRoot.textContent = `startup failed: ${error.message}`;
+  if (hudRoot) hudRoot.textContent = state.t('status.startFailed', { reason: error.message });
   throw error;
 });

@@ -1,22 +1,28 @@
 // client/hud.js - the dev overlay.
 //
-// Deliberately text-only for Milestone 0: the numbers that tell you whether the
-// simulation is healthy (tick, state hash, seed) matter more right now than a
-// styled instrument panel. The hash is here so a desync is visible the moment
-// it happens rather than three minutes later.
+// Deliberately text-only for now: the numbers that tell you whether the
+// simulation is healthy (tick, state hash, seed) matter more than a styled
+// instrument panel. The hash is here so a desync is visible the moment it
+// happens rather than three minutes later.
+//
+// Every string goes through the translator. That is not ceremony for a debug
+// overlay - it is how the catalogues stay honest while the HUD is still small
+// enough to fix cheaply.
 
-function createHud(root) {
+const HUD_ROWS = [
+  'transport', 'seat', 'tick', 'speedx', 'hash', 'seed', 'graphics',
+  'fps', 'speed', 'throttle', 'heading', 'fuel', 'stores', 'hangar',
+  'unit', 'islands', 'status',
+];
+
+function createHud(root, t) {
   const lines = {};
-  const order = [
-    'transport', 'seat', 'tick', 'hash', 'seed', 'graphics',
-    'fps', 'speed', 'throttle', 'heading', 'fuel', 'stores', 'hangar', 'unit', 'islands', 'status',
-  ];
-  for (const key of order) {
+  for (const key of HUD_ROWS) {
     const row = document.createElement('div');
     row.className = 'hud-row';
     const label = document.createElement('span');
     label.className = 'hud-label';
-    label.textContent = key;
+    label.textContent = t(`hud.${key}`);
     const value = document.createElement('span');
     value.className = 'hud-value';
     value.id = `hud-${key}`;
@@ -25,7 +31,7 @@ function createHud(root) {
     root.append(row);
     lines[key] = value;
   }
-  return { lines: lines, frames: 0, lastFpsMs: 0, fps: 0 };
+  return { lines: lines, frames: 0, lastFpsMs: 0, fps: 0, t: t };
 }
 
 function setHud(hud, key, text) {
@@ -56,25 +62,28 @@ function degreesFrom(bam) {
 }
 
 function updateCarrierHud(hud, carrier, params) {
+  const t = hud.t;
   if (carrier === undefined) {
-    setHud(hud, 'speed', 'no hull');
+    setHud(hud, 'speed', '-');
     return;
   }
-  setHud(hud, 'speed', `${knotsFrom(carrier.speed, params.unitsPerMetre, params.tickHz)} kn`);
-  setHud(hud, 'throttle', `${carrier.throttle}%${carrier.grounded === 1 ? ' AGROUND' : ''}`);
-  setHud(hud, 'heading', `${degreesFrom(carrier.heading)} deg`);
+  const knots = knotsFrom(carrier.speed, params.unitsPerMetre, params.tickHz);
+  setHud(hud, 'speed', `${knots} ${t('hud.knots')}`);
+  const aground = carrier.grounded === 1 ? ` ${t('hud.aground')}` : '';
+  setHud(hud, 'throttle', `${carrier.throttle}%${aground}`);
+  setHud(hud, 'heading', `${degreesFrom(carrier.heading)} ${t('hud.degrees')}`);
   const percent = carrier.fuelCapacity > 0
     ? Math.round((carrier.fuel * 100) / carrier.fuelCapacity)
     : 0;
-  setHud(hud, 'fuel', `${percent}%`);
+  const hull = carrier.maxHull > 0 ? Math.round((carrier.hull * 100) / carrier.maxHull) : 0;
+  setHud(hud, 'fuel', `${percent}% / hull ${hull}%`);
 }
 
-const KIND_NAMES = ['Manta', 'Walrus'];
-const STATE_NAMES = ['stowed', 'active', 'returning', 'lost'];
-const ORDER_NAMES = ['holding', 'moving', 'returning'];
+const KIND_KEYS = ['unit.manta', 'unit.walrus'];
+const STATE_KEYS = ['unit.stowed', 'unit.holding', 'unit.returning', 'unit.lost'];
+const ORDER_KEYS = ['unit.holding', 'unit.moving', 'unit.returning'];
 
-// "3 Manta / 2 Walrus" - what is still on the deck and launchable.
-function describeHangar(units, team) {
+function describeHangar(t, units, team) {
   let mantas = 0;
   let walruses = 0;
   for (const unit of units) {
@@ -82,53 +91,51 @@ function describeHangar(units, team) {
     if (unit.kind === 0) mantas += 1;
     else walruses += 1;
   }
-  return `${mantas} Manta / ${walruses} Walrus`;
+  return t('hangar.tally', { mantas: mantas, walruses: walruses });
 }
 
-function describeUnit(unit, params) {
-  if (unit === undefined) return 'none selected';
-  const kind = KIND_NAMES[unit.kind] ?? 'unit';
+function describeUnit(t, unit, params) {
+  if (unit === undefined) return t('unit.none');
+  const kind = t(KIND_KEYS[unit.kind] ?? 'unit.none');
   const situation = unit.control !== -1
-    ? 'PILOTED'
-    : (ORDER_NAMES[unit.order] ?? STATE_NAMES[unit.state] ?? '');
-  const fuel = unit.fuelCapacity > 0
-    ? Math.round((unit.fuel * 100) / unit.fuelCapacity)
-    : 0;
+    ? t('unit.piloted')
+    : t(ORDER_KEYS[unit.order] ?? STATE_KEYS[unit.state] ?? 'unit.holding');
+  const fuel = unit.fuelCapacity > 0 ? Math.round((unit.fuel * 100) / unit.fuelCapacity) : 0;
   const speed = knotsFrom(unit.speed, params.unitsPerMetre, params.tickHz);
-  return `#${unit.id} ${kind} ${situation} ${speed}kn ${fuel}%`;
+  const pod = unit.kind === 1 && unit.pod === 1 ? ' [pod]' : '';
+  return `#${unit.id} ${kind} ${situation} ${speed}${t('hud.knots')} ${fuel}%${pod}`;
 }
 
-function describeStores(view) {
+function describeStores(t, view) {
   const r = view.resources;
   return `f ${r.fuel} / m ${r.materials} / o ${r.ordnance}`;
 }
 
-const WIN_REASONS = ['', 'held the archipelago', 'sank the enemy carrier'];
+const WIN_KEYS = ['war.unknown', 'war.byIslands', 'war.byCarrier'];
 
-// "3 of 8 held - war over: you won (sank the enemy carrier)"
-function describeIslands(view) {
+function describeIslands(t, view) {
   let mine = 0;
   let theirs = 0;
   for (const island of view.islands) {
     if (island.owner === view.team) mine += 1;
     else if (island.owner >= 0) theirs += 1;
   }
-  const tally = `${mine} of ${view.islands.length} (enemy ${theirs})`;
+  const tally = t('islands.tally', { mine: mine, total: view.islands.length, theirs: theirs });
   if (view.phase !== 1) return tally;
-  const outcome = view.winner === view.team ? 'YOU WON' : 'YOU LOST';
-  return `${tally} - ${outcome}, ${WIN_REASONS[view.winReason] ?? 'somehow'}`;
+  const outcome = view.winner === view.team ? t('war.won') : t('war.lost');
+  return `${tally} - ${outcome}, ${t(WIN_KEYS[view.winReason] ?? 'war.unknown')}`;
 }
 
 export {
-  describeStores,
-  describeIslands,
+  HUD_ROWS,
   createHud,
   setHud,
   tickFps,
   updateCarrierHud,
   describeHangar,
   describeUnit,
+  describeStores,
+  describeIslands,
   knotsFrom,
   degreesFrom,
-  KIND_NAMES,
 };

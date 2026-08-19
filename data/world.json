@@ -30,5 +30,6 @@
   ],
   "carrierStartOffsetMetres": 2400,
   "coastWarpPermil": 260,
-  "coastWarpCellPermil": 900
+  "coastWarpCellPermil": 900,
+  "baseIslandCount": 8
 }

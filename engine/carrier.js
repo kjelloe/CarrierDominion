@@ -1,14 +1,25 @@
 // engine/carrier.js - helm handling and carrier movement integration.
 //
-// Order per tick, and it matters for the hash: turn, then accelerate, then
-// translate, then test the seabed, then burn fuel. A carrier that grounds
-// keeps its heading but loses its way on, and only the translation is undone -
-// so backing off a shoal works by reversing the helm, not by teleporting.
+// Order per tick, and it matters for the hash: turn, then work out how much
+// water is under the keel, then accelerate against that limit, then translate,
+// then test the bow, then burn fuel, then take grounding damage.
+//
+// Shoal behaviour has three stages, which is the whole point of the shallow
+// shelf around every island: in shoaling water the ship SLOWS, on the shelf
+// itself it HALTS, and held there it takes hull damage until it is steered
+// clear. Backing off works by reversing the helm, never by teleporting.
 
 import { clampI, floorDiv, mulDiv, stepToward, turnToward, wrapAngle } from '../shared/fixed.js';
 import { mulCos, mulSin } from '../shared/trig.js';
 import { HEADING_MANUAL } from './commands.js';
-import { EVT_CARRIER_GROUNDED, EVT_FUEL_EMPTY, EVT_FUEL_RESTORED, pushEvent } from './events.js';
+import {
+  EVT_CARRIER_DAMAGED,
+  EVT_CARRIER_GROUNDED,
+  EVT_CARRIER_SUNK,
+  EVT_FUEL_EMPTY,
+  EVT_FUEL_RESTORED,
+  pushEvent,
+} from './events.js';
 import { worldHeightAt } from './heightmap.js';
 
 // The keel clears terrain shallower than this; -draught is the waterline depth
@@ -17,12 +28,28 @@ function grounds(islands, x, y, draught) {
   return worldHeightAt(islands, x, y) > -draught;
 }
 
+// Water under the keel at a point, in fixed units. Negative means the ground
+// is already above the keel line.
+function clearanceAt(islands, x, y, draught) {
+  return -worldHeightAt(islands, x, y) - draught;
+}
+
 function steer(carrier) {
   if (carrier.headingHold !== HEADING_MANUAL) {
     return turnToward(carrier.heading, carrier.headingHold, carrier.turnRate);
   }
   if (carrier.rudder === 0) return carrier.heading;
   return wrapAngle(carrier.heading + carrier.rudder * carrier.turnRate);
+}
+
+// A master who feels the bottom coming up eases the throttle. Inside the
+// shallow band the ship's top speed falls off linearly with the water left
+// under the keel, so shoaling water is felt before it is hit.
+function shoalLimit(carrier, clearance) {
+  if (clearance >= carrier.shallowBand) return carrier.maxSpeed;
+  if (clearance <= 0) return 0;
+  const limited = mulDiv(carrier.maxSpeed, clearance, carrier.shallowBand);
+  return limited < carrier.slowestSpeed ? carrier.slowestSpeed : limited;
 }
 
 function burnFuel(carrier) {
@@ -35,11 +62,34 @@ function burnFuel(carrier) {
   if (carrier.fuel < 0) carrier.fuel = 0;
 }
 
+// Sitting on a shelf works the hull. Damage accrues per 100 ticks, like fuel,
+// so the rate can be a fraction of a hull point.
+function grindHull(carrier, events) {
+  const accum = carrier.groundAccum + carrier.groundDamage;
+  const taken = floorDiv(accum, 100);
+  carrier.groundAccum = accum - taken * 100;
+  if (taken <= 0) return;
+  const before = carrier.hull;
+  carrier.hull = carrier.hull - taken;
+  if (carrier.hull < 0) carrier.hull = 0;
+  pushEvent(events, EVT_CARRIER_DAMAGED, carrier.id, carrier.team, before - carrier.hull);
+  if (carrier.hull === 0 && before > 0) {
+    pushEvent(events, EVT_CARRIER_SUNK, carrier.id, carrier.team, 0);
+  }
+}
+
 function stepCarrier(carrier, islands, sizeUnits, events) {
+  if (carrier.hull <= 0) {
+    carrier.speed = 0;
+    return;
+  }
   const hadFuel = carrier.fuel > 0;
   carrier.heading = steer(carrier);
 
+  const clearance = clearanceAt(islands, carrier.x, carrier.y, carrier.draught);
   let targetSpeed = mulDiv(carrier.maxSpeed, carrier.throttle, 100);
+  const limit = shoalLimit(carrier, clearance);
+  if (targetSpeed > limit) targetSpeed = limit;
   if (!hadFuel) targetSpeed = 0;
   carrier.speed = stepToward(carrier.speed, targetSpeed, carrier.accel);
 
@@ -57,18 +107,21 @@ function stepCarrier(carrier, islands, sizeUnits, events) {
   if (blocked) {
     if (carrier.grounded === 0) {
       carrier.grounded = 1;
-      pushEvent(events, EVT_CARRIER_GROUNDED, carrier.id, 0, 0);
+      carrier.groundAccum = 0;
+      pushEvent(events, EVT_CARRIER_GROUNDED, carrier.id, carrier.team, 0);
     }
     carrier.speed = 0;
+    grindHull(carrier, events);
   } else {
     carrier.grounded = 0;
+    carrier.groundAccum = 0;
     carrier.x = nextX;
     carrier.y = nextY;
   }
 
   burnFuel(carrier);
-  if (hadFuel && carrier.fuel === 0) pushEvent(events, EVT_FUEL_EMPTY, carrier.id, 0, 0);
-  if (!hadFuel && carrier.fuel > 0) pushEvent(events, EVT_FUEL_RESTORED, carrier.id, 0, 0);
+  if (hadFuel && carrier.fuel === 0) pushEvent(events, EVT_FUEL_EMPTY, carrier.id, carrier.team, 0);
+  if (!hadFuel && carrier.fuel > 0) pushEvent(events, EVT_FUEL_RESTORED, carrier.id, carrier.team, 0);
 }
 
 function stepCarriers(state) {
@@ -77,4 +130,4 @@ function stepCarriers(state) {
   }
 }
 
-export { stepCarriers, stepCarrier, grounds };
+export { stepCarriers, stepCarrier, grounds, clearanceAt, shoalLimit };

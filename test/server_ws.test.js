@@ -180,3 +180,60 @@ test('rubbish on the wire is answered, not crashed on', async () => {
     client.close();
   });
 });
+
+test('one player alone may compress time; two may not', async () => {
+  await withServer(async (app, _httpUrl, wsUrl) => {
+    const first = connect(wsUrl);
+    await first.open();
+    const welcome = await first.next((m) => m.type === 'welcome');
+    assert.equal(welcome.speed, 1);
+    assert.equal(welcome.speedLocked, 0);
+
+    first.send({ type: 'set_speed', speed: 8 });
+    const confirmed = await first.next((m) => m.type === 'speed');
+    assert.equal(confirmed.speed, 8);
+    assert.equal(app.clock.speed, 8);
+
+    // A second player joins: the clock is now a shared concern.
+    const second = connect(wsUrl);
+    await second.open();
+    const joined = await second.next((m) => m.type === 'welcome');
+    assert.equal(joined.speedLocked, 1, 'the newcomer should be told it is locked');
+
+    second.send({ type: 'set_speed', speed: 1 });
+    const refused = await second.next((m) => m.type === 'rejected');
+    assert.match(refused.reason, /needs a vote/);
+    assert.equal(app.clock.speed, 8, 'the refused change must not have landed');
+
+    first.close();
+    second.close();
+  });
+});
+
+test('a speed off the ladder is refused', async () => {
+  await withServer(async (app, _httpUrl, wsUrl) => {
+    const client = connect(wsUrl);
+    await client.open();
+    await client.next((m) => m.type === 'welcome');
+    client.send({ type: 'set_speed', speed: 3 });
+    const refused = await client.next((m) => m.type === 'rejected');
+    assert.match(refused.reason, /no such speed/);
+    assert.equal(app.clock.speed, 1);
+    client.close();
+  });
+});
+
+test('a compressed server really does tick faster', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, speed: 16 });
+  await app.listen(0, '127.0.0.1');
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    // 400 ms at x16 is ~128 ticks; a x1 server would manage about 8. The
+    // assertion is deliberately loose - this is about the multiplier being
+    // applied at all, not about timer precision on a loaded machine.
+    assert.ok(app.game.state.tick > 40, `only reached tick ${app.game.state.tick}`);
+    assert.equal(app.health().speed, 16);
+  } finally {
+    await app.close();
+  }
+});

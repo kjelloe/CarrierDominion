@@ -35,13 +35,17 @@ function accrueIncome(state) {
 }
 
 // The nearest island this carrier's team owns, within resupply range, or -1.
+//
+// Range is measured from the SHORE, not the centre. Measured from the centre
+// it was unreachable: a 1 km island with a shallow shelf grounds a carrier
+// long before it gets within 900 m of the middle, so the whole mechanism could
+// never fire. The test that caught it was checking something else entirely.
 function resupplyPointFor(state, carrier) {
   for (let i = 0; i < state.islands.length; i++) {
     const island = state.islands[i];
     if (island.owner !== carrier.team) continue;
-    if (dist2D(carrier.x, carrier.y, island.x, island.y) <= state.economy.resupplyRange) {
-      return island;
-    }
+    const offshore = dist2D(carrier.x, carrier.y, island.x, island.y) - island.radius;
+    if (offshore <= state.economy.resupplyRange) return island;
   }
   return -1;
 }

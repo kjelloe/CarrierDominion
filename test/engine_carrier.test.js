@@ -6,7 +6,8 @@ import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { dist2D, mulDiv } from '../shared/fixed.js';
 import { worldHeightAt } from '../engine/heightmap.js';
-import { EVT_CARRIER_GROUNDED } from '../engine/events.js';
+import { clearanceAt, shoalLimit } from '../engine/carrier.js';
+import { EVT_CARRIER_DAMAGED, EVT_CARRIER_GROUNDED, EVT_CARRIER_SUNK } from '../engine/events.js';
 import { canonicalize } from '../shared/statehash.js';
 
 // No AI: several of these tests use the second carrier as an idle control.
@@ -155,4 +156,126 @@ test('the state stays hygienic after a long run', () => {
   state = apply(state, { type: 'set_throttle', carrierId: 1, throttle: 35 });
   state = drive(state, 1000);
   assert.doesNotThrow(() => canonicalize(state));
+});
+
+test('shoaling water slows the ship before it hits anything', () => {
+  let state = createInitialState(SEED, rules);
+  const carrier = state.carriers[0];
+  const island = state.islands[0];
+  // Park it on the shelf, well outside the shoreline but over shallow water.
+  carrier.x = island.x;
+  carrier.y = island.y - island.radius - 40 * 256;
+  carrier.heading = 49152; // pointing away, so nothing blocks the bow
+  state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: 100 });
+  state = drive(state, 300);
+
+  const shoaled = state.carriers[0];
+  assert.equal(shoaled.grounded, 0, 'this test is about slowing, not grounding');
+  assert.ok(shoaled.speed > 0, 'it should still be making way');
+  assert.ok(
+    shoaled.speed < rules.units.carrier.maxSpeedUnitsPerTick,
+    `full speed (${shoaled.speed}) over a shelf`,
+  );
+});
+
+test('deep water imposes no speed limit at all', () => {
+  const state = createInitialState(SEED, rules);
+  const carrier = state.carriers[0];
+  const deep = clearanceAt(state.islands, carrier.x, carrier.y, carrier.draught);
+  assert.ok(deep > carrier.shallowBand, 'the spawn should be in deep water');
+  assert.equal(shoalLimit(carrier, deep), carrier.maxSpeed);
+});
+
+test('the shoal limit falls off with the water under the keel', () => {
+  const carrier = createInitialState(SEED, rules).carriers[0];
+  const band = carrier.shallowBand;
+  assert.equal(shoalLimit(carrier, band), carrier.maxSpeed);
+  assert.ok(shoalLimit(carrier, band / 2) < carrier.maxSpeed);
+  assert.ok(shoalLimit(carrier, band / 2) > shoalLimit(carrier, band / 8));
+  // Never quite zero while there is water: a crawl is still steerage way.
+  assert.equal(shoalLimit(carrier, 1), carrier.slowestSpeed);
+  assert.equal(shoalLimit(carrier, 0), 0);
+});
+
+test('a carrier held aground grinds its hull down, and can be lost', () => {
+  let state = createInitialState(SEED, rules);
+  const carrier = state.carriers[0];
+  const island = state.islands[0];
+  carrier.x = island.x;
+  carrier.y = island.y - island.radius * 2;
+  carrier.heading = 16384;
+  state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: 100 });
+
+  let ticks = 0;
+  while (ticks < 40000 && state.carriers[0].grounded === 0) {
+    state = apply(state, TICK);
+    ticks += 1;
+  }
+  assert.equal(state.carriers[0].grounded, 1, 'never grounded');
+  const hullOnContact = state.carriers[0].hull;
+
+  // Damage lands as whole hull points every seventeenth tick or so, so the
+  // report has to be collected across the run rather than read off the last
+  // tick's event list.
+  let damageReports = 0;
+  for (let i = 0; i < 1000; i++) {
+    state = apply(state, TICK);
+    for (const event of state.events) if (event.code === EVT_CARRIER_DAMAGED) damageReports += 1;
+  }
+  const after = state.carriers[0];
+  assert.ok(after.hull < hullOnContact, 'sitting on a reef cost nothing');
+  const expected = mulDiv(rules.units.carrier.groundedHullPer100Ticks, 1000, 100);
+  assert.ok(
+    Math.abs(hullOnContact - after.hull - expected) <= 1,
+    `lost ${hullOnContact - after.hull}, expected about ${expected}`,
+  );
+  assert.equal(damageReports, expected, 'one report per hull point lost');
+});
+
+test('a hull ground down to nothing sinks, once, and stops moving', () => {
+  let state = createInitialState(SEED, rules);
+  const carrier = state.carriers[0];
+  const island = state.islands[0];
+  carrier.x = island.x;
+  carrier.y = island.y - island.radius * 2;
+  carrier.heading = 16384;
+  carrier.hull = 8;
+  state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: 100 });
+
+  let sinkings = 0;
+  for (let i = 0; i < 40000; i++) {
+    state = apply(state, TICK);
+    for (const event of state.events) if (event.code === EVT_CARRIER_SUNK) sinkings += 1;
+    if (state.carriers[0].hull === 0) break;
+  }
+  assert.equal(state.carriers[0].hull, 0);
+  assert.equal(sinkings, 1, `sank ${sinkings} times`);
+  const restingPlace = { x: state.carriers[0].x, y: state.carriers[0].y };
+  state = drive(state, 200);
+  assert.equal(state.carriers[0].x, restingPlace.x, 'a sunk carrier is still under way');
+  assert.equal(state.carriers[0].speed, 0);
+});
+
+test('clearing the shoal stops the damage', () => {
+  let state = createInitialState(SEED, rules);
+  const carrier = state.carriers[0];
+  const island = state.islands[0];
+  carrier.x = island.x;
+  carrier.y = island.y - island.radius * 2;
+  carrier.heading = 16384;
+  state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: 100 });
+  let ticks = 0;
+  while (ticks < 40000 && state.carriers[0].grounded === 0) {
+    state = apply(state, TICK);
+    ticks += 1;
+  }
+  assert.equal(state.carriers[0].grounded, 1);
+
+  // Come about and steam off the shelf.
+  state = apply(state, { type: 'set_heading', carrierId: 0, heading: 49152 });
+  state = drive(state, 4000);
+  assert.equal(state.carriers[0].grounded, 0, 'never got off');
+  const hull = state.carriers[0].hull;
+  state = drive(state, 1000);
+  assert.equal(state.carriers[0].hull, hull, 'still taking damage in open water');
 });

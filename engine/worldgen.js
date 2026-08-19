@@ -8,9 +8,23 @@
 // Islands are the only terrain record in state. Their surface is a pure
 // function of these integers (engine/heightmap.js), never a stored grid.
 
-import { floorDiv, mulDiv } from '../shared/fixed.js';
+import { floorDiv, isqrt, mulDiv } from '../shared/fixed.js';
 import { deriveSeed, rollBetween, rollRange } from '../shared/prng.js';
 import { pickCommandNode, skirtRadius } from './heightmap.js';
+
+// Island count and ocean size have to move together. At the base spacing eight
+// islands fill about a quarter of the base box; thirty-two in the same box
+// would need near-perfect packing, which dart-throwing cannot reach and which
+// would leave no ocean to cross anyway. Area scales with the count, so the
+// side scales with its square root - 8 islands in 20 km, 32 in 40 km, at
+// identical density.
+function worldSizeMetres(world) {
+  const base = world.baseIslandCount;
+  if (base < 1 || world.islandCount === base) return world.sizeMetres;
+  // isqrt of a Q16 ratio gives a Q8 scale: sqrt(65536) is 256.
+  const scaleQ8 = isqrt(mulDiv(world.islandCount, 65536, base));
+  return mulDiv(world.sizeMetres, scaleQ8, 256);
+}
 
 const KIND_FACTORY = 0;
 const KIND_RESOURCE = 1;
@@ -43,7 +57,7 @@ function clearsExisting(islands, x, y, radius, minSpacing) {
 }
 
 function createIslands(seed, world, unitsPerMetre) {
-  const sizeUnits = world.sizeMetres * unitsPerMetre;
+  const sizeUnits = worldSizeMetres(world) * unitsPerMetre;
   const margin = world.edgeMarginMetres * unitsPerMetre;
   const minSpacing = world.minSpacingMetres * unitsPerMetre;
   const radiusMin = world.islandRadiusMinMetres * unitsPerMetre;
@@ -102,7 +116,7 @@ function createIslands(seed, world, unitsPerMetre) {
 // Team start positions: opposite corners of the playable box, pushed off any
 // island that happens to sit near the corner.
 function startPositions(islands, world, unitsPerMetre, teamCount) {
-  const sizeUnits = world.sizeMetres * unitsPerMetre;
+  const sizeUnits = worldSizeMetres(world) * unitsPerMetre;
   const offset = world.carrierStartOffsetMetres * unitsPerMetre;
   const corners = [
     { x: offset, y: offset },
@@ -140,6 +154,7 @@ function startPositions(islands, world, unitsPerMetre, teamCount) {
 }
 
 export {
+  worldSizeMetres,
   KIND_FACTORY,
   KIND_RESOURCE,
   KIND_RADAR,

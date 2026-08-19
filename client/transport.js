@@ -5,6 +5,7 @@
 //
 //   connect(handlers)  handlers = { onWelcome, onSnapshot, onRejected, onClosed }
 //   send(command)
+//   setSpeed(multiplier)
 //   close()
 //
 // The local driver runs the real engine in this tab and filters its own views
@@ -13,9 +14,10 @@
 
 import { createGame, enqueueCommand, stepGame } from '../engine/game.js';
 import { checkAuthority } from '../engine/authority.js';
+import { isSpeed } from '../shared/speeds.js';
 
-function createLocalTransport(seed, rules, team) {
-  const state = { game: 0, timer: 0, handlers: 0, team: team };
+function createLocalTransport(seed, rules, team, speed) {
+  const state = { game: 0, timer: 0, handlers: 0, team: team, speed: isSpeed(speed) ? speed : 1 };
   return {
     kind: 'local',
     connect(handlers) {
@@ -27,15 +29,27 @@ function createLocalTransport(seed, rules, team) {
         tickHz: rules.rules.tickHz,
         rulesHash: state.game.state.rulesHash,
         spectator: false,
+        speed: state.speed,
+        speedLocked: 0,
       });
+      // Compression is delivered as more ticks per interval, not a shorter
+      // interval: the browser cannot be relied on for a 3 ms timer, and the
+      // ticks themselves must stay identical to a x1 run.
       state.timer = setInterval(() => {
-        const snapshot = stepGame(state.game);
+        let snapshot = -1;
+        for (let i = 0; i < state.speed; i++) snapshot = stepGame(state.game);
+        if (snapshot === -1) return;
         handlers.onSnapshot({
           tick: snapshot.tick,
           stateHash: snapshot.stateHash,
           view: snapshot.views[state.team],
         });
       }, rules.rules.msPerTick);
+    },
+    setSpeed(multiplier) {
+      if (!isSpeed(multiplier)) return;
+      state.speed = multiplier;
+      state.handlers.onSpeed(multiplier);
     },
     send(command) {
       // Solo play has nobody to cheat, but it runs the same authority check so
@@ -72,6 +86,7 @@ function createWsTransport(url) {
         }
         if (message.type === 'welcome') handlers.onWelcome(message);
         else if (message.type === 'snapshot') handlers.onSnapshot(message);
+        else if (message.type === 'speed') handlers.onSpeed(message.speed);
         else if (message.type === 'rejected') handlers.onRejected(message.reason);
       });
       socket.addEventListener('close', () => handlers.onClosed('disconnected'));
@@ -80,6 +95,12 @@ function createWsTransport(url) {
     send(command) {
       if (state.socket === 0 || state.socket.readyState !== WebSocket.OPEN) return;
       state.socket.send(JSON.stringify({ type: 'command', command: command }));
+    },
+    // The server decides: alone in the war it obliges, sharing it refuses
+    // until the voting slice exists.
+    setSpeed(multiplier) {
+      if (state.socket === 0 || state.socket.readyState !== WebSocket.OPEN) return;
+      state.socket.send(JSON.stringify({ type: 'set_speed', speed: multiplier }));
     },
     close() {
       if (state.socket !== 0) state.socket.close();

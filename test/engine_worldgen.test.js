@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { loadRules } from '../server/rules.js';
 import { createInitialState } from '../engine/state.js';
-import { createIslands } from '../engine/worldgen.js';
+import { createIslands, worldSizeMetres } from '../engine/worldgen.js';
 import { SEABED_UNITS, islandHeightAt, skirtRadius, worldHeightAt } from '../engine/heightmap.js';
 import { hashState } from '../engine/snapshot.js';
 
@@ -12,7 +12,7 @@ const rules = loadRules();
 // Golden worldgen hash. Moving it means the map for every existing seed
 // changed - re-pin only with a note in dev-log.md saying why.
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = 'fb342b8b352257eb';
+const GOLDEN_WORLD_HASH = 'd28ba7126a580917';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);
@@ -143,4 +143,39 @@ test('carriers start in open water with room to get under way', () => {
 test('the golden world hash has not moved', () => {
   const state = createInitialState(GOLDEN_SEED, rules);
   assert.equal(hashState(state), GOLDEN_WORLD_HASH);
+});
+
+test('the ocean grows with the island count, at constant density', () => {
+  const base = rules.world;
+  assert.equal(worldSizeMetres(base), base.sizeMetres, 'the base count must not be rescaled');
+  // Four times the islands is twice the side: the same islands-per-square-km.
+  const quadrupled = worldSizeMetres({ ...base, islandCount: base.baseIslandCount * 4 });
+  assert.equal(quadrupled, base.sizeMetres * 2);
+  const quartered = worldSizeMetres({ ...base, islandCount: base.baseIslandCount / 2 });
+  assert.ok(quartered < base.sizeMetres && quartered > base.sizeMetres / 2);
+});
+
+test('a 32-island map still places every island', () => {
+  const big = { ...rules.world, islandCount: 32 };
+  for (let seed = 1; seed <= 5; seed++) {
+    const generated = createIslands(seed, big, rules.rules.unitsPerMetre);
+    assert.equal(generated.islands.length, 32, `seed ${seed} came up short`);
+    assert.ok(generated.attempts < big.placementAttempts, `seed ${seed} exhausted its attempts`);
+  }
+});
+
+test('a scaled map is internally consistent: state, worldgen and spawns agree', () => {
+  const scaledRules = { ...rules, world: { ...rules.world, islandCount: 20 } };
+  const state = createInitialState(7, scaledRules);
+  const expected = worldSizeMetres(scaledRules.world) * scaledRules.rules.unitsPerMetre;
+  assert.equal(state.params.sizeUnits, expected);
+  assert.equal(state.islands.length, 20);
+  for (const island of state.islands) {
+    assert.ok(island.x > 0 && island.x < expected, 'island placed outside the scaled ocean');
+    assert.ok(island.y > 0 && island.y < expected);
+  }
+  for (const carrier of state.carriers) {
+    assert.ok(carrier.x > 0 && carrier.x < expected, 'carrier spawned outside the scaled ocean');
+    assert.ok(worldHeightAt(state.islands, carrier.x, carrier.y) < -carrier.draught);
+  }
 });

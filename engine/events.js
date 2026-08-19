@@ -24,6 +24,8 @@ const EVT_POD_LOST = 16; // a = islandId, b = the team whose pod was displaced
 const EVT_ISLAND_CAPTURED = 17; // a = islandId, b = new owner team
 const EVT_WAR_OVER = 18; // a = winning team, b = why (engine/victory.js)
 const EVT_RESUPPLIED = 19; // a = carrierId, b = team, c = islandId
+const EVT_CARRIER_DAMAGED = 20; // a = carrierId, b = team, c = hull points lost
+const EVT_CARRIER_SUNK = 21; // a = carrierId, b = team
 
 function makeEvent(code, a, b, c) {
   return { code: code, a: a, b: b, c: c };
@@ -54,6 +56,8 @@ export {
   EVT_ISLAND_CAPTURED,
   EVT_WAR_OVER,
   EVT_RESUPPLIED,
+  EVT_CARRIER_DAMAGED,
+  EVT_CARRIER_SUNK,
   makeEvent,
   pushEvent,
 };

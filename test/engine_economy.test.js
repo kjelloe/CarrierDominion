@@ -85,7 +85,7 @@ test('a carrier off its own island refuels from the team stores', () => {
   island.owner = 0;
   island.kind = KIND_RESOURCE;
   const carrier = state.carriers[0];
-  carrier.x = island.x + state.economy.resupplyRange - 1000;
+  carrier.x = island.x + island.radius + state.economy.resupplyRange - 1000;
   carrier.y = island.y;
   carrier.fuel = 1000;
   const teamFuelBefore = state.teams[0].fuel;
@@ -107,7 +107,7 @@ test('resupply stops at the tank and at the stores', () => {
   // window - this test is about the two ceilings, not about earning.
   island.kind = KIND_RADAR;
   state.carriers[0].x = island.x;
-  state.carriers[0].y = island.y + state.economy.resupplyRange - 1000;
+  state.carriers[0].y = island.y + island.radius + state.economy.resupplyRange - 1000;
   state.carriers[0].fuel = state.carriers[0].fuelCapacity - 5;
   state.teams[0].fuel = 3;
   state = drive(state, EVERY);
@@ -121,8 +121,11 @@ test('resupply repairs the hull but never past new', () => {
   let state = fresh();
   const island = state.islands[0];
   island.owner = 0;
+  // Offshore, in deep water: parked on the island itself the hull grinds
+  // faster than the yard can patch it, which is correct and not what this
+  // test is about.
   state.carriers[0].x = island.x;
-  state.carriers[0].y = island.y;
+  state.carriers[0].y = island.y + island.radius + state.economy.resupplyRange - 1000;
   state.carriers[0].hull = state.carriers[0].maxHull - 2;
   state = drive(state, EVERY);
   assert.equal(state.carriers[0].hull, state.carriers[0].maxHull);
@@ -133,7 +136,7 @@ test('resupply repairs the hull but never past new', () => {
 test('a carrier far from home, or off an enemy island, gets nothing', () => {
   let state = fresh();
   state.islands[0].owner = 1;
-  state.carriers[0].x = state.islands[0].x;
+  state.carriers[0].x = state.islands[0].x + state.islands[0].radius + 200;
   state.carriers[0].y = state.islands[0].y;
   state.carriers[0].fuel = 10;
   state = drive(state, EVERY);

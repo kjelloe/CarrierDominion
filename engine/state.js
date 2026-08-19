@@ -13,7 +13,7 @@ import { HEADING_MANUAL } from './commands.js';
 import { copyUnit, createManta, createWalrus } from './units.js';
 import { copyBrain, createBrain } from './ai_carrier.js';
 import { copyEconomy, createEconomy } from './economy.js';
-import { createIslands, startPositions } from './worldgen.js';
+import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
 
 const PHASE_RUNNING = 0;
 const PHASE_OVER = 1;
@@ -55,11 +55,15 @@ function copyCarrier(carrier) {
     maxHull: carrier.maxHull,
     fuel: carrier.fuel,
     grounded: carrier.grounded,
+    groundAccum: carrier.groundAccum,
     fuelAccum: carrier.fuelAccum,
     maxSpeed: carrier.maxSpeed,
     accel: carrier.accel,
     turnRate: carrier.turnRate,
     draught: carrier.draught,
+    shallowBand: carrier.shallowBand,
+    slowestSpeed: carrier.slowestSpeed,
+    groundDamage: carrier.groundDamage,
     lookahead: carrier.lookahead,
     radar: carrier.radar,
     fuelCapacity: carrier.fuelCapacity,
@@ -139,11 +143,15 @@ function createCarrier(id, team, position, carrierRules, unitsPerMetre) {
     maxHull: carrierRules.hull,
     fuel: carrierRules.fuelCapacity,
     grounded: 0,
+    groundAccum: 0,
     fuelAccum: 0,
     maxSpeed: carrierRules.maxSpeedUnitsPerTick,
     accel: carrierRules.accelUnitsPerTickSq,
     turnRate: carrierRules.turnRateBamPerTick,
     draught: carrierRules.draughtMetres * unitsPerMetre,
+    shallowBand: carrierRules.shallowBandMetres * unitsPerMetre,
+    slowestSpeed: carrierRules.slowestSpeedUnitsPerTick,
+    groundDamage: carrierRules.groundedHullPer100Ticks,
     lookahead: carrierRules.lookaheadMetres * unitsPerMetre,
     radar: carrierRules.radarRangeMetres * unitsPerMetre,
     fuelCapacity: carrierRules.fuelCapacity,
@@ -218,7 +226,7 @@ function createInitialState(seed, rules) {
     rulesHash: hashState(rules),
     params: {
       unitsPerMetre: unitsPerMetre,
-      sizeUnits: world.sizeMetres * unitsPerMetre,
+      sizeUnits: worldSizeMetres(world) * unitsPerMetre,
       tickHz: base.tickHz,
       deckHeight: rules.units.carrier.deckHeightMetres * unitsPerMetre,
       recoverRange: rules.units.carrier.recoverRangeMetres * unitsPerMetre,
