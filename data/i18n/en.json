@@ -72,5 +72,13 @@
   "hud.weapons": "weapons",
   "weapons.state": "{rounds} rnd / {store} ord - {air} in the air",
   "war.draw": "a draw, both carriers lost",
-  "status.noAmmo": "no rounds left aboard that unit"
+  "status.noAmmo": "no rounds left aboard that unit",
+  "hud.damage": "damage",
+  "damage.none": "no report",
+  "damage.out": "OUT",
+  "section.engines": "eng",
+  "section.hangar": "hgr",
+  "section.bridge": "brg",
+  "section.radar": "rdr",
+  "section.guns": "gun"
 }

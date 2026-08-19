@@ -15,6 +15,7 @@ import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { EVT_SUPPLY_DELIVERED, EVT_SUPPLY_LOADED, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { islandById, teamById } from './economy.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
+import { repairSections } from './damage.js';
 import {
   KIND_LIGHTER,
   ORDER_DELIVER,
@@ -105,16 +106,21 @@ function unloadToCarrier(state, unit, carrier) {
   unit.cargoOrdnance = unit.cargoOrdnance - ordnance;
   carrier.ordnance = carrier.ordnance + ordnance;
   worked = worked + ordnance;
-  // Materials become hull repair on arrival - the yard is wherever the ship is.
-  const damage = carrier.maxHull - carrier.hull;
-  if (damage > 0 && unit.cargoMaterials > 0) {
+  // Materials become repairs on arrival - the yard is wherever the ship is.
+  // Sections come first: a ship that cannot move, see, or fly its aircraft is
+  // in worse trouble than one with dented plating (ruling #19).
+  if (unit.cargoMaterials > 0) {
     const perPoint = state.economy.repairPerMaterial;
-    const affordable = perPoint > 0 ? floorDiv(unit.cargoMaterials, perPoint) : 0;
-    const repair = affordable < damage ? affordable : damage;
-    if (repair > 0) {
-      unit.cargoMaterials = unit.cargoMaterials - repair * perPoint;
-      carrier.hull = carrier.hull + repair;
-      worked = worked + repair;
+    let affordable = perPoint > 0 ? floorDiv(unit.cargoMaterials, perPoint) : 0;
+    if (affordable > 0) {
+      const onSections = repairSections(carrier, affordable);
+      affordable = affordable - onSections;
+      const damage = carrier.maxHull - carrier.hull;
+      const onHull = affordable < damage ? affordable : damage;
+      carrier.hull = carrier.hull + (onHull > 0 ? onHull : 0);
+      const spent = onSections + (onHull > 0 ? onHull : 0);
+      unit.cargoMaterials = unit.cargoMaterials - spent * perPoint;
+      worked = worked + spent;
     }
   }
   return worked;

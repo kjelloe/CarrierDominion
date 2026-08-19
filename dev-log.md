@@ -5,6 +5,78 @@ golden hash and why.
 
 ---
 
+## 2026-08-19 — Rulings #17, #18, #19: supply, the trigger, and damaged sections
+
+227 tests + smoke gate green. Three rulings, three slices, in that order.
+
+### #17 Ordnance is carried, not conjured
+
+Rearming was free, so air power was unlimited and a carrier that emptied its
+600-round magazine was defenceless for the rest of the war — which is literally
+what decided the measured war.
+
+Now the carrier holds an ordnance store (6000, full at start). Rearming a hull
+is a withdrawal: 25 per Manta missile, 1 per gun round, and **partial rearms are
+normal** — you take what there is. Point defence is fed from the same store at
+40 rounds per 100 ticks, because a ship does not teleport shells to the mounts.
+The lighter now carries ordnance alongside fuel and materials, in priority
+order: fuel moves the ship, ordnance keeps it dangerous, materials put it back
+together. The AI calls a run on whichever of fuel or ordnance is emptier.
+
+The withdrawal threshold went from a third of the hull to half. Measured, not
+guessed: with point defence reloading, both sides still died together at a
+third, because a four-Manta wave carries 640 damage against 1000 hull.
+
+### #18 A Manta fires for its pilot
+
+Auto-fire was blanket. It is now the rule only for hulls that defend themselves
+without being asked — a ship's point defence, a Walrus gun. A Manta shoots for
+whoever is flying it: the player (`F`), or the AI agent that launched it, which
+pulls the trigger in `manageStrike`.
+
+Cooling down had to be split from choosing to shoot. They were the same branch,
+so a trigger-fired Manta that was never fired would never have become ready
+again. New command `fire_unit`, routed through the existing ownership check.
+
+Target *selection* stays in the engine — nearest enemy in range this weapon can
+engage — because that is not the decision the ruling was about.
+
+### #19 Damaged sections
+
+`engine/damage.js`. Five sections laid out along the ship, stern to bow:
+engines, hangar, bridge, radar, guns. Where a round lands decides which one
+takes it — the impact is projected onto the ship's own axis and read off in
+fifths of her length — so **the aspect you present to an enemy is a real
+decision**.
+
+A hit costs the general hull its full damage and the section a 60% share, so
+"mechanically wrecked but afloat" and "nearly sunk but still fighting" are
+different states and the player can tell them apart.
+
+| Section | What it costs you |
+|---|---|
+| engines | top speed, down to a 25% floor — a wrecked engine room still limps |
+| bridge | rudder response, floor 30% |
+| radar | detection range, floor 15%; at zero you are blind |
+| hangar | binary: a wrecked hangar deck is a closed one, nothing launches or lands |
+| guns | point defence slows as the mount is chewed up, then stops |
+
+`maxSpeed`, `turnRate` and `radar` are **derived** onto the carrier record from
+untouched base values whenever damage or repair moves, so the helm, the fog
+filter and the AI keep reading them directly and know nothing about sections.
+
+Materials landed by the lighter now repair the worst-damaged section first and
+the plating second — a ship that cannot move, see, or fly its aircraft is in
+worse trouble than one with dents. The HUD gained a damage row
+(`eng OUT hgr 71 brg 93 rdr OUT gun 36`); an enemy contact reports `[]`, because
+what is broken aboard an enemy ship is exactly what you would most like to know.
+
+**Effect on the war:** decisive and faster. AI-vs-AI now resolves at tick
+165,348 (was 233,987), won by sinking, with the loser's sections knocked out
+before its hull ran out.
+
+---
+
 ## 2026-08-19 — Weapons and damage (M1)
 
 210 tests + smoke gate green. The last big hole in Milestone 1: hulls could be

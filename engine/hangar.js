@@ -8,6 +8,7 @@
 import { dist2D } from '../shared/fixed.js';
 import { mulCos, mulSin } from '../shared/trig.js';
 import { rearm } from './weapons.js';
+import { hangarOpen } from './damage.js';
 import {
   KIND_MANTA,
   KIND_WALRUS,
@@ -22,6 +23,11 @@ const LAUNCH_AHEAD_UNITS = 120 * 256; // 120 m clear of the bow
 const LAUNCH_ABEAM_UNITS = 90 * 256; // and off to starboard for a Walrus
 
 function readyToLaunch(state, carrierId, kind) {
+  // A wrecked hangar deck is a closed one: nothing goes up (ruling #19).
+  for (let c = 0; c < state.carriers.length; c++) {
+    const carrier = state.carriers[c];
+    if (carrier.id === carrierId && !hangarOpen(carrier)) return -1;
+  }
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
     if (unit.carrierId !== carrierId) continue;

@@ -11,8 +11,8 @@
 
 const HUD_ROWS = [
   'transport', 'seat', 'tick', 'speedx', 'hash', 'seed', 'graphics',
-  'fps', 'speed', 'throttle', 'heading', 'fuel', 'weapons', 'stores',
-  'hangar', 'unit', 'islands', 'supply', 'status',
+  'fps', 'speed', 'throttle', 'heading', 'fuel', 'damage', 'weapons',
+  'stores', 'hangar', 'unit', 'islands', 'supply', 'status',
 ];
 
 function createHud(root, t) {
@@ -107,6 +107,25 @@ function describeUnit(t, unit, params) {
   return `#${unit.id} ${kind} ${situation} ${speed}${t('hud.knots')} ${fuel}%${ammo}${pod}`;
 }
 
+// The damage report, in the order the sections sit along the ship: stern to
+// bow. A percentage each, and the ones that are gone say so - what is broken
+// matters more than by how much, once it is broken.
+const SECTION_KEYS = [
+  'section.engines', 'section.hangar', 'section.bridge', 'section.radar', 'section.guns',
+];
+
+function describeDamage(t, view) {
+  const carrier = view.carriers.find((c) => c.team === view.team && c.contact === 0);
+  if (carrier === undefined || carrier.sections.length === 0) return t('damage.none');
+  const parts = [];
+  for (const section of carrier.sections) {
+    const percent = section.maxHp > 0 ? Math.round((section.hp * 100) / section.maxHp) : 100;
+    const name = t(SECTION_KEYS[section.id] ?? 'damage.none');
+    parts.push(percent === 0 ? `${name} ${t('damage.out')}` : `${name} ${percent}`);
+  }
+  return parts.join(' ');
+}
+
 // "600 rnd - 3 in the air". Point defence is the number that decides whether a
 // strike gets through, so it belongs next to the hull, not buried in a menu.
 function describeWeapons(t, view) {
@@ -165,6 +184,7 @@ export {
   describeUnit,
   describeStores,
   describeWeapons,
+  describeDamage,
   describeIslands,
   describeSupply,
   knotsFrom,

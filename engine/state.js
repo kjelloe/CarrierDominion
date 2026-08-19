@@ -7,6 +7,7 @@
 //
 // No value in state may be null, undefined, or fractional. Absence is -1.
 
+import { mulDiv } from '../shared/fixed.js';
 import { hashState } from '../shared/statehash.js';
 import { seedRng } from '../shared/prng.js';
 import { HEADING_MANUAL } from './commands.js';
@@ -14,6 +15,7 @@ import { copyUnit, createLighter, createManta, createWalrus } from './units.js';
 import { copyBrain, createBrain } from './ai_carrier.js';
 import { copyEconomy, createEconomy } from './economy.js';
 import { WEAPON_CARRIER, copyShot, copyWeapons, createWeapons } from './weapons.js';
+import { copySections, createSections } from './damage.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
 
 const PHASE_RUNNING = 0;
@@ -80,6 +82,15 @@ function copyCarrier(carrier) {
     ordnanceCapacity: carrier.ordnanceCapacity,
     reloadRate: carrier.reloadRate,
     reloadAccum: carrier.reloadAccum,
+    maxSpeedBase: carrier.maxSpeedBase,
+    turnRateBase: carrier.turnRateBase,
+    radarBase: carrier.radarBase,
+    halfLength: carrier.halfLength,
+    sectionDamagePermil: carrier.sectionDamagePermil,
+    speedFloorPermil: carrier.speedFloorPermil,
+    turnFloorPermil: carrier.turnFloorPermil,
+    radarFloorPermil: carrier.radarFloorPermil,
+    sections: copySections(carrier.sections),
   };
 }
 
@@ -183,6 +194,18 @@ function createCarrier(id, team, position, carrierRules, carrierWeapon, unitsPer
     ordnanceCapacity: carrierRules.ordnanceCapacity,
     reloadRate: carrierRules.reloadRoundsPer100Ticks,
     reloadAccum: 0,
+    // Undamaged capability. maxSpeed, turnRate and radar above are DERIVED
+    // from these and the section health, and are recomputed on every hit and
+    // every repair, so the rest of the engine can keep reading them directly.
+    maxSpeedBase: carrierRules.maxSpeedUnitsPerTick,
+    turnRateBase: carrierRules.turnRateBamPerTick,
+    radarBase: carrierRules.radarRangeMetres * unitsPerMetre,
+    halfLength: mulDiv(carrierRules.lengthMetres * unitsPerMetre, 1, 2),
+    sectionDamagePermil: carrierRules.sectionDamagePermil,
+    speedFloorPermil: carrierRules.speedFloorPermil,
+    turnFloorPermil: carrierRules.turnFloorPermil,
+    radarFloorPermil: carrierRules.radarFloorPermil,
+    sections: createSections(carrierRules),
   };
 }
 

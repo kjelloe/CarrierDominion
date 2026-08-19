@@ -62,6 +62,22 @@ await page.waitForTimeout(600);
 const drawn = await page.evaluate(() => Object.keys(window.__scene3d.shots).length);
 await page.screenshot({ path: join(SHOTS, 'combat-shots.png') });
 
+// The damage report, with the ship in a bad way: sections are engine state, so
+// they are injected the same way the shots were.
+await page.evaluate(() => {
+  const view = window.__lastView;
+  const own = view.carriers.find((c) => c.team === view.team && c.contact === 0);
+  // Fractions of each section's own maximum: engines and radar gone, hangar
+  // and guns hurt, bridge largely intact.
+  const left = [0, 0.71, 0.93, 0, 0.36];
+  for (const section of own.sections) {
+    section.hp = Math.round(section.maxHp * left[section.id]);
+  }
+  own.hull = Math.round(own.maxHull * 0.42);
+});
+await page.waitForTimeout(600);
+await page.screenshot({ path: join(SHOTS, 'combat-damage.png') });
+
 // And they must come off again: the renderer keeps no shot the view dropped.
 await page.evaluate(() => {
   window.__lastView.shots.length = 0;

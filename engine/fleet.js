@@ -21,6 +21,7 @@ import {
   pushEvent,
 } from './events.js';
 import { recoverUnit, withinRecoveryRange } from './hangar.js';
+import { hangarOpen } from './damage.js';
 import { KIND_MANTA, UNIT_ACTIVE, UNIT_RETURNING, findCarrierById } from './units.js';
 
 function stepUnits(state) {
@@ -54,7 +55,8 @@ function stepUnits(state) {
       continue;
     }
     if (outcome === FLIGHT_HOME || outcome === DRIVE_HOME) {
-      if (carrier !== -1 && withinRecoveryRange(unit, carrier, state.params.recoverRange)) {
+      const canLand = carrier !== -1 && hangarOpen(carrier);
+      if (canLand && withinRecoveryRange(unit, carrier, state.params.recoverRange)) {
         recoverUnit(unit, carrier, state.weapons);
         pushEvent(state.events, EVT_UNIT_RECOVERED, unit.id, unit.team, 0);
       }

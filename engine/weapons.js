@@ -23,6 +23,7 @@ import {
   pushEvent,
 } from './events.js';
 import { KIND_MANTA, UNIT_ACTIVE, UNIT_LOST, UNIT_RETURNING } from './units.js';
+import { damageSection, gunCooldown, sectionAt } from './damage.js';
 
 // Where a weapon record lives in state.weapons. The first three are the unit
 // KIND_* values on purpose, so a unit's weapon is state.weapons[unit.kind].
@@ -247,7 +248,13 @@ function fireAll(state) {
     const weapon = state.weapons[WEAPON_CARRIER];
     reloadCarrier(carrier, weapon);
     coolDown(carrier);
-    serveWeapon(state, carrier.team, carrier.x, carrier.y, 0, weapon, carrier);
+    // A chewed-up mount fires slowly and a destroyed one not at all, so the
+    // cooldown the shot leaves behind depends on the state of the guns.
+    const cooldown = gunCooldown(carrier, weapon.cooldown);
+    if (cooldown < 0) continue;
+    if (serveWeapon(state, carrier.team, carrier.x, carrier.y, 0, weapon, carrier) === 1) {
+      carrier.cooldown = cooldown;
+    }
   }
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
@@ -310,7 +317,12 @@ function hitUnit(state, unit, damage) {
   pushEvent(state.events, EVT_UNIT_LOST, unit.id, unit.team, 0);
 }
 
-function hitCarrier(state, carrier, damage) {
+// A hit costs the hull its full damage and the section it landed on a share of
+// it (ruling #19). The two are tracked apart because they are different kinds
+// of trouble: one sinks you, the other stops you doing your job.
+function hitCarrier(state, carrier, damage, x, y) {
+  const section = sectionAt(carrier, x, y);
+  damageSection(carrier, section, mulDiv(damage, carrier.sectionDamagePermil, 1000));
   const before = carrier.hull;
   carrier.hull = carrier.hull - damage;
   if (carrier.hull < 0) carrier.hull = 0;
@@ -363,7 +375,9 @@ function stepShots(state, hitUnitRadius, hitCarrierRadius) {
     const nz = shot.z + shot.climb;
     const hit = findHit(state, shot, nx, ny, nz, hitUnitRadius, hitCarrierRadius);
     if (hit !== -1) {
-      if (hit.kind === TARGET_CARRIER) hitCarrier(state, state.carriers[hit.index], shot.damage);
+      if (hit.kind === TARGET_CARRIER) {
+        hitCarrier(state, state.carriers[hit.index], shot.damage, nx, ny);
+      }
       else hitUnit(state, state.units[hit.index], shot.damage);
       continue;
     }

@@ -12,6 +12,14 @@
 import { distSq2D } from './fixed.js';
 import { teamHoldings } from '../engine/economy.js';
 
+function sectionsView(sections) {
+  const out = [];
+  for (let i = 0; i < sections.length; i++) {
+    out.push({ id: sections[i].id, hp: sections[i].hp, maxHp: sections[i].maxHp });
+  }
+  return out;
+}
+
 function ownCarrierView(carrier) {
   return {
     id: carrier.id,
@@ -34,6 +42,7 @@ function ownCarrierView(carrier) {
     ammo: carrier.ammo,
     ordnance: carrier.ordnance,
     ordnanceCapacity: carrier.ordnanceCapacity,
+    sections: sectionsView(carrier.sections),
     contact: 0,
   };
 }
@@ -60,6 +69,9 @@ function contactView(carrier) {
     ammo: -1,
     ordnance: -1,
     ordnanceCapacity: -1,
+    // What is broken aboard an enemy ship is exactly what you would most like
+    // to know, so a radar contact tells you nothing about it.
+    sections: [],
     contact: 1,
   };
 }

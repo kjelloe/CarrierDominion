@@ -23,7 +23,19 @@
     "groundedHullPer100Ticks": 6,
     "hangarLighters": 2,
     "ordnanceCapacity": 6000,
-    "reloadRoundsPer100Ticks": 40
+    "reloadRoundsPer100Ticks": 40,
+    "lengthMetres": 330,
+    "sections": {
+      "engines": 200,
+      "hangar": 220,
+      "bridge": 150,
+      "radar": 110,
+      "guns": 140
+    },
+    "sectionDamagePermil": 600,
+    "speedFloorPermil": 250,
+    "turnFloorPermil": 300,
+    "radarFloorPermil": 150
   },
   "manta": {
     "hull": 60,

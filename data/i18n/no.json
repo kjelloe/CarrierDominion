@@ -72,5 +72,13 @@
   "hud.weapons": "våpen",
   "weapons.state": "{rounds} skudd / {store} ammo - {air} i lufta",
   "war.draw": "uavgjort, begge hangarskip tapt",
-  "status.noAmmo": "ingen skudd igjen om bord"
+  "status.noAmmo": "ingen skudd igjen om bord",
+  "hud.damage": "skader",
+  "damage.none": "ingen rapport",
+  "damage.out": "UTE",
+  "section.engines": "mask",
+  "section.hangar": "hang",
+  "section.bridge": "bro",
+  "section.radar": "radar",
+  "section.guns": "kanon"
 }
