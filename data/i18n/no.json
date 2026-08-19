@@ -70,7 +70,7 @@
   "status.noOwnedIsland": "du holder ingen øy å gjøre til depot",
   "help.supply": "L forsyningstur - K gjør nærmeste øy til depot",
   "hud.weapons": "våpen",
-  "weapons.state": "{rounds} skudd / {store} ammo - {air} i lufta",
+  "weapons.state": "{weapon} {rounds} - {store} ammo - {air} i lufta",
   "war.draw": "uavgjort, begge hangarskip tapt",
   "status.noAmmo": "ingen skudd igjen om bord",
   "hud.damage": "skader",
@@ -96,5 +96,16 @@
   "score.toCap": "{score} / {cap}",
   "score.toTime": "{score} - {seconds}s igjen",
   "war.byPoints": "på poeng",
-  "war.byTime": "ledet da tiden gikk ut"
+  "war.byTime": "ledet da tiden gikk ut",
+  "weapons.hot": "VARM",
+  "weapon.none": "ubevæpnet",
+  "weapon.laser": "laser",
+  "weapon.cluster": "klasebombe",
+  "weapon.napalm": "napalm",
+  "weapon.missile": "missil",
+  "weapon.cannon": "kanon",
+  "weapon.mine": "mine",
+  "weapon.carrierLaser": "laser",
+  "help.weapons": "V neste våpen - F skyt",
+  "status.overheated": "løpet er for varmt"
 }

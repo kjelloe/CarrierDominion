@@ -18,6 +18,7 @@ import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './dia
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
 import { createScene, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
 import { createBoard, pickSection, renderBoard, updateBoard } from './render/damageboard.js';
+import { nextWeapon } from '../engine/weapons.js';
 import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
 import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.js';
 import { applyStyleToDocument, resolveStyle, styleFor } from './styles.js';
@@ -31,6 +32,7 @@ import {
   describeIslands,
   describeStores,
   describeWeapons,
+  roundsOf,
   describeDamage,
   describeScore,
   sectionPercent,
@@ -234,10 +236,24 @@ function renderDamageBoard(deltaSeconds) {
   });
 }
 
+// Cycle the selected unit's loadout: laser, cluster, napalm, missile for a
+// Manta; cannon and mines for a Walrus.
+function cycleWeapon() {
+  const unit = selectedUnit();
+  if (unit === undefined || unit.arms === undefined || unit.arms.length < 2) return;
+  const next = nextWeapon(unit);
+  if (next === -1) return;
+  state.transport.send({ type: 'select_weapon', unitId: unit.id, weapon: next });
+}
+
 function fireSelected() {
   const unit = selectedUnit();
   if (unit === undefined) return;
-  if (unit.ammo <= 0) {
+  if (unit.overheated === 1) {
+    setHud(state.hud, 'status', state.t('status.overheated'));
+    return;
+  }
+  if (roundsOf(unit) <= 0) {
     setHud(state.hud, 'status', state.t('status.noAmmo'));
     return;
   }
@@ -387,6 +403,7 @@ function bindInput(level) {
     else if (key === 'p') deployPod();
     else if (key === 'f') fireSelected();
     else if (key === 'z') toggleDamageBoard();
+    else if (key === 'v') cycleWeapon();
     else if (key === 'l') toggleSupplyRun();
     else if (key === 'k') nominateDepot();
     else if (key === ',') nudgeSpeed(-1);
@@ -495,7 +512,7 @@ function frame(nowMs) {
   setHud(state.hud, 'islands', describeIslands(state.t, state.view));
   setHud(state.hud, 'score', describeScore(state.t, state.view));
   setHud(state.hud, 'damage', describeDamage(state.t, state.view));
-  setHud(state.hud, 'weapons', describeWeapons(state.t, state.view));
+  setHud(state.hud, 'weapons', describeWeapons(state.t, state.view, selectedUnit()));
   setHud(state.hud, 'stores', describeStores(state.t, state.view));
   setHud(state.hud, 'supply', describeSupply(state.t, state.view));
   renderDamageBoard(deltaSeconds);
@@ -504,7 +521,7 @@ function frame(nowMs) {
 function renderHelp(t) {
   const help = document.getElementById('help');
   help.textContent = '';
-  const lines = ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.damage', 'help.time'];
+  const lines = ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.weapons', 'help.damage', 'help.time'];
   for (const key of lines) {
     const line = document.createElement('div');
     line.textContent = t(key);

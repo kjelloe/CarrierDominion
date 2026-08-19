@@ -14,7 +14,16 @@ import { HEADING_MANUAL } from './commands.js';
 import { copyUnit, createLighter, createManta, createWalrus } from './units.js';
 import { copyBrain, createBrain } from './ai_carrier.js';
 import { copyEconomy, createEconomy } from './economy.js';
-import { WEAPON_CARRIER, copyShot, copyWeapons, createWeapons } from './weapons.js';
+import {
+  LOADOUT_CARRIER,
+  copyArms,
+  copyLoadouts,
+  copyWeapons,
+  createArms,
+  createLoadouts,
+  createWeapons,
+} from './weapons.js';
+import { copyShot } from './shots.js';
 import { copySections, createSections } from './damage.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
 
@@ -76,8 +85,12 @@ function copyCarrier(carrier) {
     fuelCapacity: carrier.fuelCapacity,
     fuelBurnFull: carrier.fuelBurnFull,
     fuelBurnIdle: carrier.fuelBurnIdle,
-    ammo: carrier.ammo,
+    arms: copyArms(carrier.arms),
+    weapon: carrier.weapon,
     cooldown: carrier.cooldown,
+    heat: carrier.heat,
+    heatAccum: carrier.heatAccum,
+    overheated: carrier.overheated,
     ordnance: carrier.ordnance,
     ordnanceCapacity: carrier.ordnanceCapacity,
     reloadRate: carrier.reloadRate,
@@ -160,6 +173,7 @@ function copyState(state) {
       hitRadiusCarrier: state.params.hitRadiusCarrier,
     },
     weapons: copyWeapons(state.weapons),
+    loadouts: copyLoadouts(state.loadouts),
     economy: copyEconomy(state.economy),
     teams: teams,
     carriers: carriers,
@@ -172,7 +186,7 @@ function copyState(state) {
   };
 }
 
-function createCarrier(id, team, position, carrierRules, carrierWeapon, unitsPerMetre) {
+function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
   return {
     id: id,
     team: team,
@@ -202,8 +216,12 @@ function createCarrier(id, team, position, carrierRules, carrierWeapon, unitsPer
     fuelCapacity: carrierRules.fuelCapacity,
     fuelBurnFull: carrierRules.fuelBurnFullPer100Ticks,
     fuelBurnIdle: carrierRules.fuelBurnIdlePer100Ticks,
-    ammo: carrierWeapon.magazine,
+    arms: arms,
+    weapon: arms.length > 0 ? arms[0].w : -1,
     cooldown: 0,
+    heat: 0,
+    heatAccum: 0,
+    overheated: 0,
     ordnance: carrierRules.ordnanceCapacity,
     ordnanceCapacity: carrierRules.ordnanceCapacity,
     reloadRate: carrierRules.reloadRoundsPer100Ticks,
@@ -250,12 +268,18 @@ function createInitialState(seed, rules) {
   }
 
   const weapons = createWeapons(rules.weapons, unitsPerMetre);
+  const loadouts = createLoadouts(rules.weapons);
 
   const carriers = [];
   for (let t = 0; t < base.teamCount; t++) {
-    carriers.push(
-      createCarrier(t, t, starts[t], rules.units.carrier, weapons[WEAPON_CARRIER], unitsPerMetre),
-    );
+    carriers.push(createCarrier(
+      t,
+      t,
+      starts[t],
+      rules.units.carrier,
+      createArms(loadouts[LOADOUT_CARRIER], weapons),
+      unitsPerMetre,
+    ));
   }
   // Team 1 starts in the far corner and looks back across the map.
   for (let i = 1; i < carriers.length; i++) carriers[i].heading = 40960;
@@ -275,6 +299,11 @@ function createInitialState(seed, rules) {
     for (let l = 0; l < rules.units.carrier.hangarLighters; l++) {
       units.push(createLighter(units.length, carrier.team, carrier.id, rules, unitsPerMetre));
     }
+  }
+  // Every hull's magazines, full, from the loadout for its kind.
+  for (let i = 0; i < units.length; i++) {
+    units[i].arms = createArms(loadouts[units[i].kind], weapons);
+    units[i].weapon = units[i].arms.length > 0 ? units[i].arms[0].w : -1;
   }
   for (let i = 0; i < units.length; i++) {
     const carrier = carriers[units[i].carrierId];
@@ -321,6 +350,7 @@ function createInitialState(seed, rules) {
       hitRadiusCarrier: base.hitRadiusCarrierMetres * unitsPerMetre,
     },
     weapons: weapons,
+    loadouts: loadouts,
     economy: createEconomy(rules.economy),
     teams: teams,
     carriers: carriers,

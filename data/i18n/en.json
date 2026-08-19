@@ -70,7 +70,7 @@
   "status.noOwnedIsland": "you hold no island to make a depot of",
   "help.supply": "L supply run - K make the nearest island your depot",
   "hud.weapons": "weapons",
-  "weapons.state": "{rounds} rnd / {store} ord - {air} in the air",
+  "weapons.state": "{weapon} {rounds} - {store} ord - {air} in the air",
   "war.draw": "a draw, both carriers lost",
   "status.noAmmo": "no rounds left aboard that unit",
   "hud.damage": "damage",
@@ -96,5 +96,16 @@
   "score.toCap": "{score} / {cap}",
   "score.toTime": "{score} - {seconds}s left",
   "war.byPoints": "on points",
-  "war.byTime": "ahead when time ran out"
+  "war.byTime": "ahead when time ran out",
+  "weapons.hot": "HOT",
+  "weapon.none": "unarmed",
+  "weapon.laser": "laser",
+  "weapon.cluster": "cluster",
+  "weapon.napalm": "napalm",
+  "weapon.missile": "missile",
+  "weapon.cannon": "cannon",
+  "weapon.mine": "mine",
+  "weapon.carrierLaser": "laser",
+  "help.weapons": "V next weapon - F fire",
+  "status.overheated": "the mount is too hot to fire"
 }

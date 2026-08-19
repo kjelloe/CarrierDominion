@@ -18,6 +18,7 @@ import {
   CMD_SET_HEADING,
   CMD_SET_RUDDER,
   CMD_SET_THROTTLE,
+  CMD_SELECT_WEAPON,
   CMD_SET_REPAIR_PRIORITY,
   CMD_SET_STOCKPILE,
   CMD_SET_SUPPLY_RUN,
@@ -48,7 +49,7 @@ import { stepRepair } from './repair.js';
 import { stepScore } from './score.js';
 import { setPriority } from './damage.js';
 import { stepUnits } from './fleet.js';
-import { fireUnit, stepWeapons } from './weapons.js';
+import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import {
   ORDER_MOVE,
@@ -177,6 +178,15 @@ function applyFire(next, command) {
   return next;
 }
 
+// Weapon select. Free and instant; what it costs is the shot you did not take
+// while you were deciding.
+function applySelectWeapon(next, command) {
+  const unit = findUnit(next, command.unitId);
+  if (unit === -1) return reject(next);
+  if (selectWeapon(unit, command.weapon) !== 1) return reject(next);
+  return next;
+}
+
 function applyDeployPod(next, command) {
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
@@ -265,6 +275,7 @@ function apply(state, command) {
   if (type === CMD_SET_UNIT_HELM) return applyUnitHelm(next, command);
   if (type === CMD_DEPLOY_POD) return applyDeployPod(next, command);
   if (type === CMD_FIRE_UNIT) return applyFire(next, command);
+  if (type === CMD_SELECT_WEAPON) return applySelectWeapon(next, command);
   if (type === CMD_SET_STOCKPILE) return applySetStockpile(next, command);
   if (type === CMD_SET_SUPPLY_RUN) return applySetSupplyRun(next, command);
   if (type === CMD_SET_REPAIR_PRIORITY) return applyRepairPriority(next, command);

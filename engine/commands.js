@@ -19,6 +19,7 @@ const CMD_SET_STOCKPILE = 'set_stockpile';
 const CMD_SET_SUPPLY_RUN = 'set_supply_run';
 const CMD_FIRE_UNIT = 'fire_unit';
 const CMD_SET_REPAIR_PRIORITY = 'set_repair_priority';
+const CMD_SELECT_WEAPON = 'select_weapon';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -35,6 +36,7 @@ const UNIT_COMMANDS = [
   CMD_SET_UNIT_HELM,
   CMD_DEPLOY_POD,
   CMD_FIRE_UNIT,
+  CMD_SELECT_WEAPON,
 ];
 
 function isInt(value) {
@@ -108,6 +110,12 @@ function validateCommand(command) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
     return '';
   }
+  if (type === CMD_SELECT_WEAPON) {
+    if (!isInt(command.unitId)) return 'unitId must be an integer';
+    if (!isInt(command.weapon)) return 'weapon must be an integer';
+    if (command.weapon < 0) return 'no such weapon';
+    return '';
+  }
   if (type === CMD_ORDER_UNIT_MOVE) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
     if (!isInt(command.x) || !isInt(command.y)) return 'target must be integer coordinates';
@@ -141,6 +149,7 @@ export {
   CMD_SET_SUPPLY_RUN,
   CMD_FIRE_UNIT,
   CMD_SET_REPAIR_PRIORITY,
+  CMD_SELECT_WEAPON,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

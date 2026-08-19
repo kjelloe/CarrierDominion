@@ -25,7 +25,7 @@ import {
   WIN_TIME,
   checkVictory,
 } from '../engine/victory.js';
-import { hitUnit } from '../engine/weapons.js';
+import { hitUnit } from '../engine/shots.js';
 import { KIND_MANTA, UNIT_ACTIVE } from '../engine/units.js';
 import { EVT_SCORED } from '../engine/events.js';
 

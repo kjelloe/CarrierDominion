@@ -1,42 +1,33 @@
-// engine/weapons.js - shooting, and what a hit costs.
+// engine/weapons.js - what a hull carries, and when it decides to use it.
 //
-// Weapons are a per-KIND record held once in state.weapons, not copied onto
-// every hull: a Manta's missile stats are the same for every Manta, and the
-// only things that differ per unit are how many rounds are left and how long
-// until the next one. Two integers per hull instead of eleven.
+// Weapon records live once in state.weapons, indexed by weapon id, and
+// state.loadouts says which ids each hull kind carries. A hull keeps only what
+// differs between two identical airframes: which weapon is selected, how many
+// rounds of each it has left, how long until the next shot, and how hot the
+// mount is. Everything else is looked up.
 //
-// A shot is an entity with a life, not an instant line-of-fire test. It flies,
-// it can miss, and it can be outrun - which is what makes a Manta's speed worth
-// something and a lighter's slowness dangerous. Hit tests are against the
-// SEGMENT the shot travelled this tick, never the endpoint: a missile covers
-// 15 m in a tick and a Manta is 12 m across, so an endpoint test would let
-// shots tunnel straight through their targets.
+// The 1988 sets (ruling 2026-08-20): a Manta cycles laser, cluster bomb,
+// napalm and missile; a Walrus cannon and mines; the carrier its 360-degree
+// laser. Flight and damage are in shots.js - this module stops at the trigger.
 
-import { clampI, floorDiv, isqrt, mulDiv, turnToward } from '../shared/fixed.js';
-import { atan2B, mulCos, mulSin } from '../shared/trig.js';
-import {
-  EVT_CARRIER_DAMAGED,
-  EVT_CARRIER_SUNK,
-  EVT_SHOT_FIRED,
-  EVT_UNIT_HIT,
-  EVT_UNIT_LOST,
-  pushEvent,
-} from './events.js';
-import { KIND_MANTA, UNIT_ACTIVE, UNIT_LOST, UNIT_RETURNING } from './units.js';
-import { armourMultiplierPermil, damageSection, gunCooldown, sectionAt } from './damage.js';
-import { SCORE_CARRIER, SCORE_KILL, addScore } from './score.js';
+import { floorDiv, mulDiv } from '../shared/fixed.js';
+import { KIND_MANTA, copyArms, unitEngageable } from './units.js';
+import { gunCooldown } from './damage.js';
+import { launchShot, stepShots, TARGET_CARRIER, TARGET_UNIT } from './shots.js';
 
-// Where a weapon record lives in state.weapons. The first three are the unit
-// KIND_* values on purpose, so a unit's weapon is state.weapons[unit.kind].
-const WEAPON_CARRIER = 3;
-
-// What a shot is chasing, so a guided round can be re-aimed at the right list.
-const TARGET_UNIT = 0;
-const TARGET_CARRIER = 1;
+// Where the carrier's loadout sits in state.loadouts. The first three entries
+// are the unit KIND_* values on purpose, so a unit's loadout is
+// state.loadouts[unit.kind].
+const LOADOUT_CARRIER = 3;
 
 function weaponFrom(stats, unitsPerMetre) {
   const range = stats.rangeMetres * unitsPerMetre;
   const speed = stats.speedUnitsPerTick;
+  // A round lives exactly as long as its range allows. A mine does not fly, so
+  // its life is stated outright instead.
+  let life = 0;
+  if (stats.trigger === 1) life = stats.lifeTicks;
+  else if (speed > 0) life = floorDiv(range, speed);
   return {
     range: range,
     damage: stats.damage,
@@ -45,23 +36,26 @@ function weaponFrom(stats, unitsPerMetre) {
     speed: speed,
     turn: stats.turnRateBamPerTick,
     blast: stats.blastRadiusMetres * unitsPerMetre,
-    // A shot lives exactly as long as its range allows. Unarmed kinds get 0,
-    // which is also what stops them ever firing.
-    life: speed > 0 ? floorDiv(range, speed) : 0,
+    life: life,
     hitsAir: stats.hitsAir,
     hitsSurface: stats.hitsSurface,
     guided: stats.guided,
+    splash: stats.splash,
+    trigger: stats.trigger,
+    heatPerShot: stats.heatPerShot,
+    heatMax: stats.heatMax,
+    heatCool: stats.heatCoolPer100Ticks,
+    heatReady: stats.heatReadyPermil,
     ordnancePerRound: stats.ordnancePerRound,
   };
 }
 
 function createWeapons(rulesWeapons, unitsPerMetre) {
-  return [
-    weaponFrom(rulesWeapons.manta, unitsPerMetre),
-    weaponFrom(rulesWeapons.walrus, unitsPerMetre),
-    weaponFrom(rulesWeapons.lighter, unitsPerMetre),
-    weaponFrom(rulesWeapons.carrier, unitsPerMetre),
-  ];
+  const out = [];
+  for (let i = 0; i < rulesWeapons.list.length; i++) {
+    out.push(weaponFrom(rulesWeapons.list[i], unitsPerMetre));
+  }
+  return out;
 }
 
 function copyWeapon(weapon) {
@@ -77,6 +71,12 @@ function copyWeapon(weapon) {
     hitsAir: weapon.hitsAir,
     hitsSurface: weapon.hitsSurface,
     guided: weapon.guided,
+    splash: weapon.splash,
+    trigger: weapon.trigger,
+    heatPerShot: weapon.heatPerShot,
+    heatMax: weapon.heatMax,
+    heatCool: weapon.heatCool,
+    heatReady: weapon.heatReady,
     ordnancePerRound: weapon.ordnancePerRound,
   };
 }
@@ -87,68 +87,108 @@ function copyWeapons(weapons) {
   return out;
 }
 
-function copyShot(shot) {
-  return {
-    id: shot.id,
-    team: shot.team,
-    x: shot.x,
-    y: shot.y,
-    z: shot.z,
-    heading: shot.heading,
-    climb: shot.climb,
-    speed: shot.speed,
-    damage: shot.damage,
-    blast: shot.blast,
-    life: shot.life,
-    guided: shot.guided,
-    turn: shot.turn,
-    targetKind: shot.targetKind,
-    targetId: shot.targetId,
-  };
+function createLoadouts(rulesWeapons) {
+  const source = rulesWeapons.loadouts;
+  const rows = [source.manta, source.walrus, source.lighter, source.carrier];
+  const out = [];
+  for (let i = 0; i < rows.length; i++) {
+    const row = [];
+    for (let j = 0; j < rows[i].length; j++) row.push(rows[i][j]);
+    out.push(row);
+  }
+  return out;
+}
+
+function copyLoadouts(loadouts) {
+  const out = [];
+  for (let i = 0; i < loadouts.length; i++) {
+    const row = [];
+    for (let j = 0; j < loadouts[i].length; j++) row.push(loadouts[i][j]);
+    out.push(row);
+  }
+  return out;
+}
+
+// A hull's magazines: one entry per weapon it carries, full at build time.
+function createArms(loadout, weapons) {
+  const out = [];
+  for (let i = 0; i < loadout.length; i++) {
+    const id = loadout[i];
+    out.push({ w: id, n: weapons[id].magazine });
+  }
+  return out;
+}
+
+function armEntry(holder, weaponId) {
+  for (let i = 0; i < holder.arms.length; i++) {
+    if (holder.arms[i].w === weaponId) return holder.arms[i];
+  }
+  return -1;
+}
+
+function roundsOf(holder, weaponId) {
+  const entry = armEntry(holder, weaponId);
+  return entry === -1 ? 0 : entry.n;
+}
+
+// Cycle to the next weapon this hull carries. Selecting is free and instant -
+// what it costs you is the shot you did not take while you were deciding.
+function selectWeapon(holder, weaponId) {
+  if (armEntry(holder, weaponId) === -1) return 0;
+  holder.weapon = weaponId;
+  return 1;
+}
+
+function nextWeapon(holder) {
+  if (holder.arms.length === 0) return -1;
+  let index = 0;
+  for (let i = 0; i < holder.arms.length; i++) {
+    if (holder.arms[i].w === holder.weapon) index = i;
+  }
+  return holder.arms[(index + 1) % holder.arms.length].w;
+}
+
+// Heat, for the mounts that have it. A laser fired in bursts is fine; a laser
+// held down goes out until it has cooled to its ready line - which is the
+// original's rule, and the reason burst discipline is a skill.
+function coolHeat(holder, weapon) {
+  if (weapon.heatMax <= 0) {
+    holder.heat = 0;
+    holder.heatAccum = 0;
+    holder.overheated = 0;
+    return;
+  }
+  const accum = holder.heatAccum + weapon.heatCool;
+  const shed = floorDiv(accum, 100);
+  holder.heatAccum = accum - shed * 100;
+  holder.heat = holder.heat - shed;
+  if (holder.heat < 0) holder.heat = 0;
+  if (holder.overheated === 1 && holder.heat <= mulDiv(weapon.heatMax, weapon.heatReady, 1000)) {
+    holder.overheated = 0;
+  }
+}
+
+function addHeat(holder, weapon) {
+  if (weapon.heatMax <= 0) return;
+  holder.heat = holder.heat + weapon.heatPerShot;
+  if (holder.heat < weapon.heatMax) return;
+  holder.heat = weapon.heatMax;
+  holder.overheated = 1;
 }
 
 function isAir(kind) {
   return kind === KIND_MANTA;
 }
 
-function unitEngageable(unit) {
-  if (unit.hp <= 0) return false;
-  return unit.state === UNIT_ACTIVE || unit.state === UNIT_RETURNING;
-}
-
-// 3D squared distance. Coordinates reach ~8e6 units on the biggest map, so a
-// squared term is ~6.4e13 and three of them stay well inside 2^53.
-function distSq3D(ax, ay, az, bx, by, bz) {
+function distSq(ax, ay, az, bx, by, bz) {
   const dx = ax - bx;
   const dy = ay - by;
   const dz = az - bz;
   return dx * dx + dy * dy + dz * dz;
 }
 
-// Closest approach of a point to the segment a->b, squared. Integer only: the
-// parameter is kept as a numerator/denominator pair rather than a fraction.
-function segmentDistSq(ax, ay, az, bx, by, bz, px, py, pz) {
-  const abx = bx - ax;
-  const aby = by - ay;
-  const abz = bz - az;
-  const den = abx * abx + aby * aby + abz * abz;
-  if (den === 0) return distSq3D(ax, ay, az, px, py, pz);
-  const num = (px - ax) * abx + (py - ay) * aby + (pz - az) * abz;
-  if (num <= 0) return distSq3D(ax, ay, az, px, py, pz);
-  if (num >= den) return distSq3D(bx, by, bz, px, py, pz);
-  return distSq3D(
-    ax + mulDiv(abx, num, den),
-    ay + mulDiv(aby, num, den),
-    az + mulDiv(abz, num, den),
-    px,
-    py,
-    pz,
-  );
-}
-
 // The nearest thing this weapon may shoot at, as { kind, id, x, y, z }, or -1.
-// Enemy hulls only, inside weapon range, and only classes the weapon can
-// engage - a Walrus gun cannot elevate onto a Manta.
+// Enemy hulls only, inside weapon range, and only classes it can engage.
 function pickTarget(state, team, x, y, z, weapon) {
   if (weapon.range <= 0) return -1;
   const reach = weapon.range * weapon.range;
@@ -158,7 +198,7 @@ function pickTarget(state, team, x, y, z, weapon) {
     const carrier = state.carriers[i];
     if (carrier.team === team || carrier.hull <= 0) continue;
     if (weapon.hitsSurface !== 1) continue;
-    const distance = distSq3D(x, y, z, carrier.x, carrier.y, 0);
+    const distance = distSq(x, y, z, carrier.x, carrier.y, 0);
     if (distance > reach || distance >= bestDistance) continue;
     bestDistance = distance;
     best = { kind: TARGET_CARRIER, id: carrier.id, x: carrier.x, y: carrier.y, z: 0 };
@@ -168,7 +208,7 @@ function pickTarget(state, team, x, y, z, weapon) {
     if (unit.team === team || !unitEngageable(unit)) continue;
     const wanted = isAir(unit.kind) ? weapon.hitsAir : weapon.hitsSurface;
     if (wanted !== 1) continue;
-    const distance = distSq3D(x, y, z, unit.x, unit.y, unit.z);
+    const distance = distSq(x, y, z, unit.x, unit.y, unit.z);
     if (distance > reach || distance >= bestDistance) continue;
     bestDistance = distance;
     best = { kind: TARGET_UNIT, id: unit.id, x: unit.x, y: unit.y, z: unit.z };
@@ -176,72 +216,46 @@ function pickTarget(state, team, x, y, z, weapon) {
   return best;
 }
 
-// Vertical rate that arrives at the target's altitude at about the same time as
-// the horizontal run does. Clamped so a shot never climbs faster than it flies.
-function climbFor(z, targetZ, groundRange, speed) {
-  const ticks = speed > 0 ? floorDiv(groundRange, speed) : 0;
-  if (ticks < 1) return clampI(targetZ - z, -speed, speed);
-  return clampI(floorDiv(targetZ - z, ticks), -speed, speed);
-}
-
-function launchShot(state, team, x, y, z, weapon, target) {
-  const dx = target.x - x;
-  const dy = target.y - y;
-  const ground = isqrt(dx * dx + dy * dy);
-  const shot = {
-    id: state.nextShot,
-    team: team,
-    x: x,
-    y: y,
-    z: z,
-    heading: atan2B(dy, dx),
-    climb: climbFor(z, target.z, ground, weapon.speed),
-    speed: weapon.speed,
-    damage: weapon.damage,
-    blast: weapon.blast,
-    life: weapon.life,
-    guided: weapon.guided,
-    turn: weapon.turn,
-    // An unguided round is aimed where the target WAS. It keeps the target id
-    // anyway, purely so the client can draw a tracer that means something.
-    targetKind: target.kind,
-    targetId: target.id,
-  };
-  state.nextShot = state.nextShot + 1;
-  state.shots.push(shot);
-  pushEvent(state.events, EVT_SHOT_FIRED, shot.id, team, target.id);
-  return shot;
-}
-
 // Who waits for a trigger, and who shoots on its own.
 //
-// Ruling #18 put a pilot behind every Manta missile; the follow-up ruling said
-// an autopilot Manta does BOTH - it defends itself and it engages the target it
-// was sent at. So the line is not the airframe, it is the cockpit: a Manta with
-// somebody in it fires when that somebody says so, and an unattended one
-// defends itself like everything else aboard. A ship's point defence and a
-// Walrus gun never wait, because nobody asks a close-in mount for permission.
+// Ruling #18 put a pilot behind every Manta missile; the follow-up said an
+// autopilot Manta does BOTH - it defends itself and it presses the attack it
+// was sent on. So the line is not the airframe, it is the cockpit. A ship's
+// laser and a Walrus cannon never wait: nobody asks a close-in mount for
+// permission.
 function needsTrigger(unit) {
   return unit.kind === KIND_MANTA && unit.control !== -1;
 }
 
-// Cooling down is not the same as choosing to shoot, and separating them is
-// the whole reason this is its own function: a trigger-fired Manta that is
-// never fired would otherwise never become ready again.
-function coolDown(holder) {
+// Cooling down is not the same as choosing to shoot, and separating them is the
+// whole reason this is its own function: a trigger-fired Manta that is never
+// fired would otherwise never become ready again.
+function coolDown(holder, weapon) {
   if (holder.cooldown > 0) holder.cooldown = holder.cooldown - 1;
+  coolHeat(holder, weapon);
   return holder.cooldown;
 }
 
-// One firing decision for one armed hull.
-function serveWeapon(state, team, x, y, z, weapon, holder) {
-  if (holder.cooldown > 0) return 0;
-  if (holder.ammo <= 0 || weapon.magazine <= 0) return 0;
-  const target = pickTarget(state, team, x, y, z, weapon);
+// One firing decision for one armed hull. `cooldownOverride` is how a damaged
+// carrier mount fires more slowly than an undamaged one.
+function serveWeapon(state, team, x, y, z, holder, cooldownOverride) {
+  if (holder.cooldown > 0 || holder.overheated === 1) return 0;
+  const weapon = state.weapons[holder.weapon];
+  if (weapon === undefined) return 0;
+  const entry = armEntry(holder, holder.weapon);
+  if (entry === -1 || entry.n <= 0) return 0;
+
+  // A mine is laid where the layer stands; everything else needs something to
+  // aim at first.
+  let target = -1;
+  if (weapon.trigger === 1) target = { kind: TARGET_UNIT, id: -1, x: x, y: y, z: z };
+  else target = pickTarget(state, team, x, y, z, weapon);
   if (target === -1) return 0;
-  launchShot(state, team, x, y, z, weapon, target);
-  holder.ammo = holder.ammo - 1;
-  holder.cooldown = weapon.cooldown;
+
+  launchShot(state, team, x, y, z, holder.weapon, weapon, target);
+  entry.n = entry.n - 1;
+  holder.cooldown = cooldownOverride > 0 ? cooldownOverride : weapon.cooldown;
+  addHeat(holder, weapon);
   return 1;
 }
 
@@ -249,189 +263,71 @@ function fireAll(state) {
   for (let i = 0; i < state.carriers.length; i++) {
     const carrier = state.carriers[i];
     if (carrier.hull <= 0) continue;
-    const weapon = state.weapons[WEAPON_CARRIER];
+    const weapon = state.weapons[carrier.weapon];
     reloadCarrier(carrier, weapon);
-    coolDown(carrier);
-    // A chewed-up mount fires slowly and a destroyed one not at all, so the
-    // cooldown the shot leaves behind depends on the state of the guns.
+    coolDown(carrier, weapon);
+    // A chewed-up mount fires slowly and a destroyed one not at all.
     const cooldown = gunCooldown(carrier, weapon.cooldown);
     if (cooldown < 0) continue;
-    if (serveWeapon(state, carrier.team, carrier.x, carrier.y, 0, weapon, carrier) === 1) {
-      carrier.cooldown = cooldown;
-    }
+    serveWeapon(state, carrier.team, carrier.x, carrier.y, 0, carrier, cooldown);
   }
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
+    if (unit.arms.length === 0) continue;
     if (!unitEngageable(unit)) continue;
-    coolDown(unit);
+    const selected = state.weapons[unit.weapon];
+    coolDown(unit, selected);
     if (needsTrigger(unit)) continue;
-    serveWeapon(state, unit.team, unit.x, unit.y, unit.z, state.weapons[unit.kind], unit);
+    // A mine is laid deliberately, like the ACCB pod - never by an autopilot
+    // that happens to be carrying some. Otherwise a Walrus with mines selected
+    // seeds the whole beach on its way past.
+    if (selected.trigger === 1) continue;
+    serveWeapon(state, unit.team, unit.x, unit.y, unit.z, unit, 0);
   }
 }
 
-// Somebody pulled the trigger on this unit: the player flying it, or the AI
-// agent that sent it. Returns 1 if a round left the rail - it is a miss, not an
-// error, when there is nothing in range or the weapon is still cooling.
+// Somebody pulled the trigger: the player flying it, or the AI agent that sent
+// it. Returns 1 if a round left the rail - it is a miss, not an error, when
+// there is nothing in range, the mount is cooling, or it has overheated.
 function fireUnit(state, unit) {
-  if (!unitEngageable(unit)) return 0;
-  return serveWeapon(state, unit.team, unit.x, unit.y, unit.z, state.weapons[unit.kind], unit);
-}
-
-function findTargetPosition(state, shot) {
-  if (shot.targetKind === TARGET_CARRIER) {
-    for (let i = 0; i < state.carriers.length; i++) {
-      const carrier = state.carriers[i];
-      if (carrier.id === shot.targetId && carrier.hull > 0) {
-        return { x: carrier.x, y: carrier.y, z: 0 };
-      }
-    }
-    return -1;
-  }
-  for (let i = 0; i < state.units.length; i++) {
-    const unit = state.units[i];
-    if (unit.id === shot.targetId && unitEngageable(unit)) {
-      return { x: unit.x, y: unit.y, z: unit.z };
-    }
-  }
-  return -1;
-}
-
-// A guided round re-aims every tick, within its turn rate. When its target is
-// gone it keeps its last heading and flies on until its life runs out, which is
-// both simpler and more honest than deleting it mid-air.
-function guide(state, shot) {
-  if (shot.guided !== 1) return;
-  const target = findTargetPosition(state, shot);
-  if (target === -1) return;
-  const dx = target.x - shot.x;
-  const dy = target.y - shot.y;
-  shot.heading = turnToward(shot.heading, atan2B(dy, dx), shot.turn);
-  shot.climb = climbFor(shot.z, target.z, isqrt(dx * dx + dy * dy), shot.speed);
-}
-
-function hitUnit(state, unit, damage, byTeam) {
-  unit.hp = unit.hp - damage;
-  pushEvent(state.events, EVT_UNIT_HIT, unit.id, unit.team, damage);
-  if (unit.hp > 0) return;
-  unit.hp = 0;
-  unit.state = UNIT_LOST;
-  unit.speed = 0;
-  unit.throttle = 0;
-  unit.control = -1;
-  pushEvent(state.events, EVT_UNIT_LOST, unit.id, unit.team, 0);
-  addScore(state, byTeam, state.params.pointsPerKill, SCORE_KILL);
-}
-
-// A hit costs the hull its full damage and the section it landed on a share of
-// it (ruling #19). The two are tracked apart because they are different kinds
-// of trouble: one sinks you, the other stops you doing your job.
-function hitCarrier(state, carrier, damage, x, y, z, byTeam) {
-  const section = sectionAt(carrier, x, y, z);
-  // Armour is read BEFORE the section takes this hit: the plating that was
-  // there when the round arrived is what absorbed it.
-  const through = mulDiv(damage, armourMultiplierPermil(carrier, section), 1000);
-  damageSection(carrier, section, mulDiv(damage, carrier.sectionDamagePermil, 1000));
-  const before = carrier.hull;
-  carrier.hull = carrier.hull - through;
-  if (carrier.hull < 0) carrier.hull = 0;
-  pushEvent(state.events, EVT_CARRIER_DAMAGED, carrier.id, carrier.team, before - carrier.hull);
-  if (carrier.hull === 0 && before > 0) {
-    pushEvent(state.events, EVT_CARRIER_SUNK, carrier.id, carrier.team, 0);
-    addScore(state, byTeam, state.params.pointsPerCarrier, SCORE_CARRIER);
-  }
-}
-
-// Everything the shot passed within blast + body radius of this tick, nearest
-// first. Returns -1 for a clean miss.
-function findHit(state, shot, nx, ny, nz, hitUnitRadius, hitCarrierRadius) {
-  let best = -1;
-  let bestDistance = 2147483647;
-  const unitReach = shot.blast + hitUnitRadius;
-  const carrierReach = shot.blast + hitCarrierRadius;
-  for (let i = 0; i < state.carriers.length; i++) {
-    const carrier = state.carriers[i];
-    if (carrier.team === shot.team || carrier.hull <= 0) continue;
-    const distance = segmentDistSq(
-      shot.x, shot.y, shot.z, nx, ny, nz, carrier.x, carrier.y, 0,
-    );
-    if (distance > carrierReach * carrierReach || distance >= bestDistance) continue;
-    bestDistance = distance;
-    best = { kind: TARGET_CARRIER, index: i };
-  }
-  for (let i = 0; i < state.units.length; i++) {
-    const unit = state.units[i];
-    if (unit.team === shot.team || !unitEngageable(unit)) continue;
-    const distance = segmentDistSq(
-      shot.x, shot.y, shot.z, nx, ny, nz, unit.x, unit.y, unit.z,
-    );
-    if (distance > unitReach * unitReach || distance >= bestDistance) continue;
-    bestDistance = distance;
-    best = { kind: TARGET_UNIT, index: i };
-  }
-  return best;
-}
-
-// Move every shot one tick, resolve what it hit, and keep the survivors. The
-// array is rebuilt rather than spliced: removing from a list while walking it
-// is the kind of thing that works until the day two shots land on one tick.
-function stepShots(state, hitUnitRadius, hitCarrierRadius) {
-  const survivors = [];
-  for (let i = 0; i < state.shots.length; i++) {
-    const shot = state.shots[i];
-    guide(state, shot);
-    const nx = shot.x + mulCos(shot.speed, shot.heading);
-    const ny = shot.y + mulSin(shot.speed, shot.heading);
-    const nz = shot.z + shot.climb;
-    const hit = findHit(state, shot, nx, ny, nz, hitUnitRadius, hitCarrierRadius);
-    if (hit !== -1) {
-      if (hit.kind === TARGET_CARRIER) {
-        hitCarrier(state, state.carriers[hit.index], shot.damage, nx, ny, nz, shot.team);
-      }
-      else hitUnit(state, state.units[hit.index], shot.damage, shot.team);
-      continue;
-    }
-    shot.x = nx;
-    shot.y = ny;
-    shot.z = nz < 0 ? 0 : nz;
-    shot.life = shot.life - 1;
-    if (shot.life > 0) survivors.push(shot);
-  }
-  state.shots = survivors;
-}
-
-function stepWeapons(state, hitUnitRadius, hitCarrierRadius) {
-  fireAll(state);
-  stepShots(state, hitUnitRadius, hitCarrierRadius);
+  if (!unitEngageable(unit) || unit.arms.length === 0) return 0;
+  return serveWeapon(state, unit.team, unit.x, unit.y, unit.z, unit, 0);
 }
 
 // Called when a unit comes aboard. Rearming is a withdrawal from the ship's
-// ordnance store, not a refill from nowhere (ruling #17): a Manta missile costs
-// 25, a gun round costs 1, and a ship with an empty store sends its aircraft
-// back up empty. Partial rearms are normal and deliberate - you take what there
-// is rather than waiting for a full load.
+// ordnance store, not a refill from nowhere (ruling #17), and it works down the
+// loadout in order: partial rearms are normal, and a ship with an empty store
+// sends its aircraft back up as it is.
 function rearm(unit, weapons, carrier) {
-  const weapon = weapons[unit.kind];
   unit.cooldown = 0;
-  const wanted = weapon.magazine - unit.ammo;
-  if (wanted <= 0) return unit;
-  if (weapon.ordnancePerRound <= 0) {
-    // Free to arm (or unarmed entirely): nothing to draw.
-    unit.ammo = weapon.magazine;
-    return unit;
+  unit.heat = 0;
+  unit.heatAccum = 0;
+  unit.overheated = 0;
+  for (let i = 0; i < unit.arms.length; i++) {
+    const entry = unit.arms[i];
+    const weapon = weapons[entry.w];
+    const wanted = weapon.magazine - entry.n;
+    if (wanted <= 0) continue;
+    if (weapon.ordnancePerRound <= 0) {
+      entry.n = weapon.magazine;
+      continue;
+    }
+    const affordable = floorDiv(carrier.ordnance, weapon.ordnancePerRound);
+    const rounds = affordable < wanted ? affordable : wanted;
+    if (rounds <= 0) continue;
+    carrier.ordnance = carrier.ordnance - rounds * weapon.ordnancePerRound;
+    entry.n = entry.n + rounds;
   }
-  const affordable = floorDiv(carrier.ordnance, weapon.ordnancePerRound);
-  const rounds = affordable < wanted ? affordable : wanted;
-  if (rounds <= 0) return unit;
-  carrier.ordnance = carrier.ordnance - rounds * weapon.ordnancePerRound;
-  unit.ammo = unit.ammo + rounds;
   return unit;
 }
 
-// The ready magazine is fed from the store continuously, at a fixed rate: a
-// ship does not teleport shells to the mounts. Per 100 ticks so the rate can be
-// a fraction of a round, exactly like fuel burn.
+// The ready magazine is fed from the store continuously: a ship does not
+// teleport shells to the mounts. Per 100 ticks so the rate can be a fraction of
+// a round, exactly like fuel burn.
 function reloadCarrier(carrier, weapon) {
-  const wanted = weapon.magazine - carrier.ammo;
+  const entry = armEntry(carrier, carrier.weapon);
+  if (entry === -1) return 0;
+  const wanted = weapon.magazine - entry.n;
   if (wanted <= 0) {
     carrier.reloadAccum = 0;
     return 0;
@@ -446,27 +342,36 @@ function reloadCarrier(carrier, weapon) {
   const taken = affordable < rounds ? affordable : rounds;
   if (taken <= 0) return 0;
   carrier.ordnance = carrier.ordnance - taken * perRound;
-  carrier.ammo = carrier.ammo + taken;
+  entry.n = entry.n + taken;
   return taken;
 }
 
+function stepWeapons(state, hitUnitRadius, hitCarrierRadius) {
+  fireAll(state);
+  stepShots(state, hitUnitRadius, hitCarrierRadius);
+}
+
 export {
-  WEAPON_CARRIER,
-  TARGET_UNIT,
-  TARGET_CARRIER,
+  LOADOUT_CARRIER,
   createWeapons,
   copyWeapons,
-  copyShot,
-  segmentDistSq,
+  createLoadouts,
+  copyLoadouts,
+  createArms,
+  copyArms,
+  armEntry,
+  roundsOf,
+  selectWeapon,
+  nextWeapon,
+  coolHeat,
+  addHeat,
   pickTarget,
   needsTrigger,
   coolDown,
-  fireUnit,
+  serveWeapon,
   fireAll,
-  stepShots,
-  stepWeapons,
-  hitUnit,
-  hitCarrier,
+  fireUnit,
   rearm,
   reloadCarrier,
+  stepWeapons,
 };

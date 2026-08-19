@@ -70,8 +70,12 @@ function createManta(id, team, carrierId, rules, unitsPerMetre) {
     cargoCap: 0,
     loadRange: 0,
     workRate: 0,
-    ammo: rules.weapons.manta.magazine,
+    arms: [],
+    weapon: -1,
     cooldown: 0,
+    heat: 0,
+    heatAccum: 0,
+    overheated: 0,
   };
 }
 
@@ -120,8 +124,12 @@ function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
     cargoCap: 0,
     loadRange: 0,
     workRate: 0,
-    ammo: rules.weapons.walrus.magazine,
+    arms: [],
+    weapon: -1,
     cooldown: 0,
+    heat: 0,
+    heatAccum: 0,
+    overheated: 0,
   };
 }
 
@@ -173,9 +181,22 @@ function createLighter(id, team, carrierId, rules, unitsPerMetre) {
     cargoCap: stats.cargoCapacity,
     loadRange: stats.loadRangeMetres * unitsPerMetre,
     workRate: stats.workPerTick,
-    ammo: rules.weapons.lighter.magazine,
+    arms: [],
+    weapon: -1,
     cooldown: 0,
+    heat: 0,
+    heatAccum: 0,
+    overheated: 0,
   };
+}
+
+// The magazines, copied by value. Kept here rather than imported from
+// weapons.js so the two modules do not have to know about each other: units.js
+// owns the record, weapons.js owns what the record means.
+function copyArms(arms) {
+  const out = [];
+  for (let i = 0; i < arms.length; i++) out.push({ w: arms[i].w, n: arms[i].n });
+  return out;
 }
 
 function copyUnit(unit) {
@@ -222,8 +243,12 @@ function copyUnit(unit) {
     cargoCap: unit.cargoCap,
     loadRange: unit.loadRange,
     workRate: unit.workRate,
-    ammo: unit.ammo,
+    arms: copyArms(unit.arms),
+    weapon: unit.weapon,
     cooldown: unit.cooldown,
+    heat: unit.heat,
+    heatAccum: unit.heatAccum,
+    overheated: unit.overheated,
   };
   return copy;
 }
@@ -251,6 +276,14 @@ function stowedCount(state, carrierId, kind) {
     }
   }
   return count;
+}
+
+// Out, alive, and therefore both a target and a shooter. Lives here rather
+// than in weapons.js because it is a fact about the unit, and because shots.js
+// needs it too.
+function unitEngageable(unit) {
+  if (unit.hp <= 0) return false;
+  return unit.state === UNIT_ACTIVE || unit.state === UNIT_RETURNING;
 }
 
 function arrivedAtTarget(unit) {
@@ -300,6 +333,8 @@ export {
   findCarrierById,
   stowedCount,
   arrivedAtTarget,
+  unitEngageable,
+  copyArms,
   burnUnitFuel,
   fuelPermil,
 };

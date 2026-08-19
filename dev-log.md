@@ -5,6 +5,52 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — The 1988 weapon sets
+
+242 tests + smoke gate green. One weapon per hull kind is gone; each hull now
+carries what the original gave it, and choosing between them is a decision.
+
+| Hull | Loadout |
+|---|---|
+| Manta | laser / bouncing cluster bomb / napalm / heat-seeking missile |
+| Walrus | cannon / mines (the ACCB pod is already its own thing) |
+| Carrier | the 360-degree chemical laser |
+
+Weapon records live once in `state.weapons`, indexed by weapon id, with
+`state.loadouts` saying which ids each kind carries in cycle order. A hull keeps
+only what differs between two identical airframes: which weapon is selected,
+rounds of each, cooldown, and how hot the mount is. `V` cycles; the AI picks
+missiles for a ship strike and falls back to the gun when the rails are empty.
+
+Three behaviours are new, and all three are data rather than special cases:
+
+- **splash** damages everything inside the blast, not only what it struck -
+  cluster bombs and napalm.
+- **trigger** is a mine: it does not fly, it waits, and it goes off for anyone
+  who is not the side that laid it.
+- **heat** puts the lasers - the Manta's and the ship's - out of action under
+  sustained fire until they have cooled to a ready line. Burst discipline is
+  the skill, exactly as the original had it.
+
+`weapons.js` was past the size cap, so flight and damage moved to `shots.js`:
+one module stops at the trigger, the other starts there.
+
+### Three bugs worth recording
+
+- **`guided` fell out of the weapon record** in the rewrite, so every missile
+  flew straight at where its target had been and missed a moving Manta. The
+  duel test caught it; nothing else would have until an AI-vs-AI war quietly
+  got worse.
+- **Autopilots seeded the beach with mines.** A mine's "target" is wherever the
+  layer is standing, so auto-fire laid one every cooldown until the magazine was
+  empty. Laying a mine is now a deliberate act, like deploying the pod.
+- **Splash rounds detonated a full blast radius short.** The blast doubled as
+  the proximity fuze, so a 120 m napalm canister went off 120 m out and missed
+  everything behind the first target. A splash round now has to strike; the
+  blast is what it damages, not what sets it off.
+
+---
+
 ## 2026-08-20 — The damage board, as the original had it (rulings #21-#23)
 
 226 tests + smoke gate green. Four answers came back; three changed the build.

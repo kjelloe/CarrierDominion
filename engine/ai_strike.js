@@ -12,7 +12,7 @@ import { dist2D, mulDiv } from '../shared/fixed.js';
 import { atan2B } from '../shared/trig.js';
 import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
-import { fireUnit } from './weapons.js';
+import { fireUnit, roundsOf, selectWeapon } from './weapons.js';
 import {
   KIND_MANTA,
   ORDER_MOVE,
@@ -24,6 +24,15 @@ import {
 // How many airframes go out at once. Two is enough to matter and leaves the
 // hangar with something for the next contact.
 const STRIKE_MANTAS = 2;
+
+// The weapon a strike flies with. A Manta starts on its laser, which is a
+// 1400 m weapon: sending it at a carrier with that selected means flying inside
+// the ship's own point defence to use it. The missile reaches 3000 m.
+const STRIKE_WEAPON = 3;
+
+// What it falls back to when the rails are empty: a Manta with no missiles is
+// still worth something on the way home.
+const FALLBACK_WEAPON = 0;
 
 // Below this the Manta is kept on the deck: a strike is a round trip, and a
 // half-empty aircraft is a loss, not an attack.
@@ -116,8 +125,9 @@ function manageStrike(state, brain) {
       continue;
     }
     vectorTo(flying[i], target.x, target.y);
-    // Pull the trigger. fireUnit is a no-op when nothing is in range or the
-    // rail is still cooling, so this can simply be asked every cadence.
+    // Missiles while there are missiles; the gun once they are gone.
+    const armed = roundsOf(flying[i], STRIKE_WEAPON) > 0;
+    selectWeapon(flying[i], armed ? STRIKE_WEAPON : FALLBACK_WEAPON);
     fireUnit(state, flying[i]);
   }
 
@@ -187,6 +197,8 @@ function withdraw(state, brain, carrier) {
 
 export {
   STRIKE_MANTAS,
+  STRIKE_WEAPON,
+  FALLBACK_WEAPON,
   STRIKE_FUEL_PERMIL,
   WITHDRAW_PERMIL,
   WITHDRAW_TICKS,

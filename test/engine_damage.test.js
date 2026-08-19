@@ -30,7 +30,7 @@ import {
   setPriority,
 } from '../engine/damage.js';
 import { conditionPermil, stepRepairCarrier } from '../engine/repair.js';
-import { hitCarrier } from '../engine/weapons.js';
+import { hitCarrier } from '../engine/shots.js';
 import { KIND_MANTA, UNIT_ACTIVE } from '../engine/units.js';
 import { readyToLaunch } from '../engine/hangar.js';
 
@@ -131,7 +131,7 @@ test('each system section costs the ship the thing it is for', () => {
   assert.equal(hangarOpen(carrier), false);
   assert.equal(readyToLaunch(state, carrier.id, KIND_MANTA), -1, 'a wrecked hangar launched');
 
-  const base = state.weapons[3].cooldown;
+  const base = state.weapons[carrier.weapon].cooldown;
   damageSection(carrier, SECTION_BOW, sectionOf(carrier, SECTION_BOW).maxHp);
   assert.equal(gunCooldown(carrier, base), -1, 'a wrecked mount still fired');
 });
@@ -145,9 +145,9 @@ test('a wrecked ship does not fire, whatever is in range', () => {
   enemy.y = carrier.y;
   enemy.z = 200 * 256;
   damageSection(carrier, SECTION_BOW, sectionOf(carrier, SECTION_BOW).maxHp);
-  const ammoBefore = carrier.ammo;
+  const ammoBefore = carrier.arms[0].n;
   state = apply(state, TICK);
-  assert.equal(state.carriers[0].ammo, ammoBefore, 'a destroyed mount fired anyway');
+  assert.equal(state.carriers[0].arms[0].n, ammoBefore, 'a destroyed mount fired anyway');
 });
 
 test('repairs follow the priorities the player set, high tier first', () => {

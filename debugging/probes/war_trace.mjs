@@ -37,7 +37,7 @@ for (let tick = 0; tick < TICKS && state.phase === 0; tick++) {
     .join('/'));
   const hull = state.carriers.map((c) => c.hull);
   const fuel = state.carriers.map((c) => Math.round((c.fuel * 100) / c.fuelCapacity));
-  const ammo = state.carriers.map((c) => c.ammo);
+  const ammo = state.carriers.map((c) => (c.arms[0] === undefined ? 0 : c.arms[0].n));
   const strike = state.ai.map((b) => b.strikeCarrier);
   process.stdout.write(
     `t=${state.tick} islands=${held} hull=${hull} fuel%=${fuel} air=${air} lost=${lost}`

@@ -12,6 +12,14 @@
 import { distSq2D } from './fixed.js';
 import { teamHoldings } from '../engine/economy.js';
 
+// What is in the magazines. A contact gets an empty list: how many missiles an
+// enemy has left is not something radar tells you.
+function armsView(arms) {
+  const out = [];
+  for (let i = 0; i < arms.length; i++) out.push({ w: arms[i].w, n: arms[i].n });
+  return out;
+}
+
 function sectionsView(sections) {
   const out = [];
   for (let i = 0; i < sections.length; i++) {
@@ -44,7 +52,10 @@ function ownCarrierView(carrier) {
     supplyRun: carrier.supplyRun,
     maxSpeed: carrier.maxSpeed,
     radar: carrier.radar,
-    ammo: carrier.ammo,
+    weapon: carrier.weapon,
+    arms: armsView(carrier.arms),
+    heat: carrier.heat,
+    overheated: carrier.overheated,
     ordnance: carrier.ordnance,
     ordnanceCapacity: carrier.ordnanceCapacity,
     materials: carrier.materials,
@@ -73,7 +84,10 @@ function contactView(carrier) {
     supplyRun: 0,
     maxSpeed: 0,
     radar: 0,
-    ammo: -1,
+    weapon: -1,
+    arms: [],
+    heat: -1,
+    overheated: 0,
     ordnance: -1,
     ordnanceCapacity: -1,
     materials: -1,
@@ -112,7 +126,10 @@ function ownUnitView(unit) {
     cargoMaterials: unit.cargoMaterials,
     cargoOrdnance: unit.cargoOrdnance,
     cargoCap: unit.cargoCap,
-    ammo: unit.ammo,
+    weapon: unit.weapon,
+    arms: armsView(unit.arms),
+    heat: unit.heat,
+    overheated: unit.overheated,
     contact: 0,
   };
 }
@@ -144,7 +161,10 @@ function unitContactView(unit) {
     cargoMaterials: -1,
     cargoOrdnance: -1,
     cargoCap: -1,
-    ammo: -1,
+    weapon: -1,
+    arms: [],
+    heat: -1,
+    overheated: 0,
     contact: 1,
   };
 }

@@ -103,7 +103,7 @@ function describeUnit(t, unit, params) {
   const fuel = unit.fuelCapacity > 0 ? Math.round((unit.fuel * 100) / unit.fuelCapacity) : 0;
   const speed = knotsFrom(unit.speed, params.unitsPerMetre, params.tickHz);
   const pod = unit.kind === 1 && unit.pod === 1 ? ' [pod]' : '';
-  const ammo = unit.ammo > 0 ? ` ${unit.ammo}x` : '';
+  const ammo = roundsOf(unit) > 0 ? ` ${roundsOf(unit)}x` : '';
   return `#${unit.id} ${kind} ${situation} ${speed}${t('hud.knots')} ${fuel}%${ammo}${pod}`;
 }
 
@@ -117,6 +117,26 @@ const SECTION_KEYS = [
   'section.port', 'section.starboard', 'section.topside', 'section.engine',
 ];
 const PRIORITY_KEYS = ['priority.low', 'priority.medium', 'priority.high'];
+
+// The 1988 loadouts, in the order the select key cycles them.
+const WEAPON_KEYS = [
+  'weapon.laser', 'weapon.cluster', 'weapon.napalm', 'weapon.missile',
+  'weapon.cannon', 'weapon.mine', 'weapon.carrierLaser',
+];
+
+// Rounds of whatever this hull has selected.
+function roundsOf(holder) {
+  if (holder === undefined || holder.arms === undefined) return 0;
+  for (const entry of holder.arms) {
+    if (entry.w === holder.weapon) return entry.n;
+  }
+  return 0;
+}
+
+function weaponName(t, holder) {
+  if (holder === undefined || holder.weapon < 0) return t('weapon.none');
+  return t(WEAPON_KEYS[holder.weapon] ?? 'weapon.none');
+}
 
 function sectionPercent(section) {
   return section.maxHp > 0 ? Math.round((section.hp * 100) / section.maxHp) : 100;
@@ -140,12 +160,24 @@ function describeDamage(t, view) {
 
 // "600 rnd - 3 in the air". Point defence is the number that decides whether a
 // strike gets through, so it belongs next to the hull, not buried in a menu.
-function describeWeapons(t, view) {
+// What the hull you are controlling is holding, and what the ship has left:
+// "missile 4 - 6000 ord - 3 in the air", plus HOT when a mount has been held
+// down long enough to shut itself off.
+function describeWeapons(t, view, selected) {
   const carrier = view.carriers.find((c) => c.team === view.team && c.contact === 0);
-  const rounds = carrier === undefined ? 0 : carrier.ammo;
+  const holder = selected !== undefined && selected.arms !== undefined && selected.arms.length > 0
+    ? selected
+    : carrier;
   const store = carrier === undefined ? 0 : carrier.ordnance;
   const air = view.shots.filter((s) => s.team === view.team).length;
-  return t('weapons.state', { rounds: rounds, store: store, air: air });
+  const line = t('weapons.state', {
+    weapon: weaponName(t, holder),
+    rounds: roundsOf(holder),
+    store: store,
+    air: air,
+  });
+  if (holder !== undefined && holder.overheated === 1) return `${line} ${t('weapons.hot')}`;
+  return line;
 }
 
 function describeStores(t, view) {
@@ -210,6 +242,9 @@ export {
   describeUnit,
   describeStores,
   describeWeapons,
+  weaponName,
+  roundsOf,
+  WEAPON_KEYS,
   describeDamage,
   describeScore,
   sectionPercent,

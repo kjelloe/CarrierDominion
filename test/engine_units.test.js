@@ -71,6 +71,15 @@ test('unit records are integers only and survive a copy intact', () => {
   const state = fresh();
   for (const unit of state.units) {
     for (const [key, value] of Object.entries(unit)) {
+      // `arms` is the one nested field: a magazine per weapon the hull carries.
+      // The rule still holds inside it.
+      if (key === 'arms') {
+        for (const entry of value) {
+          assert.ok(Number.isInteger(entry.w), `arms weapon id is not an integer: ${entry.w}`);
+          assert.ok(Number.isInteger(entry.n), `arms round count is not an integer: ${entry.n}`);
+        }
+        continue;
+      }
       assert.ok(Number.isInteger(value), `${key} is not an integer: ${value}`);
     }
   }
@@ -79,6 +88,9 @@ test('unit records are integers only and survive a copy intact', () => {
   assert.notEqual(copy.units[0], state.units[0]);
   copy.units[0].hp = -99;
   assert.notEqual(state.units[0].hp, -99);
+  // The magazines must be copied, not shared.
+  copy.units[0].arms[0].n = 1;
+  assert.notEqual(state.units[0].arms[0].n, 1);
 });
 
 test('launching puts a Manta in the air ahead of its carrier', () => {
