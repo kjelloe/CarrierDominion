@@ -198,7 +198,7 @@ test('coming aboard rearms as well as refuels', () => {
 test('two sunk carriers end the war as a draw rather than never', () => {
   const state = fresh();
   for (const carrier of state.carriers) carrier.hull = 0;
-  checkVictory(state, state.params.victoryIslandPermil);
+  checkVictory(state, state.params);
   assert.equal(state.phase, PHASE_OVER);
   assert.equal(state.winner, -1);
   assert.equal(state.winReason, WIN_DRAW);

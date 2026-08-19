@@ -45,6 +45,7 @@ import { checkVictory } from './victory.js';
 import { stepEconomy, teamById } from './economy.js';
 import { stepSupply } from './supply.js';
 import { stepRepair } from './repair.js';
+import { stepScore } from './score.js';
 import { setPriority } from './damage.js';
 import { stepUnits } from './fleet.js';
 import { fireUnit, stepWeapons } from './weapons.js';
@@ -238,7 +239,8 @@ function advanceTick(next) {
   // Repairs last: the boat has landed this tick's materials, and the yard
   // spends what is in the store, not what is in the hold.
   stepRepair(next);
-  checkVictory(next, next.params.victoryIslandPermil);
+  stepScore(next, next.params.pointsPerIsland);
+  checkVictory(next, next.params);
   return next;
 }
 

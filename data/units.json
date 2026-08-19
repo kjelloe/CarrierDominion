@@ -58,9 +58,9 @@
   },
   "walrus": {
     "hull": 120,
-    "maxSpeedUnitsPerTick": 90,
-    "maxSpeedLandUnitsPerTick": 64,
-    "accelUnitsPerTickSq": 3,
+    "maxSpeedUnitsPerTick": 130,
+    "maxSpeedLandUnitsPerTick": 170,
+    "accelUnitsPerTickSq": 5,
     "turnRateBamPerTick": 180,
     "radarRangeMetres": 1800,
     "fuelCapacity": 10000,

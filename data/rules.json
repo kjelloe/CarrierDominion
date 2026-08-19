@@ -16,5 +16,10 @@
   "aiStandoffMetres": 500,
   "victoryIslandPermil": 667,
   "hitRadiusUnitMetres": 12,
-  "hitRadiusCarrierMetres": 60
+  "hitRadiusCarrierMetres": 60,
+  "pointCap": 0,
+  "timeCapTicks": 0,
+  "pointsPerIslandPer100Ticks": 1,
+  "pointsPerUnitKill": 40,
+  "pointsPerCarrierSunk": 600
 }

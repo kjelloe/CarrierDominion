@@ -12,7 +12,7 @@
 const HUD_ROWS = [
   'transport', 'seat', 'tick', 'speedx', 'hash', 'seed', 'graphics',
   'fps', 'speed', 'throttle', 'heading', 'fuel', 'damage', 'weapons',
-  'stores', 'hangar', 'unit', 'islands', 'supply', 'status',
+  'stores', 'hangar', 'unit', 'islands', 'score', 'supply', 'status',
 ];
 
 function createHud(root, t) {
@@ -169,7 +169,21 @@ function describeSupply(t, view) {
   return parts.join(' - ');
 }
 
-const WIN_KEYS = ['war.unknown', 'war.byIslands', 'war.byCarrier', 'war.draw'];
+const WIN_KEYS = [
+  'war.unknown', 'war.byIslands', 'war.byCarrier', 'war.draw', 'war.byPoints', 'war.byTime',
+];
+
+// Silent unless the host switched a cap on, because in an uncapped war the
+// score decides nothing and a row of numbers that decides nothing is noise.
+function describeScore(t, view) {
+  const cap = view.params.pointCap;
+  const clock = view.params.timeCapTicks;
+  if (cap <= 0 && clock <= 0) return t('score.uncapped');
+  const score = view.resources.score;
+  if (cap > 0) return t('score.toCap', { score: score, cap: cap });
+  const left = Math.max(0, Math.ceil((clock - view.tick) / 20));
+  return t('score.toTime', { score: score, seconds: left });
+}
 
 function describeIslands(t, view) {
   let mine = 0;
@@ -197,6 +211,7 @@ export {
   describeStores,
   describeWeapons,
   describeDamage,
+  describeScore,
   sectionPercent,
   SECTION_KEYS,
   PRIORITY_KEYS,

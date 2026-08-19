@@ -235,8 +235,11 @@ function buildView(state, team) {
   for (let i = 0; i < state.islands.length; i++) islands.push(islandView(state.islands[i], team));
 
   let stockpileIsland = -1;
+  let score = 0;
   for (let i = 0; i < state.teams.length; i++) {
-    if (state.teams[i].id === team) stockpileIsland = state.teams[i].stockpileIsland;
+    if (state.teams[i].id !== team) continue;
+    stockpileIsland = state.teams[i].stockpileIsland;
+    score = state.teams[i].score;
   }
   const holdings = teamHoldings(state, team);
 
@@ -273,6 +276,8 @@ function buildView(state, team) {
       unitsPerMetre: state.params.unitsPerMetre,
       sizeUnits: state.params.sizeUnits,
       tickHz: state.params.tickHz,
+      pointCap: state.params.pointCap,
+      timeCapTicks: state.params.timeCapTicks,
     },
     // Not a treasury: the sum of what is sitting on the islands you hold.
     resources: {
@@ -281,6 +286,7 @@ function buildView(state, team) {
       materials: holdings.materials,
       ordnance: holdings.ordnance,
       stockpileIsland: stockpileIsland,
+      score: score,
     },
     carriers: carriers,
     units: units,

@@ -37,8 +37,11 @@ function soleIsland(state, team, kind) {
 test('nobody starts with stores: what you have is what your islands hold', () => {
   const state = fresh();
   for (const team of state.teams) {
-    assert.deepEqual(Object.keys(team).sort(), ['id', 'stockpileIsland']);
+    // A team record holds no goods - only which island it ships to, and its
+    // score for the optional point/time end conditions.
+    assert.deepEqual(Object.keys(team).sort(), ['id', 'score', 'stockpileIsland']);
     assert.equal(team.stockpileIsland, -1);
+    assert.equal(team.score, 0);
     assert.deepEqual(teamHoldings(state, team.id), { fuel: 0, materials: 0, ordnance: 0 });
   }
   for (const island of state.islands) {

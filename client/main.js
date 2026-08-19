@@ -32,6 +32,7 @@ import {
   describeStores,
   describeWeapons,
   describeDamage,
+  describeScore,
   sectionPercent,
   SECTION_KEYS,
   PRIORITY_KEYS,
@@ -492,6 +493,7 @@ function frame(nowMs) {
   setHud(state.hud, 'hangar', describeHangar(state.t, state.view.units, state.view.team));
   setHud(state.hud, 'unit', describeUnit(state.t, selectedUnit(), state.view.params));
   setHud(state.hud, 'islands', describeIslands(state.t, state.view));
+  setHud(state.hud, 'score', describeScore(state.t, state.view));
   setHud(state.hud, 'damage', describeDamage(state.t, state.view));
   setHud(state.hud, 'weapons', describeWeapons(state.t, state.view));
   setHud(state.hud, 'stores', describeStores(state.t, state.view));

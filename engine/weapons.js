@@ -24,6 +24,7 @@ import {
 } from './events.js';
 import { KIND_MANTA, UNIT_ACTIVE, UNIT_LOST, UNIT_RETURNING } from './units.js';
 import { armourMultiplierPermil, damageSection, gunCooldown, sectionAt } from './damage.js';
+import { SCORE_CARRIER, SCORE_KILL, addScore } from './score.js';
 
 // Where a weapon record lives in state.weapons. The first three are the unit
 // KIND_* values on purpose, so a unit's weapon is state.weapons[unit.kind].
@@ -308,7 +309,7 @@ function guide(state, shot) {
   shot.climb = climbFor(shot.z, target.z, isqrt(dx * dx + dy * dy), shot.speed);
 }
 
-function hitUnit(state, unit, damage) {
+function hitUnit(state, unit, damage, byTeam) {
   unit.hp = unit.hp - damage;
   pushEvent(state.events, EVT_UNIT_HIT, unit.id, unit.team, damage);
   if (unit.hp > 0) return;
@@ -318,12 +319,13 @@ function hitUnit(state, unit, damage) {
   unit.throttle = 0;
   unit.control = -1;
   pushEvent(state.events, EVT_UNIT_LOST, unit.id, unit.team, 0);
+  addScore(state, byTeam, state.params.pointsPerKill, SCORE_KILL);
 }
 
 // A hit costs the hull its full damage and the section it landed on a share of
 // it (ruling #19). The two are tracked apart because they are different kinds
 // of trouble: one sinks you, the other stops you doing your job.
-function hitCarrier(state, carrier, damage, x, y, z) {
+function hitCarrier(state, carrier, damage, x, y, z, byTeam) {
   const section = sectionAt(carrier, x, y, z);
   // Armour is read BEFORE the section takes this hit: the plating that was
   // there when the round arrived is what absorbed it.
@@ -335,6 +337,7 @@ function hitCarrier(state, carrier, damage, x, y, z) {
   pushEvent(state.events, EVT_CARRIER_DAMAGED, carrier.id, carrier.team, before - carrier.hull);
   if (carrier.hull === 0 && before > 0) {
     pushEvent(state.events, EVT_CARRIER_SUNK, carrier.id, carrier.team, 0);
+    addScore(state, byTeam, state.params.pointsPerCarrier, SCORE_CARRIER);
   }
 }
 
@@ -382,9 +385,9 @@ function stepShots(state, hitUnitRadius, hitCarrierRadius) {
     const hit = findHit(state, shot, nx, ny, nz, hitUnitRadius, hitCarrierRadius);
     if (hit !== -1) {
       if (hit.kind === TARGET_CARRIER) {
-        hitCarrier(state, state.carriers[hit.index], shot.damage, nx, ny, nz);
+        hitCarrier(state, state.carriers[hit.index], shot.damage, nx, ny, nz, shot.team);
       }
-      else hitUnit(state, state.units[hit.index], shot.damage);
+      else hitUnit(state, state.units[hit.index], shot.damage, shot.team);
       continue;
     }
     shot.x = nx;

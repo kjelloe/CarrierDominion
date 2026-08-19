@@ -109,6 +109,7 @@ function copyTeam(team) {
     // stores of its own - only which island it has nominated as the depot
     // everything is shipped to.
     stockpileIsland: team.stockpileIsland,
+    score: team.score,
   };
 }
 
@@ -150,6 +151,11 @@ function copyState(state) {
       aiCadenceTicks: state.params.aiCadenceTicks,
       aiStandoff: state.params.aiStandoff,
       victoryIslandPermil: state.params.victoryIslandPermil,
+      pointCap: state.params.pointCap,
+      timeCapTicks: state.params.timeCapTicks,
+      pointsPerIsland: state.params.pointsPerIsland,
+      pointsPerKill: state.params.pointsPerKill,
+      pointsPerCarrier: state.params.pointsPerCarrier,
       hitRadiusUnit: state.params.hitRadiusUnit,
       hitRadiusCarrier: state.params.hitRadiusCarrier,
     },
@@ -240,7 +246,7 @@ function createInitialState(seed, rules) {
 
   const teams = [];
   for (let t = 0; t < base.teamCount; t++) {
-    teams.push({ id: t, stockpileIsland: -1 });
+    teams.push({ id: t, stockpileIsland: -1, score: 0 });
   }
 
   const weapons = createWeapons(rules.weapons, unitsPerMetre);
@@ -306,6 +312,11 @@ function createInitialState(seed, rules) {
       aiCadenceTicks: base.aiCadenceTicks,
       aiStandoff: base.aiStandoffMetres * unitsPerMetre,
       victoryIslandPermil: base.victoryIslandPermil,
+      pointCap: base.pointCap,
+      timeCapTicks: base.timeCapTicks,
+      pointsPerIsland: base.pointsPerIslandPer100Ticks,
+      pointsPerKill: base.pointsPerUnitKill,
+      pointsPerCarrier: base.pointsPerCarrierSunk,
       hitRadiusUnit: base.hitRadiusUnitMetres * unitsPerMetre,
       hitRadiusCarrier: base.hitRadiusCarrierMetres * unitsPerMetre,
     },
