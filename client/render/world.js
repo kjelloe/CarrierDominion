@@ -170,8 +170,10 @@ function buildOceanGrid(sizeMetres) {
     for (let cell = 0; cell < cells; cell += 1) {
       const from = origin + cell * step;
       const to = from + step;
-      points.push(fixed, 6, -from, fixed, 6, -to);
-      points.push(from, 6, -fixed, to, 6, -fixed);
+      // A metre above the water, not six: at six the grid draws over every
+      // beach in the archipelago, because a beach is lower than that.
+      points.push(fixed, 1, -from, fixed, 1, -to);
+      points.push(from, 1, -fixed, to, 1, -fixed);
     }
   }
   const geometry = new THREE.BufferGeometry();
@@ -330,27 +332,41 @@ function buildShot(teamColour) {
 
 // An island battery: a squat base and a barrel, so it reads as a gun from the
 // air without pretending to be a model. Missile batteries get the taller box.
+// Drawn well over life size, and deliberately: a real emplacement is about
+// twenty metres across, which is two pixels at the range its own missiles
+// reach. A gun you cannot see is a gun you cannot plan around.
 function buildTurret(teamColour, missile) {
   const group = new THREE.Group();
   const base = new THREE.Mesh(
-    new THREE.CylinderGeometry(9, 12, 7, 6),
+    new THREE.CylinderGeometry(22, 30, 16, 6),
     new THREE.MeshLambertMaterial({ color: 0x4a4f55 }),
   );
-  base.position.y = 3.5;
+  base.position.y = 8;
   group.add(base);
   const mount = new THREE.Mesh(
-    missile ? new THREE.BoxGeometry(12, 10, 12) : new THREE.CylinderGeometry(5, 5, 6, 6),
+    missile ? new THREE.BoxGeometry(30, 26, 30) : new THREE.CylinderGeometry(13, 13, 16, 6),
     new THREE.MeshLambertMaterial({ color: teamColour }),
   );
-  mount.position.y = 11;
+  mount.position.y = 27;
   group.add(mount);
-  if (!missile) {
+  if (missile) {
+    // Four rails, so a missile battery reads as one at a glance.
+    for (let i = 0; i < 4; i++) {
+      const rail = new THREE.Mesh(
+        new THREE.CylinderGeometry(2.6, 2.6, 34, 5),
+        new THREE.MeshLambertMaterial({ color: 0xc9d4de }),
+      );
+      rail.geometry.rotateZ(-Math.PI / 2.6);
+      rail.position.set(-4 + i * 3, 44, -12 + i * 8);
+      group.add(rail);
+    }
+  } else {
     const barrel = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.6, 1.6, 18, 5),
+      new THREE.CylinderGeometry(4.2, 4.2, 48, 5),
       new THREE.MeshLambertMaterial({ color: 0x8fa4b8 }),
     );
     barrel.geometry.rotateZ(-Math.PI / 2);
-    barrel.position.set(8, 12, 0);
+    barrel.position.set(22, 30, 0);
     group.add(barrel);
   }
   return group;
