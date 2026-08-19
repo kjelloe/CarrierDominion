@@ -32,6 +32,7 @@ const EVT_SUPPLY_DELIVERED = 24; // a = unitId, b = team
 const EVT_SUPPLY_RUN = 25; // a = carrierId, b = team, c = 1 on / 0 off
 const EVT_SHOT_FIRED = 26; // a = shotId, b = the FIRING team, c = target id
 const EVT_UNIT_HIT = 27; // a = unitId, b = the team that was hit, c = damage
+const EVT_REPAIRED = 28; // a = carrierId, b = team, c = hull after - per 100 points
 
 function makeEvent(code, a, b, c) {
   return { code: code, a: a, b: b, c: c };
@@ -70,6 +71,7 @@ export {
   EVT_SUPPLY_RUN,
   EVT_SHOT_FIRED,
   EVT_UNIT_HIT,
+  EVT_REPAIRED,
   makeEvent,
   pushEvent,
 };

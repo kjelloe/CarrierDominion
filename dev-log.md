@@ -5,6 +5,72 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — The damage board, as the original had it (rulings #21-#23)
+
+226 tests + smoke gate green. Four answers came back; three changed the build.
+
+### Point defence stays automatic; the autopilot defends itself
+
+The line is not the airframe, it is the cockpit. A Manta with somebody in it
+fires when that somebody says so; an unattended one defends itself AND presses
+home the attack it was sent on. A ship's point defence and a Walrus gun never
+wait — nobody asks a close-in mount for permission. One function says it:
+`needsTrigger(unit)` is true only when `unit.control !== -1`.
+
+### Seven geometric sections
+
+The five functional ones are gone. Now, as the 1988 damage screen had them:
+**bow, midship, stern, port, starboard, topside, engine**. An impact is resolved
+in the ship's own frame — height first (anything above the deck hits the island
+and the mast), then the beam, then how far forward — so **which way you turn
+matters in both axes**, not just fore and aft.
+
+Two consequences follow from a section's health, and the split is what makes
+seven geometric sections work where five functional ones did:
+
+1. **Systems**, on the sections that carry one — bow the point-defence mount,
+   midship the hangar deck, stern the steering gear, topside the mast and
+   sensors, engine the machinery. Exactly as the original named consequences for
+   the engine and the weapon sections and left the rest as structure.
+2. **Armour**, on *every* section including the bare plating of the sides: a
+   hit on a wrecked section does up to half as much again to the hull. That is
+   what makes presenting your good side worth doing, and it needs no new system
+   to say it. Port and starboard would otherwise have been decoration.
+
+### The automatic repair system
+
+The original did not repair a ship the instant a boat touched alongside, and
+neither do we any more. Materials now land in the **ship's own yard stores**;
+`engine/repair.js` spends them at 8 points per 100 ticks, working through the
+board in the priority the player set — **high, then medium, then low, worst
+first inside each tier** — sections before plating. The lighter's job ends at
+the store. New command `set_repair_priority`. `repairPerMinute`, which had sat
+unused in `data/units.json` since Milestone 0, is gone: the rate is now
+`repairPointsPer100Ticks`, in the same per-100-ticks form as fuel burn and
+magazine reloading, so all three accumulate the same way.
+
+### The board itself
+
+`Z` opens it: a slowly turning **3D wireframe** of the ship, one box per
+section, coloured green/amber/red by damage, with the list underneath showing
+percentage and priority. Click a box on the model or a row in the list to cycle
+LOW → MED → HIGH. A section on LOW is dimmed on the model, so the priorities
+read off the ship and not only the list.
+
+It is `Mesh` with `wireframe: true` rather than `LineSegments` for a reason:
+it draws as wire and still raycasts as a solid, so a section can simply be
+clicked.
+
+**One bug the probe caught, and it would have bitten a real player.** The list
+rows were rebuilt from scratch every frame, so the element under the pointer was
+replaced sixty times a second and a click landed on a node that had already been
+thrown away. Rows are now built once and only their text rewritten.
+
+**Effect on the war:** faster and still decisive — AI-vs-AI resolves at tick
+180,203, won by sinking.
+
+---
+
 ## 2026-08-19 — Rulings #17, #18, #19: supply, the trigger, and damaged sections
 
 227 tests + smoke gate green. Three rulings, three slices, in that order.

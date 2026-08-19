@@ -18,6 +18,7 @@ const CMD_DEPLOY_POD = 'deploy_pod';
 const CMD_SET_STOCKPILE = 'set_stockpile';
 const CMD_SET_SUPPLY_RUN = 'set_supply_run';
 const CMD_FIRE_UNIT = 'fire_unit';
+const CMD_SET_REPAIR_PRIORITY = 'set_repair_priority';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -79,6 +80,14 @@ function validateCommand(command) {
     if (!isInt(command.islandId)) return 'islandId must be an integer';
     return '';
   }
+  if (type === CMD_SET_REPAIR_PRIORITY) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.section)) return 'section must be an integer';
+    if (command.section < 0 || command.section > 6) return 'no such section';
+    if (!isInt(command.priority)) return 'priority must be an integer';
+    if (command.priority < 0 || command.priority > 2) return 'priority out of range';
+    return '';
+  }
   if (type === CMD_SET_SUPPLY_RUN) {
     if (!isInt(command.carrierId)) return 'carrierId must be an integer';
     if (!isInt(command.active)) return 'active must be 0 or 1';
@@ -131,6 +140,7 @@ export {
   CMD_SET_STOCKPILE,
   CMD_SET_SUPPLY_RUN,
   CMD_FIRE_UNIT,
+  CMD_SET_REPAIR_PRIORITY,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

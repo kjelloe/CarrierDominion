@@ -1,156 +1,217 @@
-// engine/damage.js - the carrier's damaged sections (ruling #19).
+// engine/damage.js - the carrier's damage board (rulings #19 and #23).
 //
-// A hull number alone says only how close you are to sinking. The 1988 original
-// tracked WHERE you were hit, and so does this: five sections laid out along
-// the ship, fore to aft, each with its own health and its own consequence.
+// Seven sections, as the 1988 original had them, and geometric rather than
+// functional: BOW, MIDSHIP, STERN, PORT, STARBOARD, TOPSIDE, ENGINE. Where a
+// round lands is worked out in the ship's own frame - how far forward, how far
+// out on the beam, how high - so which way you turn is a real decision, in both
+// axes rather than only fore and aft.
 //
-//   guns     bow mount        point defence slows, then stops
-//   radar    forward mast     you see less far
-//   bridge   island, midships the wheel answers slowly
-//   hangar   midships         flight operations stop
-//   engines  aft              the ship slows
+// Two things follow from a section's health:
 //
-// Where a round lands decides which one takes it, by projecting the impact onto
-// the ship's own axis - so the aspect you present to an enemy is a real
-// decision. Turning your damaged stern away from a strike is a tactic.
+//   1. Systems. Only some sections carry one, exactly as the original named
+//      consequences for the engine and the weapon sections and left the rest as
+//      structure: bow the point-defence mount, midship the hangar deck, stern
+//      the steering gear, topside the mast and sensors, engine the machinery.
+//   2. Armour. EVERY section, including the plain plating of the sides, absorbs
+//      less as it is chewed up: a hit on a wrecked section does up to half as
+//      much again to the hull. That is what makes presenting your good side
+//      worth doing, and it needs no new system to say so.
 //
-// A hit costs the general hull its full damage AND the section a share of it,
-// so a carrier that is mechanically wrecked can still be afloat, and a carrier
-// that is nearly sunk may still be able to fight. Those are different problems
-// and the player should be able to tell them apart.
+// Repairs are the player's call to direct: each section carries a priority, and
+// the automatic repair system works through high, then medium, then low, worst
+// first inside each tier, spending the ship's own materials.
 
 import { floorDiv, mulDiv } from '../shared/fixed.js';
 import { mulCos, mulSin } from '../shared/trig.js';
 
-const SECTION_ENGINES = 0;
-const SECTION_HANGAR = 1;
-const SECTION_BRIDGE = 2;
-const SECTION_RADAR = 3;
-const SECTION_GUNS = 4;
-const SECTION_COUNT = 5;
+const SECTION_BOW = 0;
+const SECTION_MIDSHIP = 1;
+const SECTION_STERN = 2;
+const SECTION_PORT = 3;
+const SECTION_STARBOARD = 4;
+const SECTION_TOPSIDE = 5;
+const SECTION_ENGINE = 6;
+const SECTION_COUNT = 7;
 
-// Aft to fore, matching the constants above: the array index IS the position
-// along the ship, which is what makes the impact projection a simple lookup.
+const PRIORITY_LOW = 0;
+const PRIORITY_MEDIUM = 1;
+const PRIORITY_HIGH = 2;
+
+// A quarter turn in BAM: forward minus this is starboard.
+const QUARTER = 16384;
+
 function createSections(carrierRules) {
   const hp = carrierRules.sections;
-  return [
-    { id: SECTION_ENGINES, hp: hp.engines, maxHp: hp.engines },
-    { id: SECTION_HANGAR, hp: hp.hangar, maxHp: hp.hangar },
-    { id: SECTION_BRIDGE, hp: hp.bridge, maxHp: hp.bridge },
-    { id: SECTION_RADAR, hp: hp.radar, maxHp: hp.radar },
-    { id: SECTION_GUNS, hp: hp.guns, maxHp: hp.guns },
+  const rows = [
+    { id: SECTION_BOW, hp: hp.bow },
+    { id: SECTION_MIDSHIP, hp: hp.midship },
+    { id: SECTION_STERN, hp: hp.stern },
+    { id: SECTION_PORT, hp: hp.port },
+    { id: SECTION_STARBOARD, hp: hp.starboard },
+    { id: SECTION_TOPSIDE, hp: hp.topside },
+    { id: SECTION_ENGINE, hp: hp.engine },
   ];
+  const out = [];
+  for (let i = 0; i < rows.length; i++) {
+    out.push({
+      id: rows[i].id,
+      hp: rows[i].hp,
+      maxHp: rows[i].hp,
+      // Everything starts at medium, so a player who never opens the damage
+      // board still gets sensible repairs.
+      priority: PRIORITY_MEDIUM,
+    });
+  }
+  return out;
 }
 
 function copySections(sections) {
   const out = [];
   for (let i = 0; i < sections.length; i++) {
-    out.push({ id: sections[i].id, hp: sections[i].hp, maxHp: sections[i].maxHp });
+    out.push({
+      id: sections[i].id,
+      hp: sections[i].hp,
+      maxHp: sections[i].maxHp,
+      priority: sections[i].priority,
+    });
   }
   return out;
 }
 
-// Health of one section in per-mil. A missing section reads as intact rather
-// than as destroyed: a bug in the wiring must not silently disable a ship.
-function sectionPermil(carrier, id) {
+function sectionAtIndex(carrier, id) {
   for (let i = 0; i < carrier.sections.length; i++) {
-    const section = carrier.sections[i];
-    if (section.id !== id) continue;
-    if (section.maxHp <= 0) return 1000;
-    return mulDiv(section.hp, 1000, section.maxHp);
+    if (carrier.sections[i].id === id) return i;
   }
-  return 1000;
+  return -1;
 }
 
-// Degraded capability, never zero: a floor of, say, 250 leaves a wrecked engine
-// room still able to limp, which is a more interesting position to be in than
-// dead in the water. Zero HP is the exception - then it really is gone.
+// Health of one section in per-mil. A section that is not there reads as
+// intact: a hole in the wiring must not silently disable a ship.
+function sectionPermil(carrier, id) {
+  const index = sectionAtIndex(carrier, id);
+  if (index === -1) return 1000;
+  const section = carrier.sections[index];
+  if (section.maxHp <= 0) return 1000;
+  return mulDiv(section.hp, 1000, section.maxHp);
+}
+
+// Degraded capability with a floor under it: a wrecked engine room still lets
+// the ship limp, which is a more interesting position than dead in the water.
+// Zero is the exception - then it really is gone.
 function capability(carrier, id, floorPermil) {
   const health = sectionPermil(carrier, id);
   if (health <= 0) return 0;
   return health < floorPermil ? floorPermil : health;
 }
 
-// Derived stats live ON the carrier so every existing reader - the helm, the
-// fog filter, the AI - keeps working without knowing about sections. They are
-// recomputed from the untouched base values whenever damage or repair moves.
+// Derived stats live ON the carrier, recomputed from untouched base values
+// whenever damage or repair moves, so the helm, the fog filter and the AI keep
+// reading them directly and know nothing about sections.
 function applySectionEffects(carrier) {
-  const engines = capability(carrier, SECTION_ENGINES, carrier.speedFloorPermil);
-  const bridge = capability(carrier, SECTION_BRIDGE, carrier.turnFloorPermil);
-  const radar = capability(carrier, SECTION_RADAR, carrier.radarFloorPermil);
-  carrier.maxSpeed = mulDiv(carrier.maxSpeedBase, engines, 1000);
-  carrier.turnRate = mulDiv(carrier.turnRateBase, bridge, 1000);
-  carrier.radar = mulDiv(carrier.radarBase, radar, 1000);
-  // A ship with no engine room at all still drifts under way; it just cannot
-  // make headway. One unit per tick keeps the helm from dividing by nothing.
+  const engine = capability(carrier, SECTION_ENGINE, carrier.speedFloorPermil);
+  const stern = capability(carrier, SECTION_STERN, carrier.turnFloorPermil);
+  const topside = capability(carrier, SECTION_TOPSIDE, carrier.radarFloorPermil);
+  carrier.maxSpeed = mulDiv(carrier.maxSpeedBase, engine, 1000);
+  carrier.turnRate = mulDiv(carrier.turnRateBase, stern, 1000);
+  carrier.radar = mulDiv(carrier.radarBase, topside, 1000);
   if (carrier.maxSpeed < 1) carrier.maxSpeed = 1;
   if (carrier.turnRate < 1) carrier.turnRate = 1;
   return carrier;
 }
 
-// Flight operations need a hangar. This one is binary on purpose: a wrecked
-// hangar deck is not a slower hangar deck, it is a closed one.
+// Flight operations need a hangar deck. Binary on purpose: a wrecked deck is
+// not a slower deck, it is a closed one.
 function hangarOpen(carrier) {
-  return sectionPermil(carrier, SECTION_HANGAR) > 0;
+  return sectionPermil(carrier, SECTION_MIDSHIP) > 0;
 }
 
-// Point defence fires slower as the mount is chewed up, and not at all once it
-// is gone. Returns -1 for "cannot fire".
+// Point defence fires slower as the bow mount is chewed up, and not at all once
+// it is gone. Returns -1 for "cannot fire".
 function gunCooldown(carrier, baseCooldown) {
-  const health = sectionPermil(carrier, SECTION_GUNS);
+  const health = sectionPermil(carrier, SECTION_BOW);
   if (health <= 0) return -1;
   return mulDiv(baseCooldown, 1000, health);
 }
 
-// Which section an impact at (x, y) lands on. The impact is projected onto the
-// ship's forward axis and the result read off in fifths of the hull's length,
-// stern first - which is exactly the order the array is built in.
-function sectionAt(carrier, x, y) {
+// Which section an impact lands on, in the ship's own frame. Height first - a
+// round that comes in above the deck hits the island and the mast - then the
+// beam, then how far forward. `armourLossPermil` is not consulted here; this is
+// only about geometry.
+function sectionAt(carrier, x, y, z) {
+  if (z >= carrier.topsideHeight) return SECTION_TOPSIDE;
   const dx = x - carrier.x;
   const dy = y - carrier.y;
   const along = mulCos(dx, carrier.heading) + mulSin(dy, carrier.heading);
-  const half = carrier.halfLength;
-  if (half <= 0) return SECTION_BRIDGE;
-  const span = mulDiv(half, 2, SECTION_COUNT);
-  let index = floorDiv(along + half, span);
-  if (index < 0) index = 0;
-  if (index >= SECTION_COUNT) index = SECTION_COUNT - 1;
-  return index;
-}
-
-// Put damage into one section. Returns what it actually absorbed - a section
-// already at zero absorbs nothing, and the hull has taken the full hit anyway.
-function damageSection(carrier, id, amount) {
-  for (let i = 0; i < carrier.sections.length; i++) {
-    const section = carrier.sections[i];
-    if (section.id !== id) continue;
-    const taken = amount < section.hp ? amount : section.hp;
-    section.hp = section.hp - taken;
-    applySectionEffects(carrier);
-    return taken;
+  const abeam = mulCos(dx, carrier.heading - QUARTER) + mulSin(dy, carrier.heading - QUARTER);
+  const absAbeam = abeam < 0 ? -abeam : abeam;
+  // Out past half the beam is a hit on the flank rather than on the length.
+  if (absAbeam * 2 > carrier.halfBeam) {
+    return abeam < 0 ? SECTION_PORT : SECTION_STARBOARD;
   }
-  return 0;
+  const half = carrier.halfLength;
+  if (half <= 0) return SECTION_MIDSHIP;
+  if (along > floorDiv(half, 3)) return SECTION_BOW;
+  if (along > -floorDiv(half, 3)) return SECTION_MIDSHIP;
+  // The tail is the steering gear; the long stretch ahead of it is machinery.
+  if (along > -mulDiv(half, 4, 5)) return SECTION_ENGINE;
+  return SECTION_STERN;
 }
 
-// Spend a repair budget on the worst-damaged section first: a ship that cannot
-// move or cannot see is in more trouble than one with a dented bow. Returns
-// what was spent.
-function repairSections(carrier, budget) {
-  let spent = 0;
-  let left = budget;
-  while (left > 0) {
+// What a hit on this section costs the hull, in per-mil of the raw damage.
+// Intact plating absorbs; wrecked plating lets it through.
+function armourMultiplierPermil(carrier, id) {
+  const health = sectionPermil(carrier, id);
+  return 1000 + mulDiv(carrier.armourLossPermil, 1000 - health, 1000);
+}
+
+// Put damage into one section. Returns what it absorbed; a section already at
+// zero absorbs nothing, and the hull has taken the hit regardless.
+function damageSection(carrier, id, amount) {
+  const index = sectionAtIndex(carrier, id);
+  if (index === -1) return 0;
+  const section = carrier.sections[index];
+  const taken = amount < section.hp ? amount : section.hp;
+  section.hp = section.hp - taken;
+  applySectionEffects(carrier);
+  return taken;
+}
+
+function setPriority(carrier, id, priority) {
+  const index = sectionAtIndex(carrier, id);
+  if (index === -1) return 0;
+  carrier.sections[index].priority = priority;
+  return 1;
+}
+
+// The worst-damaged section in the highest tier that still has damage in it.
+// High before medium before low, exactly as the original's repair board did it.
+function nextRepairTarget(carrier) {
+  for (let tier = PRIORITY_HIGH; tier >= PRIORITY_LOW; tier--) {
     let worst = -1;
-    let worstPermil = 1000;
+    let worstPermil = 1001;
     for (let i = 0; i < carrier.sections.length; i++) {
       const section = carrier.sections[i];
+      if (section.priority !== tier) continue;
       if (section.hp >= section.maxHp || section.maxHp <= 0) continue;
       const health = mulDiv(section.hp, 1000, section.maxHp);
       if (health >= worstPermil) continue;
       worstPermil = health;
       worst = i;
     }
-    if (worst === -1) break;
-    const section = carrier.sections[worst];
+    if (worst !== -1) return worst;
+  }
+  return -1;
+}
+
+// Spend a repair budget across the sections in priority order. Returns what was
+// actually spent, which is less than the budget once the ship is whole.
+function repairSections(carrier, budget) {
+  let spent = 0;
+  let left = budget;
+  while (left > 0) {
+    const index = nextRepairTarget(carrier);
+    if (index === -1) break;
+    const section = carrier.sections[index];
     const missing = section.maxHp - section.hp;
     const put = left < missing ? left : missing;
     section.hp = section.hp + put;
@@ -169,12 +230,17 @@ function sectionsIntact(carrier) {
 }
 
 export {
-  SECTION_ENGINES,
-  SECTION_HANGAR,
-  SECTION_BRIDGE,
-  SECTION_RADAR,
-  SECTION_GUNS,
+  SECTION_BOW,
+  SECTION_MIDSHIP,
+  SECTION_STERN,
+  SECTION_PORT,
+  SECTION_STARBOARD,
+  SECTION_TOPSIDE,
+  SECTION_ENGINE,
   SECTION_COUNT,
+  PRIORITY_LOW,
+  PRIORITY_MEDIUM,
+  PRIORITY_HIGH,
   createSections,
   copySections,
   sectionPermil,
@@ -183,7 +249,10 @@ export {
   hangarOpen,
   gunCooldown,
   sectionAt,
+  armourMultiplierPermil,
   damageSection,
+  setPriority,
+  nextRepairTarget,
   repairSections,
   sectionsIntact,
 };

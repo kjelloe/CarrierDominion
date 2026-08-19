@@ -18,6 +18,7 @@ import {
   CMD_SET_HEADING,
   CMD_SET_RUDDER,
   CMD_SET_THROTTLE,
+  CMD_SET_REPAIR_PRIORITY,
   CMD_SET_STOCKPILE,
   CMD_SET_SUPPLY_RUN,
   CMD_SET_UNIT_HELM,
@@ -43,6 +44,8 @@ import { stepAi } from './ai_carrier.js';
 import { checkVictory } from './victory.js';
 import { stepEconomy, teamById } from './economy.js';
 import { stepSupply } from './supply.js';
+import { stepRepair } from './repair.js';
+import { setPriority } from './damage.js';
 import { stepUnits } from './fleet.js';
 import { fireUnit, stepWeapons } from './weapons.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
@@ -203,6 +206,14 @@ function applySetSupplyRun(next, command) {
   return next;
 }
 
+// The damage board: which section the automatic repair system sees to first.
+function applyRepairPriority(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  if (setPriority(carrier, command.section, command.priority) !== 1) return reject(next);
+  return next;
+}
+
 function advanceTick(next) {
   // Order is the simulation's contract and part of every hash: the AI decides
   // first (so its orders take effect this tick, not next), then hulls move,
@@ -224,6 +235,9 @@ function advanceTick(next) {
   stepCapture(next, next.params.podBuildTicks);
   stepEconomy(next);
   stepSupply(next);
+  // Repairs last: the boat has landed this tick's materials, and the yard
+  // spends what is in the store, not what is in the hold.
+  stepRepair(next);
   checkVictory(next, next.params.victoryIslandPermil);
   return next;
 }
@@ -251,6 +265,7 @@ function apply(state, command) {
   if (type === CMD_FIRE_UNIT) return applyFire(next, command);
   if (type === CMD_SET_STOCKPILE) return applySetStockpile(next, command);
   if (type === CMD_SET_SUPPLY_RUN) return applySetSupplyRun(next, command);
+  if (type === CMD_SET_REPAIR_PRIORITY) return applyRepairPriority(next, command);
   return reject(next);
 }
 

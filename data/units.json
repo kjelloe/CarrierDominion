@@ -15,7 +15,6 @@
     "lookaheadMetres": 250,
     "deckHeightMetres": 22,
     "recoverRangeMetres": 320,
-    "repairPerMinute": 10,
     "hangarMantas": 4,
     "hangarWalruses": 4,
     "shallowBandMetres": 45,
@@ -26,16 +25,22 @@
     "reloadRoundsPer100Ticks": 40,
     "lengthMetres": 330,
     "sections": {
-      "engines": 200,
-      "hangar": 220,
-      "bridge": 150,
-      "radar": 110,
-      "guns": 140
+      "bow": 140,
+      "midship": 220,
+      "stern": 130,
+      "port": 180,
+      "starboard": 180,
+      "topside": 110,
+      "engine": 200
     },
     "sectionDamagePermil": 600,
     "speedFloorPermil": 250,
     "turnFloorPermil": 300,
-    "radarFloorPermil": 150
+    "radarFloorPermil": 150,
+    "beamMetres": 72,
+    "armourLossPermil": 500,
+    "materialsCapacity": 8000,
+    "repairPointsPer100Ticks": 8
   },
   "manta": {
     "hull": 60,

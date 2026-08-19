@@ -112,7 +112,7 @@ test('a full round trip moves fuel from the island into the hull', (t) => {
   assert.doesNotThrow(() => canonicalize(state));
 });
 
-test('materials in the hold are landed as hull repairs', (t) => {
+test('materials in the hold reach the yard, and the yard mends the ship', (t) => {
   let { state } = stockedDepot(0, 40000);
   state.carriers[0].hull = state.carriers[0].maxHull - 300;
   state = apply(state, { type: 'set_supply_run', carrierId: 0, active: 1 });
@@ -122,6 +122,9 @@ test('materials in the hold are landed as hull repairs', (t) => {
   t.diagnostic(`repairs landed after ${run.ticks} ticks`);
   assert.ok(run.state.carriers[0].hull > run.state.carriers[0].maxHull - 300, 'nothing was repaired');
   assert.ok(run.state.carriers[0].hull <= run.state.carriers[0].maxHull, 'repaired past new');
+  // The boat's job ends at the store; the automatic repair system spends it.
+  assert.ok(run.state.carriers[0].materials >= 0);
+  assert.ok(run.state.carriers[0].materialsCapacity > 0);
 });
 
 test('the run keeps cycling until it is called off', (t) => {

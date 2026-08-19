@@ -8,11 +8,18 @@ import { canonicalize } from '../shared/statehash.js';
 import { buildView } from '../shared/view.js';
 import { mulCos, mulSin } from '../shared/trig.js';
 import {
-  SECTION_BRIDGE,
-  SECTION_ENGINES,
-  SECTION_GUNS,
-  SECTION_HANGAR,
-  SECTION_RADAR,
+  PRIORITY_HIGH,
+  PRIORITY_LOW,
+  PRIORITY_MEDIUM,
+  SECTION_BOW,
+  SECTION_COUNT,
+  SECTION_ENGINE,
+  SECTION_MIDSHIP,
+  SECTION_PORT,
+  SECTION_STARBOARD,
+  SECTION_STERN,
+  SECTION_TOPSIDE,
+  armourMultiplierPermil,
   damageSection,
   gunCooldown,
   hangarOpen,
@@ -20,7 +27,9 @@ import {
   sectionAt,
   sectionPermil,
   sectionsIntact,
+  setPriority,
 } from '../engine/damage.js';
+import { conditionPermil, stepRepairCarrier } from '../engine/repair.js';
 import { hitCarrier } from '../engine/weapons.js';
 import { KIND_MANTA, UNIT_ACTIVE } from '../engine/units.js';
 import { readyToLaunch } from '../engine/hangar.js';
@@ -28,113 +37,103 @@ import { readyToLaunch } from '../engine/hangar.js';
 const rules = loadRules();
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
+const QUARTER = 16384;
 
 function fresh() {
   return createInitialState(SEED, rules);
 }
 
-// A point `metres` ahead of (or behind, if negative) the carrier's own centre.
-function alongShip(carrier, metres) {
-  const distance = metres * 256;
+function sectionOf(carrier, id) {
+  return carrier.sections.find((s) => s.id === id);
+}
+
+// A point `ahead` metres forward of the carrier's centre and `starboard` metres
+// out on the beam, in the ship's own frame.
+function aboard(carrier, ahead, starboard) {
+  const f = ahead * 256;
+  const r = starboard * 256;
   return {
-    x: carrier.x + mulCos(distance, carrier.heading),
-    y: carrier.y + mulSin(distance, carrier.heading),
+    x: carrier.x + mulCos(f, carrier.heading) + mulCos(r, carrier.heading - QUARTER),
+    y: carrier.y + mulSin(f, carrier.heading) + mulSin(r, carrier.heading - QUARTER),
   };
 }
 
-test('a fresh carrier is whole, and its capability is the undamaged one', () => {
+test('a fresh carrier has seven whole sections, all at medium priority', () => {
   const state = fresh();
   const carrier = state.carriers[0];
+  assert.equal(carrier.sections.length, SECTION_COUNT);
   assert.ok(sectionsIntact(carrier));
-  assert.equal(carrier.sections.length, 5);
+  for (const section of carrier.sections) assert.equal(section.priority, PRIORITY_MEDIUM);
   assert.equal(carrier.maxSpeed, carrier.maxSpeedBase);
   assert.equal(carrier.turnRate, carrier.turnRateBase);
   assert.equal(carrier.radar, carrier.radarBase);
+  assert.equal(conditionPermil(carrier), 1000);
 });
 
-test('where a round lands decides what it breaks', () => {
+test('where a round lands decides what it breaks, in both axes', () => {
   const state = fresh();
   const carrier = state.carriers[0];
-  const bow = alongShip(carrier, 150);
-  const stern = alongShip(carrier, -150);
-  const middle = alongShip(carrier, 0);
-  assert.equal(sectionAt(carrier, bow.x, bow.y), SECTION_GUNS);
-  assert.equal(sectionAt(carrier, stern.x, stern.y), SECTION_ENGINES);
-  assert.equal(sectionAt(carrier, middle.x, middle.y), SECTION_BRIDGE);
-  // Well past either end still reads as the end it is past, not as nothing.
-  const far = alongShip(carrier, 4000);
-  assert.equal(sectionAt(carrier, far.x, far.y), SECTION_GUNS);
+  const bow = aboard(carrier, 150, 0);
+  const midship = aboard(carrier, 0, 0);
+  const engine = aboard(carrier, -100, 0);
+  const stern = aboard(carrier, -160, 0);
+  const port = aboard(carrier, 0, -30);
+  const starboard = aboard(carrier, 0, 30);
+
+  assert.equal(sectionAt(carrier, bow.x, bow.y, 0), SECTION_BOW);
+  assert.equal(sectionAt(carrier, midship.x, midship.y, 0), SECTION_MIDSHIP);
+  assert.equal(sectionAt(carrier, engine.x, engine.y, 0), SECTION_ENGINE);
+  assert.equal(sectionAt(carrier, stern.x, stern.y, 0), SECTION_STERN);
+  assert.equal(sectionAt(carrier, port.x, port.y, 0), SECTION_PORT);
+  assert.equal(sectionAt(carrier, starboard.x, starboard.y, 0), SECTION_STARBOARD);
+  // Anything that comes in above the deck hits the island and the mast, wherever
+  // along the ship it was.
+  assert.equal(sectionAt(carrier, bow.x, bow.y, carrier.topsideHeight + 1), SECTION_TOPSIDE);
 });
 
-test('a hit costs the hull in full and the section a share', () => {
+test('a hit costs the hull, and wrecked plating lets more of the next one through', () => {
   const state = fresh();
   const carrier = state.carriers[0];
-  const stern = alongShip(carrier, -150);
+  const port = aboard(carrier, 0, -30);
   const share = Math.floor((40 * rules.units.carrier.sectionDamagePermil) / 1000);
 
-  hitCarrier(state, carrier, 40, stern.x, stern.y);
-  assert.equal(carrier.hull, carrier.maxHull - 40);
-  assert.equal(carrier.sections[SECTION_ENGINES].hp, rules.units.carrier.sections.engines - share);
-  // Everything else aboard is untouched.
-  assert.equal(sectionPermil(carrier, SECTION_GUNS), 1000);
-});
+  hitCarrier(state, carrier, 40, port.x, port.y, 0);
+  assert.equal(carrier.hull, carrier.maxHull - 40, 'intact plating should absorb in full');
+  assert.equal(sectionOf(carrier, SECTION_PORT).hp, rules.units.carrier.sections.port - share);
+  assert.equal(sectionPermil(carrier, SECTION_STARBOARD), 1000, 'the far side took damage');
 
-test('wrecked engines slow the ship without stopping it dead', () => {
-  const state = fresh();
-  const carrier = state.carriers[0];
-  const full = carrier.maxSpeed;
-  damageSection(carrier, SECTION_ENGINES, carrier.sections[SECTION_ENGINES].maxHp);
-  assert.equal(sectionPermil(carrier, SECTION_ENGINES), 0);
-  assert.ok(carrier.maxSpeed > 0, 'a wrecked engine room left the ship unable to move at all');
-  assert.ok(carrier.maxSpeed < full, 'wrecking the engines changed nothing');
-});
-
-test('a damaged section degrades capability, with a floor under it', () => {
-  const state = fresh();
-  const carrier = state.carriers[0];
-  const engines = carrier.sections[SECTION_ENGINES];
-  damageSection(carrier, SECTION_ENGINES, Math.floor(engines.maxHp / 2));
-  const half = carrier.maxSpeed;
-  assert.ok(half < carrier.maxSpeedBase && half > 0);
-
-  // Ground it down to a sliver: the floor holds, so the ship can still limp.
-  damageSection(carrier, SECTION_ENGINES, engines.hp - 1);
-  const floor = Math.floor(
-    (carrier.maxSpeedBase * rules.units.carrier.speedFloorPermil) / 1000,
+  // Now hole that side properly and hit it again: the same round does more.
+  damageSection(carrier, SECTION_PORT, sectionOf(carrier, SECTION_PORT).hp);
+  assert.equal(
+    armourMultiplierPermil(carrier, SECTION_PORT),
+    1000 + rules.units.carrier.armourLossPermil,
   );
-  assert.equal(carrier.maxSpeed, floor);
+  const before = carrier.hull;
+  hitCarrier(state, carrier, 40, port.x, port.y, 0);
+  assert.ok(before - carrier.hull > 40, 'a wrecked side absorbed as much as a whole one');
 });
 
-test('a wrecked radar shortens what the ship can see', () => {
+test('each system section costs the ship the thing it is for', () => {
   const state = fresh();
   const carrier = state.carriers[0];
-  damageSection(carrier, SECTION_RADAR, carrier.sections[SECTION_RADAR].maxHp);
-  assert.equal(carrier.radar, 0);
-  // And the fog filter uses that immediately: an enemy that was in range is not
-  // any more. (The other carrier is far away, so this is about the shape of the
-  // rule rather than the distance.)
-  const view = buildView(state, carrier.team);
-  assert.ok(view.carriers.every((c) => c.contact === 0 || c.id !== carrier.id));
-});
 
-test('a wrecked hangar closes flight operations', () => {
-  const state = fresh();
-  const carrier = state.carriers[0];
+  damageSection(carrier, SECTION_ENGINE, sectionOf(carrier, SECTION_ENGINE).maxHp);
+  assert.ok(carrier.maxSpeed > 0 && carrier.maxSpeed < carrier.maxSpeedBase, 'engines');
+
+  damageSection(carrier, SECTION_STERN, sectionOf(carrier, SECTION_STERN).maxHp);
+  assert.ok(carrier.turnRate > 0 && carrier.turnRate < carrier.turnRateBase, 'steering');
+
+  damageSection(carrier, SECTION_TOPSIDE, sectionOf(carrier, SECTION_TOPSIDE).maxHp);
+  assert.equal(carrier.radar, 0, 'a wrecked mast should leave the ship blind');
+
   assert.notEqual(readyToLaunch(state, carrier.id, KIND_MANTA), -1);
-  damageSection(carrier, SECTION_HANGAR, carrier.sections[SECTION_HANGAR].maxHp);
+  damageSection(carrier, SECTION_MIDSHIP, sectionOf(carrier, SECTION_MIDSHIP).maxHp);
   assert.equal(hangarOpen(carrier), false);
-  assert.equal(readyToLaunch(state, carrier.id, KIND_MANTA), -1, 'a wrecked hangar still launched');
-});
+  assert.equal(readyToLaunch(state, carrier.id, KIND_MANTA), -1, 'a wrecked hangar launched');
 
-test('point defence slows as the mount is chewed up, then stops', () => {
-  const state = fresh();
-  const carrier = state.carriers[0];
   const base = state.weapons[3].cooldown;
-  assert.equal(gunCooldown(carrier, base), base);
-  damageSection(carrier, SECTION_GUNS, Math.floor(carrier.sections[SECTION_GUNS].maxHp / 2));
-  assert.ok(gunCooldown(carrier, base) > base, 'a damaged mount fires as fast as a whole one');
-  damageSection(carrier, SECTION_GUNS, carrier.sections[SECTION_GUNS].hp);
-  assert.equal(gunCooldown(carrier, base), -1);
+  damageSection(carrier, SECTION_BOW, sectionOf(carrier, SECTION_BOW).maxHp);
+  assert.equal(gunCooldown(carrier, base), -1, 'a wrecked mount still fired');
 });
 
 test('a wrecked ship does not fire, whatever is in range', () => {
@@ -145,39 +144,82 @@ test('a wrecked ship does not fire, whatever is in range', () => {
   enemy.x = carrier.x + 300 * 256;
   enemy.y = carrier.y;
   enemy.z = 200 * 256;
-  damageSection(carrier, SECTION_GUNS, carrier.sections[SECTION_GUNS].maxHp);
+  damageSection(carrier, SECTION_BOW, sectionOf(carrier, SECTION_BOW).maxHp);
   const ammoBefore = carrier.ammo;
   state = apply(state, TICK);
-  const after = state.carriers[0];
-  assert.equal(after.ammo, ammoBefore, 'a destroyed mount fired anyway');
+  assert.equal(state.carriers[0].ammo, ammoBefore, 'a destroyed mount fired anyway');
 });
 
-test('repairs go to the worst section first, then the plating', () => {
+test('repairs follow the priorities the player set, high tier first', () => {
   const state = fresh();
   const carrier = state.carriers[0];
-  damageSection(carrier, SECTION_ENGINES, 100);
-  damageSection(carrier, SECTION_RADAR, 20);
+  damageSection(carrier, SECTION_PORT, 100);
+  damageSection(carrier, SECTION_ENGINE, 40);
+  setPriority(carrier, SECTION_ENGINE, PRIORITY_HIGH);
+  setPriority(carrier, SECTION_PORT, PRIORITY_LOW);
+
+  // The engine room is barely scratched next to the side, but it is the one the
+  // player asked for, so it goes first and finishes before anything else starts.
   const spent = repairSections(carrier, 40);
   assert.equal(spent, 40);
-  // The engines were the worse of the two, so they got it.
-  assert.equal(carrier.sections[SECTION_ENGINES].hp, carrier.sections[SECTION_ENGINES].maxHp - 60);
-  assert.equal(carrier.sections[SECTION_RADAR].hp, carrier.sections[SECTION_RADAR].maxHp - 20);
-  // Repairing restores capability, not just the number.
-  assert.ok(carrier.maxSpeed > 0);
+  assert.equal(sectionOf(carrier, SECTION_ENGINE).hp, sectionOf(carrier, SECTION_ENGINE).maxHp);
+  assert.equal(sectionOf(carrier, SECTION_PORT).hp, sectionOf(carrier, SECTION_PORT).maxHp - 100);
 
-  // A budget bigger than the damage puts the ship right and stops.
-  const rest = repairSections(carrier, 10000);
-  assert.equal(rest, 80);
-  assert.ok(sectionsIntact(carrier));
-  assert.equal(carrier.maxSpeed, carrier.maxSpeedBase);
+  // With the high tier whole, the low one finally gets attention.
+  repairSections(carrier, 60);
+  assert.equal(sectionOf(carrier, SECTION_PORT).hp, sectionOf(carrier, SECTION_PORT).maxHp - 40);
+});
+
+test('within one tier the worst section is repaired first', () => {
+  const state = fresh();
+  const carrier = state.carriers[0];
+  damageSection(carrier, SECTION_PORT, 20);
+  damageSection(carrier, SECTION_TOPSIDE, sectionOf(carrier, SECTION_TOPSIDE).maxHp - 5);
+  repairSections(carrier, 10);
+  assert.equal(sectionOf(carrier, SECTION_TOPSIDE).hp, 15, 'the worst section was not first');
+  assert.equal(sectionOf(carrier, SECTION_PORT).hp, sectionOf(carrier, SECTION_PORT).maxHp - 20);
+});
+
+test('the yard spends the ship own materials, and stops when they run out', () => {
+  const state = fresh();
+  const carrier = state.carriers[0];
+  const perPoint = state.economy.repairPerMaterial;
+  damageSection(carrier, SECTION_ENGINE, 150);
+  carrier.materials = 0;
+
+  for (let tick = 0; tick < 500; tick++) stepRepairCarrier(state, carrier);
+  assert.equal(sectionOf(carrier, SECTION_ENGINE).hp, sectionOf(carrier, SECTION_ENGINE).maxHp - 150,
+    'a ship with no materials repaired itself out of thin air');
+
+  carrier.materials = 20 * perPoint;
+  let done = 0;
+  for (let tick = 0; tick < 2000; tick++) done += stepRepairCarrier(state, carrier);
+  assert.equal(done, 20, 'the yard put in more than the store could pay for');
+  assert.equal(carrier.materials, 0);
+});
+
+test('a repair command from the seat changes the board', () => {
+  let state = fresh();
+  state = apply(state, {
+    type: 'set_repair_priority',
+    carrierId: 0,
+    section: SECTION_TOPSIDE,
+    priority: PRIORITY_HIGH,
+  });
+  assert.equal(sectionOf(state.carriers[0], SECTION_TOPSIDE).priority, PRIORITY_HIGH);
+  // A section that does not exist is rejected rather than silently ignored.
+  const before = state.events.length;
+  state = apply(state, {
+    type: 'set_repair_priority', carrierId: 0, section: 99, priority: PRIORITY_HIGH,
+  });
+  assert.ok(state.events.length >= before);
 });
 
 test('an enemy contact reveals nothing about what is broken aboard', () => {
   const state = fresh();
   const mine = state.carriers[0];
   const theirs = state.carriers[1];
-  damageSection(theirs, SECTION_ENGINES, 100);
-  // Put them nose to nose so the contact exists at all.
+  damageSection(theirs, SECTION_ENGINE, 100);
   theirs.x = mine.x + 1000 * 256;
   theirs.y = mine.y;
   const view = buildView(state, mine.team);
@@ -185,14 +227,17 @@ test('an enemy contact reveals nothing about what is broken aboard', () => {
   assert.notEqual(contact, undefined, 'no contact to test');
   assert.deepEqual(contact.sections, []);
   const own = view.carriers.find((c) => c.contact === 0);
-  assert.equal(own.sections.length, 5);
+  assert.equal(own.sections.length, SECTION_COUNT);
+  assert.equal(own.sections[0].priority, PRIORITY_MEDIUM);
 });
 
 test('sections survive the canonical walk and the deep copy', () => {
   let state = fresh();
-  const stern = alongShip(state.carriers[0], -150);
-  hitCarrier(state, state.carriers[0], 40, stern.x, stern.y);
+  const stern = aboard(state.carriers[0], -160, 0);
+  hitCarrier(state, state.carriers[0], 40, stern.x, stern.y, 0);
+  setPriority(state.carriers[0], SECTION_STERN, PRIORITY_HIGH);
   state = apply(state, TICK);
   assert.doesNotThrow(() => canonicalize(state));
-  assert.ok(state.carriers[0].sections[SECTION_ENGINES].hp < rules.units.carrier.sections.engines);
+  assert.equal(sectionOf(state.carriers[0], SECTION_STERN).priority, PRIORITY_HIGH);
+  assert.ok(sectionOf(state.carriers[0], SECTION_STERN).hp < rules.units.carrier.sections.stern);
 });

@@ -34,6 +34,22 @@
       pointer-events: none; user-select: none;
     }
     #gpu { color: var(--hud-dim); opacity: 0.75; }
+    /* The damage control board: hidden until Z, and pointer-active when open -
+       it is the one part of the overlay you click rather than read. */
+    #damage-panel {
+      position: fixed; top: 50%; right: 24px; transform: translateY(-50%);
+      width: 420px; padding: 12px 14px; border-radius: 6px;
+      background: var(--hud-panel); color: var(--hud-ink);
+      font: 12px/1.5 var(--hud-font);
+      display: none; user-select: none;
+    }
+    #damage-panel.open { display: block; }
+    #damage-title { letter-spacing: 2px; margin-bottom: 8px; }
+    #damage-view { display: block; width: 100%; height: 220px; cursor: crosshair; }
+    .damage-row { display: flex; justify-content: space-between; gap: 12px; cursor: pointer; }
+    .damage-row:hover { color: var(--hud-ink); text-decoration: underline; }
+    .damage-name { color: var(--hud-dim); }
+    #damage-legend, #damage-stores { color: var(--hud-dim); margin-top: 8px; }
   </style>
   <script type="importmap">
     { "imports": { "three": "/client/vendor/three.module.min.js" } }
@@ -44,6 +60,13 @@
   <div id="hud"></div>
   <!-- The legend is rendered from the language catalogue by main.js. -->
   <div id="help"></div>
+  <div id="damage-panel">
+    <div id="damage-title"></div>
+    <canvas id="damage-view"></canvas>
+    <div id="damage-list"></div>
+    <div id="damage-stores"></div>
+    <div id="damage-legend"></div>
+  </div>
   <script type="module" src="/client/main.js"></script>
 </body>
 </html>

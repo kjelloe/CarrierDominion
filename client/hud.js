@@ -110,19 +110,31 @@ function describeUnit(t, unit, params) {
 // The damage report, in the order the sections sit along the ship: stern to
 // bow. A percentage each, and the ones that are gone say so - what is broken
 // matters more than by how much, once it is broken.
+// In the order the sections sit on the ship, which is the order the damage
+// board draws them: bow, midship, stern, port, starboard, topside, engine.
 const SECTION_KEYS = [
-  'section.engines', 'section.hangar', 'section.bridge', 'section.radar', 'section.guns',
+  'section.bow', 'section.midship', 'section.stern',
+  'section.port', 'section.starboard', 'section.topside', 'section.engine',
 ];
+const PRIORITY_KEYS = ['priority.low', 'priority.medium', 'priority.high'];
 
+function sectionPercent(section) {
+  return section.maxHp > 0 ? Math.round((section.hp * 100) / section.maxHp) : 100;
+}
+
+// One line for the overlay: only what is actually hurt, because seven sections
+// at 100 is a row of noise. "all sound" when there is nothing to say.
 function describeDamage(t, view) {
   const carrier = view.carriers.find((c) => c.team === view.team && c.contact === 0);
   if (carrier === undefined || carrier.sections.length === 0) return t('damage.none');
   const parts = [];
   for (const section of carrier.sections) {
-    const percent = section.maxHp > 0 ? Math.round((section.hp * 100) / section.maxHp) : 100;
+    const percent = sectionPercent(section);
+    if (percent >= 100) continue;
     const name = t(SECTION_KEYS[section.id] ?? 'damage.none');
     parts.push(percent === 0 ? `${name} ${t('damage.out')}` : `${name} ${percent}`);
   }
+  if (parts.length === 0) return t('damage.sound');
   return parts.join(' ');
 }
 
@@ -185,6 +197,9 @@ export {
   describeStores,
   describeWeapons,
   describeDamage,
+  sectionPercent,
+  SECTION_KEYS,
+  PRIORITY_KEYS,
   describeIslands,
   describeSupply,
   knotsFrom,

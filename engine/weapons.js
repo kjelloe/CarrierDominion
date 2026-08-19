@@ -23,7 +23,7 @@ import {
   pushEvent,
 } from './events.js';
 import { KIND_MANTA, UNIT_ACTIVE, UNIT_LOST, UNIT_RETURNING } from './units.js';
-import { damageSection, gunCooldown, sectionAt } from './damage.js';
+import { armourMultiplierPermil, damageSection, gunCooldown, sectionAt } from './damage.js';
 
 // Where a weapon record lives in state.weapons. The first three are the unit
 // KIND_* values on purpose, so a unit's weapon is state.weapons[unit.kind].
@@ -212,13 +212,16 @@ function launchShot(state, team, x, y, z, weapon, target) {
   return shot;
 }
 
-// Ruling #18: a Manta does not shoot by itself. Somebody flies it - the player
-// under direct control, or the AI agent that launched it - and that somebody
-// pulls the trigger. Everything else defends itself: a ship's point defence
-// and a Walrus gun engage on their own, because nobody asks a close-in mount
-// for permission.
-function needsTrigger(kind) {
-  return kind === KIND_MANTA;
+// Who waits for a trigger, and who shoots on its own.
+//
+// Ruling #18 put a pilot behind every Manta missile; the follow-up ruling said
+// an autopilot Manta does BOTH - it defends itself and it engages the target it
+// was sent at. So the line is not the airframe, it is the cockpit: a Manta with
+// somebody in it fires when that somebody says so, and an unattended one
+// defends itself like everything else aboard. A ship's point defence and a
+// Walrus gun never wait, because nobody asks a close-in mount for permission.
+function needsTrigger(unit) {
+  return unit.kind === KIND_MANTA && unit.control !== -1;
 }
 
 // Cooling down is not the same as choosing to shoot, and separating them is
@@ -260,7 +263,7 @@ function fireAll(state) {
     const unit = state.units[i];
     if (!unitEngageable(unit)) continue;
     coolDown(unit);
-    if (needsTrigger(unit.kind)) continue;
+    if (needsTrigger(unit)) continue;
     serveWeapon(state, unit.team, unit.x, unit.y, unit.z, state.weapons[unit.kind], unit);
   }
 }
@@ -320,11 +323,14 @@ function hitUnit(state, unit, damage) {
 // A hit costs the hull its full damage and the section it landed on a share of
 // it (ruling #19). The two are tracked apart because they are different kinds
 // of trouble: one sinks you, the other stops you doing your job.
-function hitCarrier(state, carrier, damage, x, y) {
-  const section = sectionAt(carrier, x, y);
+function hitCarrier(state, carrier, damage, x, y, z) {
+  const section = sectionAt(carrier, x, y, z);
+  // Armour is read BEFORE the section takes this hit: the plating that was
+  // there when the round arrived is what absorbed it.
+  const through = mulDiv(damage, armourMultiplierPermil(carrier, section), 1000);
   damageSection(carrier, section, mulDiv(damage, carrier.sectionDamagePermil, 1000));
   const before = carrier.hull;
-  carrier.hull = carrier.hull - damage;
+  carrier.hull = carrier.hull - through;
   if (carrier.hull < 0) carrier.hull = 0;
   pushEvent(state.events, EVT_CARRIER_DAMAGED, carrier.id, carrier.team, before - carrier.hull);
   if (carrier.hull === 0 && before > 0) {
@@ -376,7 +382,7 @@ function stepShots(state, hitUnitRadius, hitCarrierRadius) {
     const hit = findHit(state, shot, nx, ny, nz, hitUnitRadius, hitCarrierRadius);
     if (hit !== -1) {
       if (hit.kind === TARGET_CARRIER) {
-        hitCarrier(state, state.carriers[hit.index], shot.damage, nx, ny);
+        hitCarrier(state, state.carriers[hit.index], shot.damage, nx, ny, nz);
       }
       else hitUnit(state, state.units[hit.index], shot.damage);
       continue;

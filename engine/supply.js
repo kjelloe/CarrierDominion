@@ -10,12 +10,11 @@
 // it on and the boat keeps cycling: load, deliver, load again. Switch it off
 // and it finishes the leg it is on and comes home.
 
-import { dist2D, floorDiv, mulDiv } from '../shared/fixed.js';
+import { dist2D, mulDiv } from '../shared/fixed.js';
 import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { EVT_SUPPLY_DELIVERED, EVT_SUPPLY_LOADED, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { islandById, teamById } from './economy.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
-import { repairSections } from './damage.js';
 import {
   KIND_LIGHTER,
   ORDER_DELIVER,
@@ -106,23 +105,17 @@ function unloadToCarrier(state, unit, carrier) {
   unit.cargoOrdnance = unit.cargoOrdnance - ordnance;
   carrier.ordnance = carrier.ordnance + ordnance;
   worked = worked + ordnance;
-  // Materials become repairs on arrival - the yard is wherever the ship is.
-  // Sections come first: a ship that cannot move, see, or fly its aircraft is
-  // in worse trouble than one with dented plating (ruling #19).
-  if (unit.cargoMaterials > 0) {
-    const perPoint = state.economy.repairPerMaterial;
-    let affordable = perPoint > 0 ? floorDiv(unit.cargoMaterials, perPoint) : 0;
-    if (affordable > 0) {
-      const onSections = repairSections(carrier, affordable);
-      affordable = affordable - onSections;
-      const damage = carrier.maxHull - carrier.hull;
-      const onHull = affordable < damage ? affordable : damage;
-      carrier.hull = carrier.hull + (onHull > 0 ? onHull : 0);
-      const spent = onSections + (onHull > 0 ? onHull : 0);
-      unit.cargoMaterials = unit.cargoMaterials - spent * perPoint;
-      worked = worked + spent;
-    }
-  }
+  // Materials go into the ship's yard stores. They are not repairs yet: the
+  // automatic repair system spends them, in the priority order the player set
+  // (engine/repair.js).
+  const materials = moveAmount(
+    unit.cargoMaterials,
+    unit.workRate - worked,
+    carrier.materialsCapacity - carrier.materials,
+  );
+  unit.cargoMaterials = unit.cargoMaterials - materials;
+  carrier.materials = carrier.materials + materials;
+  worked = worked + materials;
   return worked;
 }
 

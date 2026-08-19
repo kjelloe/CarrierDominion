@@ -86,6 +86,14 @@ function copyCarrier(carrier) {
     turnRateBase: carrier.turnRateBase,
     radarBase: carrier.radarBase,
     halfLength: carrier.halfLength,
+    halfBeam: carrier.halfBeam,
+    topsideHeight: carrier.topsideHeight,
+    armourLossPermil: carrier.armourLossPermil,
+    materials: carrier.materials,
+    materialsCapacity: carrier.materialsCapacity,
+    repairRate: carrier.repairRate,
+    repairAccum: carrier.repairAccum,
+    repairReported: carrier.repairReported,
     sectionDamagePermil: carrier.sectionDamagePermil,
     speedFloorPermil: carrier.speedFloorPermil,
     turnFloorPermil: carrier.turnFloorPermil,
@@ -201,6 +209,18 @@ function createCarrier(id, team, position, carrierRules, carrierWeapon, unitsPer
     turnRateBase: carrierRules.turnRateBamPerTick,
     radarBase: carrierRules.radarRangeMetres * unitsPerMetre,
     halfLength: mulDiv(carrierRules.lengthMetres * unitsPerMetre, 1, 2),
+    halfBeam: mulDiv(carrierRules.beamMetres * unitsPerMetre, 1, 2),
+    // Above the deck is the island and the mast, and a round that gets up
+    // there is hitting topside whatever else it was aimed at.
+    topsideHeight: carrierRules.deckHeightMetres * unitsPerMetre,
+    armourLossPermil: carrierRules.armourLossPermil,
+    // The ship's own yard stores. The lighter fills these; the repair system
+    // spends them.
+    materials: 0,
+    materialsCapacity: carrierRules.materialsCapacity,
+    repairRate: carrierRules.repairPointsPer100Ticks,
+    repairAccum: 0,
+    repairReported: 0,
     sectionDamagePermil: carrierRules.sectionDamagePermil,
     speedFloorPermil: carrierRules.speedFloorPermil,
     turnFloorPermil: carrierRules.turnFloorPermil,

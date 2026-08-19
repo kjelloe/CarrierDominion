@@ -17,6 +17,7 @@ import { createLocalTransport, createWsTransport } from './transport.js';
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
 import { createScene, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
+import { createBoard, pickSection, renderBoard, updateBoard } from './render/damageboard.js';
 import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
 import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.js';
 import { applyStyleToDocument, resolveStyle, styleFor } from './styles.js';
@@ -31,6 +32,9 @@ import {
   describeStores,
   describeWeapons,
   describeDamage,
+  sectionPercent,
+  SECTION_KEYS,
+  PRIORITY_KEYS,
   describeSupply,
   describeUnit,
 } from './hud.js';
@@ -68,6 +72,9 @@ const state = {
   transport: undefined,
   scene3d: undefined,
   hud: undefined,
+  board: undefined,
+  damageRows: [],
+  damageOpen: false,
   lastFrameMs: 0,
 };
 
@@ -145,6 +152,87 @@ function recallSelected() {
 // Ruling #18: a Manta shoots when its pilot says so. The engine picks the
 // target - nearest enemy in range that this weapon can engage - but the trigger
 // is yours, and it is a no-op if there is nothing there or the rail is cooling.
+// The damage control board. It is only built when it is first opened: a player
+// who never presses Z never pays for a second WebGL context.
+function toggleDamageBoard() {
+  const panel = document.getElementById('damage-panel');
+  const open = !panel.classList.contains('open');
+  panel.classList.toggle('open', open);
+  state.damageOpen = open;
+  if (!open || state.board !== undefined) return;
+  const canvas = document.getElementById('damage-view');
+  state.board = createBoard(canvas);
+  document.getElementById('damage-title').textContent = state.t('damage.title');
+  document.getElementById('damage-legend').textContent = state.t('damage.legend');
+  canvas.addEventListener('pointerdown', (event) => {
+    const bounds = canvas.getBoundingClientRect();
+    const ndcX = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+    const ndcY = -(((event.clientY - bounds.top) / bounds.height) * 2 - 1);
+    cyclePriority(pickSection(state.board, ndcX, ndcY));
+  });
+  buildDamageRows();
+}
+
+// The rows are built ONCE and then only have their text rewritten. Rebuilding
+// them every frame - which is what this did first - replaces the element under
+// the pointer sixty times a second, so a click lands on a node that has already
+// been thrown away.
+function buildDamageRows() {
+  const list = document.getElementById('damage-list');
+  list.textContent = '';
+  state.damageRows = [];
+  for (const key of SECTION_KEYS) {
+    const row = document.createElement('div');
+    row.className = 'damage-row';
+    const name = document.createElement('span');
+    name.className = 'damage-name';
+    name.textContent = state.t(key);
+    const value = document.createElement('span');
+    value.textContent = '-';
+    row.append(name, value);
+    const index = state.damageRows.length;
+    row.addEventListener('click', () => cyclePriority(index));
+    list.append(row);
+    state.damageRows.push(value);
+  }
+}
+
+// Low, medium, high, and round again. The engine holds the authority; this only
+// asks, and the next view answers.
+function cyclePriority(sectionId) {
+  if (sectionId === -1 || state.carrierId === -1) return;
+  const carrier = ownCarrierOf(state.view);
+  if (carrier === undefined) return;
+  const section = carrier.sections.find((s) => s.id === sectionId);
+  if (section === undefined) return;
+  state.transport.send({
+    type: 'set_repair_priority',
+    carrierId: state.carrierId,
+    section: sectionId,
+    priority: (section.priority + 1) % 3,
+  });
+}
+
+function renderDamageBoard(deltaSeconds) {
+  if (!state.damageOpen || state.board === undefined) return;
+  const carrier = ownCarrierOf(state.view);
+  if (carrier === undefined) return;
+  updateBoard(state.board, carrier.sections);
+  const canvas = document.getElementById('damage-view');
+  renderBoard(state.board, deltaSeconds, canvas.clientWidth, canvas.clientHeight);
+
+  for (const section of carrier.sections) {
+    const value = state.damageRows[section.id];
+    if (value === undefined) continue;
+    const percent = sectionPercent(section);
+    value.textContent = `${percent}% ${state.t(PRIORITY_KEYS[section.priority] ?? '')}`;
+  }
+  document.getElementById('damage-stores').textContent = state.t('damage.stores', {
+    materials: carrier.materials,
+    capacity: carrier.materialsCapacity,
+  });
+}
+
 function fireSelected() {
   const unit = selectedUnit();
   if (unit === undefined) return;
@@ -297,6 +385,7 @@ function bindInput(level) {
     else if (key === 't') togglePiloting();
     else if (key === 'p') deployPod();
     else if (key === 'f') fireSelected();
+    else if (key === 'z') toggleDamageBoard();
     else if (key === 'l') toggleSupplyRun();
     else if (key === 'k') nominateDepot();
     else if (key === ',') nudgeSpeed(-1);
@@ -407,12 +496,14 @@ function frame(nowMs) {
   setHud(state.hud, 'weapons', describeWeapons(state.t, state.view));
   setHud(state.hud, 'stores', describeStores(state.t, state.view));
   setHud(state.hud, 'supply', describeSupply(state.t, state.view));
+  renderDamageBoard(deltaSeconds);
 }
 
 function renderHelp(t) {
   const help = document.getElementById('help');
   help.textContent = '';
-  for (const key of ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.time']) {
+  const lines = ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.damage', 'help.time'];
+  for (const key of lines) {
     const line = document.createElement('div');
     line.textContent = t(key);
     help.append(line);

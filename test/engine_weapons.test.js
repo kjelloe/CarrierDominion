@@ -303,21 +303,31 @@ test('a lighter brings ordnance from the depot into the ship', () => {
   assert.ok(aboardBefore > 0, 'a carrier should start with a full store');
 });
 
-test('a Manta with nobody flying it never fires', () => {
+test('an autopilot Manta defends itself; a piloted one waits for its pilot', () => {
   let state = fresh();
-  // Team 0 has no AI brain in the default ruleset, so this Manta has no pilot.
-  // Its target is a Walrus, whose gun cannot reach up at it - so the Manta sits
-  // in easy range of something it could kill, and does nothing, for want of a
-  // finger on the trigger.
+  // Its target is a Walrus, whose gun cannot elevate at it - so the aircraft is
+  // in easy range of something it could kill, and the only question is whether
+  // anything makes it shoot.
   const pair = faceOff(state, KIND_MANTA, KIND_WALRUS, 700 * 256);
-  const idle = pair.a.id;
-  for (let tick = 0; tick < 200; tick++) state = apply(state, TICK);
-  const after = state.units.find((u) => u.id === idle);
-  assert.equal(after.ammo, rules.weapons.manta.magazine, 'an unflown Manta spent rounds');
-  // ...and one command is all it takes to change that.
-  state = apply(state, { type: 'fire_unit', unitId: idle });
-  const armed = state.units.find((u) => u.id === idle);
-  assert.equal(armed.ammo, rules.weapons.manta.magazine - 1);
+  const flown = pair.a.id;
+  state = apply(state, TICK);
+  const auto = state.units.find((u) => u.id === flown);
+  assert.ok(auto.ammo < rules.weapons.manta.magazine, 'an autopilot Manta did not defend itself');
+
+  // Climb into the cockpit and it stops shooting on its own.
+  let piloted = fresh();
+  const seat = faceOff(piloted, KIND_MANTA, KIND_WALRUS, 700 * 256);
+  piloted = apply(piloted, { type: 'take_control', unitId: seat.a.id });
+  const held = piloted.units.find((u) => u.id === seat.a.id).ammo;
+  for (let tick = 0; tick < 120; tick++) piloted = apply(piloted, TICK);
+  assert.equal(
+    piloted.units.find((u) => u.id === seat.a.id).ammo,
+    held,
+    'a piloted Manta fired without its pilot',
+  );
+  // ...until the pilot pulls the trigger.
+  piloted = apply(piloted, { type: 'fire_unit', unitId: seat.a.id });
+  assert.equal(piloted.units.find((u) => u.id === seat.a.id).ammo, held - 1);
 });
 
 test('a cooling weapon becomes ready even when the trigger is never pulled', () => {
