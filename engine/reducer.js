@@ -10,6 +10,7 @@ import { PHASE_RUNNING } from './victory.js';
 import {
   CMD_ADVANCE_TICK,
   CMD_DEPLOY_POD,
+  CMD_FIRE_UNIT,
   CMD_LAUNCH_UNIT,
   CMD_ORDER_UNIT_MOVE,
   CMD_RECALL_UNIT,
@@ -43,7 +44,7 @@ import { checkVictory } from './victory.js';
 import { stepEconomy, teamById } from './economy.js';
 import { stepSupply } from './supply.js';
 import { stepUnits } from './fleet.js';
-import { stepWeapons } from './weapons.js';
+import { fireUnit, stepWeapons } from './weapons.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import {
   ORDER_MOVE,
@@ -162,6 +163,16 @@ function findIsland(state, islandId) {
   return -1;
 }
 
+// Firing is a command, not a tick effect (ruling #18). A Manta that nobody
+// flies is a Manta that never shoots.
+function applyFire(next, command) {
+  const unit = findUnit(next, command.unitId);
+  if (unit === -1) return reject(next);
+  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
+  fireUnit(next, unit);
+  return next;
+}
+
 function applyDeployPod(next, command) {
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
@@ -237,6 +248,7 @@ function apply(state, command) {
   if (type === CMD_RELEASE_CONTROL) return applyReleaseControl(next, command);
   if (type === CMD_SET_UNIT_HELM) return applyUnitHelm(next, command);
   if (type === CMD_DEPLOY_POD) return applyDeployPod(next, command);
+  if (type === CMD_FIRE_UNIT) return applyFire(next, command);
   if (type === CMD_SET_STOCKPILE) return applySetStockpile(next, command);
   if (type === CMD_SET_SUPPLY_RUN) return applySetSupplyRun(next, command);
   return reject(next);

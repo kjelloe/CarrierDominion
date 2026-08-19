@@ -100,10 +100,13 @@ test('a Manta shoots an enemy Manta down, and the kill is in the events', () => 
   let state = fresh();
   const pair = faceOff(state, KIND_MANTA, KIND_MANTA, 1200 * 256);
   const victim = pair.b.id;
-  // Nobody is steering, so both simply hang there and trade.
+  const shooter = pair.a.id;
+  // Nobody is steering, so both simply hang there and trade. The trigger is
+  // pulled every tick: a Manta fires for its pilot and nobody else (#18).
   let fired = 0;
   let killed = false;
   for (let tick = 0; tick < 600 && !killed; tick++) {
+    state = apply(state, { type: 'fire_unit', unitId: shooter });
     state = apply(state, TICK);
     for (const event of state.events) {
       if (event.code === EVT_SHOT_FIRED) fired += 1;
@@ -298,4 +301,32 @@ test('a lighter brings ordnance from the depot into the ship', () => {
   assert.ok(carrier.ordnance > 0, 'nothing was landed into the magazine');
   assert.ok(carrier.ordnance <= carrier.ordnanceCapacity);
   assert.ok(aboardBefore > 0, 'a carrier should start with a full store');
+});
+
+test('a Manta with nobody flying it never fires', () => {
+  let state = fresh();
+  // Team 0 has no AI brain in the default ruleset, so this Manta has no pilot.
+  // Its target is a Walrus, whose gun cannot reach up at it - so the Manta sits
+  // in easy range of something it could kill, and does nothing, for want of a
+  // finger on the trigger.
+  const pair = faceOff(state, KIND_MANTA, KIND_WALRUS, 700 * 256);
+  const idle = pair.a.id;
+  for (let tick = 0; tick < 200; tick++) state = apply(state, TICK);
+  const after = state.units.find((u) => u.id === idle);
+  assert.equal(after.ammo, rules.weapons.manta.magazine, 'an unflown Manta spent rounds');
+  // ...and one command is all it takes to change that.
+  state = apply(state, { type: 'fire_unit', unitId: idle });
+  const armed = state.units.find((u) => u.id === idle);
+  assert.equal(armed.ammo, rules.weapons.manta.magazine - 1);
+});
+
+test('a cooling weapon becomes ready even when the trigger is never pulled', () => {
+  let state = fresh();
+  const pair = faceOff(state, KIND_MANTA, KIND_MANTA, 1200 * 256);
+  state = apply(state, { type: 'fire_unit', unitId: pair.a.id });
+  const hot = state.units.find((u) => u.id === pair.a.id);
+  assert.ok(hot.cooldown > 0, 'firing left no cooldown');
+  state = apply(state, TICK);
+  const cooler = state.units.find((u) => u.id === pair.a.id);
+  assert.ok(cooler.cooldown < hot.cooldown, 'the rail never cooled');
 });

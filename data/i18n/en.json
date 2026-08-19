@@ -56,7 +56,7 @@
   "war.unknown": "somehow",
   "help.helm": "W/S throttle - A/D rudder - X all stop - C camera - G graphics tier",
   "help.units": "1 launch Manta - 2 launch Walrus - N next unit - click sea to send it",
-  "help.orders": "T take the controls - R recall - P deploy ACCB pod",
+  "help.orders": "T take the controls - R recall - P deploy ACCB pod - F fire",
   "help.time": ", / . time compression - space pause",
   "gpu.detecting": "detecting GPU...",
   "hud.supply": "supply",
@@ -71,5 +71,6 @@
   "help.supply": "L supply run - K make the nearest island your depot",
   "hud.weapons": "weapons",
   "weapons.state": "{rounds} rnd / {store} ord - {air} in the air",
-  "war.draw": "a draw, both carriers lost"
+  "war.draw": "a draw, both carriers lost",
+  "status.noAmmo": "no rounds left aboard that unit"
 }

@@ -17,6 +17,7 @@ const CMD_SET_UNIT_HELM = 'set_unit_helm';
 const CMD_DEPLOY_POD = 'deploy_pod';
 const CMD_SET_STOCKPILE = 'set_stockpile';
 const CMD_SET_SUPPLY_RUN = 'set_supply_run';
+const CMD_FIRE_UNIT = 'fire_unit';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -32,6 +33,7 @@ const UNIT_COMMANDS = [
   CMD_RELEASE_CONTROL,
   CMD_SET_UNIT_HELM,
   CMD_DEPLOY_POD,
+  CMD_FIRE_UNIT,
 ];
 
 function isInt(value) {
@@ -88,7 +90,12 @@ function validateCommand(command) {
     if (!isInt(command.islandId)) return 'islandId must be an integer';
     return '';
   }
-  if (type === CMD_RECALL_UNIT || type === CMD_TAKE_CONTROL || type === CMD_RELEASE_CONTROL) {
+  if (
+    type === CMD_RECALL_UNIT
+    || type === CMD_TAKE_CONTROL
+    || type === CMD_RELEASE_CONTROL
+    || type === CMD_FIRE_UNIT
+  ) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
     return '';
   }
@@ -123,6 +130,7 @@ export {
   CMD_DEPLOY_POD,
   CMD_SET_STOCKPILE,
   CMD_SET_SUPPLY_RUN,
+  CMD_FIRE_UNIT,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

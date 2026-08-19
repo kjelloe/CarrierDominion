@@ -211,13 +211,26 @@ function launchShot(state, team, x, y, z, weapon, target) {
   return shot;
 }
 
-// One firing decision for one armed hull. Cooldown ticks down here too, so an
-// entity that never sees a target still becomes ready.
+// Ruling #18: a Manta does not shoot by itself. Somebody flies it - the player
+// under direct control, or the AI agent that launched it - and that somebody
+// pulls the trigger. Everything else defends itself: a ship's point defence
+// and a Walrus gun engage on their own, because nobody asks a close-in mount
+// for permission.
+function needsTrigger(kind) {
+  return kind === KIND_MANTA;
+}
+
+// Cooling down is not the same as choosing to shoot, and separating them is
+// the whole reason this is its own function: a trigger-fired Manta that is
+// never fired would otherwise never become ready again.
+function coolDown(holder) {
+  if (holder.cooldown > 0) holder.cooldown = holder.cooldown - 1;
+  return holder.cooldown;
+}
+
+// One firing decision for one armed hull.
 function serveWeapon(state, team, x, y, z, weapon, holder) {
-  if (holder.cooldown > 0) {
-    holder.cooldown = holder.cooldown - 1;
-    return 0;
-  }
+  if (holder.cooldown > 0) return 0;
   if (holder.ammo <= 0 || weapon.magazine <= 0) return 0;
   const target = pickTarget(state, team, x, y, z, weapon);
   if (target === -1) return 0;
@@ -233,13 +246,24 @@ function fireAll(state) {
     if (carrier.hull <= 0) continue;
     const weapon = state.weapons[WEAPON_CARRIER];
     reloadCarrier(carrier, weapon);
+    coolDown(carrier);
     serveWeapon(state, carrier.team, carrier.x, carrier.y, 0, weapon, carrier);
   }
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
     if (!unitEngageable(unit)) continue;
+    coolDown(unit);
+    if (needsTrigger(unit.kind)) continue;
     serveWeapon(state, unit.team, unit.x, unit.y, unit.z, state.weapons[unit.kind], unit);
   }
+}
+
+// Somebody pulled the trigger on this unit: the player flying it, or the AI
+// agent that sent it. Returns 1 if a round left the rail - it is a miss, not an
+// error, when there is nothing in range or the weapon is still cooling.
+function fireUnit(state, unit) {
+  if (!unitEngageable(unit)) return 0;
+  return serveWeapon(state, unit.team, unit.x, unit.y, unit.z, state.weapons[unit.kind], unit);
 }
 
 function findTargetPosition(state, shot) {
@@ -412,6 +436,9 @@ export {
   copyShot,
   segmentDistSq,
   pickTarget,
+  needsTrigger,
+  coolDown,
+  fireUnit,
   fireAll,
   stepShots,
   stepWeapons,

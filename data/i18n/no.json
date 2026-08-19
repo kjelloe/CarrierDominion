@@ -56,7 +56,7 @@
   "war.unknown": "på et vis",
   "help.helm": "W/S pådrag - A/D ror - X full stopp - C kamera - G grafikknivå",
   "help.units": "1 send opp Manta - 2 sett ut Walrus - N neste enhet - klikk sjøen for å sende den",
-  "help.orders": "T ta kontrollen - R kall tilbake - P sett ut ACCB-pod",
+  "help.orders": "T ta kontrollen - R kall tilbake - P slipp ACCB-kapsel - F skyt",
   "help.time": ", / . tidskomprimering - mellomrom pause",
   "gpu.detecting": "finner GPU...",
   "hud.supply": "forsyning",
@@ -71,5 +71,6 @@
   "help.supply": "L forsyningstur - K gjør nærmeste øy til depot",
   "hud.weapons": "våpen",
   "weapons.state": "{rounds} skudd / {store} ammo - {air} i lufta",
-  "war.draw": "uavgjort, begge hangarskip tapt"
+  "war.draw": "uavgjort, begge hangarskip tapt",
+  "status.noAmmo": "ingen skudd igjen om bord"
 }

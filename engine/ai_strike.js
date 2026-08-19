@@ -12,6 +12,7 @@ import { dist2D, mulDiv } from '../shared/fixed.js';
 import { atan2B } from '../shared/trig.js';
 import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
+import { fireUnit } from './weapons.js';
 import {
   KIND_MANTA,
   ORDER_MOVE,
@@ -79,9 +80,9 @@ function airborneMantas(state, team) {
   return out;
 }
 
-// Send an aircraft at a point. It is a move order, not a fire order: the
-// shooting is automatic once something enemy is inside missile range, so the
-// AI's whole job is to put the airframe where that becomes true.
+// Send an aircraft at a point. Getting it there is only half the job: a Manta
+// fires only when somebody pulls the trigger (ruling #18), and for an AI-flown
+// aircraft that somebody is this module.
 function vectorTo(unit, x, y) {
   unit.order = ORDER_MOVE;
   unit.state = UNIT_ACTIVE;
@@ -110,8 +111,14 @@ function manageStrike(state, brain) {
 
   brain.strikeCarrier = target.id;
   for (let i = 0; i < flying.length; i++) {
-    if (fuelPermil(flying[i]) <= STRIKE_FUEL_PERMIL) orderReturn(flying[i]);
-    else vectorTo(flying[i], target.x, target.y);
+    if (fuelPermil(flying[i]) <= STRIKE_FUEL_PERMIL) {
+      orderReturn(flying[i]);
+      continue;
+    }
+    vectorTo(flying[i], target.x, target.y);
+    // Pull the trigger. fireUnit is a no-op when nothing is in range or the
+    // rail is still cooling, so this can simply be asked every cadence.
+    fireUnit(state, flying[i]);
   }
 
   let carrier = -1;

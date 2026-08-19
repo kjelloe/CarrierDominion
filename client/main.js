@@ -141,6 +141,19 @@ function recallSelected() {
   state.transport.send({ type: 'recall_unit', unitId: unit.id });
 }
 
+// Ruling #18: a Manta shoots when its pilot says so. The engine picks the
+// target - nearest enemy in range that this weapon can engage - but the trigger
+// is yours, and it is a no-op if there is nothing there or the rail is cooling.
+function fireSelected() {
+  const unit = selectedUnit();
+  if (unit === undefined) return;
+  if (unit.ammo <= 0) {
+    setHud(state.hud, 'status', state.t('status.noAmmo'));
+    return;
+  }
+  state.transport.send({ type: 'fire_unit', unitId: unit.id });
+}
+
 function stopPiloting() {
   if (!state.piloting) return;
   const unit = selectedUnit();
@@ -282,6 +295,7 @@ function bindInput(level) {
     else if (key === 'r') recallSelected();
     else if (key === 't') togglePiloting();
     else if (key === 'p') deployPod();
+    else if (key === 'f') fireSelected();
     else if (key === 'l') toggleSupplyRun();
     else if (key === 'k') nominateDepot();
     else if (key === ',') nudgeSpeed(-1);
