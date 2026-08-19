@@ -17,7 +17,13 @@ import { createLocalTransport, createWsTransport } from './transport.js';
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
 import { createScene, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
-import { createBoard, pickSection, renderBoard, updateBoard } from './render/damageboard.js';
+import { createDamagePanel, renderDamagePanel, toggleDamagePanel } from './panels/damage.js';
+import {
+  createIslandPanel,
+  islandAt,
+  openIslandPanel,
+  renderIslandPanel,
+} from './panels/island.js';
 import { nextWeapon } from '../engine/weapons.js';
 import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
 import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.js';
@@ -35,9 +41,6 @@ import {
   roundsOf,
   describeDamage,
   describeScore,
-  sectionPercent,
-  SECTION_KEYS,
-  PRIORITY_KEYS,
   describeSupply,
   describeUnit,
 } from './hud.js';
@@ -76,11 +79,8 @@ const state = {
   transport: undefined,
   scene3d: undefined,
   hud: undefined,
-  board: undefined,
-  damageRows: [],
-  damageOpen: false,
-  islandId: -1,
-  islandStamp: '',
+  damage: undefined,
+  island: undefined,
   buildCosts: [0, 0, 0],
   lastFrameMs: 0,
 };
@@ -161,217 +161,6 @@ function recallSelected() {
 // is yours, and it is a no-op if there is nothing there or the rail is cooling.
 // The damage control board. It is only built when it is first opened: a player
 // who never presses Z never pays for a second WebGL context.
-function toggleDamageBoard() {
-  const panel = document.getElementById('damage-panel');
-  const open = !panel.classList.contains('open');
-  panel.classList.toggle('open', open);
-  state.damageOpen = open;
-  if (!open || state.board !== undefined) return;
-  const canvas = document.getElementById('damage-view');
-  state.board = createBoard(canvas);
-  document.getElementById('damage-title').textContent = state.t('damage.title');
-  document.getElementById('damage-legend').textContent = state.t('damage.legend');
-  canvas.addEventListener('pointerdown', (event) => {
-    const bounds = canvas.getBoundingClientRect();
-    const ndcX = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-    const ndcY = -(((event.clientY - bounds.top) / bounds.height) * 2 - 1);
-    cyclePriority(pickSection(state.board, ndcX, ndcY));
-  });
-  buildDamageRows();
-}
-
-// The rows are built ONCE and then only have their text rewritten. Rebuilding
-// them every frame - which is what this did first - replaces the element under
-// the pointer sixty times a second, so a click lands on a node that has already
-// been thrown away.
-function buildDamageRows() {
-  const list = document.getElementById('damage-list');
-  list.textContent = '';
-  state.damageRows = [];
-  for (const key of SECTION_KEYS) {
-    const row = document.createElement('div');
-    row.className = 'damage-row';
-    const name = document.createElement('span');
-    name.className = 'damage-name';
-    name.textContent = state.t(key);
-    const value = document.createElement('span');
-    value.textContent = '-';
-    row.append(name, value);
-    const index = state.damageRows.length;
-    row.addEventListener('click', () => cyclePriority(index));
-    list.append(row);
-    state.damageRows.push(value);
-  }
-}
-
-// Low, medium, high, and round again. The engine holds the authority; this only
-// asks, and the next view answers.
-function cyclePriority(sectionId) {
-  if (sectionId === -1 || state.carrierId === -1) return;
-  const carrier = ownCarrierOf(state.view);
-  if (carrier === undefined) return;
-  const section = carrier.sections.find((s) => s.id === sectionId);
-  if (section === undefined) return;
-  state.transport.send({
-    type: 'set_repair_priority',
-    carrierId: state.carrierId,
-    section: sectionId,
-    priority: (section.priority + 1) % 3,
-  });
-}
-
-function renderDamageBoard(deltaSeconds) {
-  if (!state.damageOpen || state.board === undefined) return;
-  const carrier = ownCarrierOf(state.view);
-  if (carrier === undefined) return;
-  updateBoard(state.board, carrier.sections);
-  const canvas = document.getElementById('damage-view');
-  renderBoard(state.board, deltaSeconds, canvas.clientWidth, canvas.clientHeight);
-
-  for (const section of carrier.sections) {
-    const value = state.damageRows[section.id];
-    if (value === undefined) continue;
-    const percent = sectionPercent(section);
-    value.textContent = `${percent}% ${state.t(PRIORITY_KEYS[section.priority] ?? '')}`;
-  }
-  document.getElementById('damage-stores').textContent = state.t('damage.stores', {
-    materials: carrier.materials,
-    capacity: carrier.materialsCapacity,
-  });
-}
-
-// Cycle the selected unit's loadout: laser, cluster, napalm, missile for a
-// Manta; cannon and mines for a Walrus.
-// ---------------------------------------------------------------------------
-// The island board: what a captured island is for, and what is going up on it.
-
-const ROLE_KEYS = ['island.roleResource', 'island.roleFactory', 'island.roleDefence'];
-const BUILD_KEYS = ['build.factory', 'build.warehouse', 'build.turret'];
-// Which buildings each role allows, mirroring engine/island.js. The engine is
-// the authority - this only decides what to offer.
-const ROLE_BUILDS = [[1], [0, 1], [2]];
-
-// What the cargo network could put toward a site: the island's own stock plus
-// whatever is sitting at the depot, which is what engine/island.js will spend.
-function depotMaterials() {
-  if (state.view === undefined) return 0;
-  const depotId = state.view.resources.stockpileIsland;
-  if (depotId < 0) return 0;
-  const depot = state.view.islands.find((i) => i.id === depotId);
-  return depot === undefined || depot.stockMaterials < 0 ? 0 : depot.stockMaterials;
-}
-
-function islandAt(x, y) {
-  if (state.view === undefined) return undefined;
-  for (const island of state.view.islands) {
-    if (island.owner !== state.view.team) continue;
-    if (Math.hypot(island.x - x, island.y - y) <= island.radius * 1.6) return island;
-  }
-  return undefined;
-}
-
-function openIslandPanel(island) {
-  state.islandId = island === undefined ? -1 : island.id;
-  document.getElementById('island-panel').classList.toggle('open', island !== undefined);
-}
-
-function actionRow(label, enabled, onPick) {
-  const row = document.createElement('div');
-  row.className = enabled ? 'island-row island-act' : 'island-row island-act off';
-  const text = document.createElement('span');
-  text.textContent = label;
-  row.append(text);
-  if (enabled) row.addEventListener('click', onPick);
-  return row;
-}
-
-function infoRow(label, value) {
-  const row = document.createElement('div');
-  row.className = 'island-row';
-  const left = document.createElement('span');
-  left.className = 'hud-label';
-  left.textContent = label;
-  const right = document.createElement('span');
-  right.textContent = value;
-  row.append(left, right);
-  return row;
-}
-
-// Rebuilt whenever the island's numbers change, and not every frame: the rows
-// are clickable, and an element replaced under the pointer cannot be clicked.
-function renderIslandPanel() {
-  if (state.islandId === -1 || state.view === undefined) return;
-  const island = state.view.islands.find((i) => i.id === state.islandId);
-  if (island === undefined || island.owner !== state.view.team) {
-    openIslandPanel(undefined);
-    return;
-  }
-  const stamp = [
-    island.role, island.factories, island.warehouses, island.turrets,
-    island.building, Math.floor(island.buildTicks / 20), island.stockMaterials,
-  ].join('/');
-  if (stamp === state.islandStamp) return;
-  state.islandStamp = stamp;
-
-  document.getElementById('island-title').textContent = state.t('island.title', { id: island.id });
-  const body = document.getElementById('island-body');
-  body.textContent = '';
-  const roleName = island.role < 0
-    ? state.t('island.roleNone')
-    : state.t(ROLE_KEYS[island.role]);
-  body.append(infoRow(state.t('island.role'), roleName));
-  body.append(infoRow(
-    state.t('island.works'),
-    `${island.factories}f / ${island.warehouses}w / ${island.turrets}t`,
-  ));
-  body.append(infoRow(
-    state.t('island.stock'),
-    `m ${island.stockMaterials} / f ${island.stockFuel} / o ${island.stockOrdnance}`,
-  ));
-
-  if (island.building >= 0) {
-    body.append(infoRow('', state.t('island.building', {
-      what: state.t(BUILD_KEYS[island.building]),
-      ticks: island.buildTicks,
-    })));
-  }
-
-  const built = island.factories + island.warehouses + island.turrets;
-  if (built === 0 && island.building < 0) {
-    for (let role = 0; role < ROLE_KEYS.length; role++) {
-      if (role === island.role) continue;
-      body.append(actionRow(
-        state.t('island.setRole', { role: state.t(ROLE_KEYS[role]) }),
-        true,
-        () => state.transport.send({
-          type: 'set_island_role',
-          carrierId: state.carrierId,
-          islandId: island.id,
-          role: role,
-        }),
-      ));
-    }
-  }
-  if (island.role >= 0 && island.building < 0) {
-    for (const what of ROLE_BUILDS[island.role]) {
-      const cost = state.buildCosts[what] ?? 0;
-      body.append(actionRow(
-        state.t('island.build', { what: state.t(BUILD_KEYS[what]), cost: cost }),
-        island.stockMaterials + depotMaterials() >= cost,
-        () => state.transport.send({
-          type: 'build_on_island',
-          carrierId: state.carrierId,
-          islandId: island.id,
-          what: what,
-        }),
-      ));
-    }
-  }
-  document.getElementById('island-note').textContent = built > 0
-    ? `${state.t('island.locked')} - ${state.t('island.close')}`
-    : state.t('island.close');
-}
-
 // Anything hostile within this of the clicked point counts as "you clicked
 // that". Generous on purpose: a contact is a small thing on a big ocean.
 const CLICK_PICK_UNITS = 500 * 256;
@@ -562,7 +351,7 @@ function bindInput(level) {
     else if (key === 't') togglePiloting();
     else if (key === 'p') deployPod();
     else if (key === 'f') fireSelected();
-    else if (key === 'z') toggleDamageBoard();
+    else if (key === 'z') toggleDamagePanel(state.damage);
     else if (key === 'v') cycleWeapon();
     else if (key === 'l') toggleSupplyRun();
     else if (key === 'k') nominateDepot();
@@ -588,7 +377,7 @@ function bindInput(level) {
   // resolved to a point on the water first; whether anything hostile is
   // standing near that point decides which of the two it was.
   window.addEventListener('pointerdown', (event) => {
-    if (state.piloting || state.damageOpen) return;
+    if (state.piloting || state.damage.open) return;
     const ndcX = (event.clientX / window.innerWidth) * 2 - 1;
     const ndcY = -(event.clientY / window.innerHeight) * 2 + 1;
     const target = pickSea(state.scene3d, ndcX, ndcY);
@@ -598,12 +387,9 @@ function bindInput(level) {
     const unit = selectedUnit();
     if (enemy === undefined) {
       // An island you hold opens its board; anything else closes it.
-      const island = islandAt(target.x, target.y);
-      if (island !== undefined) {
-        openIslandPanel(island);
-        return;
-      }
-      openIslandPanel(undefined);
+      const island = islandAt(state.view, target.x, target.y);
+      openIslandPanel(state.island, island);
+      if (island !== undefined) return;
     }
     if (enemy !== undefined) {
       // With a unit selected the click is an attack order; with none, it is the
@@ -729,8 +515,8 @@ function frame(nowMs) {
   setHud(state.hud, 'weapons', describeWeapons(state.t, state.view, selectedUnit()));
   setHud(state.hud, 'stores', describeStores(state.t, state.view));
   setHud(state.hud, 'supply', describeSupply(state.t, state.view));
-  renderDamageBoard(deltaSeconds);
-  renderIslandPanel();
+  renderDamagePanel(state.damage, deltaSeconds);
+  renderIslandPanel(state.island);
   updateSight();
 }
 
@@ -798,6 +584,18 @@ async function main() {
   const rules = await fetchRules();
   state.podBuildTicks = rules.rules.podBuildTicks;
   state.buildCosts = rules.economy.builds.map((row) => row.materials);
+  // The two boards get a context rather than the client: a translator, the
+  // current view, the seat's ship, prices, and a way to send a command.
+  const panelContext = {
+    t: (key, vars) => state.t(key, vars),
+    view: () => state.view,
+    ownCarrier: () => (state.view === undefined ? undefined : ownCarrierOf(state.view)),
+    carrierId: () => state.carrierId,
+    buildCost: (what) => state.buildCosts[what] ?? 0,
+    send: (message) => state.transport.send(message),
+  };
+  state.damage = createDamagePanel(panelContext);
+  state.island = createIslandPanel(panelContext);
   const diag = getGraphicsDiagnostics();
   const override = params.get('graphics') ?? readOverride(window.localStorage);
   const resolved = resolveGraphics(suggestGraphicsLevel(diag), override);
@@ -820,7 +618,7 @@ async function main() {
     const island = state.view === undefined
       ? undefined
       : state.view.islands.find((i) => i.id === islandId);
-    openIslandPanel(island);
+    openIslandPanel(state.island, island);
   };
   // Render probes reach the scene graph through this; nothing in the game uses
   // it, and it holds no state the client does not already own.

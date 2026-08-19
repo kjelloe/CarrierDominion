@@ -32,12 +32,19 @@ Controls:
 | `X` | all stop |
 | `1` `2` | launch a Manta / a Walrus |
 | `N` | select the next unit that is out |
-| click | send the selected unit to that point on the sea |
 | `T` | take the controls of the selected unit (again to hand back) |
 | `R` | recall the selected unit to the carrier |
 | `P` | deploy the ACCB pod at the command node you are standing on |
+| `F` | fire - down the nose when you are flying, at what is in range when you are not |
+| `V` | next weapon: laser / cluster / napalm / missile, or cannon / mines |
+| `L` `K` | supply run on or off / make the nearest island your depot |
+| `Z` | the damage control board - click a section to set its repair priority |
 | `C` | chase camera / strategic pull-back |
+| `,` `.` | time compression down / up (`space` pauses; in LAN it takes a vote) |
 | `G` | cycle the graphics tier |
+| click sea | send the selected unit there |
+| click enemy | attack it with the selected unit, or hand it to the ship's laser |
+| click island | the island board: what it is for, and what to build on it |
 
 ## Testing
 
