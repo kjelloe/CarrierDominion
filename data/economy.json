@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "comment": "Income is per accrual tick, and accrual happens every incomeEveryTicks. Rows are indexed by island kind: 0 factory, 1 resource, 2 radar, 3 airfield, 4 fortress. Radar and airfield islands pay nothing - their value is sight and reach.",
+  "incomeEveryTicks": 100,
+  "islandIncome": [
+    { "fuel": 0, "materials": 30, "ordnance": 10 },
+    { "fuel": 40, "materials": 20, "ordnance": 0 },
+    { "fuel": 0, "materials": 0, "ordnance": 0 },
+    { "fuel": 0, "materials": 0, "ordnance": 0 },
+    { "fuel": 0, "materials": 0, "ordnance": 5 }
+  ],
+  "resupplyRangeMetres": 900,
+  "resupplyFuelPerAccrual": 500,
+  "resupplyHullPerAccrual": 4
+}

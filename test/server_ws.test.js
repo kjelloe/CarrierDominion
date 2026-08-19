@@ -1,0 +1,182 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { WebSocket } from 'ws';
+
+import { createApp } from '../server/app.js';
+import { loadRules } from '../server/rules.js';
+
+const rules = loadRules();
+
+async function withServer(run) {
+  const app = createApp({ seed: 20260818, rules: rules });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    await run(app, `http://127.0.0.1:${address.port}`, `ws://127.0.0.1:${address.port}`);
+  } finally {
+    await app.close();
+  }
+}
+
+function connect(wsUrl) {
+  const socket = new WebSocket(wsUrl);
+  const inbox = [];
+  const waiters = [];
+  socket.on('message', (raw) => {
+    const message = JSON.parse(raw.toString());
+    inbox.push(message);
+    for (let i = waiters.length - 1; i >= 0; i--) {
+      if (waiters[i].match(message)) {
+        waiters[i].resolve(message);
+        waiters.splice(i, 1);
+      }
+    }
+  });
+  return {
+    socket: socket,
+    inbox: inbox,
+    open() {
+      return new Promise((resolve, reject) => {
+        socket.once('open', resolve);
+        socket.once('error', reject);
+      });
+    },
+    next(match, timeoutMs = 4000) {
+      for (let i = 0; i < inbox.length; i++) {
+        if (match(inbox[i])) return Promise.resolve(inbox[i]);
+      }
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('timed out waiting for message')), timeoutMs);
+        waiters.push({
+          match: match,
+          resolve: (message) => { clearTimeout(timer); resolve(message); },
+        });
+      });
+    },
+    send(message) { socket.send(JSON.stringify(message)); },
+    close() { socket.close(); },
+  };
+}
+
+test('healthz reports a live, ticking war', async () => {
+  await withServer(async (app, httpUrl) => {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const body = await (await fetch(`${httpUrl}/healthz`)).json();
+    assert.equal(body.ok, true);
+    assert.equal(body.game, 'carrier-dominion');
+    assert.ok(body.tick > 0, 'the clock should be running');
+    assert.match(body.stateHash, /^[0-9a-f]{16}$/);
+    assert.equal(body.rulesHash, app.game.state.rulesHash);
+    assert.ok(body.rssMb > 0);
+  });
+});
+
+test('the client page and its module graph are served', async () => {
+  await withServer(async (_app, httpUrl) => {
+    for (const path of [
+      '/',
+      '/client/main.js',
+      '/client/vendor/three.module.min.js',
+      '/engine/game.js',
+      '/shared/view.js',
+      '/data/world.json',
+    ]) {
+      const response = await fetch(`${httpUrl}${path}`);
+      assert.equal(response.status, 200, `${path} returned ${response.status}`);
+    }
+  });
+});
+
+test('a path traversal out of the served roots is refused', async () => {
+  await withServer(async (_app, httpUrl) => {
+    for (const path of ['/../package.json', '/client/../../package.json', '/data/../../ops/README.md']) {
+      const response = await fetch(`${httpUrl}${path}`);
+      assert.notEqual(response.status, 200, `${path} was served`);
+    }
+  });
+});
+
+test('a joining client is seated and starts receiving its own view', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const client = connect(wsUrl);
+    await client.open();
+    const welcome = await client.next((m) => m.type === 'welcome');
+    assert.equal(welcome.team, 0);
+    assert.equal(welcome.spectator, false);
+    const snapshot = await client.next((m) => m.type === 'snapshot');
+    assert.equal(snapshot.view.team, 0);
+    assert.match(snapshot.stateHash, /^[0-9a-f]{16}$/);
+    assert.equal(snapshot.view.rng, undefined, 'the view must not carry engine internals');
+    client.close();
+  });
+});
+
+test('two clients take the two seats and see different views', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const first = connect(wsUrl);
+    await first.open();
+    await first.next((m) => m.type === 'welcome');
+    const second = connect(wsUrl);
+    await second.open();
+    const welcome = await second.next((m) => m.type === 'welcome');
+    assert.equal(welcome.team, 1);
+    const view = (await second.next((m) => m.type === 'snapshot')).view;
+    assert.equal(view.team, 1);
+    assert.equal(view.carriers[0].team, 1);
+    first.close();
+    second.close();
+  });
+});
+
+test('a command from the seat that owns the hull is obeyed', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const client = connect(wsUrl);
+    await client.open();
+    await client.next((m) => m.type === 'welcome');
+    client.send({ type: 'command', command: { type: 'set_throttle', carrierId: 0, throttle: 100 } });
+    const moving = await client.next(
+      (m) => m.type === 'snapshot' && m.view.carriers[0].throttle === 100,
+      6000,
+    );
+    assert.equal(moving.view.carriers[0].throttle, 100);
+    client.close();
+  });
+});
+
+test('a command aimed at the other team hull is refused', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const client = connect(wsUrl);
+    await client.open();
+    await client.next((m) => m.type === 'welcome');
+    client.send({ type: 'command', command: { type: 'set_throttle', carrierId: 1, throttle: 100 } });
+    const rejected = await client.next((m) => m.type === 'rejected');
+    assert.match(rejected.reason, /another team/);
+    client.close();
+  });
+});
+
+test('the tick is server-owned and cannot be driven by a client', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const client = connect(wsUrl);
+    await client.open();
+    await client.next((m) => m.type === 'welcome');
+    client.send({ type: 'command', command: { type: 'advance_tick' } });
+    const rejected = await client.next((m) => m.type === 'rejected');
+    assert.match(rejected.reason, /server-owned/);
+    client.close();
+  });
+});
+
+test('rubbish on the wire is answered, not crashed on', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const client = connect(wsUrl);
+    await client.open();
+    await client.next((m) => m.type === 'welcome');
+    client.socket.send('this is not json');
+    const first = await client.next((m) => m.type === 'rejected');
+    assert.match(first.reason, /malformed json/);
+    client.send({ type: 'nonsense' });
+    const second = await client.next((m) => m.type === 'rejected' && m.reason !== first.reason);
+    assert.match(second.reason, /unknown message type/);
+    client.close();
+  });
+});

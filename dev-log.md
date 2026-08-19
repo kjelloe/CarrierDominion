@@ -1,0 +1,291 @@
+# Development log
+
+Newest first. One entry per slice: what landed, what it cost, what moved a
+golden hash and why.
+
+---
+
+## 2026-08-19 — Milestone 1: the economy loop closes
+
+Islands now pay for the ship, and the ship takes islands. 149 tests green.
+
+`data/economy.json` gives each island kind an income row — resource islands pay
+fuel and materials, factories pay materials and ordnance, radar and airfield
+islands pay nothing because their value is sight and reach. A carrier lying
+within 900 m of an island its team owns draws fuel from the stores and patches
+its hull.
+
+Two decisions worth recording:
+
+- **Income accrues in a lump every 100 ticks**, not as a fraction every tick.
+  With integer resources the two are identical, and the lump needs no per-team
+  accumulator in state: one less field to forget in `copyState`, and a hash
+  that does not churn on 19 ticks out of 20.
+- **The carrier carries its own `maxHull`**, like every other stat. The repair
+  cap could have come from the ruleset, but then the reducer would need the
+  ruleset, and the whole point of snapshotting stats onto records is that
+  `apply` never reaches outside the state it was given.
+
+The tests caught the thing that always catches economy tests: a carrier burns
+fuel while it sits there, and the idle-burn window is exactly the accrual
+window, so every resupply figure has to account for it. `IDLE_BURN` is spelled
+out at the top of `test/engine_economy.test.js` for the next person.
+
+---
+
+## 2026-08-19 — Milestone 1: an enemy, and a way to win
+
+It is a game now: the other carrier plays, and somebody wins. 139 tests green,
+smoke gate green.
+
+### The AI carrier
+
+`engine/ai_carrier.js` is a three-state machine — SEEK an island, INVADE it
+with a Walrus, WAIT for the pod — running **inside the reducer** on the 3-tick
+cadence, exactly as `plan-version1.md` §2.4 called for. That placement is the
+whole point: the AI is part of the deterministic war, so every replay, every
+golden hash, and every headless sim covers it. There is no separate AI process
+to desync.
+
+`engine/victory.js` ends the war two ways: hold two-thirds of the islands, or
+be the last carrier afloat. The second is unreachable until weapons exist, but
+wiring it now means the end-of-war path has tests from the start.
+
+### The bug that justified the trace probe
+
+The first AI took an island, turned for the next one, **ran aground on the
+island it had just captured, and sat there for three hours of game time** with
+the throttle at 40%. The brain kept steering at the target; the hull kept
+refusing to move; nothing in the state machine could see the contradiction.
+
+`debugging/probes/ai_trace.mjs` prints a line whenever the brain's situation
+changes, and the fault was obvious in ten lines of output — a carrier at a
+fixed position, throttle up, speed zero, grounded, forever.
+
+The fix is `backOff`: aground, the carrier commits to a course straight out to
+sea for 6000 ticks before the brain gets the helm back. The commitment has to
+be that long because a carrier needs over a thousand ticks just to come about,
+and a shorter escape puts it back on the same shelf on the next leg. It is the
+same shape as the Walrus's contour-following: **the pattern that keeps
+appearing is "when blocked, commit to an escape for long enough to matter".**
+
+After the fix the AI takes all five islands it needs and wins at tick 361,000.
+
+### Measurements
+
+| | |
+|---|---|
+| AI takes its first island | tick 74,438 |
+| AI vs AI, war decided | tick 338,375 (4.7 h of game time) |
+| Headless tick rate, AI active | ~2,400 ticks/s (120x real time) |
+
+The tick rate is down from 20,000/s because the AI's carrier now steams near
+islands, where terrain sampling stops early-outing. Still ample, but the sweep
+batteries planned for balance work will feel it — a memoised terrain sample is
+the obvious lever when they do.
+
+---
+
+## 2026-08-19 — Milestone 1, first two groups: units, and taking an island
+
+The game is now playable end to end: steam to an island, put a Walrus in the
+water, drive it up the beach to the command node, deploy an ACCB pod, hold
+while it builds, own the island. `test/integration_capture.test.js` does
+exactly that through commands only - no reaching into state - and is the single
+most valuable test in the suite.
+
+127 tests green, smoke gate green.
+
+### S1.1 Units: Manta and Walrus
+
+Every airframe and vehicle exists from tick zero, STOWED in a hangar. Launching
+is a state change, not a spawn: ids are stable for a whole war, a lost Manta is
+a record rather than a missing one, and the fog filter has one less special
+case.
+
+- `engine/units.js` - records, life cycle, orders, fuel.
+- `engine/flight.js` - Manta. Sim-lite: thrust, turn rate, a separate altitude
+  axis, no stall. Runs dry over the sea and it is gone.
+- `engine/drive.js` - Walrus. Swims, crawls ashore at a lower speed, refuses
+  slopes past its climb limit.
+- `engine/hangar.js` - launch geometry, recovery, refuel and re-arm.
+- `engine/fleet.js` - one tick per unit. A returning unit re-aims at its
+  carrier EVERY tick, because the carrier it is chasing is under way.
+
+Two bugs worth remembering, both in the Walrus:
+
+1. **Slope measured per-step deadlocked it.** Integer terrain rises by at least
+   one unit, so at speed 3 a one-unit step reads as a 333-per-mil cliff: stop,
+   accelerate, re-block, forever. Slope is now measured over a FIXED 2 m probe.
+2. **A blocked Walrus never got anywhere**, because the autopilot kept steering
+   into the same rock. It now looks 45 degrees either way, commits to the
+   gentler side for 80 ticks, and follows the contour until the way up opens.
+   Not path-finding - a driver, and a deterministic one.
+
+### S1.2 Direct control
+
+`take_control` / `release_control` / `set_unit_helm`, with the chase camera
+following whatever the player is actually flying. The helm keys drive the
+piloted unit when there is one and the carrier's own helm otherwise, so there
+is one set of controls rather than two modes to learn.
+
+### S1.3 Islands and the ACCB pod (ruling Q9)
+
+A command node per island, placed at worldgen by scanning a fixed ring of
+candidates for somewhere ashore, flat, and not on the summit - putting it on
+the peak looks right and makes some islands impossible to capture.
+
+A Walrus carries one pod, deploys it within 60 m of the node, and the pod
+builds over 1200 ticks (a minute). An enemy pod deploying displaces one that is
+still building and restarts the clock - the peaceful race; combat will provide
+the louder answer later.
+
+### Terrain: two changes that were really gameplay changes
+
+- **A skirt of shallow water** around every island (to 1.6 radii). Without it
+  the seabed was a 200 m cliff at the shoreline, which reads fine but means a
+  Walrus meets an unclimbable wall at the beach and a carrier can anchor with
+  its bow touching the sand. The skirt is what makes "keep the ship off the
+  shallows" a real constraint - and it immediately found that the seed's
+  spawn had a shoal 200 m off the bow, so `startPositions` now clears the
+  shelf, not just the shore.
+- **A warped coastline.** The distance from the island centre is displaced by a
+  coarse noise field before the falloff is applied, which costs one noise
+  sample and turns a bullseye dome into something with bays and headlands.
+
+### Two rendering bugs the screenshots caught
+
+- **Islands were invisible from above and unlit from the side.** Engine north
+  maps to three.js -z, which flips the handedness of the terrain grid, so the
+  naive triangle winding faced the seabed. Winding decides both which side is
+  culled and which way `computeVertexNormals` points.
+- **The strategic view showed an empty ocean** - same cause. Worth noting that
+  neither bug could fail a headless test; both were found by looking at the
+  smoke gate's screenshots, which is the argument for taking them.
+
+### What this told us about pacing
+
+The integration test reports its timings: a 7.6 km crossing takes **20,561
+ticks (17 minutes)**, the Walrus run ashore another **15,518 (13 minutes)**,
+the pod **1,200 (1 minute)**. Taking one island is half an hour of real time at
+1x. That is the strongest evidence yet for time compression - it is question 1
+in `dev-questions.md` and now has numbers behind it.
+
+---
+
+## 2026-08-19 — Milestone 0 complete (S0.1 … S0.8)
+
+A carrier drives across a procedural ocean past procedural islands, in a
+browser, driven end to end through both transports. 100 tests green plus the
+browser smoke gate.
+
+### S0.1 Repo scaffold
+
+`package.json` (one runtime dependency: `ws`), `run.sh`, `README.md`, the
+directory layout from the plan, `node --test` wiring, `/healthz`.
+
+three.js is **vendored, not npm'd**: `client/vendor/three.module.min.js` is
+r162, copied from multiciv, reached through an importmap. The client therefore
+has zero install-time dependencies.
+
+### S0.2 shared/
+
+- `fixed.js` — 256 units = 1 m, 16-bit BAM angles, `floorDiv`/`truncDiv`,
+  `mulDiv` with an exact-range assertion, `isqrt`, `turnToward`, `stepToward`.
+  Every division normalises negative zero away at the source: `-0` compares
+  equal to `0` but is not the same value everywhere, and it leaks in through
+  `Math.floor(-0/n)`.
+- `prng.js` — xorshift32 with the state in game state, `deriveSeed` for
+  independent streams so adding a subsystem that rolls does not shift every
+  other subsystem's numbers.
+- `trig.js` + `trig_table.js` (generated by `tools/gen_trig.mjs`) — a committed
+  1025-entry quadrant sine table plus a 257-entry arctangent table, integer
+  linear interpolation between entries. Worst observed error vs `Math.sin`:
+  well inside the 8/65536 tolerance the test pins.
+- `statehash.js` — canonical string + FNV-1a **64** in 16-bit limbs. The FNV
+  vectors for `""`, `"a"`, `"foobar"` are asserted, so the limb arithmetic is
+  checked against the published algorithm rather than against itself.
+- `noise.js` — integer value noise and fbm, shared by collision and mesher.
+- `view.js` — per-team fog filtering, the only thing a client ever receives.
+
+### S0.3 Reducer
+
+`apply(state, command) -> state`, pure; `copyState` deep-copies every nested
+array and object; commands validated and **dropped, never thrown on** (they
+arrive from the network); events are integers in state so they are hashed and
+replayed.
+
+`test/fixtures/m0a.json` pins the state hash after each of 300 scripted ticks.
+`tools/repin_m0a.mjs` refuses to re-pin when the **event stream** moved rather
+than just the numbers — that is the signal that behaviour changed and wants an
+explanation here first.
+
+### S0.4 Worldgen
+
+Dart-throwing with a minimum-separation reject. Terrain is a **pure function**
+of the island's dozen integers — radial falloff times fbm — so no heightmap
+grid is stored in state, the state hash stays small, and the client mesher and
+the server's collision cannot disagree about where the beach is.
+
+Golden world hash for seed 20260818: `94fca572b0e7ebf2`.
+
+### S0.5 Carrier and helm
+
+Turn, accelerate, translate, test the seabed, burn fuel — in that order,
+and the order is part of the hash.
+
+Grounding took two attempts. The first version tested only the next position;
+at one unit per tick a hull creeps into a shoal and re-reports grounding every
+tick. The fix tests a point 250 m ahead of the bow, so a ship held against a
+shore stays grounded, reports **once**, and clears only when steered away.
+
+### S0.6 Transports
+
+One interface, two drivers. `createLocalTransport` runs the real engine in the
+browser tab; `createWsTransport` talks to the authoritative server. Both feed
+the renderer the same fog-filtered view object, and both run the same
+`engine/authority.js` check — solo play has nobody to cheat, but running the
+check there means a bug in a command path cannot hide until the LAN game finds
+it.
+
+`engine/authority.js` sits in `engine/` rather than `server/` precisely because
+the browser loads the same file.
+
+### S0.7 Client
+
+three.js scene, shader ocean (medium/high) or flat ocean (low), island meshes
+sampled from `engine/heightmap.js`, placeholder carrier, chase camera and a
+strategic pull-back, WASD helm through the transport, and the three graphics
+presets with multiciv's GPU auto-detect and a persisted override.
+
+Two rendering bugs found and fixed by looking at the smoke screenshots:
+
+- **Heading was mirrored.** Flipping engine north onto three.js `-z` also flips
+  the sense of rotation, and the two negations cancel — so yaw is the heading
+  unnegated. The first version negated it and every ship sailed backwards.
+- **Everything was a silhouette.** The directional light aimed at the scene
+  origin, which is the map's south-west *corner*, not its middle. It now aims
+  at the map centre, with a weak fill from the opposite quarter.
+
+### S0.8 Gates
+
+`test/client_smoke.mjs` starts a real server on an ephemeral port, loads the
+real client in Chromium, fails on **any** console error, page exception, or
+failed request, drives the helm through the keyboard and asserts the engine
+answered, checks the WebGL context is alive, and screenshots both transports to
+`debugging/shots/`. It skips (exit 0) where Playwright browsers are absent.
+
+`test/headless/sim_m0.mjs` runs the war headless: 6000 ticks in ~300 ms, about
+1000x real time, which is the number that matters for future AI-vs-AI sweeps.
+
+### Deviations from plan-version1.md
+
+1. **Hashing.** The plan inherited Fireline's hand-maintained field list. I used
+   multiciv's whole-state canonical walk instead: a new field cannot be
+   forgotten by the hash, and the walk doubles as the hygiene assertion.
+   `trajectoryHash` and `behaviorHash` cover the cases the field list was for.
+2. **three.js r162**, vendored from multiciv, rather than `^0.165` from npm.
+3. **No heightmap in state.** The plan's state sketch had a `heightmapRef`;
+   terrain turned out to need no storage at all.
+
+Both are recorded in `dev-questions.md` for the owner to confirm or reverse.

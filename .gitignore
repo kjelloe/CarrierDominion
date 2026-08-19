@@ -24,6 +24,7 @@ reports/sweeps/
 debugging/logs/
 debugging/sim/
 debugging/jobs/
+debugging/shots/
 test-results/
 playwright-report/
 

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "tickHz": 20,
+  "msPerTick": 50,
+  "unitsPerMetre": 256,
+  "teamCount": 2,
+  "startFuel": 20000,
+  "startMaterials": 5000,
+  "startOrdnance": 2000,
+  "aiCadenceTicks": 3,
+  "podRangeMetres": 60,
+  "podBuildTicks": 1200,
+  "aiTeams": [
+    1
+  ],
+  "aiStandoffMetres": 500,
+  "victoryIslandPermil": 667
+}

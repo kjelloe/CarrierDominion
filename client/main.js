@@ -1,0 +1,337 @@
+// client/main.js - wiring only.
+//
+// Picks a transport, resolves a graphics preset, turns input into commands, and
+// draws whatever view arrives. All of those are somebody else's module; this
+// file is the harness that connects them and nothing else.
+//
+//   ?mode=solo   run the engine in this tab (default)
+//   ?mode=lan    connect to the authoritative server over ws
+//   ?team=1      take the other seat in solo play
+//   ?graphics=low|medium|high   override the auto-detected preset
+
+import { fetchRules } from './rules.js';
+import { createLocalTransport, createWsTransport } from './transport.js';
+import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
+import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
+import { createScene, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
+import {
+  createHud,
+  setHud,
+  tickFps,
+  updateCarrierHud,
+  describeHangar,
+  describeIslands,
+  describeStores,
+  describeUnit,
+} from './hud.js';
+
+const params = new URLSearchParams(window.location.search);
+const MODE = params.get('mode') === 'lan' ? 'lan' : 'solo';
+const SEAT = Number(params.get('team') ?? 0);
+const THROTTLE_STEP = 10;
+
+const KIND_MANTA = 0;
+const KIND_WALRUS = 1;
+const UNIT_ACTIVE = 1;
+const UNIT_RETURNING = 2;
+const POD_RANGE_UNITS = 60 * 256; // matches data/rules.json podRangeMetres
+
+const state = {
+  view: undefined,
+  stateHash: '',
+  carrierId: -1,
+  team: SEAT,
+  throttle: 0,
+  rudder: 0,
+  selectedUnitId: -1,
+  piloting: false,
+  podBuildTicks: 1200,
+  transport: undefined,
+  scene3d: undefined,
+  hud: undefined,
+  lastFrameMs: 0,
+};
+
+function afloatUnits() {
+  if (state.view === undefined) return [];
+  return state.view.units.filter(
+    (unit) => unit.team === state.view.team
+      && (unit.state === UNIT_ACTIVE || unit.state === UNIT_RETURNING),
+  );
+}
+
+function selectedUnit() {
+  return afloatUnits().find((unit) => unit.id === state.selectedUnitId);
+}
+
+function clampThrottle(value) {
+  return Math.max(0, Math.min(100, value));
+}
+
+// W/S and A/D drive whatever the player is currently at the controls of: the
+// piloted unit if there is one, otherwise the carrier's helm.
+function sendThrottle(next) {
+  const wanted = clampThrottle(next);
+  if (state.piloting) {
+    const unit = selectedUnit();
+    if (unit === undefined) return;
+    state.throttle = wanted;
+    state.transport.send({
+      type: 'set_unit_helm', unitId: unit.id, throttle: wanted, rudder: state.rudder,
+    });
+    return;
+  }
+  if (wanted === state.throttle || state.carrierId < 0) return;
+  state.throttle = wanted;
+  state.transport.send({ type: 'set_throttle', carrierId: state.carrierId, throttle: wanted });
+}
+
+function sendRudder(next) {
+  if (state.piloting) {
+    const unit = selectedUnit();
+    if (unit === undefined || next === state.rudder) return;
+    state.rudder = next;
+    state.transport.send({
+      type: 'set_unit_helm', unitId: unit.id, throttle: state.throttle, rudder: next,
+    });
+    return;
+  }
+  if (next === state.rudder || state.carrierId < 0) return;
+  state.rudder = next;
+  state.transport.send({ type: 'set_rudder', carrierId: state.carrierId, rudder: next });
+}
+
+function cycleSelection() {
+  const units = afloatUnits();
+  if (units.length === 0) {
+    state.selectedUnitId = -1;
+    return;
+  }
+  const index = units.findIndex((unit) => unit.id === state.selectedUnitId);
+  state.selectedUnitId = units[(index + 1) % units.length].id;
+}
+
+function launch(kind) {
+  if (state.carrierId < 0) return;
+  state.transport.send({ type: 'launch_unit', carrierId: state.carrierId, kind: kind });
+}
+
+function recallSelected() {
+  const unit = selectedUnit();
+  if (unit === undefined) return;
+  stopPiloting();
+  state.transport.send({ type: 'recall_unit', unitId: unit.id });
+}
+
+function stopPiloting() {
+  if (!state.piloting) return;
+  const unit = selectedUnit();
+  state.piloting = false;
+  state.scene3d.followUnitId = -1;
+  if (unit !== undefined) state.transport.send({ type: 'release_control', unitId: unit.id });
+  const carrier = ownCarrierOf(state.view);
+  state.throttle = carrier === undefined ? 0 : carrier.throttle;
+  state.rudder = 0;
+}
+
+function togglePiloting() {
+  if (state.piloting) {
+    stopPiloting();
+    return;
+  }
+  const unit = selectedUnit();
+  if (unit === undefined) return;
+  state.piloting = true;
+  state.throttle = 100;
+  state.rudder = 0;
+  state.scene3d.followUnitId = unit.id;
+  state.transport.send({ type: 'take_control', unitId: unit.id });
+}
+
+// The nearest command node to the selected Walrus. The engine checks range
+// again; this only picks which island the player probably meant.
+function nearestNode(unit) {
+  let best;
+  let bestDistance = Infinity;
+  for (const island of state.view.islands) {
+    const dx = island.nodeX - unit.x;
+    const dy = island.nodeY - unit.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = island;
+    }
+  }
+  return { island: best, distance: bestDistance };
+}
+
+function deployPod() {
+  const unit = selectedUnit();
+  if (unit === undefined || unit.kind !== KIND_WALRUS) {
+    setHud(state.hud, 'status', 'select a Walrus to deploy a pod');
+    return;
+  }
+  if (unit.pod !== 1) {
+    setHud(state.hud, 'status', 'no pod aboard - go back to the carrier');
+    return;
+  }
+  const near = nearestNode(unit);
+  if (near.island === undefined) return;
+  if (near.distance > POD_RANGE_UNITS) {
+    setHud(state.hud, 'status', `${Math.round(near.distance / 256)} m from the nearest node`);
+    return;
+  }
+  state.transport.send({ type: 'deploy_pod', unitId: unit.id, islandId: near.island.id });
+}
+
+function cycleGraphics(currentLevel) {
+  const names = presetNames();
+  const next = names[(names.indexOf(currentLevel) + 1) % names.length];
+  writeOverride(window.localStorage, next);
+  // A preset changes renderer construction (antialias, shadow maps), so it is
+  // applied by reloading rather than by rebuilding half the scene in place.
+  window.location.reload();
+}
+
+function bindInput(level) {
+  const held = { a: false, d: false };
+  window.addEventListener('keydown', (event) => {
+    if (event.repeat) return;
+    const key = event.key.toLowerCase();
+    if (key === 'w') sendThrottle(state.throttle + THROTTLE_STEP);
+    else if (key === 's') sendThrottle(state.throttle - THROTTLE_STEP);
+    else if (key === 'x') sendThrottle(0);
+    else if (key === 'a') { held.a = true; sendRudder(1); }
+    else if (key === 'd') { held.d = true; sendRudder(-1); }
+    else if (key === '1') launch(KIND_MANTA);
+    else if (key === '2') launch(KIND_WALRUS);
+    else if (key === 'n') cycleSelection();
+    else if (key === 'r') recallSelected();
+    else if (key === 't') togglePiloting();
+    else if (key === 'p') deployPod();
+    else if (key === 'c' || key === 'tab') {
+      event.preventDefault();
+      state.scene3d.strategic = !state.scene3d.strategic;
+    } else if (key === 'g') cycleGraphics(level);
+    else return;
+    event.preventDefault();
+  });
+  window.addEventListener('keyup', (event) => {
+    const key = event.key.toLowerCase();
+    if (key === 'a') held.a = false;
+    if (key === 'd') held.d = false;
+    if (key === 'a' || key === 'd') sendRudder(held.a ? 1 : (held.d ? -1 : 0));
+  });
+  window.addEventListener('blur', () => sendRudder(0));
+
+  // Click the sea to send the selected unit there.
+  window.addEventListener('pointerdown', (event) => {
+    const unit = selectedUnit();
+    if (unit === undefined || state.piloting) return;
+    const ndcX = (event.clientX / window.innerWidth) * 2 - 1;
+    const ndcY = -(event.clientY / window.innerHeight) * 2 + 1;
+    const target = pickSea(state.scene3d, ndcX, ndcY);
+    if (target === -1) return;
+    const size = state.view.params.sizeUnits;
+    if (target.x < 0 || target.y < 0 || target.x > size || target.y > size) return;
+    state.transport.send({
+      type: 'order_unit_move', unitId: unit.id, x: target.x, y: target.y,
+    });
+  });
+}
+
+function onWelcome(message) {
+  state.team = message.spectator ? 0 : message.team;
+  setHud(state.hud, 'seat', message.spectator ? 'spectator' : `team ${message.team}`);
+  setHud(state.hud, 'seed', message.seed);
+  setHud(state.hud, 'status', 'connected');
+}
+
+function onSnapshot(message) {
+  state.view = message.view;
+  state.stateHash = message.stateHash ?? '';
+  const own = ownCarrierOf(message.view);
+  if (own !== undefined) {
+    state.carrierId = own.id;
+    // The server is the authority on the helm; adopt what it reports so a
+    // rejected or lost command cannot leave the HUD lying.
+    if (!state.piloting) {
+      state.throttle = own.throttle;
+      state.rudder = own.rudder;
+    }
+  }
+  // A selection that has been recovered, lost, or shot down stops being one.
+  if (state.selectedUnitId !== -1 && selectedUnit() === undefined) {
+    state.selectedUnitId = -1;
+    state.piloting = false;
+    state.scene3d.followUnitId = -1;
+  }
+  if (state.selectedUnitId === -1 && afloatUnits().length > 0) cycleSelection();
+}
+
+function onRejected(reason) {
+  setHud(state.hud, 'status', `rejected: ${reason}`);
+}
+
+function onClosed(reason) {
+  setHud(state.hud, 'status', reason);
+}
+
+function frame(nowMs) {
+  window.requestAnimationFrame(frame);
+  if (state.view === undefined) return;
+  const deltaSeconds = state.lastFrameMs === 0 ? 0 : (nowMs - state.lastFrameMs) / 1000;
+  state.lastFrameMs = nowMs;
+  tickFps(state.hud, nowMs);
+  renderView(state.scene3d, state.view, deltaSeconds, state.podBuildTicks);
+  setHud(state.hud, 'tick', state.view.tick);
+  setHud(state.hud, 'hash', state.stateHash === '' ? '-' : state.stateHash);
+  updateCarrierHud(state.hud, ownCarrierOf(state.view), state.view.params);
+  setHud(state.hud, 'hangar', describeHangar(state.view.units, state.view.team));
+  setHud(state.hud, 'unit', describeUnit(selectedUnit(), state.view.params));
+  setHud(state.hud, 'islands', describeIslands(state.view));
+  setHud(state.hud, 'stores', describeStores(state.view));
+}
+
+async function main() {
+  const hudRoot = document.getElementById('hud');
+  state.hud = createHud(hudRoot);
+  setHud(state.hud, 'status', 'loading rules');
+
+  const rules = await fetchRules();
+  state.podBuildTicks = rules.rules.podBuildTicks;
+  const diag = getGraphicsDiagnostics();
+  const override = params.get('graphics') ?? readOverride(window.localStorage);
+  const resolved = resolveGraphics(suggestGraphicsLevel(diag), override);
+  const preset = presetFor(resolved.level);
+  setHud(state.hud, 'graphics', `${preset.label} (${resolved.source})`);
+  document.getElementById('gpu').textContent = describeGpu(diag);
+
+  const sizeMetres = rules.world.sizeMetres;
+  state.scene3d = createScene(document.getElementById('view'), preset, sizeMetres);
+  resize(state.scene3d);
+  window.addEventListener('resize', () => resize(state.scene3d));
+
+  if (MODE === 'lan') {
+    const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    state.transport = createWsTransport(`${scheme}://${window.location.host}`);
+  } else {
+    const seed = Number(params.get('seed') ?? 20260818);
+    state.transport = createLocalTransport(seed, rules, SEAT);
+  }
+  setHud(state.hud, 'transport', MODE === 'lan' ? 'ws (authoritative)' : 'local (solo)');
+  bindInput(resolved.level);
+  state.transport.connect({
+    onWelcome: onWelcome,
+    onSnapshot: onSnapshot,
+    onRejected: onRejected,
+    onClosed: onClosed,
+  });
+  window.requestAnimationFrame(frame);
+}
+
+main().catch((error) => {
+  const hudRoot = document.getElementById('hud');
+  if (hudRoot) hudRoot.textContent = `startup failed: ${error.message}`;
+  throw error;
+});

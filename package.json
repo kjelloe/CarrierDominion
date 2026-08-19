@@ -1,0 +1,26 @@
+{
+  "name": "carrier-dominion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Carrier Dominion - deterministic real-time carrier warfare on procedural archipelagos.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test test/",
+    "smoke": "node test/client_smoke.mjs",
+    "gate": "node --test test/ && node test/client_smoke.mjs",
+    "trig": "node tools/gen_trig.mjs",
+    "repin": "node tools/repin_m0a.mjs",
+    "sim": "node test/headless/sim_m0.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}

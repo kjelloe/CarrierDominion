@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carrier Dominion</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1420; }
+    #view { display: block; width: 100vw; height: 100vh; }
+    #hud {
+      position: fixed; top: 12px; left: 12px; min-width: 220px;
+      padding: 10px 12px; border-radius: 6px;
+      background: rgba(8, 16, 26, 0.72); color: #cfe3f5;
+      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      pointer-events: none; user-select: none;
+    }
+    .hud-row { display: flex; justify-content: space-between; gap: 18px; }
+    .hud-label { color: #7f9fbb; }
+    .hud-value { color: #e8f2fb; }
+    #help {
+      position: fixed; bottom: 12px; left: 12px;
+      padding: 8px 12px; border-radius: 6px;
+      background: rgba(8, 16, 26, 0.72); color: #9db8d2;
+      font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      pointer-events: none; user-select: none;
+    }
+    #gpu { color: #6f8ba6; }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "/client/vendor/three.module.min.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="hud"></div>
+  <div id="help">
+    W/S throttle &middot; A/D rudder &middot; X all stop &middot; C camera &middot; G graphics tier<br>
+    1 launch Manta &middot; 2 launch Walrus &middot; N next unit &middot; click sea to send it &middot;
+    T take the controls &middot; R recall &middot; P deploy ACCB pod<br>
+    <span id="gpu">detecting GPU&hellip;</span>
+  </div>
+  <script type="module" src="/client/main.js"></script>
+</body>
+</html>

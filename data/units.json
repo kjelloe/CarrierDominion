@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "comment": "Speeds are fixed-point units per tick (256 units = 1 m, 20 ticks = 1 s). 53 units/tick = 8.0 knots. Fuel burn is per 100 ticks so idle rates can be a fraction of a unit.",
+  "carrier": {
+    "hull": 1000,
+    "maxSpeedUnitsPerTick": 53,
+    "maxSpeedUpgradedUnitsPerTick": 93,
+    "accelUnitsPerTickSq": 1,
+    "turnRateBamPerTick": 24,
+    "radarRangeMetres": 8000,
+    "fuelCapacity": 100000,
+    "fuelBurnFullPer100Ticks": 20,
+    "fuelBurnIdlePer100Ticks": 2,
+    "draughtMetres": 12,
+    "lookaheadMetres": 250,
+    "deckHeightMetres": 22,
+    "recoverRangeMetres": 320,
+    "repairPerMinute": 10,
+    "hangarMantas": 4,
+    "hangarWalruses": 4
+  },
+  "manta": {
+    "hull": 60,
+    "maxSpeedUnitsPerTick": 1600,
+    "minSpeedUnitsPerTick": 260,
+    "accelUnitsPerTickSq": 18,
+    "turnRateBamPerTick": 300,
+    "cruiseAltitudeMetres": 400,
+    "climbUnitsPerTick": 70,
+    "radarRangeMetres": 5000,
+    "fuelCapacity": 10000,
+    "fuelBurnPer100Ticks": 80,
+    "fuelBurnHoverPer100Ticks": 140,
+    "arriveRadiusMetres": 120
+  },
+  "walrus": {
+    "hull": 120,
+    "maxSpeedUnitsPerTick": 90,
+    "maxSpeedLandUnitsPerTick": 64,
+    "accelUnitsPerTickSq": 3,
+    "turnRateBamPerTick": 180,
+    "radarRangeMetres": 1800,
+    "fuelCapacity": 10000,
+    "fuelBurnPer100Ticks": 25,
+    "maxClimbPermil": 500,
+    "arriveRadiusMetres": 40
+  }
+}

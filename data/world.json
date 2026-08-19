@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "sizeMetres": 20480,
+  "edgeMarginMetres": 1800,
+  "islandCount": 8,
+  "islandCountMax": 32,
+  "minSpacingMetres": 1200,
+  "placementAttempts": 4000,
+  "islandRadiusMinMetres": 700,
+  "islandRadiusMaxMetres": 1400,
+  "peakHeightMinMetres": 90,
+  "peakHeightMaxMetres": 420,
+  "noiseOctaves": 4,
+  "noiseBaseCellMetres": 512,
+  "noiseAmplitudePermil": 420,
+  "shorePlateauPermil": 120,
+  "islandKinds": [
+    "factory",
+    "resource",
+    "radar",
+    "airfield",
+    "fortress"
+  ],
+  "islandKindWeights": [
+    2,
+    4,
+    1,
+    1,
+    2
+  ],
+  "carrierStartOffsetMetres": 2400,
+  "coastWarpPermil": 260,
+  "coastWarpCellPermil": 900
+}
