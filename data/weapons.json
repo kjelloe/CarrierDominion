@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "comment": "One weapon per hull kind. Speeds are units per tick (256 units = 1 m, 20 ticks = 1 s): 3840 = 300 m/s. Range is in metres and decides how long a shot lives - life = range / speed, so a shot that misses simply runs out of flight rather than being deleted by a special case. hitsAir/hitsSurface classify by KIND, not by altitude: a Manta is air whether it is at cruise or on the deck.",
+  "manta": {
+    "comment": "Guided air-to-anything missiles. Four aboard, and no rearming until it is back on the deck, so a strike is a decision rather than a stream.",
+    "guided": 1,
+    "rangeMetres": 3000,
+    "damage": 40,
+    "cooldownTicks": 40,
+    "magazine": 4,
+    "speedUnitsPerTick": 3840,
+    "turnRateBamPerTick": 900,
+    "blastRadiusMetres": 22,
+    "hitsAir": 1,
+    "hitsSurface": 1
+  },
+  "walrus": {
+    "comment": "A surface gun. It cannot elevate onto aircraft, which is what makes a lone Walrus ashore worth escorting.",
+    "guided": 0,
+    "rangeMetres": 900,
+    "damage": 14,
+    "cooldownTicks": 24,
+    "magazine": 60,
+    "speedUnitsPerTick": 5376,
+    "turnRateBamPerTick": 0,
+    "blastRadiusMetres": 10,
+    "hitsAir": 0,
+    "hitsSurface": 1
+  },
+  "lighter": {
+    "comment": "Unarmed. The logistics boat is a target, and protecting it is the point.",
+    "guided": 0,
+    "rangeMetres": 0,
+    "damage": 0,
+    "cooldownTicks": 0,
+    "magazine": 0,
+    "speedUnitsPerTick": 0,
+    "turnRateBamPerTick": 0,
+    "blastRadiusMetres": 0,
+    "hitsAir": 0,
+    "hitsSurface": 0
+  },
+  "carrier": {
+    "comment": "Point defence, not an offensive battery: short-ranged, fast-firing, and effectively unlimited, because a ship that runs out of close-in defence is just a target. 1000 hull against 40-point missiles means a carrier survives 25 hits, which is more than one Manta strike carries.",
+    "guided": 0,
+    "rangeMetres": 1600,
+    "damage": 18,
+    "cooldownTicks": 16,
+    "magazine": 600,
+    "speedUnitsPerTick": 6400,
+    "turnRateBamPerTick": 0,
+    "blastRadiusMetres": 12,
+    "hitsAir": 1,
+    "hitsSurface": 1
+  }
+}

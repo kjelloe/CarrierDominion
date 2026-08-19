@@ -31,6 +31,7 @@ function ownCarrierView(carrier) {
     supplyRun: carrier.supplyRun,
     maxSpeed: carrier.maxSpeed,
     radar: carrier.radar,
+    ammo: carrier.ammo,
     contact: 0,
   };
 }
@@ -54,6 +55,7 @@ function contactView(carrier) {
     supplyRun: 0,
     maxSpeed: 0,
     radar: 0,
+    ammo: -1,
     contact: 1,
   };
 }
@@ -84,6 +86,7 @@ function ownUnitView(unit) {
     cargoFuel: unit.cargoFuel,
     cargoMaterials: unit.cargoMaterials,
     cargoCap: unit.cargoCap,
+    ammo: unit.ammo,
     contact: 0,
   };
 }
@@ -114,6 +117,7 @@ function unitContactView(unit) {
     cargoFuel: -1,
     cargoMaterials: -1,
     cargoCap: -1,
+    ammo: -1,
     contact: 1,
   };
 }
@@ -162,6 +166,20 @@ function detectedBy(state, team, target) {
   return false;
 }
 
+// A shot in the air is visible the way anything else is: your own always, an
+// enemy's only where one of your hulls can see it. Nothing about a shot is
+// hidden once it IS visible - it is a missile, not a secret.
+function shotView(shot) {
+  return {
+    id: shot.id,
+    team: shot.team,
+    x: shot.x,
+    y: shot.y,
+    z: shot.z,
+    heading: shot.heading,
+  };
+}
+
 function buildView(state, team) {
   const carriers = [];
   for (let i = 0; i < state.carriers.length; i++) {
@@ -178,6 +196,12 @@ function buildView(state, team) {
       // A stowed enemy unit is inside a hangar and cannot be seen at all.
       if (detectedBy(state, team, unit)) units.push(unitContactView(unit));
     }
+  }
+
+  const shots = [];
+  for (let i = 0; i < state.shots.length; i++) {
+    const shot = state.shots[i];
+    if (shot.team === team || detectedBy(state, team, shot)) shots.push(shotView(shot));
   }
 
   const islands = [];
@@ -233,6 +257,7 @@ function buildView(state, team) {
     },
     carriers: carriers,
     units: units,
+    shots: shots,
     islands: islands,
     events: events,
   };

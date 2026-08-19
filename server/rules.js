@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(HERE, '..', 'data');
 
-const RULE_FILES = ['rules', 'world', 'units', 'economy'];
+const RULE_FILES = ['rules', 'world', 'units', 'economy', 'weapons'];
 
 function loadRules(dataDir = DATA_DIR) {
   const out = {};

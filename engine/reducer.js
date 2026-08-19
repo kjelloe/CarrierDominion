@@ -43,6 +43,7 @@ import { checkVictory } from './victory.js';
 import { stepEconomy, teamById } from './economy.js';
 import { stepSupply } from './supply.js';
 import { stepUnits } from './fleet.js';
+import { stepWeapons } from './weapons.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import {
   ORDER_MOVE,
@@ -194,14 +195,21 @@ function applySetSupplyRun(next, command) {
 function advanceTick(next) {
   // Order is the simulation's contract and part of every hash: the AI decides
   // first (so its orders take effect this tick, not next), then hulls move,
-  // then pods build, then the war is checked for an ending. A finished war
-  // still ticks - the world does not freeze - but nothing new is decided.
+  // then they shoot from where they now are, then pods build, then the war is
+  // checked for an ending. A finished war still ticks - the world does not
+  // freeze - but nothing new is decided.
+  //
+  // Weapons go AFTER movement so a shot is fired from the position the shooter
+  // reached this tick, and a hull that just closed to weapon range gets to use
+  // it. It goes BEFORE capture so a Walrus killed on the beach cannot also
+  // plant its pod on the tick it died.
   next.tick = next.tick + 1;
   if (next.phase === PHASE_RUNNING) {
     stepAi(next, next.params.aiCadenceTicks, next.params.aiStandoff);
   }
   stepCarriers(next);
   stepUnits(next);
+  stepWeapons(next, next.params.hitRadiusUnit, next.params.hitRadiusCarrier);
   stepCapture(next, next.params.podBuildTicks);
   stepEconomy(next);
   stepSupply(next);

@@ -11,8 +11,8 @@
 
 const HUD_ROWS = [
   'transport', 'seat', 'tick', 'speedx', 'hash', 'seed', 'graphics',
-  'fps', 'speed', 'throttle', 'heading', 'fuel', 'stores', 'hangar',
-  'unit', 'islands', 'supply', 'status',
+  'fps', 'speed', 'throttle', 'heading', 'fuel', 'weapons', 'stores',
+  'hangar', 'unit', 'islands', 'supply', 'status',
 ];
 
 function createHud(root, t) {
@@ -103,7 +103,17 @@ function describeUnit(t, unit, params) {
   const fuel = unit.fuelCapacity > 0 ? Math.round((unit.fuel * 100) / unit.fuelCapacity) : 0;
   const speed = knotsFrom(unit.speed, params.unitsPerMetre, params.tickHz);
   const pod = unit.kind === 1 && unit.pod === 1 ? ' [pod]' : '';
-  return `#${unit.id} ${kind} ${situation} ${speed}${t('hud.knots')} ${fuel}%${pod}`;
+  const ammo = unit.ammo > 0 ? ` ${unit.ammo}x` : '';
+  return `#${unit.id} ${kind} ${situation} ${speed}${t('hud.knots')} ${fuel}%${ammo}${pod}`;
+}
+
+// "600 rnd - 3 in the air". Point defence is the number that decides whether a
+// strike gets through, so it belongs next to the hull, not buried in a menu.
+function describeWeapons(t, view) {
+  const carrier = view.carriers.find((c) => c.team === view.team && c.contact === 0);
+  const rounds = carrier === undefined ? 0 : carrier.ammo;
+  const air = view.shots.filter((s) => s.team === view.team).length;
+  return t('weapons.state', { rounds: rounds, air: air });
 }
 
 function describeStores(t, view) {
@@ -128,7 +138,7 @@ function describeSupply(t, view) {
   return parts.join(' - ');
 }
 
-const WIN_KEYS = ['war.unknown', 'war.byIslands', 'war.byCarrier'];
+const WIN_KEYS = ['war.unknown', 'war.byIslands', 'war.byCarrier', 'war.draw'];
 
 function describeIslands(t, view) {
   let mine = 0;
@@ -139,6 +149,8 @@ function describeIslands(t, view) {
   }
   const tally = t('islands.tally', { mine: mine, total: view.islands.length, theirs: theirs });
   if (view.phase !== 1) return tally;
+  // A draw is a real ending: both carriers on the bottom, nobody's war to win.
+  if (view.winner < 0) return `${tally} - ${t('war.draw')}`;
   const outcome = view.winner === view.team ? t('war.won') : t('war.lost');
   return `${tally} - ${outcome}, ${t(WIN_KEYS[view.winReason] ?? 'war.unknown')}`;
 }
@@ -152,6 +164,7 @@ export {
   describeHangar,
   describeUnit,
   describeStores,
+  describeWeapons,
   describeIslands,
   describeSupply,
   knotsFrom,

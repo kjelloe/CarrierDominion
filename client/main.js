@@ -29,6 +29,7 @@ import {
   describeHangar,
   describeIslands,
   describeStores,
+  describeWeapons,
   describeSupply,
   describeUnit,
 } from './hud.js';
@@ -337,6 +338,9 @@ function onWelcome(message) {
 
 function onSnapshot(message) {
   state.view = message.view;
+  // The last view, for probes. It is the same object the renderer is about to
+  // draw, so a probe that asserts on it is asserting on what is on screen.
+  window.__lastView = message.view;
   state.stateHash = message.stateHash ?? '';
   const own = ownCarrierOf(message.view);
   if (own !== undefined) {
@@ -384,6 +388,7 @@ function frame(nowMs) {
   setHud(state.hud, 'hangar', describeHangar(state.t, state.view.units, state.view.team));
   setHud(state.hud, 'unit', describeUnit(state.t, selectedUnit(), state.view.params));
   setHud(state.hud, 'islands', describeIslands(state.t, state.view));
+  setHud(state.hud, 'weapons', describeWeapons(state.t, state.view));
   setHud(state.hud, 'stores', describeStores(state.t, state.view));
   setHud(state.hud, 'supply', describeSupply(state.t, state.view));
 }

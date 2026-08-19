@@ -26,6 +26,7 @@ import {
 } from './units.js';
 import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { teamById } from './economy.js';
+import { manageStrike, withdraw } from './ai_strike.js';
 
 const AI_SEEK = 0; // steaming toward the chosen island
 const AI_INVADE = 1; // in position, getting a Walrus to the node
@@ -248,9 +249,16 @@ function manageSupply(state, brain, carrier) {
 // One AI turn for one team. Called from the reducer on the AI cadence.
 function stepAiTeam(state, brain, standoffExtra) {
   const carrier = findCarrierForTeam(state, brain.team);
-  if (carrier === -1) return;
+  if (carrier === -1 || carrier.hull <= 0) return;
   manageSupply(state, brain, carrier);
   if (backOff(state, brain, carrier) === 1) return;
+  // A battered carrier breaks contact before it does anything else. Only a
+  // healthy one goes looking for a fight.
+  if (withdraw(state, brain, carrier) === 1) return;
+  // Air defence and strike run alongside the invasion plan rather than
+  // replacing it: the carrier keeps steaming for its island while its Mantas
+  // deal with whatever has come over the horizon.
+  manageStrike(state, brain);
   if (brain.mode === AI_SEEK) seek(state, brain, carrier, standoffExtra);
   else if (brain.mode === AI_INVADE) invade(state, brain, carrier);
   else waitForPod(state, brain, carrier);
@@ -270,6 +278,9 @@ function createBrain(team) {
     walrusId: -1,
     avoidTicks: 0,
     avoidHeading: 0,
+    strikeCarrier: -1,
+    retreatTicks: 0,
+    retreatHeading: 0,
   };
 }
 
@@ -281,6 +292,9 @@ function copyBrain(brain) {
     walrusId: brain.walrusId,
     avoidTicks: brain.avoidTicks,
     avoidHeading: brain.avoidHeading,
+    strikeCarrier: brain.strikeCarrier,
+    retreatTicks: brain.retreatTicks,
+    retreatHeading: brain.retreatHeading,
   };
 }
 

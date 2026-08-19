@@ -16,6 +16,7 @@ import {
   buildManta,
   buildOcean,
   buildOceanGrid,
+  buildShot,
   buildWalrus,
   updateCommandNode,
 } from './world.js';
@@ -100,6 +101,7 @@ function createScene(canvas, preset, sizeMetres, style) {
     nodes: {},
     carriers: {},
     units: {},
+    shots: {},
     strategic: false,
     followUnitId: -1,
     elapsed: 0,
@@ -211,6 +213,30 @@ function syncUnits(view3d, view) {
   }
 }
 
+// Shots come and go every few ticks, so they are rebuilt from the view rather
+// than tracked: anything the view no longer lists has either hit something or
+// run out of range, and either way it is gone.
+function syncShots(view3d, view) {
+  const seen = {};
+  for (const shot of view.shots) {
+    seen[shot.id] = true;
+    let group = view3d.shots[shot.id];
+    if (group === undefined) {
+      group = buildShot(TEAM_COLOURS[shot.team % TEAM_COLOURS.length]);
+      view3d.shots[shot.id] = group;
+      view3d.scene.add(group);
+    }
+    group.position.set(toMetres(shot.x), toMetres(shot.z), -toMetres(shot.y));
+    group.rotation.y = headingToYaw(shot.heading);
+  }
+  for (const id of Object.keys(view3d.shots)) {
+    if (seen[id] === undefined) {
+      view3d.scene.remove(view3d.shots[id]);
+      delete view3d.shots[id];
+    }
+  }
+}
+
 // The camera chases whatever the player is actually flying: a unit under
 // direct control if there is one, otherwise the carrier.
 function chaseSubject(view3d, view) {
@@ -274,6 +300,7 @@ function renderView(view3d, view, deltaSeconds, podBuildTicks) {
   syncNodes(view3d, view, podBuildTicks);
   syncCarriers(view3d, view);
   syncUnits(view3d, view);
+  syncShots(view3d, view);
   placeCamera(view3d, chaseSubject(view3d, view));
   if (view3d.ocean.material.uniforms !== undefined) {
     view3d.ocean.material.uniforms.uTime.value = view3d.elapsed;

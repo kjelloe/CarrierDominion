@@ -7,6 +7,7 @@
 
 import { dist2D } from '../shared/fixed.js';
 import { mulCos, mulSin } from '../shared/trig.js';
+import { rearm } from './weapons.js';
 import {
   KIND_MANTA,
   KIND_WALRUS,
@@ -71,9 +72,10 @@ function withinRecoveryRange(unit, carrier, recoverRangeUnits) {
   return dist2D(unit.x, unit.y, carrier.x, carrier.y) <= recoverRangeUnits;
 }
 
-// Back in the hangar. Refuelling is instant for now - the fuel economy slice
-// will make it draw on the carrier's own tank over time.
-function recoverUnit(unit, carrier) {
+// Back in the hangar. Refuelling and rearming are instant for now - the fuel
+// economy slice will make them draw on the carrier's own tank and magazines
+// over time.
+function recoverUnit(unit, carrier, weapons) {
   unit.state = UNIT_STOWED;
   unit.order = ORDER_HOLD;
   unit.control = -1;
@@ -83,6 +85,7 @@ function recoverUnit(unit, carrier) {
   unit.fuel = unit.fuelCapacity;
   unit.fuelAccum = 0;
   unit.blocked = 0;
+  rearm(unit, weapons);
   // A Walrus draws a fresh pod from the carrier's stores when it comes aboard.
   if (unit.kind === KIND_WALRUS) unit.pod = 1;
   unit.x = carrier.x;

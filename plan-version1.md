@@ -210,12 +210,12 @@ state at all) are recorded in `dev-log.md` and put to the owner in
 ## 4. Milestone 1 — vertical slice (condensed; detailed plan after M0)
 
 **Status 2026-08-19:** units & direct control, islands & ACCB capture,
-the enemy carrier FSM, the island economy, and a win condition are all
-in on `dev_night` — 149 tests plus the smoke gate green, and an
-AI-vs-AI war that resolves end to end. Still outstanding from this
-milestone: weapons and damage, buildable structures, real fog of war,
-and a HUD beyond the debug overlay. Details and measurements in
-`dev-log.md`.
+the enemy carrier FSM, the island economy, a win condition, and now
+weapons & damage are all in on `dev_night` — 210 tests plus the smoke
+gate green, and an AI-vs-AI war that resolves end to end (tick ~234,000,
+won by sinking). Still outstanding from this milestone: ordnance
+logistics (question #17), buildable structures, real fog of war, and a
+HUD beyond the debug overlay. Details and measurements in `dev-log.md`.
 
 
 GDD week themes become slice groups: units & direct control (chase

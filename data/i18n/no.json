@@ -68,5 +68,8 @@
   "supply.atSea": "båt til sjøs",
   "status.stockpileSet": "øy #{island} er nå depot",
   "status.noOwnedIsland": "du holder ingen øy å gjøre til depot",
-  "help.supply": "L forsyningstur - K gjør nærmeste øy til depot"
+  "help.supply": "L forsyningstur - K gjør nærmeste øy til depot",
+  "hud.weapons": "våpen",
+  "weapons.state": "{rounds} skudd - {air} i lufta",
+  "war.draw": "uavgjort, begge hangarskip tapt"
 }

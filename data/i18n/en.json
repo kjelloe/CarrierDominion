@@ -68,5 +68,8 @@
   "supply.atSea": "boat at sea",
   "status.stockpileSet": "island #{island} is now the depot",
   "status.noOwnedIsland": "you hold no island to make a depot of",
-  "help.supply": "L supply run - K make the nearest island your depot"
+  "help.supply": "L supply run - K make the nearest island your depot",
+  "hud.weapons": "weapons",
+  "weapons.state": "{rounds} rnd - {air} in the air",
+  "war.draw": "a draw, both carriers lost"
 }

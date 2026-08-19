@@ -14,6 +14,10 @@ const PHASE_OVER = 1;
 const WIN_NONE = 0;
 const WIN_ISLANDS = 1;
 const WIN_CARRIER_SUNK = 2;
+// Both carriers on the bottom. Two air groups can and do finish each other on
+// the same tick, and without this the war simply never ends - which is exactly
+// what the first AI-vs-AI run after weapons landed did for 900,000 ticks.
+const WIN_DRAW = 3;
 
 function islandsHeldBy(state, team) {
   let held = 0;
@@ -33,7 +37,11 @@ function afloatCarriers(state, team) {
 
 function checkVictory(state, islandPermil) {
   if (state.phase !== PHASE_RUNNING) return;
-  const needed = mulDiv(state.islands.length, islandPermil, 1000);
+  // Never zero. Two thirds of a one-island map rounds down to nothing, and a
+  // threshold of nothing is met before the war starts - a tiny test map used to
+  // declare a winner on tick zero, holding no islands at all.
+  let needed = mulDiv(state.islands.length, islandPermil, 1000);
+  if (needed < 1) needed = 1;
 
   // Last carrier afloat wins outright, before any counting of islands.
   let alive = -1;
@@ -43,6 +51,13 @@ function checkVictory(state, islandPermil) {
       alive = state.teams[i].id;
       aliveCount = aliveCount + 1;
     }
+  }
+  if (aliveCount === 0 && state.teams.length > 0) {
+    state.phase = PHASE_OVER;
+    state.winner = -1;
+    state.winReason = WIN_DRAW;
+    pushEvent(state.events, EVT_WAR_OVER, -1, WIN_DRAW, 0);
+    return;
   }
   if (aliveCount === 1 && state.teams.length > 1) {
     state.phase = PHASE_OVER;
@@ -69,6 +84,7 @@ export {
   WIN_NONE,
   WIN_ISLANDS,
   WIN_CARRIER_SUNK,
+  WIN_DRAW,
   islandsHeldBy,
   afloatCarriers,
   checkVictory,

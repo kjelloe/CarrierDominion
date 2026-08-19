@@ -5,6 +5,68 @@ golden hash and why.
 
 ---
 
+## 2026-08-19 — Weapons and damage (M1)
+
+210 tests + smoke gate green. The last big hole in Milestone 1: hulls could be
+sunk by running aground, and by nothing else.
+
+### The shape of it
+
+`data/weapons.json` gives each hull kind one weapon. The stats live once in
+`state.weapons`, indexed by unit KIND, and a hull carries only `ammo` and
+`cooldown` — two integers instead of eleven copied fields, which keeps the
+state hash small and the records readable.
+
+A shot is an entity with a life, not an instant line-of-fire test: it flies, it
+can miss, and it can be outrun. `life = range / speed`, so a round that misses
+runs out of flight instead of being deleted by a special case. Guided rounds
+(the Manta's missiles) re-aim within a turn rate each tick; when their target
+dies they fly on straight rather than vanishing.
+
+Hit tests are against the **segment travelled this tick**, never the endpoint.
+A missile covers 15 m per tick and a Manta is 12 m across, so an endpoint test
+would let shots tunnel through their targets — the whole reason for
+`segmentDistSq`, which is integer-only and keeps its parameter as a
+numerator/denominator pair rather than a fraction.
+
+Classes are by KIND, not altitude: a Walrus gun cannot elevate onto a Manta
+whether that Manta is at 400 m or sitting on the deck. That is what makes a
+lone Walrus ashore worth escorting.
+
+Tick order gained one step: `stepUnits → stepWeapons → stepCapture`. After
+movement, so a hull that just closed to range gets to use it; before capture,
+so a Walrus killed on the beach cannot also plant its pod on the tick it died.
+
+### The AI now fights
+
+`engine/ai_strike.js` (split out to keep both AI modules under the size cap):
+find the nearest **spotted** enemy carrier — same sensor rule the fog filter
+uses, so the AI learns nothing a player would not — launch two Mantas, and vector
+them at it. It never manoeuvres the carrier to attack; the carrier is the
+airfield.
+
+### Three things the first AI-vs-AI run after weapons taught us
+
+- **The war stopped ending.** Both carriers sank, often on the same tick, and
+  `checkVictory` had no case for "nobody afloat" — so it ran 900,000 ticks and
+  declared nothing. `WIN_DRAW` now ends it honestly.
+- **Trading to the death was the only tactic.** Added `withdraw`: below a third
+  of its hull the AI turns directly away, recalls the air group, and calls for
+  supply — the lighter brings materials, and materials are hull repair. With
+  that in, the war resolves again at tick ~234,000, won by sinking.
+- **A carrier that empties its magazine is defenceless forever.** Point defence
+  is 600 rounds and nothing refills it. The war above was decided by exactly
+  that. Ordnance is already produced by factories and stockpiled on islands, so
+  ferrying it is the obvious next slice — recorded as question #17.
+
+### And one from the probe
+
+`combat_shot.mjs` ran on a pocket map and won the war on tick zero holding no
+islands: two thirds of a one-island map rounds down to a threshold of nothing.
+`checkVictory` now floors the requirement at one island.
+
+---
+
 ## 2026-08-19 — Art direction as data, and the port claim (rulings #13, #6)
 
 198 tests + smoke gate green. Nothing here touches the simulation: two players

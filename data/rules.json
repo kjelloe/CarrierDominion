@@ -14,5 +14,7 @@
     1
   ],
   "aiStandoffMetres": 500,
-  "victoryIslandPermil": 667
+  "victoryIslandPermil": 667,
+  "hitRadiusUnitMetres": 12,
+  "hitRadiusCarrierMetres": 60
 }

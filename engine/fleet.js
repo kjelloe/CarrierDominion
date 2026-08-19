@@ -55,7 +55,7 @@ function stepUnits(state) {
     }
     if (outcome === FLIGHT_HOME || outcome === DRIVE_HOME) {
       if (carrier !== -1 && withinRecoveryRange(unit, carrier, state.params.recoverRange)) {
-        recoverUnit(unit, carrier);
+        recoverUnit(unit, carrier, state.weapons);
         pushEvent(state.events, EVT_UNIT_RECOVERED, unit.id, unit.team, 0);
       }
     }

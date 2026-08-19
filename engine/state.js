@@ -13,6 +13,7 @@ import { HEADING_MANUAL } from './commands.js';
 import { copyUnit, createLighter, createManta, createWalrus } from './units.js';
 import { copyBrain, createBrain } from './ai_carrier.js';
 import { copyEconomy, createEconomy } from './economy.js';
+import { WEAPON_CARRIER, copyShot, copyWeapons, createWeapons } from './weapons.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
 
 const PHASE_RUNNING = 0;
@@ -73,6 +74,8 @@ function copyCarrier(carrier) {
     fuelCapacity: carrier.fuelCapacity,
     fuelBurnFull: carrier.fuelBurnFull,
     fuelBurnIdle: carrier.fuelBurnIdle,
+    ammo: carrier.ammo,
+    cooldown: carrier.cooldown,
   };
 }
 
@@ -103,6 +106,8 @@ function copyState(state) {
   for (let i = 0; i < state.events.length; i++) events.push(copyEvent(state.events[i]));
   const ai = [];
   for (let i = 0; i < state.ai.length; i++) ai.push(copyBrain(state.ai[i]));
+  const shots = [];
+  for (let i = 0; i < state.shots.length; i++) shots.push(copyShot(state.shots[i]));
   return {
     tick: state.tick,
     seed: state.seed,
@@ -122,18 +127,23 @@ function copyState(state) {
       aiCadenceTicks: state.params.aiCadenceTicks,
       aiStandoff: state.params.aiStandoff,
       victoryIslandPermil: state.params.victoryIslandPermil,
+      hitRadiusUnit: state.params.hitRadiusUnit,
+      hitRadiusCarrier: state.params.hitRadiusCarrier,
     },
+    weapons: copyWeapons(state.weapons),
     economy: copyEconomy(state.economy),
     teams: teams,
     carriers: carriers,
     units: units,
     islands: islands,
     ai: ai,
+    shots: shots,
+    nextShot: state.nextShot,
     events: events,
   };
 }
 
-function createCarrier(id, team, position, carrierRules, unitsPerMetre) {
+function createCarrier(id, team, position, carrierRules, carrierWeapon, unitsPerMetre) {
   return {
     id: id,
     team: team,
@@ -163,6 +173,8 @@ function createCarrier(id, team, position, carrierRules, unitsPerMetre) {
     fuelCapacity: carrierRules.fuelCapacity,
     fuelBurnFull: carrierRules.fuelBurnFullPer100Ticks,
     fuelBurnIdle: carrierRules.fuelBurnIdlePer100Ticks,
+    ammo: carrierWeapon.magazine,
+    cooldown: 0,
   };
 }
 
@@ -180,9 +192,13 @@ function createInitialState(seed, rules) {
     teams.push({ id: t, stockpileIsland: -1 });
   }
 
+  const weapons = createWeapons(rules.weapons, unitsPerMetre);
+
   const carriers = [];
   for (let t = 0; t < base.teamCount; t++) {
-    carriers.push(createCarrier(t, t, starts[t], rules.units.carrier, unitsPerMetre));
+    carriers.push(
+      createCarrier(t, t, starts[t], rules.units.carrier, weapons[WEAPON_CARRIER], unitsPerMetre),
+    );
   }
   // Team 1 starts in the far corner and looks back across the map.
   for (let i = 1; i < carriers.length; i++) carriers[i].heading = 40960;
@@ -239,13 +255,18 @@ function createInitialState(seed, rules) {
       aiCadenceTicks: base.aiCadenceTicks,
       aiStandoff: base.aiStandoffMetres * unitsPerMetre,
       victoryIslandPermil: base.victoryIslandPermil,
+      hitRadiusUnit: base.hitRadiusUnitMetres * unitsPerMetre,
+      hitRadiusCarrier: base.hitRadiusCarrierMetres * unitsPerMetre,
     },
+    weapons: weapons,
     economy: createEconomy(rules.economy),
     teams: teams,
     carriers: carriers,
     units: units,
     islands: generated.islands,
     ai: ai,
+    shots: [],
+    nextShot: 0,
     events: [],
   };
 }

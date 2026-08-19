@@ -69,6 +69,8 @@ function createManta(id, team, carrierId, rules, unitsPerMetre) {
     cargoCap: 0,
     loadRange: 0,
     workRate: 0,
+    ammo: rules.weapons.manta.magazine,
+    cooldown: 0,
   };
 }
 
@@ -116,6 +118,8 @@ function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
     cargoCap: 0,
     loadRange: 0,
     workRate: 0,
+    ammo: rules.weapons.walrus.magazine,
+    cooldown: 0,
   };
 }
 
@@ -166,6 +170,8 @@ function createLighter(id, team, carrierId, rules, unitsPerMetre) {
     cargoCap: stats.cargoCapacity,
     loadRange: stats.loadRangeMetres * unitsPerMetre,
     workRate: stats.workPerTick,
+    ammo: rules.weapons.lighter.magazine,
+    cooldown: 0,
   };
 }
 
@@ -212,6 +218,8 @@ function copyUnit(unit) {
     cargoCap: unit.cargoCap,
     loadRange: unit.loadRange,
     workRate: unit.workRate,
+    ammo: unit.ammo,
+    cooldown: unit.cooldown,
   };
   return copy;
 }

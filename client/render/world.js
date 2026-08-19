@@ -308,6 +308,26 @@ function buildLighter(teamColour) {
   return group;
 }
 
+// A shot is drawn as a lit dart, not a hull: it is unlit on purpose so it reads
+// as its own light source against a night sea, and it is small enough that
+// seeing one at all means something is being shot at.
+function buildShot(teamColour) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.6, 1.6, 22, 6),
+    new THREE.MeshBasicMaterial({ color: teamColour }),
+  );
+  body.geometry.rotateZ(-Math.PI / 2);
+  group.add(body);
+  const flame = new THREE.Mesh(
+    new THREE.SphereGeometry(3.4, 6, 5),
+    new THREE.MeshBasicMaterial({ color: 0xffd58a }),
+  );
+  flame.position.x = -13;
+  group.add(flame);
+  return group;
+}
+
 const NEUTRAL_NODE_COLOUR = 0xb9b3a4;
 
 // The command node: a mast on a plinth, tall enough to spot from the air,
@@ -363,6 +383,7 @@ export {
   buildManta,
   buildWalrus,
   buildLighter,
+  buildShot,
   buildCommandNode,
   updateCommandNode,
   NEUTRAL_NODE_COLOUR,
