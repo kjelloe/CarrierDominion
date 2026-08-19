@@ -27,6 +27,7 @@ import {
 import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { teamById } from './economy.js';
 import { manageStrike, withdraw } from './ai_strike.js';
+import { manageIslands } from './ai_estate.js';
 
 const AI_SEEK = 0; // steaming toward the chosen island
 const AI_INVADE = 1; // in position, getting a Walrus to the node
@@ -257,6 +258,9 @@ function stepAiTeam(state, brain, standoffExtra) {
   const carrier = findCarrierForTeam(state, brain.team);
   if (carrier === -1 || carrier.hull <= 0) return;
   manageSupply(state, brain, carrier);
+  // An island the AI takes and never develops produces nothing, so the estate
+  // is managed before anything else: it is what pays for the rest.
+  manageIslands(state, brain);
   if (backOff(state, brain, carrier) === 1) return;
   // A battered carrier breaks contact before it does anything else. Only a
   // healthy one goes looking for a fight.

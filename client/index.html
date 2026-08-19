@@ -66,6 +66,23 @@
     .damage-row:hover { color: var(--hud-ink); text-decoration: underline; }
     .damage-name { color: var(--hud-dim); }
     #damage-legend, #damage-stores { color: var(--hud-dim); margin-top: 8px; }
+    /* The island board: what a captured island is for, and what is going up on
+       it. Opens by clicking an island you hold. */
+    #island-panel {
+      /* Clear of the legend, which is bottom-left and about 140px tall. */
+      position: fixed; left: 50%; bottom: 170px; transform: translateX(-50%);
+      min-width: 420px; padding: 12px 14px; border-radius: 6px;
+      background: var(--hud-panel); color: var(--hud-ink);
+      font: 12px/1.5 var(--hud-font);
+      display: none; user-select: none;
+    }
+    #island-panel.open { display: block; }
+    #island-title { letter-spacing: 2px; margin-bottom: 8px; }
+    .island-row { display: flex; justify-content: space-between; gap: 18px; }
+    .island-act { cursor: pointer; }
+    .island-act:hover { text-decoration: underline; }
+    .island-act.off { color: var(--hud-dim); cursor: default; text-decoration: none; }
+    #island-note { color: var(--hud-dim); margin-top: 8px; }
   </style>
   <script type="importmap">
     { "imports": { "three": "/client/vendor/three.module.min.js" } }
@@ -83,6 +100,11 @@
     <div id="damage-list"></div>
     <div id="damage-stores"></div>
     <div id="damage-legend"></div>
+  </div>
+  <div id="island-panel">
+    <div id="island-title"></div>
+    <div id="island-body"></div>
+    <div id="island-note"></div>
   </div>
   <script type="module" src="/client/main.js"></script>
 </body>

@@ -19,7 +19,7 @@
 
 import { mulDiv } from '../shared/fixed.js';
 import { EVT_STOCKPILE_SET, pushEvent } from './events.js';
-import { KIND_FACTORY } from './worldgen.js';
+import { ROLE_FACTORY, ROLE_NONE, stockCapOf, terrainPermil } from './island.js';
 
 function capped(value, cap) {
   return value > cap ? cap : value;
@@ -39,32 +39,53 @@ function islandById(state, islandId) {
   return -1;
 }
 
-// Mines and quarries: raw output straight into the island's own stock.
+// Mines and quarries: raw output straight into the island's own stock. What it
+// makes is decided by the ROLE its owner gave it, scaled by how well the ground
+// suits that role. An island nobody has configured produces nothing - taking it
+// is the start of the job, not the end.
 function produce(state) {
-  const cap = state.economy.stockCap;
   for (let i = 0; i < state.islands.length; i++) {
     const island = state.islands[i];
-    if (island.owner < 0) continue;
-    const row = state.economy.income[island.kind];
+    if (island.owner < 0 || island.role === ROLE_NONE) continue;
+    const row = state.economy.income[island.role];
     if (row === undefined) continue;
-    island.stockFuel = capped(island.stockFuel + row.fuel, cap);
-    island.stockMaterials = capped(island.stockMaterials + row.materials, cap);
-    island.stockOrdnance = capped(island.stockOrdnance + row.ordnance, cap);
+    const bonus = terrainPermil(island, state.economy);
+    const cap = stockCapOf(island, state.economy);
+    island.stockFuel = capped(island.stockFuel + mulDiv(row.fuel, bonus, 1000), cap);
+    island.stockMaterials = capped(
+      island.stockMaterials + mulDiv(row.materials, bonus, 1000),
+      cap,
+    );
+    island.stockOrdnance = capped(island.stockOrdnance + mulDiv(row.ordnance, bonus, 1000), cap);
   }
 }
 
-// Refineries: a factory turns materials into fuel and ordnance, and turns
-// nothing into nothing. An enemy who takes your resource islands starves the
-// factory without ever having to touch it.
+// Refineries: a factory turns materials into fuel, munitions and replacement
+// vehicle chassis, and turns nothing into nothing. An enemy who takes your
+// resource islands starves the factory without ever having to touch it.
+//
+// Throughput is per FACTORY BUILT, so the island's three factory slots are
+// three times the plant, not a label. A factory island with nothing built on it
+// yet is a building site.
 function refine(state) {
-  const cap = state.economy.stockCap;
   for (let i = 0; i < state.islands.length; i++) {
     const island = state.islands[i];
-    if (island.owner < 0 || island.kind !== KIND_FACTORY) continue;
-    if (island.stockMaterials < state.economy.factoryIn) continue;
-    island.stockMaterials = island.stockMaterials - state.economy.factoryIn;
-    island.stockFuel = capped(island.stockFuel + state.economy.factoryFuel, cap);
-    island.stockOrdnance = capped(island.stockOrdnance + state.economy.factoryOrdnance, cap);
+    if (island.owner < 0 || island.role !== ROLE_FACTORY || island.factories <= 0) continue;
+    const cap = stockCapOf(island, state.economy);
+    const bonus = terrainPermil(island, state.economy);
+    for (let run = 0; run < island.factories; run++) {
+      if (island.stockMaterials < state.economy.factoryIn) break;
+      island.stockMaterials = island.stockMaterials - state.economy.factoryIn;
+      island.stockFuel = capped(
+        island.stockFuel + mulDiv(state.economy.factoryFuel, bonus, 1000),
+        cap,
+      );
+      island.stockOrdnance = capped(
+        island.stockOrdnance + mulDiv(state.economy.factoryOrdnance, bonus, 1000),
+        cap,
+      );
+      island.stockChassis = capped(island.stockChassis + state.economy.factoryChassis, cap);
+    }
   }
 }
 
@@ -73,24 +94,27 @@ function refine(state) {
 // entities - the interesting decision is WHICH island is the stockpile and
 // whether the chain is intact, not the individual sorties.
 function shipToStockpile(state) {
-  const cap = state.economy.stockCap;
   for (let t = 0; t < state.teams.length; t++) {
     const team = state.teams[t];
     if (team.stockpileIsland < 0) continue;
     const depot = islandById(state, team.stockpileIsland);
     if (depot === -1 || depot.owner !== team.id) continue;
+    const cap = stockCapOf(depot, state.economy);
     for (let i = 0; i < state.islands.length; i++) {
       const island = state.islands[i];
       if (island.owner !== team.id || island.id === depot.id) continue;
       const fuel = mulDiv(island.stockFuel, state.economy.networkPermil, 1000);
       const materials = mulDiv(island.stockMaterials, state.economy.networkPermil, 1000);
       const ordnance = mulDiv(island.stockOrdnance, state.economy.networkPermil, 1000);
+      const chassis = mulDiv(island.stockChassis, state.economy.networkPermil, 1000);
       island.stockFuel = island.stockFuel - fuel;
       island.stockMaterials = island.stockMaterials - materials;
       island.stockOrdnance = island.stockOrdnance - ordnance;
+      island.stockChassis = island.stockChassis - chassis;
       depot.stockFuel = capped(depot.stockFuel + fuel, cap);
       depot.stockMaterials = capped(depot.stockMaterials + materials, cap);
       depot.stockOrdnance = capped(depot.stockOrdnance + ordnance, cap);
+      depot.stockChassis = capped(depot.stockChassis + chassis, cap);
     }
   }
 }
@@ -126,45 +150,59 @@ function stepEconomy(state) {
 
 // What a team holds across everything it owns - the number the HUD shows.
 function teamHoldings(state, teamId) {
-  const total = { fuel: 0, materials: 0, ordnance: 0 };
+  const total = { fuel: 0, materials: 0, ordnance: 0, chassis: 0 };
   for (let i = 0; i < state.islands.length; i++) {
     const island = state.islands[i];
     if (island.owner !== teamId) continue;
     total.fuel = total.fuel + island.stockFuel;
     total.materials = total.materials + island.stockMaterials;
     total.ordnance = total.ordnance + island.stockOrdnance;
+    total.chassis = total.chassis + island.stockChassis;
   }
   return total;
 }
 
-function copyEconomy(economy) {
-  const income = [];
-  for (let i = 0; i < economy.income.length; i++) {
-    income.push({
-      fuel: economy.income[i].fuel,
-      materials: economy.income[i].materials,
-      ordnance: economy.income[i].ordnance,
-    });
+function copyIncome(rows) {
+  const out = [];
+  for (let i = 0; i < rows.length; i++) {
+    out.push({ fuel: rows[i].fuel, materials: rows[i].materials, ordnance: rows[i].ordnance });
   }
+  return out;
+}
+
+function copyBuilds(rows) {
+  const out = [];
+  for (let i = 0; i < rows.length; i++) {
+    out.push({ cost: rows[i].cost, ticks: rows[i].ticks, max: rows[i].max });
+  }
+  return out;
+}
+
+function copyEconomy(economy) {
   return {
     incomeEvery: economy.incomeEvery,
     factoryIn: economy.factoryIn,
     factoryFuel: economy.factoryFuel,
     factoryOrdnance: economy.factoryOrdnance,
+    factoryChassis: economy.factoryChassis,
+    chassisPerHull: economy.chassisPerHull,
     networkPermil: economy.networkPermil,
     stockCap: economy.stockCap,
+    warehouseCap: economy.warehouseCap,
+    terrainBonus: economy.terrainBonus,
     repairPerMaterial: economy.repairPerMaterial,
-    income: income,
+    income: copyIncome(economy.income),
+    builds: copyBuilds(economy.builds),
   };
 }
 
 function createEconomy(econRules) {
-  const income = [];
-  for (let i = 0; i < econRules.islandIncome.length; i++) {
-    income.push({
-      fuel: econRules.islandIncome[i].fuel,
-      materials: econRules.islandIncome[i].materials,
-      ordnance: econRules.islandIncome[i].ordnance,
+  const builds = [];
+  for (let i = 0; i < econRules.builds.length; i++) {
+    builds.push({
+      cost: econRules.builds[i].materials,
+      ticks: econRules.builds[i].ticks,
+      max: econRules.builds[i].max,
     });
   }
   return {
@@ -172,10 +210,15 @@ function createEconomy(econRules) {
     factoryIn: econRules.factoryMaterialsIn,
     factoryFuel: econRules.factoryFuelOut,
     factoryOrdnance: econRules.factoryOrdnanceOut,
+    factoryChassis: econRules.factoryChassisOut,
+    chassisPerHull: econRules.chassisPerHull,
     networkPermil: econRules.networkSharePermil,
     stockCap: econRules.islandStockCap,
+    warehouseCap: econRules.warehouseStockCap,
+    terrainBonus: econRules.terrainBonusPermil,
     repairPerMaterial: econRules.repairPerMaterial,
-    income: income,
+    income: copyIncome(econRules.roleIncome),
+    builds: builds,
   };
 }
 

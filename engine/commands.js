@@ -22,6 +22,8 @@ const CMD_SET_REPAIR_PRIORITY = 'set_repair_priority';
 const CMD_SELECT_WEAPON = 'select_weapon';
 const CMD_ORDER_UNIT_ATTACK = 'order_unit_attack';
 const CMD_SET_CARRIER_AIM = 'set_carrier_aim';
+const CMD_SET_ISLAND_ROLE = 'set_island_role';
+const CMD_BUILD_ON_ISLAND = 'build_on_island';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -91,6 +93,20 @@ function validateCommand(command) {
     if (command.section < 0 || command.section > 6) return 'no such section';
     if (!isInt(command.priority)) return 'priority must be an integer';
     if (command.priority < 0 || command.priority > 2) return 'priority out of range';
+    return '';
+  }
+  if (type === CMD_SET_ISLAND_ROLE) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.islandId)) return 'islandId must be an integer';
+    if (!isInt(command.role)) return 'role must be an integer';
+    if (command.role < 0 || command.role > 2) return 'no such island role';
+    return '';
+  }
+  if (type === CMD_BUILD_ON_ISLAND) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.islandId)) return 'islandId must be an integer';
+    if (!isInt(command.what)) return 'what must be an integer';
+    if (command.what < 0 || command.what > 2) return 'no such building';
     return '';
   }
   if (type === CMD_SET_SUPPLY_RUN) {
@@ -170,6 +186,8 @@ export {
   CMD_SELECT_WEAPON,
   CMD_ORDER_UNIT_ATTACK,
   CMD_SET_CARRIER_AIM,
+  CMD_SET_ISLAND_ROLE,
+  CMD_BUILD_ON_ISLAND,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

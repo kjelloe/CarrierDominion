@@ -10,8 +10,11 @@
 // sections the player has expressed an opinion about.
 
 import { floorDiv, mulDiv } from '../shared/fixed.js';
-import { EVT_REPAIRED, pushEvent } from './events.js';
+import { EVT_HULL_REPLACED, EVT_REPAIRED, pushEvent } from './events.js';
 import { repairSections, sectionsIntact } from './damage.js';
+import { hangarOpen } from './damage.js';
+import { UNIT_LOST, UNIT_STOWED } from './units.js';
+import { createArms } from './weapons.js';
 
 // Points of repair earned this tick, given the rate per 100 ticks. The
 // accumulator lets the rate be a fraction of a point, exactly like fuel burn.
@@ -60,6 +63,7 @@ function stepRepairCarrier(state, carrier) {
 function stepRepair(state) {
   for (let i = 0; i < state.carriers.length; i++) {
     const carrier = state.carriers[i];
+    replaceHull(state, carrier);
     const done = stepRepairCarrier(state, carrier);
     if (done <= 0) continue;
     const before = carrier.repairReported;
@@ -68,6 +72,48 @@ function stepRepair(state) {
       pushEvent(state.events, EVT_REPAIRED, carrier.id, carrier.team, carrier.hull);
     }
   }
+}
+
+// A hull lost is not gone for good: a factory island makes replacement chassis,
+// the boat brings them, and the hangar assembles one when there is a gap to
+// fill. The unit record is REUSED - ids are stable for a whole war, and a Manta
+// that comes back is the same Manta as far as everything else is concerned.
+function replaceHull(state, carrier) {
+  if (carrier.hull <= 0 || !hangarOpen(carrier)) return 0;
+  const cost = state.economy.chassisPerHull;
+  if (cost <= 0 || carrier.chassis < cost) return 0;
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.carrierId !== carrier.id || unit.state !== UNIT_LOST) continue;
+    carrier.chassis = carrier.chassis - cost;
+    unit.state = UNIT_STOWED;
+    unit.hp = unit.maxHp;
+    unit.fuel = unit.fuelCapacity;
+    unit.fuelAccum = 0;
+    unit.speed = 0;
+    unit.throttle = 0;
+    unit.rudder = 0;
+    unit.blocked = 0;
+    unit.control = -1;
+    unit.order = 0;
+    unit.orderTargetKind = -1;
+    unit.orderTargetId = -1;
+    unit.x = carrier.x;
+    unit.y = carrier.y;
+    unit.z = 0;
+    unit.targetX = carrier.x;
+    unit.targetY = carrier.y;
+    unit.arms = createArms(state.loadouts[unit.kind], state.weapons);
+    unit.weapon = unit.arms.length > 0 ? unit.arms[0].w : -1;
+    unit.heat = 0;
+    unit.heatAccum = 0;
+    unit.overheated = 0;
+    unit.cooldown = 0;
+    if (unit.kind === 1) unit.pod = 1;
+    pushEvent(state.events, EVT_HULL_REPLACED, unit.id, unit.team, unit.kind);
+    return 1;
+  }
+  return 0;
 }
 
 // Fraction of the ship that is whole, in per-mil, across hull and every
@@ -83,4 +129,4 @@ function conditionPermil(carrier) {
   return mulDiv(have, 1000, total);
 }
 
-export { stepRepair, stepRepairCarrier, repairDue, conditionPermil };
+export { stepRepair, stepRepairCarrier, repairDue, replaceHull, conditionPermil };

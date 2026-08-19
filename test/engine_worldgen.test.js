@@ -12,7 +12,7 @@ const rules = loadRules();
 // Golden worldgen hash. Moving it means the map for every existing seed
 // changed - re-pin only with a note in dev-log.md saying why.
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = '9cd2307c6acd1bf9';
+const GOLDEN_WORLD_HASH = '4837de9700c5caa7';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

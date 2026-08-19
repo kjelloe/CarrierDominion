@@ -34,6 +34,9 @@ const EVT_SHOT_FIRED = 26; // a = shotId, b = the FIRING team, c = target id
 const EVT_UNIT_HIT = 27; // a = unitId, b = the team that was hit, c = damage
 const EVT_REPAIRED = 28; // a = carrierId, b = team, c = hull after - per 100 points
 const EVT_SCORED = 29; // a = team, b = points, c = why (engine/score.js SCORE_*)
+const EVT_ISLAND_ROLE = 30; // a = islandId, b = owning team, c = role
+const EVT_ISLAND_BUILT = 31; // a = islandId, b = owning team, c = what was built
+const EVT_HULL_REPLACED = 32; // a = unitId, b = team, c = kind - a chassis became a hull
 
 function makeEvent(code, a, b, c) {
   return { code: code, a: a, b: b, c: c };
@@ -74,6 +77,9 @@ export {
   EVT_UNIT_HIT,
   EVT_REPAIRED,
   EVT_SCORED,
+  EVT_ISLAND_ROLE,
+  EVT_ISLAND_BUILT,
+  EVT_HULL_REPLACED,
   makeEvent,
   pushEvent,
 };

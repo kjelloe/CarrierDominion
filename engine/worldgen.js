@@ -105,6 +105,15 @@ function createIslands(seed, world, unitsPerMetre) {
       stockFuel: 0,
       stockMaterials: 0,
       stockOrdnance: 0,
+      stockChassis: 0,
+      // What the island is FOR: its owner decides after taking it, and until
+      // then it produces nothing. -1 is ROLE_NONE; island.js owns the meaning.
+      role: -1,
+      factories: 0,
+      warehouses: 0,
+      turrets: 0,
+      building: -1,
+      buildTicks: 0,
     };
     // The command node depends on the island's own terrain, so it can only be
     // chosen once the record is complete.

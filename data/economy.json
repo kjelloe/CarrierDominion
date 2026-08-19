@@ -1,38 +1,52 @@
 {
-  "version": 2,
-  "comment": "Production happens ON an island and stays there until the network moves it. Rows are indexed by island kind: 0 factory, 1 resource, 2 radar, 3 airfield, 4 fortress. A factory does not produce from nothing - it converts materials, which is why a resource island is worth taking first.",
+  "version": 3,
+  "comment": "Production happens ON an island and stays there until the network moves it. What an island produces is decided by its ROLE, which its owner sets after capture: 0 resource, 1 factory, 2 defence. worldgen's `kind` is not overridden by that - it is a terrainBonusPermil multiplier when the role suits the ground (resource-rich rock as Resource, natural fortress as Defence). A factory does not produce from nothing: it converts materials, per factory built, which is why a resource island is worth taking first.",
   "incomeEveryTicks": 100,
-  "islandIncome": [
-    {
-      "fuel": 0,
-      "materials": 10,
-      "ordnance": 0
-    },
-    {
-      "fuel": 15,
-      "materials": 45,
-      "ordnance": 0
-    },
-    {
-      "fuel": 0,
-      "materials": 0,
-      "ordnance": 0
-    },
-    {
-      "fuel": 0,
-      "materials": 0,
-      "ordnance": 0
-    },
-    {
-      "fuel": 0,
-      "materials": 0,
-      "ordnance": 5
-    }
-  ],
   "factoryMaterialsIn": 30,
   "factoryFuelOut": 90,
   "factoryOrdnanceOut": 6,
   "networkSharePermil": 300,
   "islandStockCap": 60000,
-  "repairPerMaterial": 1
+  "repairPerMaterial": 1,
+  "roleIncome": [
+    {
+      "fuel": 6,
+      "materials": 45,
+      "ordnance": 0
+    },
+    {
+      "fuel": 0,
+      "materials": 8,
+      "ordnance": 0
+    },
+    {
+      "fuel": 0,
+      "materials": 0,
+      "ordnance": 0
+    }
+  ],
+  "terrainBonusPermil": 1600,
+  "warehouseStockCap": 40000,
+  "builds": [
+    {
+      "key": "factory",
+      "materials": 900,
+      "ticks": 4000,
+      "max": 3
+    },
+    {
+      "key": "warehouse",
+      "materials": 500,
+      "ticks": 2600,
+      "max": 2
+    },
+    {
+      "key": "turret",
+      "materials": 1200,
+      "ticks": 3400,
+      "max": 4
+    }
+  ],
+  "factoryChassisOut": 1,
+  "chassisPerHull": 12
 }

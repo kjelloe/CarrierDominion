@@ -51,7 +51,7 @@ function lighterFor(state, carrierId) {
 }
 
 function laden(unit) {
-  return unit.cargoFuel + unit.cargoMaterials + unit.cargoOrdnance;
+  return unit.cargoFuel + unit.cargoMaterials + unit.cargoOrdnance + unit.cargoChassis;
 }
 
 // How much of one good moves this tick: never more than there is, never more
@@ -85,6 +85,13 @@ function loadFromDepot(state, unit, depot) {
   unit.cargoMaterials = unit.cargoMaterials + materials;
   worked = worked + materials;
 
+  // Replacement chassis last: they are the least urgent of the four and the
+  // bulkiest, so they travel in whatever the rest left behind.
+  const chassis = moveAmount(depot.stockChassis, unit.workRate - worked, room - worked);
+  depot.stockChassis = depot.stockChassis - chassis;
+  unit.cargoChassis = unit.cargoChassis + chassis;
+  worked = worked + chassis;
+
   return worked;
 }
 
@@ -116,6 +123,11 @@ function unloadToCarrier(state, unit, carrier) {
   unit.cargoMaterials = unit.cargoMaterials - materials;
   carrier.materials = carrier.materials + materials;
   worked = worked + materials;
+
+  const chassis = moveAmount(unit.cargoChassis, unit.workRate - worked, unit.cargoChassis);
+  unit.cargoChassis = unit.cargoChassis - chassis;
+  carrier.chassis = carrier.chassis + chassis;
+  worked = worked + chassis;
   return worked;
 }
 
@@ -154,6 +166,7 @@ function runLighter(state, unit, carrier, depot) {
       unit.cargoFuel = 0;
       unit.cargoMaterials = 0;
       unit.cargoOrdnance = 0;
+      unit.cargoChassis = 0;
       if (carrier.supplyRun === 1) unit.order = ORDER_LOAD;
       else orderReturn(unit);
     }

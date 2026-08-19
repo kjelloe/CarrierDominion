@@ -13,6 +13,7 @@
 import { dist2D } from '../shared/fixed.js';
 import { EVT_ISLAND_CAPTURED, EVT_POD_DEPLOYED, EVT_POD_LOST, pushEvent } from './events.js';
 import { KIND_WALRUS, UNIT_ACTIVE } from './units.js';
+import { clearWorks } from './island.js';
 
 // Returns '' when this unit may deploy on this island, otherwise the reason.
 function checkDeploy(unit, island, podRangeUnits) {
@@ -62,6 +63,10 @@ function stepCapture(state, podBuildTicks) {
     island.owner = island.podTeam;
     island.podTeam = -1;
     island.podTicks = 0;
+    // A new command centre means a new plan. The command centre itself is what
+    // you took the island FOR, but the previous owner's works are theirs: the
+    // new owner starts from bare ground and decides what it is for.
+    clearWorks(island);
     pushEvent(state.events, EVT_ISLAND_CAPTURED, island.id, island.owner, 0);
   }
 }

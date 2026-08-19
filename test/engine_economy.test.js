@@ -7,7 +7,8 @@ import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
 import { buildView } from '../shared/view.js';
 import { teamHoldings } from '../engine/economy.js';
-import { KIND_FACTORY, KIND_FORTRESS, KIND_RADAR, KIND_RESOURCE } from '../engine/worldgen.js';
+import { KIND_FACTORY, KIND_RADAR, KIND_RESOURCE } from '../engine/worldgen.js';
+import { ROLE_DEFENCE, ROLE_FACTORY, ROLE_NONE, ROLE_RESOURCE } from '../engine/island.js';
 import { EVT_STOCKPILE_SET } from '../engine/events.js';
 
 const rules = withoutAi(loadRules());
@@ -25,13 +26,20 @@ function drive(state, ticks) {
   return state;
 }
 
-// Give a team one island of a chosen kind and nothing else, so a test can
-// watch a single link of the chain in isolation.
-function soleIsland(state, team, kind) {
+// Give a team one island, put it to work, and leave it holding nothing else -
+// so a test can watch a single link of the chain in isolation. `kind` is the
+// terrain the generator laid down; `role` is what the owner made of it.
+function soleIsland(state, team, role, kind) {
   const island = state.islands[0];
   island.owner = team;
-  island.kind = kind;
+  island.role = role;
+  if (kind !== undefined) island.kind = kind;
   return island;
+}
+
+// Output for a role, before the terrain bonus.
+function income(role) {
+  return econ.roleIncome[role];
 }
 
 test('nobody starts with stores: what you have is what your islands hold', () => {
@@ -42,12 +50,18 @@ test('nobody starts with stores: what you have is what your islands hold', () =>
     assert.deepEqual(Object.keys(team).sort(), ['id', 'score', 'stockpileIsland']);
     assert.equal(team.stockpileIsland, -1);
     assert.equal(team.score, 0);
-    assert.deepEqual(teamHoldings(state, team.id), { fuel: 0, materials: 0, ordnance: 0 });
+    assert.deepEqual(
+      teamHoldings(state, team.id),
+      { fuel: 0, materials: 0, ordnance: 0, chassis: 0 },
+    );
   }
   for (const island of state.islands) {
     assert.equal(island.stockFuel, 0);
     assert.equal(island.stockMaterials, 0);
     assert.equal(island.stockOrdnance, 0);
+    assert.equal(island.stockChassis, 0);
+    assert.equal(island.role, ROLE_NONE, 'an island starts with no purpose at all');
+    assert.equal(island.factories + island.warehouses + island.turrets, 0);
   }
 });
 
@@ -56,10 +70,19 @@ test('a neutral archipelago produces nothing', () => {
   for (const island of state.islands) assert.equal(island.stockMaterials, 0);
 });
 
+test('an island with no role assigned produces nothing at all', () => {
+  let state = fresh();
+  const island = state.islands[0];
+  island.owner = 0;
+  state = drive(state, EVERY * 4);
+  assert.equal(state.islands[island.id].stockMaterials, 0, 'a bare command centre earned money');
+});
+
 test('a resource island mines into its OWN stock, on the accrual tick', () => {
   let state = fresh();
-  const island = soleIsland(state, 0, KIND_RESOURCE);
-  const row = econ.islandIncome[KIND_RESOURCE];
+  // Plain terrain, so this is the role's base rate with no bonus on it.
+  const island = soleIsland(state, 0, ROLE_RESOURCE, KIND_RADAR);
+  const row = income(ROLE_RESOURCE);
 
   state = drive(state, EVERY - 1);
   assert.equal(state.islands[island.id].stockMaterials, 0, 'produced early');
@@ -69,37 +92,61 @@ test('a resource island mines into its OWN stock, on the accrual tick', () => {
   assert.equal(teamHoldings(state, 0).materials, row.materials);
 });
 
-test('a factory converts materials, and makes nothing from nothing', () => {
-  let state = fresh();
-  const factory = soleIsland(state, 0, KIND_FACTORY);
-  const own = econ.islandIncome[KIND_FACTORY].materials;
-  assert.ok(own < econ.factoryMaterialsIn, 'this test needs a factory that cannot feed itself');
+test('ground that suits the role pays better than ground that does not', () => {
+  let plain = fresh();
+  soleIsland(plain, 0, ROLE_RESOURCE, KIND_RADAR);
+  plain = drive(plain, EVERY);
 
-  state = drive(state, EVERY);
-  assert.equal(state.islands[factory.id].stockFuel, 0, 'refined fuel out of thin air');
+  let rich = fresh();
+  soleIsland(rich, 0, ROLE_RESOURCE, KIND_RESOURCE);
+  rich = drive(rich, EVERY);
 
-  // Hand it a heap of materials and it starts refining.
-  state.islands[factory.id].stockMaterials = econ.factoryMaterialsIn * 3;
-  state = drive(state, EVERY);
-  const after = state.islands[factory.id];
-  assert.equal(after.stockFuel, econ.factoryFuelOut);
-  assert.equal(after.stockOrdnance, econ.factoryOrdnanceOut);
-  assert.equal(
-    after.stockMaterials,
-    econ.factoryMaterialsIn * 3 - econ.factoryMaterialsIn + own,
-    'the converter should consume exactly its input and keep its own output',
+  assert.ok(
+    rich.islands[0].stockMaterials > plain.islands[0].stockMaterials,
+    'resource-rich ground should out-produce a bare rock in the same role',
   );
 });
 
-test('a fortress pays in ordnance and a radar island pays in nothing', () => {
+test('a factory island with nothing built on it is a building site', () => {
+  let state = fresh();
+  const factory = soleIsland(state, 0, ROLE_FACTORY, KIND_RADAR);
+  state.islands[factory.id].stockMaterials = econ.factoryMaterialsIn * 3;
+  state = drive(state, EVERY);
+  assert.equal(state.islands[factory.id].stockFuel, 0, 'a plant that does not exist refined fuel');
+});
+
+test('a factory converts materials, and three factories convert three times', () => {
+  let state = fresh();
+  const factory = soleIsland(state, 0, ROLE_FACTORY, KIND_RADAR);
+  const own = income(ROLE_FACTORY).materials;
+  state.islands[factory.id].factories = 1;
+  state.islands[factory.id].stockMaterials = econ.factoryMaterialsIn * 6;
+  state = drive(state, EVERY);
+  const one = state.islands[factory.id];
+  assert.equal(one.stockFuel, econ.factoryFuelOut);
+  assert.equal(one.stockOrdnance, econ.factoryOrdnanceOut);
+  assert.equal(one.stockChassis, econ.factoryChassisOut);
+  assert.equal(
+    one.stockMaterials,
+    econ.factoryMaterialsIn * 6 - econ.factoryMaterialsIn + own,
+    'the converter should consume exactly its input and keep its own output',
+  );
+
+  let three = fresh();
+  const plant = soleIsland(three, 0, ROLE_FACTORY, KIND_RADAR);
+  three.islands[plant.id].factories = 3;
+  three.islands[plant.id].stockMaterials = econ.factoryMaterialsIn * 6;
+  three = drive(three, EVERY);
+  assert.equal(three.islands[plant.id].stockFuel, econ.factoryFuelOut * 3);
+});
+
+test('a defence island pays in nothing, which is the price of the guns', () => {
   let state = fresh();
   state.islands[0].owner = 0;
-  state.islands[0].kind = KIND_FORTRESS;
-  state.islands[1].owner = 0;
-  state.islands[1].kind = KIND_RADAR;
-  state = drive(state, EVERY);
-  assert.equal(state.islands[1].stockOrdnance, 0, 'a radar island earns its keep in sight, not goods');
-  assert.ok(teamHoldings(state, 0).ordnance > 0);
+  state.islands[0].role = ROLE_DEFENCE;
+  state = drive(state, EVERY * 3);
+  const held = teamHoldings(state, 0);
+  assert.equal(held.materials + held.fuel + held.ordnance, 0);
 });
 
 test('the first island a team takes becomes its stockpile', () => {
@@ -114,7 +161,8 @@ test('the network ships a share of every island toward the stockpile', () => {
   let state = fresh();
   for (const id of [0, 1, 2]) {
     state.islands[id].owner = 0;
-    state.islands[id].kind = KIND_RESOURCE;
+    state.islands[id].role = ROLE_RESOURCE;
+    state.islands[id].kind = KIND_RADAR; // plain ground: no bonus to reason about
   }
   state.teams[0].stockpileIsland = 0;
   // Seed the outlying islands and let one accrual move goods inward.
@@ -128,7 +176,7 @@ test('the network ships a share of every island toward the stockpile', () => {
   assert.ok(depot.stockMaterials > share, 'the depot should have taken delivery');
   assert.ok(outlying.stockMaterials < 1000, 'the outlying island should have shipped some out');
   // Nothing is created or destroyed by shipping it.
-  const produced = econ.islandIncome[KIND_RESOURCE].materials * 3;
+  const produced = income(ROLE_RESOURCE).materials * 3;
   assert.equal(teamHoldings(state, 0).materials, 2000 + produced);
 });
 
@@ -150,11 +198,11 @@ test('losing the stockpile island moves the depot to another one', () => {
 
 test('a stranded island keeps what it makes when there is no depot to ship to', () => {
   let state = fresh();
-  const island = soleIsland(state, 0, KIND_RESOURCE);
+  const island = soleIsland(state, 0, ROLE_RESOURCE, KIND_RADAR);
   state = drive(state, EVERY * 3);
   // It is its own depot by default, so nothing moves and nothing is lost.
   assert.equal(state.teams[0].stockpileIsland, island.id);
-  assert.equal(state.islands[island.id].stockMaterials, econ.islandIncome[KIND_RESOURCE].materials * 3);
+  assert.equal(state.islands[island.id].stockMaterials, income(ROLE_RESOURCE).materials * 3);
 });
 
 test('a commander may nominate the stockpile, but only on an island they hold', () => {
@@ -176,15 +224,27 @@ test('a commander may nominate the stockpile, but only on an island they hold', 
 
 test('an island stock is capped', () => {
   let state = fresh();
-  const island = soleIsland(state, 0, KIND_RESOURCE);
+  const island = soleIsland(state, 0, ROLE_RESOURCE, KIND_RADAR);
   state.islands[island.id].stockMaterials = econ.islandStockCap - 1;
   state = drive(state, EVERY);
   assert.equal(state.islands[island.id].stockMaterials, econ.islandStockCap);
 });
 
+test('a warehouse raises the cap it is capped at', () => {
+  let state = fresh();
+  const island = soleIsland(state, 0, ROLE_RESOURCE, KIND_RADAR);
+  state.islands[island.id].warehouses = 1;
+  state.islands[island.id].stockMaterials = econ.islandStockCap + 10;
+  state = drive(state, EVERY);
+  assert.ok(
+    state.islands[island.id].stockMaterials > econ.islandStockCap,
+    'a warehouse should let an island hold more than the bare cap',
+  );
+});
+
 test('what is piled on an island is visible only to the side holding it', () => {
   let state = fresh();
-  const island = soleIsland(state, 0, KIND_RESOURCE);
+  const island = soleIsland(state, 0, ROLE_RESOURCE, KIND_RESOURCE);
   state = drive(state, EVERY);
 
   const mine = buildView(state, 0).islands[island.id];
@@ -197,7 +257,7 @@ test('what is piled on an island is visible only to the side holding it', () => 
 test('the view reports holdings and which island is the depot', () => {
   let state = fresh();
   state.islands[2].owner = 0;
-  state.islands[2].kind = KIND_RESOURCE;
+  state.islands[2].role = ROLE_RESOURCE;
   state = drive(state, EVERY);
   const view = buildView(state, 0);
   assert.equal(view.resources.stockpileIsland, 2);
@@ -218,7 +278,10 @@ test('the economy record survives copyState without aliasing', () => {
 
 test('the economy keeps the state hygienic', () => {
   let state = fresh();
-  for (const island of state.islands) island.owner = island.id % 2;
+  for (const island of state.islands) {
+    island.owner = island.id % 2;
+    island.role = island.id % 3;
+  }
   state = drive(state, EVERY * 3);
   assert.doesNotThrow(() => canonicalize(state));
 });

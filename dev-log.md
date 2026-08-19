@@ -5,6 +5,68 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — Islands become something: roles, works, and replacement hulls
+
+267 tests + smoke gate green. The largest untouched system in the game, and the
+one that makes taking an island worth doing (ruling #24.1).
+
+### What an island is FOR is now a decision
+
+The ACCB pod builds the command centre; the command centre makes the island
+yours; and then the owner picks one of three roles:
+
+| Role | What it does | What it may build |
+|---|---|---|
+| Resource | mines materials into the network | warehouses |
+| Factory | converts materials into fuel, munitions and **replacement hulls** | up to 3 factories, warehouses |
+| Defence | nothing economic at all | up to 4 turrets |
+
+The role can be changed until concrete is poured, and not after. Worldgen's
+`kind` is no longer what an island produces - it is a **terrain bonus** when the
+role suits the ground, so resource-rich rock rewards a mine and a natural
+fortress rewards guns. Losing an island loses the works: the command centre is
+what you took it for, but the previous owner's factories are theirs.
+
+Factory throughput is **per factory built**, so three slots are three times the
+plant rather than a label, and a factory island with nothing on it is a
+building site.
+
+### Replacement hulls close the loop
+
+A factory makes chassis; the lighter carries them as a fourth good; the hangar
+assembles one when there is a gap to fill. The unit RECORD is reused - ids are
+stable for a whole war, so a Manta that comes back is the same Manta - and a
+wrecked hangar deck cannot assemble anything. Losing an air group is no longer
+permanent, provided you hold the industry to replace it.
+
+### The AI develops its estate
+
+`engine/ai_estate.js`. Without it the enemy takes islands, develops none, and
+drifts out of fuel three hours in.
+
+Two things it taught us, both fixed:
+
+- **Sites could never be paid for.** A build came out of the island's own
+  materials, but the cargo network ships a share of every island's stock to the
+  stockpile every accrual - so a factory island could never accumulate the price
+  of its own factory. The network that empties a site now also supplies it: the
+  island's stock first, then the depot's.
+- **Terrain-first planning starved a side.** If a team's islands all happened to
+  be resource-rich, every one became a mine, no factory was ever planned, and
+  the carrier ran on the trickle of crude a mine makes. The plant now comes
+  second whatever the ground: a factory on poor ground beats no factory.
+
+With both fixed the AI runs 2 mines and a 3-factory plant, and its fuel curve
+turns back upward instead of sliding to zero.
+
+### The board
+
+Click an island you hold: role, works, stock, what is under construction, and
+the choices open to you, priced. Same pattern as the damage board - rows built
+once, not per frame, because a row rebuilt under the pointer cannot be clicked.
+
+---
+
 ## 2026-08-20 — Targeting: the player is back in the loop
 
 252 tests + smoke gate green. The original put the player in the targeting loop

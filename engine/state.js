@@ -52,6 +52,13 @@ function copyIsland(island) {
     stockFuel: island.stockFuel,
     stockMaterials: island.stockMaterials,
     stockOrdnance: island.stockOrdnance,
+    stockChassis: island.stockChassis,
+    role: island.role,
+    factories: island.factories,
+    warehouses: island.warehouses,
+    turrets: island.turrets,
+    building: island.building,
+    buildTicks: island.buildTicks,
   };
 }
 
@@ -106,6 +113,7 @@ function copyCarrier(carrier) {
     armourLossPermil: carrier.armourLossPermil,
     materials: carrier.materials,
     materialsCapacity: carrier.materialsCapacity,
+    chassis: carrier.chassis,
     repairRate: carrier.repairRate,
     repairAccum: carrier.repairAccum,
     repairReported: carrier.repairReported,
@@ -247,6 +255,9 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     // spends them.
     materials: 0,
     materialsCapacity: carrierRules.materialsCapacity,
+    // Replacement hulls, in parts. A factory island makes them; the boat
+    // brings them; the hangar assembles one when there is a gap to fill.
+    chassis: 0,
     repairRate: carrierRules.repairPointsPer100Ticks,
     repairAccum: 0,
     repairReported: 0,

@@ -189,10 +189,18 @@ function islandView(island, team) {
     nodeY: island.nodeY,
     podTeam: island.podTeam,
     podTicks: island.podTicks,
-    // What is piled up on an island is only visible to the side holding it.
+    // What an island has been made INTO is visible from the sea - you can see
+    // a factory - but what is piled up inside it is not.
+    role: island.role,
+    factories: island.factories,
+    warehouses: island.warehouses,
+    turrets: island.turrets,
+    building: island.building,
+    buildTicks: mine ? island.buildTicks : -1,
     stockFuel: mine ? island.stockFuel : -1,
     stockMaterials: mine ? island.stockMaterials : -1,
     stockOrdnance: mine ? island.stockOrdnance : -1,
+    stockChassis: mine ? island.stockChassis : -1,
   };
 }
 
@@ -305,6 +313,7 @@ function buildView(state, team) {
       fuel: holdings.fuel,
       materials: holdings.materials,
       ordnance: holdings.ordnance,
+      chassis: holdings.chassis,
       stockpileIsland: stockpileIsland,
       score: score,
     },

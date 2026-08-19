@@ -21,6 +21,8 @@ import {
   CMD_SET_THROTTLE,
   CMD_SELECT_WEAPON,
   CMD_SET_CARRIER_AIM,
+  CMD_SET_ISLAND_ROLE,
+  CMD_BUILD_ON_ISLAND,
   CMD_SET_REPAIR_PRIORITY,
   CMD_SET_STOCKPILE,
   CMD_SET_SUPPLY_RUN,
@@ -49,6 +51,7 @@ import { stepEconomy, teamById } from './economy.js';
 import { stepSupply } from './supply.js';
 import { stepRepair } from './repair.js';
 import { stepScore } from './score.js';
+import { setRole, startBuild, stepBuild } from './island.js';
 import { setPriority } from './damage.js';
 import { stepUnits } from './fleet.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
@@ -236,6 +239,30 @@ function applyDeployPod(next, command) {
   return next;
 }
 
+// What an island is for. Only its owner decides, and only while there is
+// nothing built on it (island.js) - once concrete is poured the decision is
+// made.
+function applyIslandRole(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  const island = findIsland(next, command.islandId);
+  if (island === -1 || island.owner !== carrier.team) return reject(next);
+  if (setRole(next, island, command.role) !== 1) return reject(next);
+  return next;
+}
+
+// Start a factory, a warehouse, or a turret. Paid for out of the island's own
+// materials, and refused when the role does not allow it, the slots are full,
+// or the stock is short.
+function applyIslandBuild(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  const island = findIsland(next, command.islandId);
+  if (island === -1 || island.owner !== carrier.team) return reject(next);
+  if (startBuild(next, island, command.what, next.economy) !== 1) return reject(next);
+  return next;
+}
+
 function applySetStockpile(next, command) {
   const carrier = findCarrier(next, command.carrierId);
   if (carrier === -1) return reject(next);
@@ -283,6 +310,7 @@ function advanceTick(next) {
   stepUnits(next);
   stepWeapons(next, next.params.hitRadiusUnit, next.params.hitRadiusCarrier);
   stepCapture(next, next.params.podBuildTicks);
+  stepBuild(next);
   stepEconomy(next);
   stepSupply(next);
   // Repairs last: the boat has landed this tick's materials, and the yard
@@ -320,6 +348,8 @@ function apply(state, command) {
   if (type === CMD_SET_STOCKPILE) return applySetStockpile(next, command);
   if (type === CMD_SET_SUPPLY_RUN) return applySetSupplyRun(next, command);
   if (type === CMD_SET_REPAIR_PRIORITY) return applyRepairPriority(next, command);
+  if (type === CMD_SET_ISLAND_ROLE) return applyIslandRole(next, command);
+  if (type === CMD_BUILD_ON_ISLAND) return applyIslandBuild(next, command);
   return reject(next);
 }
 
