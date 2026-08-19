@@ -10,6 +10,7 @@ import { dist2D, mulDiv, floorDiv } from '../shared/fixed.js';
 
 const KIND_MANTA = 0;
 const KIND_WALRUS = 1;
+const KIND_LIGHTER = 2; // the logistics boat
 
 // Where a unit is in its life cycle.
 const UNIT_STOWED = 0; // in the hangar, not on the map
@@ -21,6 +22,8 @@ const UNIT_LOST = 3; // destroyed or out of fuel away from the carrier
 const ORDER_HOLD = 0;
 const ORDER_MOVE = 1;
 const ORDER_RETURN = 2;
+const ORDER_LOAD = 3; // lighter: stand off the stockpile island and take cargo
+const ORDER_DELIVER = 4; // lighter: bring it back to the carrier
 
 function createManta(id, team, carrierId, rules, unitsPerMetre) {
   const stats = rules.units.manta;
@@ -61,6 +64,11 @@ function createManta(id, team, carrierId, rules, unitsPerMetre) {
     avoidTicks: 0,
     avoidHeading: 0,
     pod: 0,
+    cargoFuel: 0,
+    cargoMaterials: 0,
+    cargoCap: 0,
+    loadRange: 0,
+    workRate: 0,
   };
 }
 
@@ -103,6 +111,61 @@ function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
     avoidTicks: 0,
     avoidHeading: 0,
     pod: 1,
+    cargoFuel: 0,
+    cargoMaterials: 0,
+    cargoCap: 0,
+    loadRange: 0,
+    workRate: 0,
+  };
+}
+
+// The logistics boat. It moves on the Walrus drive model but never targets
+// land, so its climb limit is zero: if it somehow finds itself facing a beach
+// it stops rather than crawling up one.
+function createLighter(id, team, carrierId, rules, unitsPerMetre) {
+  const stats = rules.units.lighter;
+  return {
+    id: id,
+    team: team,
+    kind: KIND_LIGHTER,
+    carrierId: carrierId,
+    state: UNIT_STOWED,
+    order: ORDER_HOLD,
+    x: 0,
+    y: 0,
+    z: 0,
+    heading: 0,
+    speed: 0,
+    hp: stats.hull,
+    fuel: stats.fuelCapacity,
+    fuelAccum: 0,
+    targetX: 0,
+    targetY: 0,
+    control: -1,
+    throttle: 0,
+    rudder: 0,
+    maxSpeed: stats.maxSpeedUnitsPerTick,
+    minSpeed: 0,
+    accel: stats.accelUnitsPerTickSq,
+    turnRate: stats.turnRateBamPerTick,
+    cruiseAltitude: 0,
+    climbRate: 0,
+    radar: stats.radarRangeMetres * unitsPerMetre,
+    fuelCapacity: stats.fuelCapacity,
+    fuelBurn: stats.fuelBurnPer100Ticks,
+    fuelBurnHover: stats.fuelBurnPer100Ticks,
+    arriveRadius: stats.arriveRadiusMetres * unitsPerMetre,
+    maxClimbPermil: 0,
+    landSpeed: 0,
+    blocked: 0,
+    avoidTicks: 0,
+    avoidHeading: 0,
+    pod: 0,
+    cargoFuel: 0,
+    cargoMaterials: 0,
+    cargoCap: stats.cargoCapacity,
+    loadRange: stats.loadRangeMetres * unitsPerMetre,
+    workRate: stats.workPerTick,
   };
 }
 
@@ -144,6 +207,11 @@ function copyUnit(unit) {
     avoidTicks: unit.avoidTicks,
     avoidHeading: unit.avoidHeading,
     pod: unit.pod,
+    cargoFuel: unit.cargoFuel,
+    cargoMaterials: unit.cargoMaterials,
+    cargoCap: unit.cargoCap,
+    loadRange: unit.loadRange,
+    workRate: unit.workRate,
   };
   return copy;
 }
@@ -202,6 +270,7 @@ function fuelPermil(unit) {
 export {
   KIND_MANTA,
   KIND_WALRUS,
+  KIND_LIGHTER,
   UNIT_STOWED,
   UNIT_ACTIVE,
   UNIT_RETURNING,
@@ -209,8 +278,11 @@ export {
   ORDER_HOLD,
   ORDER_MOVE,
   ORDER_RETURN,
+  ORDER_LOAD,
+  ORDER_DELIVER,
   createManta,
   createWalrus,
+  createLighter,
   copyUnit,
   findUnit,
   findCarrierById,

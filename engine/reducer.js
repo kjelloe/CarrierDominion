@@ -17,6 +17,8 @@ import {
   CMD_SET_HEADING,
   CMD_SET_RUDDER,
   CMD_SET_THROTTLE,
+  CMD_SET_STOCKPILE,
+  CMD_SET_SUPPLY_RUN,
   CMD_SET_UNIT_HELM,
   CMD_TAKE_CONTROL,
   HEADING_MANUAL,
@@ -30,13 +32,16 @@ import {
   EVT_UNIT_CONTROL,
   EVT_UNIT_LAUNCHED,
   EVT_UNIT_ORDERED,
+  EVT_STOCKPILE_SET,
+  EVT_SUPPLY_RUN,
   pushEvent,
 } from './events.js';
 import { stepCarriers } from './carrier.js';
 import { checkDeploy, deployPod, stepCapture } from './capture.js';
 import { stepAi } from './ai_carrier.js';
 import { checkVictory } from './victory.js';
-import { stepEconomy } from './economy.js';
+import { stepEconomy, teamById } from './economy.js';
+import { stepSupply } from './supply.js';
 import { stepUnits } from './fleet.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import {
@@ -166,6 +171,26 @@ function applyDeployPod(next, command) {
   return next;
 }
 
+function applySetStockpile(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  const island = findIsland(next, command.islandId);
+  if (island === -1 || island.owner !== carrier.team) return reject(next);
+  const team = teamById(next, carrier.team);
+  if (team === -1) return reject(next);
+  team.stockpileIsland = island.id;
+  pushEvent(next.events, EVT_STOCKPILE_SET, island.id, team.id, 0);
+  return next;
+}
+
+function applySetSupplyRun(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  carrier.supplyRun = command.active;
+  pushEvent(next.events, EVT_SUPPLY_RUN, carrier.id, carrier.team, carrier.supplyRun);
+  return next;
+}
+
 function advanceTick(next) {
   // Order is the simulation's contract and part of every hash: the AI decides
   // first (so its orders take effect this tick, not next), then hulls move,
@@ -179,6 +204,7 @@ function advanceTick(next) {
   stepUnits(next);
   stepCapture(next, next.params.podBuildTicks);
   stepEconomy(next);
+  stepSupply(next);
   checkVictory(next, next.params.victoryIslandPermil);
   return next;
 }
@@ -203,6 +229,8 @@ function apply(state, command) {
   if (type === CMD_RELEASE_CONTROL) return applyReleaseControl(next, command);
   if (type === CMD_SET_UNIT_HELM) return applyUnitHelm(next, command);
   if (type === CMD_DEPLOY_POD) return applyDeployPod(next, command);
+  if (type === CMD_SET_STOCKPILE) return applySetStockpile(next, command);
+  if (type === CMD_SET_SUPPLY_RUN) return applySetSupplyRun(next, command);
   return reject(next);
 }
 

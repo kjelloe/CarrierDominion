@@ -56,7 +56,9 @@ function firstUnitOf(state, team, kind) {
 
 test('both hangars are full at tick zero and nothing is on the map', () => {
   const state = fresh();
-  const perCarrier = rules.units.carrier.hangarMantas + rules.units.carrier.hangarWalruses;
+  const perCarrier = rules.units.carrier.hangarMantas
+    + rules.units.carrier.hangarWalruses
+    + rules.units.carrier.hangarLighters;
   assert.equal(state.units.length, perCarrier * state.carriers.length);
   for (const unit of state.units) {
     assert.equal(unit.state, UNIT_STOWED);

@@ -12,7 +12,7 @@
 const HUD_ROWS = [
   'transport', 'seat', 'tick', 'speedx', 'hash', 'seed', 'graphics',
   'fps', 'speed', 'throttle', 'heading', 'fuel', 'stores', 'hangar',
-  'unit', 'islands', 'status',
+  'unit', 'islands', 'supply', 'status',
 ];
 
 function createHud(root, t) {
@@ -111,6 +111,23 @@ function describeStores(t, view) {
   return `f ${r.fuel} / m ${r.materials} / o ${r.ordnance}`;
 }
 
+// "running - depot #3 - boat 62% laden"
+function describeSupply(t, view) {
+  const carrier = view.carriers.find((c) => c.team === view.team && c.contact === 0);
+  const running = carrier !== undefined && carrier.supplyRun === 1;
+  const parts = [t(running ? 'supply.on' : 'supply.off')];
+  const depot = view.resources.stockpileIsland;
+  parts.push(depot < 0 ? t('supply.noDepot') : t('supply.depot', { island: depot }));
+  const boat = view.units.find((u) => u.kind === 2 && u.team === view.team && u.state !== 0);
+  if (boat !== undefined) {
+    const laden = boat.cargoCap > 0
+      ? Math.round(((boat.cargoFuel + boat.cargoMaterials) * 100) / boat.cargoCap)
+      : 0;
+    parts.push(laden > 0 ? t('supply.laden', { percent: laden }) : t('supply.atSea'));
+  }
+  return parts.join(' - ');
+}
+
 const WIN_KEYS = ['war.unknown', 'war.byIslands', 'war.byCarrier'];
 
 function describeIslands(t, view) {
@@ -136,6 +153,7 @@ export {
   describeUnit,
   describeStores,
   describeIslands,
+  describeSupply,
   knotsFrom,
   degreesFrom,
 };

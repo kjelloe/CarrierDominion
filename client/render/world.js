@@ -207,6 +207,31 @@ function buildWalrus(teamColour) {
   return group;
 }
 
+// A lighter: a blunt barge with a deckhouse aft. Read at a distance it should
+// never be mistaken for a Walrus - one of these is a target worth chasing.
+function buildLighter(teamColour) {
+  const group = new THREE.Group();
+  const hull = new THREE.Mesh(
+    new THREE.BoxGeometry(26, 6, 11),
+    new THREE.MeshLambertMaterial({ color: teamColour }),
+  );
+  hull.position.y = 3;
+  group.add(hull);
+  const cargo = new THREE.Mesh(
+    new THREE.BoxGeometry(13, 5, 8),
+    new THREE.MeshLambertMaterial({ color: 0x9a8f6a }),
+  );
+  cargo.position.set(3, 8, 0);
+  group.add(cargo);
+  const house = new THREE.Mesh(
+    new THREE.BoxGeometry(6, 6, 7),
+    new THREE.MeshLambertMaterial({ color: 0x62707c }),
+  );
+  house.position.set(-9, 9, 0);
+  group.add(house);
+  return group;
+}
+
 const NEUTRAL_NODE_COLOUR = 0xb9b3a4;
 
 // The command node: a mast on a plinth, tall enough to spot from the air,
@@ -260,6 +285,7 @@ export {
   buildCarrier,
   buildManta,
   buildWalrus,
+  buildLighter,
   buildCommandNode,
   updateCommandNode,
   NEUTRAL_NODE_COLOUR,

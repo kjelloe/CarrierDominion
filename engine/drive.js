@@ -40,10 +40,21 @@ const AVOID_TURN_BAM = 8192; // 45 degrees
 // probe clears, and the Walrus grinds along the same rock forever.
 const AVOID_TICKS = 80;
 
-function slopeAhead(unit, islands, heightHere, bam, sizeUnits) {
+// The surface a hull actually travels over: the ground where it is dry, the
+// waterline where it is not. Measuring slope against the raw SEABED made the
+// shelf around every island an unclimbable wall to anything afloat - a boat
+// with a zero climb limit could not approach a beach at all, because the sand
+// was rising under thirty metres of water. Only the part above the waterline
+// is a hill.
+function surfaceAt(islands, x, y) {
+  const height = worldHeightAt(islands, x, y);
+  return height > 0 ? height : 0;
+}
+
+function slopeAhead(unit, islands, surfaceHere, bam, sizeUnits) {
   const x = clampI(unit.x + mulCos(SLOPE_PROBE_UNITS, bam), 0, sizeUnits);
   const y = clampI(unit.y + mulSin(SLOPE_PROBE_UNITS, bam), 0, sizeUnits);
-  const rise = worldHeightAt(islands, x, y) - heightHere;
+  const rise = surfaceAt(islands, x, y) - surfaceHere;
   // Only a climb is limited: dropping down a bank is always allowed.
   return rise > 0 ? mulDiv(rise, 1000, SLOPE_PROBE_UNITS) : 0;
 }
@@ -69,17 +80,18 @@ function targetSpeedFor(unit, ashore) {
 // Facing a slope it cannot take, the vehicle looks 45 degrees either way and
 // commits to whichever side climbs less. It is not path-finding - it is a
 // driver following the contour until the way up opens.
-function beginAvoidance(unit, islands, heightHere, sizeUnits) {
+function beginAvoidance(unit, islands, surfaceHere, sizeUnits) {
   const left = wrapAngle(unit.heading + AVOID_TURN_BAM);
   const right = wrapAngle(unit.heading - AVOID_TURN_BAM);
-  const leftSlope = slopeAhead(unit, islands, heightHere, left, sizeUnits);
-  const rightSlope = slopeAhead(unit, islands, heightHere, right, sizeUnits);
+  const leftSlope = slopeAhead(unit, islands, surfaceHere, left, sizeUnits);
+  const rightSlope = slopeAhead(unit, islands, surfaceHere, right, sizeUnits);
   unit.avoidHeading = leftSlope <= rightSlope ? left : right;
   unit.avoidTicks = AVOID_TICKS;
 }
 
 function stepWalrus(unit, islands, sizeUnits) {
   const heightHere = worldHeightAt(islands, unit.x, unit.y);
+  const surfaceHere = heightHere > 0 ? heightHere : 0;
   const ashore = heightHere > 0 ? 1 : 0;
   if (unit.avoidTicks > 0) unit.avoidTicks = unit.avoidTicks - 1;
 
@@ -87,11 +99,11 @@ function stepWalrus(unit, islands, sizeUnits) {
   unit.speed = stepToward(unit.speed, targetSpeedFor(unit, ashore), unit.accel);
 
   let reportBlocked = 0;
-  if (slopeAhead(unit, islands, heightHere, unit.heading, sizeUnits) > unit.maxClimbPermil) {
+  if (slopeAhead(unit, islands, surfaceHere, unit.heading, sizeUnits) > unit.maxClimbPermil) {
     unit.speed = 0;
     reportBlocked = unit.blocked === 0 ? 1 : 0;
     unit.blocked = 1;
-    if (unit.control === -1) beginAvoidance(unit, islands, heightHere, sizeUnits);
+    if (unit.control === -1) beginAvoidance(unit, islands, surfaceHere, sizeUnits);
   } else {
     unit.blocked = 0;
     if (unit.speed !== 0) {
@@ -126,5 +138,7 @@ export {
   DRIVE_BLOCKED,
   SLOPE_PROBE_UNITS,
   AVOID_TICKS,
+  surfaceAt,
+  slopeAhead,
   stepWalrus,
 };

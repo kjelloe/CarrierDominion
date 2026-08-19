@@ -5,17 +5,16 @@ import { loadRules, withoutAi } from './helpers/rules.mjs';
 import { createInitialState, copyState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
-import { resupplyPointFor } from '../engine/economy.js';
-import { KIND_FACTORY, KIND_RADAR, KIND_RESOURCE } from '../engine/worldgen.js';
-import { EVT_RESUPPLIED } from '../engine/events.js';
+import { buildView } from '../shared/view.js';
+import { teamHoldings } from '../engine/economy.js';
+import { KIND_FACTORY, KIND_FORTRESS, KIND_RADAR, KIND_RESOURCE } from '../engine/worldgen.js';
+import { EVT_STOCKPILE_SET } from '../engine/events.js';
 
 const rules = withoutAi(loadRules());
+const econ = loadRules().economy;
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
-const EVERY = loadRules().economy.incomeEveryTicks;
-// A carrier burns fuel just sitting there, and the accrual window is exactly
-// the idle-burn window, so every resupply figure below has to account for it.
-const IDLE_BURN = loadRules().units.carrier.fuelBurnIdlePer100Ticks;
+const EVERY = econ.incomeEveryTicks;
 
 function fresh() {
   return createInitialState(SEED, rules);
@@ -26,122 +25,181 @@ function drive(state, ticks) {
   return state;
 }
 
-test('a neutral archipelago pays nobody', () => {
-  let state = fresh();
-  const before = state.teams.map((t) => ({ ...t }));
-  state = drive(state, EVERY * 5);
+// Give a team one island of a chosen kind and nothing else, so a test can
+// watch a single link of the chain in isolation.
+function soleIsland(state, team, kind) {
+  const island = state.islands[0];
+  island.owner = team;
+  island.kind = kind;
+  return island;
+}
+
+test('nobody starts with stores: what you have is what your islands hold', () => {
+  const state = fresh();
   for (const team of state.teams) {
-    assert.deepEqual({ ...team }, before[team.id], `team ${team.id} was paid for nothing`);
+    assert.deepEqual(Object.keys(team).sort(), ['id', 'stockpileIsland']);
+    assert.equal(team.stockpileIsland, -1);
+    assert.deepEqual(teamHoldings(state, team.id), { fuel: 0, materials: 0, ordnance: 0 });
+  }
+  for (const island of state.islands) {
+    assert.equal(island.stockFuel, 0);
+    assert.equal(island.stockMaterials, 0);
+    assert.equal(island.stockOrdnance, 0);
   }
 });
 
-test('an owned island pays its kind rate, on the accrual tick and no other', () => {
+test('a neutral archipelago produces nothing', () => {
+  let state = drive(fresh(), EVERY * 5);
+  for (const island of state.islands) assert.equal(island.stockMaterials, 0);
+});
+
+test('a resource island mines into its OWN stock, on the accrual tick', () => {
   let state = fresh();
-  const island = state.islands.find((i) => i.kind === KIND_RESOURCE) ?? state.islands[0];
-  island.kind = KIND_RESOURCE;
-  island.owner = 0;
-  const row = rules.economy.islandIncome[KIND_RESOURCE];
-  const startFuel = state.teams[0].fuel;
+  const island = soleIsland(state, 0, KIND_RESOURCE);
+  const row = econ.islandIncome[KIND_RESOURCE];
 
   state = drive(state, EVERY - 1);
-  assert.equal(state.teams[0].fuel, startFuel, 'paid early');
+  assert.equal(state.islands[island.id].stockMaterials, 0, 'produced early');
   state = drive(state, 1);
-  assert.equal(state.teams[0].fuel, startFuel + row.fuel);
-  assert.equal(state.teams[0].materials, rules.rules.startMaterials + row.materials);
-
-  state = drive(state, EVERY);
-  assert.equal(state.teams[0].fuel, startFuel + row.fuel * 2);
+  // It is the stockpile as well as the mine, so what it made stays put.
+  assert.equal(state.islands[island.id].stockMaterials, row.materials);
+  assert.equal(teamHoldings(state, 0).materials, row.materials);
 });
 
-test('each island kind pays its own row, and radar pays nothing', () => {
+test('a factory converts materials, and makes nothing from nothing', () => {
   let state = fresh();
-  state.islands[0].kind = KIND_FACTORY;
+  const factory = soleIsland(state, 0, KIND_FACTORY);
+  const own = econ.islandIncome[KIND_FACTORY].materials;
+  assert.ok(own < econ.factoryMaterialsIn, 'this test needs a factory that cannot feed itself');
+
+  state = drive(state, EVERY);
+  assert.equal(state.islands[factory.id].stockFuel, 0, 'refined fuel out of thin air');
+
+  // Hand it a heap of materials and it starts refining.
+  state.islands[factory.id].stockMaterials = econ.factoryMaterialsIn * 3;
+  state = drive(state, EVERY);
+  const after = state.islands[factory.id];
+  assert.equal(after.stockFuel, econ.factoryFuelOut);
+  assert.equal(after.stockOrdnance, econ.factoryOrdnanceOut);
+  assert.equal(
+    after.stockMaterials,
+    econ.factoryMaterialsIn * 3 - econ.factoryMaterialsIn + own,
+    'the converter should consume exactly its input and keep its own output',
+  );
+});
+
+test('a fortress pays in ordnance and a radar island pays in nothing', () => {
+  let state = fresh();
   state.islands[0].owner = 0;
-  state.islands[1].kind = KIND_RADAR;
+  state.islands[0].kind = KIND_FORTRESS;
   state.islands[1].owner = 0;
-  const factory = rules.economy.islandIncome[KIND_FACTORY];
-  const startMaterials = state.teams[0].materials;
+  state.islands[1].kind = KIND_RADAR;
   state = drive(state, EVERY);
-  assert.equal(state.teams[0].materials, startMaterials + factory.materials);
-  assert.equal(state.teams[0].ordnance, rules.rules.startOrdnance + factory.ordnance);
-  // The radar island contributed nothing but is still owned.
-  assert.equal(state.islands[1].owner, 0);
+  assert.equal(state.islands[1].stockOrdnance, 0, 'a radar island earns its keep in sight, not goods');
+  assert.ok(teamHoldings(state, 0).ordnance > 0);
 });
 
-test('income goes to the owner, not to whoever is nearest', () => {
+test('the first island a team takes becomes its stockpile', () => {
   let state = fresh();
-  state.islands[0].kind = KIND_RESOURCE;
-  state.islands[0].owner = 1;
-  const startFuel0 = state.teams[0].fuel;
-  const startFuel1 = state.teams[1].fuel;
+  state.islands[3].owner = 0;
   state = drive(state, EVERY);
-  assert.equal(state.teams[0].fuel, startFuel0);
-  assert.ok(state.teams[1].fuel > startFuel1);
+  assert.equal(state.teams[0].stockpileIsland, 3);
+  assert.ok(state.events.some((e) => e.code === EVT_STOCKPILE_SET && e.b === 0));
 });
 
-test('a carrier off its own island refuels from the team stores', () => {
+test('the network ships a share of every island toward the stockpile', () => {
   let state = fresh();
-  const island = state.islands[0];
-  island.owner = 0;
-  island.kind = KIND_RESOURCE;
-  const carrier = state.carriers[0];
-  carrier.x = island.x + island.radius + state.economy.resupplyRange - 1000;
-  carrier.y = island.y;
-  carrier.fuel = 1000;
-  const teamFuelBefore = state.teams[0].fuel;
+  for (const id of [0, 1, 2]) {
+    state.islands[id].owner = 0;
+    state.islands[id].kind = KIND_RESOURCE;
+  }
+  state.teams[0].stockpileIsland = 0;
+  // Seed the outlying islands and let one accrual move goods inward.
+  state.islands[1].stockMaterials = 1000;
+  state.islands[2].stockMaterials = 1000;
+  const share = Math.floor((1000 * econ.networkSharePermil) / 1000);
 
   state = drive(state, EVERY);
-  const after = state.carriers[0];
-  assert.ok(after.fuel > 1000, 'the carrier took nothing aboard');
-  const taken = after.fuel - 1000 + IDLE_BURN;
-  const income = rules.economy.islandIncome[KIND_RESOURCE].fuel;
-  assert.equal(state.teams[0].fuel, teamFuelBefore + income - taken, 'fuel came from nowhere');
-  assert.ok(state.events.some((e) => e.code === EVT_RESUPPLIED));
+  const depot = state.islands[0];
+  const outlying = state.islands[1];
+  assert.ok(depot.stockMaterials > share, 'the depot should have taken delivery');
+  assert.ok(outlying.stockMaterials < 1000, 'the outlying island should have shipped some out');
+  // Nothing is created or destroyed by shipping it.
+  const produced = econ.islandIncome[KIND_RESOURCE].materials * 3;
+  assert.equal(teamHoldings(state, 0).materials, 2000 + produced);
 });
 
-test('resupply stops at the tank and at the stores', () => {
+test('losing the stockpile island moves the depot to another one', () => {
   let state = fresh();
-  const island = state.islands[0];
-  island.owner = 0;
-  // A radar island so the stores are not topped up by income in the same
-  // window - this test is about the two ceilings, not about earning.
-  island.kind = KIND_RADAR;
-  state.carriers[0].x = island.x;
-  state.carriers[0].y = island.y + island.radius + state.economy.resupplyRange - 1000;
-  state.carriers[0].fuel = state.carriers[0].fuelCapacity - 5;
-  state.teams[0].fuel = 3;
+  state.islands[2].owner = 0;
+  state.islands[5].owner = 0;
   state = drive(state, EVERY);
-  assert.ok(state.carriers[0].fuel <= state.carriers[0].fuelCapacity, 'overfilled the tank');
-  assert.equal(state.teams[0].fuel, 0, 'the stores should be drained, not overdrawn');
-  // Burnt IDLE_BURN sitting there, then took every one of the 3 units left.
-  assert.equal(state.carriers[0].fuel, state.carriers[0].fuelCapacity - 5 - IDLE_BURN + 3);
+  assert.equal(state.teams[0].stockpileIsland, 2);
+
+  state.islands[2].owner = 1; // taken from us
+  state = drive(state, EVERY);
+  assert.equal(state.teams[0].stockpileIsland, 5, 'the depot should fall back to what is left');
+
+  state.islands[5].owner = -1; // and now we hold nothing
+  state = drive(state, EVERY);
+  assert.equal(state.teams[0].stockpileIsland, -1);
 });
 
-test('resupply repairs the hull but never past new', () => {
+test('a stranded island keeps what it makes when there is no depot to ship to', () => {
   let state = fresh();
-  const island = state.islands[0];
-  island.owner = 0;
-  // Offshore, in deep water: parked on the island itself the hull grinds
-  // faster than the yard can patch it, which is correct and not what this
-  // test is about.
-  state.carriers[0].x = island.x;
-  state.carriers[0].y = island.y + island.radius + state.economy.resupplyRange - 1000;
-  state.carriers[0].hull = state.carriers[0].maxHull - 2;
-  state = drive(state, EVERY);
-  assert.equal(state.carriers[0].hull, state.carriers[0].maxHull);
-  state = drive(state, EVERY);
-  assert.equal(state.carriers[0].hull, state.carriers[0].maxHull, 'repaired past new');
+  const island = soleIsland(state, 0, KIND_RESOURCE);
+  state = drive(state, EVERY * 3);
+  // It is its own depot by default, so nothing moves and nothing is lost.
+  assert.equal(state.teams[0].stockpileIsland, island.id);
+  assert.equal(state.islands[island.id].stockMaterials, econ.islandIncome[KIND_RESOURCE].materials * 3);
 });
 
-test('a carrier far from home, or off an enemy island, gets nothing', () => {
+test('a commander may nominate the stockpile, but only on an island they hold', () => {
   let state = fresh();
-  state.islands[0].owner = 1;
-  state.carriers[0].x = state.islands[0].x + state.islands[0].radius + 200;
-  state.carriers[0].y = state.islands[0].y;
-  state.carriers[0].fuel = 10;
+  state.islands[1].owner = 0;
+  state.islands[4].owner = 0;
+  state.islands[6].owner = 1;
+
+  state = apply(state, { type: 'set_stockpile', carrierId: 0, islandId: 4 });
+  assert.equal(state.teams[0].stockpileIsland, 4);
+  assert.ok(state.events.some((e) => e.code === EVT_STOCKPILE_SET));
+
+  state = apply(state, { type: 'set_stockpile', carrierId: 0, islandId: 6 });
+  assert.equal(state.events[0].code, 1, 'nominated an enemy island as a depot');
+  state = apply(state, { type: 'set_stockpile', carrierId: 0, islandId: 999 });
+  assert.equal(state.events[0].code, 1);
+  assert.equal(state.teams[0].stockpileIsland, 4, 'a refused nomination must not stick');
+});
+
+test('an island stock is capped', () => {
+  let state = fresh();
+  const island = soleIsland(state, 0, KIND_RESOURCE);
+  state.islands[island.id].stockMaterials = econ.islandStockCap - 1;
   state = drive(state, EVERY);
-  assert.equal(state.carriers[0].fuel, 10 - IDLE_BURN, 'resupplied at an enemy island');
-  assert.equal(resupplyPointFor(state, state.carriers[0]), -1);
+  assert.equal(state.islands[island.id].stockMaterials, econ.islandStockCap);
+});
+
+test('what is piled on an island is visible only to the side holding it', () => {
+  let state = fresh();
+  const island = soleIsland(state, 0, KIND_RESOURCE);
+  state = drive(state, EVERY);
+
+  const mine = buildView(state, 0).islands[island.id];
+  assert.ok(mine.stockMaterials > 0);
+  const theirs = buildView(state, 1).islands[island.id];
+  assert.equal(theirs.stockMaterials, -1, 'the enemy can see the island, not its warehouse');
+  assert.equal(theirs.owner, 0, 'ownership itself is chart knowledge');
+});
+
+test('the view reports holdings and which island is the depot', () => {
+  let state = fresh();
+  state.islands[2].owner = 0;
+  state.islands[2].kind = KIND_RESOURCE;
+  state = drive(state, EVERY);
+  const view = buildView(state, 0);
+  assert.equal(view.resources.stockpileIsland, 2);
+  assert.equal(view.resources.materials, teamHoldings(state, 0).materials);
+  assert.equal(buildView(state, 1).resources.materials, 0);
 });
 
 test('the economy record survives copyState without aliasing', () => {

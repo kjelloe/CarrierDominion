@@ -10,7 +10,7 @@
 import { hashState } from '../shared/statehash.js';
 import { seedRng } from '../shared/prng.js';
 import { HEADING_MANUAL } from './commands.js';
-import { copyUnit, createManta, createWalrus } from './units.js';
+import { copyUnit, createLighter, createManta, createWalrus } from './units.js';
 import { copyBrain, createBrain } from './ai_carrier.js';
 import { copyEconomy, createEconomy } from './economy.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
@@ -37,6 +37,9 @@ function copyIsland(island) {
     nodeY: island.nodeY,
     podTeam: island.podTeam,
     podTicks: island.podTicks,
+    stockFuel: island.stockFuel,
+    stockMaterials: island.stockMaterials,
+    stockOrdnance: island.stockOrdnance,
   };
 }
 
@@ -55,6 +58,7 @@ function copyCarrier(carrier) {
     maxHull: carrier.maxHull,
     fuel: carrier.fuel,
     grounded: carrier.grounded,
+    supplyRun: carrier.supplyRun,
     groundAccum: carrier.groundAccum,
     fuelAccum: carrier.fuelAccum,
     maxSpeed: carrier.maxSpeed,
@@ -75,9 +79,10 @@ function copyCarrier(carrier) {
 function copyTeam(team) {
   return {
     id: team.id,
-    fuel: team.fuel,
-    materials: team.materials,
-    ordnance: team.ordnance,
+    // Goods live ON islands now (ruling #3), so a team record carries no
+    // stores of its own - only which island it has nominated as the depot
+    // everything is shipped to.
+    stockpileIsland: team.stockpileIsland,
   };
 }
 
@@ -143,6 +148,7 @@ function createCarrier(id, team, position, carrierRules, unitsPerMetre) {
     maxHull: carrierRules.hull,
     fuel: carrierRules.fuelCapacity,
     grounded: 0,
+    supplyRun: 0,
     groundAccum: 0,
     fuelAccum: 0,
     maxSpeed: carrierRules.maxSpeedUnitsPerTick,
@@ -171,12 +177,7 @@ function createInitialState(seed, rules) {
 
   const teams = [];
   for (let t = 0; t < base.teamCount; t++) {
-    teams.push({
-      id: t,
-      fuel: base.startFuel,
-      materials: base.startMaterials,
-      ordnance: base.startOrdnance,
-    });
+    teams.push({ id: t, stockpileIsland: -1 });
   }
 
   const carriers = [];
@@ -197,6 +198,9 @@ function createInitialState(seed, rules) {
     }
     for (let w = 0; w < rules.units.carrier.hangarWalruses; w++) {
       units.push(createWalrus(units.length, carrier.team, carrier.id, rules, unitsPerMetre));
+    }
+    for (let l = 0; l < rules.units.carrier.hangarLighters; l++) {
+      units.push(createLighter(units.length, carrier.team, carrier.id, rules, unitsPerMetre));
     }
   }
   for (let i = 0; i < units.length; i++) {
@@ -236,7 +240,7 @@ function createInitialState(seed, rules) {
       aiStandoff: base.aiStandoffMetres * unitsPerMetre,
       victoryIslandPermil: base.victoryIslandPermil,
     },
-    economy: createEconomy(rules.economy, unitsPerMetre),
+    economy: createEconomy(rules.economy),
     teams: teams,
     carriers: carriers,
     units: units,

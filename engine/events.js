@@ -26,6 +26,10 @@ const EVT_WAR_OVER = 18; // a = winning team, b = why (engine/victory.js)
 const EVT_RESUPPLIED = 19; // a = carrierId, b = team, c = islandId
 const EVT_CARRIER_DAMAGED = 20; // a = carrierId, b = team, c = hull points lost
 const EVT_CARRIER_SUNK = 21; // a = carrierId, b = team
+const EVT_STOCKPILE_SET = 22; // a = islandId, b = team
+const EVT_SUPPLY_LOADED = 23; // a = unitId, b = team, c = fuel aboard
+const EVT_SUPPLY_DELIVERED = 24; // a = unitId, b = team
+const EVT_SUPPLY_RUN = 25; // a = carrierId, b = team, c = 1 on / 0 off
 
 function makeEvent(code, a, b, c) {
   return { code: code, a: a, b: b, c: c };
@@ -58,6 +62,10 @@ export {
   EVT_RESUPPLIED,
   EVT_CARRIER_DAMAGED,
   EVT_CARRIER_SUNK,
+  EVT_STOCKPILE_SET,
+  EVT_SUPPLY_LOADED,
+  EVT_SUPPLY_DELIVERED,
+  EVT_SUPPLY_RUN,
   makeEvent,
   pushEvent,
 };

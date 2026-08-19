@@ -58,5 +58,15 @@
   "help.units": "1 send opp Manta - 2 sett ut Walrus - N neste enhet - klikk sjøen for å sende den",
   "help.orders": "T ta kontrollen - R kall tilbake - P sett ut ACCB-pod",
   "help.time": ", / . tidskomprimering - mellomrom pause",
-  "gpu.detecting": "finner GPU..."
+  "gpu.detecting": "finner GPU...",
+  "hud.supply": "forsyning",
+  "supply.off": "ingen tur",
+  "supply.on": "går",
+  "supply.noDepot": "ingen depot",
+  "supply.depot": "depot #{island}",
+  "supply.laden": "båt {percent}% lastet",
+  "supply.atSea": "båt til sjøs",
+  "status.stockpileSet": "øy #{island} er nå depot",
+  "status.noOwnedIsland": "du holder ingen øy å gjøre til depot",
+  "help.supply": "L forsyningstur - K gjør nærmeste øy til depot"
 }

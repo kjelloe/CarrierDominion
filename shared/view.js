@@ -10,6 +10,7 @@
 // then only as a contact - position and heading, no fuel, no hull, no orders.
 
 import { distSq2D } from './fixed.js';
+import { teamHoldings } from '../engine/economy.js';
 
 function ownCarrierView(carrier) {
   return {
@@ -27,6 +28,7 @@ function ownCarrierView(carrier) {
     fuel: carrier.fuel,
     fuelCapacity: carrier.fuelCapacity,
     grounded: carrier.grounded,
+    supplyRun: carrier.supplyRun,
     maxSpeed: carrier.maxSpeed,
     radar: carrier.radar,
     contact: 0,
@@ -49,6 +51,7 @@ function contactView(carrier) {
     fuel: -1,
     fuelCapacity: -1,
     grounded: 0,
+    supplyRun: 0,
     maxSpeed: 0,
     radar: 0,
     contact: 1,
@@ -78,6 +81,9 @@ function ownUnitView(unit) {
     maxSpeed: unit.maxSpeed,
     pod: unit.pod,
     blocked: unit.blocked,
+    cargoFuel: unit.cargoFuel,
+    cargoMaterials: unit.cargoMaterials,
+    cargoCap: unit.cargoCap,
     contact: 0,
   };
 }
@@ -105,11 +111,15 @@ function unitContactView(unit) {
     maxSpeed: 0,
     pod: 0,
     blocked: 0,
+    cargoFuel: -1,
+    cargoMaterials: -1,
+    cargoCap: -1,
     contact: 1,
   };
 }
 
-function islandView(island) {
+function islandView(island, team) {
+  const mine = island.owner === team;
   return {
     id: island.id,
     kind: island.kind,
@@ -128,6 +138,10 @@ function islandView(island) {
     nodeY: island.nodeY,
     podTeam: island.podTeam,
     podTicks: island.podTicks,
+    // What is piled up on an island is only visible to the side holding it.
+    stockFuel: mine ? island.stockFuel : -1,
+    stockMaterials: mine ? island.stockMaterials : -1,
+    stockOrdnance: mine ? island.stockOrdnance : -1,
   };
 }
 
@@ -167,12 +181,13 @@ function buildView(state, team) {
   }
 
   const islands = [];
-  for (let i = 0; i < state.islands.length; i++) islands.push(islandView(state.islands[i]));
+  for (let i = 0; i < state.islands.length; i++) islands.push(islandView(state.islands[i], team));
 
-  let own = { id: team, fuel: 0, materials: 0, ordnance: 0 };
+  let stockpileIsland = -1;
   for (let i = 0; i < state.teams.length; i++) {
-    if (state.teams[i].id === team) own = state.teams[i];
+    if (state.teams[i].id === team) stockpileIsland = state.teams[i].stockpileIsland;
   }
+  const holdings = teamHoldings(state, team);
 
   // Carrier events carry a carrier id in `a`; unit events (code 8 and up)
   // carry a unit id in `a` and the owning team in `b`. Either way a team hears
@@ -208,7 +223,14 @@ function buildView(state, team) {
       sizeUnits: state.params.sizeUnits,
       tickHz: state.params.tickHz,
     },
-    resources: { id: own.id, fuel: own.fuel, materials: own.materials, ordnance: own.ordnance },
+    // Not a treasury: the sum of what is sitting on the islands you hold.
+    resources: {
+      id: team,
+      fuel: holdings.fuel,
+      materials: holdings.materials,
+      ordnance: holdings.ordnance,
+      stockpileIsland: stockpileIsland,
+    },
     carriers: carriers,
     units: units,
     islands: islands,

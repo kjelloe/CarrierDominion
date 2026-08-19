@@ -102,6 +102,9 @@ function createIslands(seed, world, unitsPerMetre) {
       nodeY: ry.value,
       podTeam: -1,
       podTicks: 0,
+      stockFuel: 0,
+      stockMaterials: 0,
+      stockOrdnance: 0,
     };
     // The command node depends on the island's own terrain, so it can only be
     // chosen once the record is complete.

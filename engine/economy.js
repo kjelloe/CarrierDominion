@@ -1,17 +1,29 @@
-// engine/economy.js - what holding an island is FOR.
+// engine/economy.js - production and the cargo network.
 //
-// Income accrues in a lump every `incomeEveryTicks` rather than a fraction
-// every tick. With integer resources the two are equivalent, and the lump
-// version needs no per-team accumulator in state - which means one less field
-// to forget in copyState, and a hash that does not churn on 19 ticks out of
-// every 20.
+// Ruling #3 replaced the placeholder "carrier near a friendly island refuels
+// by magic" with the original's actual chain:
 //
-// Resupply is the other half: a carrier lying off an island it owns draws fuel
-// from the team's stores and patches its hull. That is the loop the whole game
-// hangs on - islands pay for the ship, the ship takes islands.
+//   Resource island  ->  mines materials into its OWN stock
+//   Factory island   ->  converts materials into fuel and ordnance
+//   cargo network    ->  ships stock toward the team's stockpile island
+//   supply boat      ->  ferries fuel from the stockpile to the carrier
+//
+// The first three live here; the boat lives in engine/supply.js. What matters
+// about this shape is that goods have a LOCATION. Losing the island that was
+// making your fuel costs you the fuel it had not shipped yet, and losing the
+// stockpile strands everything upstream of it.
+//
+// Accrual happens in a lump every `incomeEvery` ticks rather than a fraction
+// every tick: with integer goods the two are equivalent, and the lump needs no
+// accumulators in state.
 
-import { dist2D } from '../shared/fixed.js';
-import { EVT_RESUPPLIED, pushEvent } from './events.js';
+import { mulDiv } from '../shared/fixed.js';
+import { EVT_STOCKPILE_SET, pushEvent } from './events.js';
+import { KIND_FACTORY } from './worldgen.js';
+
+function capped(value, cap) {
+  return value > cap ? cap : value;
+}
 
 function teamById(state, teamId) {
   for (let i = 0; i < state.teams.length; i++) {
@@ -20,73 +32,109 @@ function teamById(state, teamId) {
   return -1;
 }
 
-function accrueIncome(state) {
+function islandById(state, islandId) {
   for (let i = 0; i < state.islands.length; i++) {
-    const island = state.islands[i];
-    if (island.owner < 0) continue;
-    const team = teamById(state, island.owner);
-    if (team === -1) continue;
-    const row = state.economy.income[island.kind];
-    if (row === undefined) continue;
-    team.fuel = team.fuel + row.fuel;
-    team.materials = team.materials + row.materials;
-    team.ordnance = team.ordnance + row.ordnance;
-  }
-}
-
-// The nearest island this carrier's team owns, within resupply range, or -1.
-//
-// Range is measured from the SHORE, not the centre. Measured from the centre
-// it was unreachable: a 1 km island with a shallow shelf grounds a carrier
-// long before it gets within 900 m of the middle, so the whole mechanism could
-// never fire. The test that caught it was checking something else entirely.
-function resupplyPointFor(state, carrier) {
-  for (let i = 0; i < state.islands.length; i++) {
-    const island = state.islands[i];
-    if (island.owner !== carrier.team) continue;
-    const offshore = dist2D(carrier.x, carrier.y, island.x, island.y) - island.radius;
-    if (offshore <= state.economy.resupplyRange) return island;
+    if (state.islands[i].id === islandId) return state.islands[i];
   }
   return -1;
 }
 
-function resupplyCarriers(state) {
-  for (let i = 0; i < state.carriers.length; i++) {
-    const carrier = state.carriers[i];
-    if (carrier.hull <= 0) continue;
-    const island = resupplyPointFor(state, carrier);
-    if (island === -1) continue;
-    const team = teamById(state, carrier.team);
-    if (team === -1) continue;
+// Mines and quarries: raw output straight into the island's own stock.
+function produce(state) {
+  const cap = state.economy.stockCap;
+  for (let i = 0; i < state.islands.length; i++) {
+    const island = state.islands[i];
+    if (island.owner < 0) continue;
+    const row = state.economy.income[island.kind];
+    if (row === undefined) continue;
+    island.stockFuel = capped(island.stockFuel + row.fuel, cap);
+    island.stockMaterials = capped(island.stockMaterials + row.materials, cap);
+    island.stockOrdnance = capped(island.stockOrdnance + row.ordnance, cap);
+  }
+}
 
-    let taken = 0;
-    const room = carrier.fuelCapacity - carrier.fuel;
-    if (room > 0 && team.fuel > 0) {
-      let amount = state.economy.resupplyFuel;
-      if (amount > room) amount = room;
-      if (amount > team.fuel) amount = team.fuel;
-      carrier.fuel = carrier.fuel + amount;
-      team.fuel = team.fuel - amount;
-      taken = amount;
+// Refineries: a factory turns materials into fuel and ordnance, and turns
+// nothing into nothing. An enemy who takes your resource islands starves the
+// factory without ever having to touch it.
+function refine(state) {
+  const cap = state.economy.stockCap;
+  for (let i = 0; i < state.islands.length; i++) {
+    const island = state.islands[i];
+    if (island.owner < 0 || island.kind !== KIND_FACTORY) continue;
+    if (island.stockMaterials < state.economy.factoryIn) continue;
+    island.stockMaterials = island.stockMaterials - state.economy.factoryIn;
+    island.stockFuel = capped(island.stockFuel + state.economy.factoryFuel, cap);
+    island.stockOrdnance = capped(island.stockOrdnance + state.economy.factoryOrdnance, cap);
+  }
+}
+
+// The cargo network, abstracted: each accrual, every owned island ships a
+// share of what it holds toward the team's stockpile island. No drone
+// entities - the interesting decision is WHICH island is the stockpile and
+// whether the chain is intact, not the individual sorties.
+function shipToStockpile(state) {
+  const cap = state.economy.stockCap;
+  for (let t = 0; t < state.teams.length; t++) {
+    const team = state.teams[t];
+    if (team.stockpileIsland < 0) continue;
+    const depot = islandById(state, team.stockpileIsland);
+    if (depot === -1 || depot.owner !== team.id) continue;
+    for (let i = 0; i < state.islands.length; i++) {
+      const island = state.islands[i];
+      if (island.owner !== team.id || island.id === depot.id) continue;
+      const fuel = mulDiv(island.stockFuel, state.economy.networkPermil, 1000);
+      const materials = mulDiv(island.stockMaterials, state.economy.networkPermil, 1000);
+      const ordnance = mulDiv(island.stockOrdnance, state.economy.networkPermil, 1000);
+      island.stockFuel = island.stockFuel - fuel;
+      island.stockMaterials = island.stockMaterials - materials;
+      island.stockOrdnance = island.stockOrdnance - ordnance;
+      depot.stockFuel = capped(depot.stockFuel + fuel, cap);
+      depot.stockMaterials = capped(depot.stockMaterials + materials, cap);
+      depot.stockOrdnance = capped(depot.stockOrdnance + ordnance, cap);
     }
+  }
+}
 
-    const damage = carrier.maxHull - carrier.hull;
-    if (damage > 0) {
-      let repair = state.economy.resupplyHull;
-      if (repair > damage) repair = damage;
-      carrier.hull = carrier.hull + repair;
-      taken = taken + repair;
+// A team with no stockpile has nowhere to ship to, so the first island it
+// takes becomes one automatically. The player can move it later; the point is
+// that the chain works before anyone has read a manual.
+function claimDefaultStockpile(state) {
+  for (let t = 0; t < state.teams.length; t++) {
+    const team = state.teams[t];
+    if (team.stockpileIsland >= 0) {
+      const held = islandById(state, team.stockpileIsland);
+      if (held !== -1 && held.owner === team.id) continue;
+      team.stockpileIsland = -1; // lost it; look for another
     }
-
-    if (taken > 0) pushEvent(state.events, EVT_RESUPPLIED, carrier.id, carrier.team, island.id);
+    for (let i = 0; i < state.islands.length; i++) {
+      if (state.islands[i].owner !== team.id) continue;
+      team.stockpileIsland = state.islands[i].id;
+      pushEvent(state.events, EVT_STOCKPILE_SET, state.islands[i].id, team.id, 0);
+      break;
+    }
   }
 }
 
 function stepEconomy(state) {
   if (state.economy.incomeEvery < 1) return;
   if (state.tick % state.economy.incomeEvery !== 0) return;
-  accrueIncome(state);
-  resupplyCarriers(state);
+  claimDefaultStockpile(state);
+  produce(state);
+  refine(state);
+  shipToStockpile(state);
+}
+
+// What a team holds across everything it owns - the number the HUD shows.
+function teamHoldings(state, teamId) {
+  const total = { fuel: 0, materials: 0, ordnance: 0 };
+  for (let i = 0; i < state.islands.length; i++) {
+    const island = state.islands[i];
+    if (island.owner !== teamId) continue;
+    total.fuel = total.fuel + island.stockFuel;
+    total.materials = total.materials + island.stockMaterials;
+    total.ordnance = total.ordnance + island.stockOrdnance;
+  }
+  return total;
 }
 
 function copyEconomy(economy) {
@@ -100,14 +148,17 @@ function copyEconomy(economy) {
   }
   return {
     incomeEvery: economy.incomeEvery,
-    resupplyRange: economy.resupplyRange,
-    resupplyFuel: economy.resupplyFuel,
-    resupplyHull: economy.resupplyHull,
+    factoryIn: economy.factoryIn,
+    factoryFuel: economy.factoryFuel,
+    factoryOrdnance: economy.factoryOrdnance,
+    networkPermil: economy.networkPermil,
+    stockCap: economy.stockCap,
+    repairPerMaterial: economy.repairPerMaterial,
     income: income,
   };
 }
 
-function createEconomy(econRules, unitsPerMetre) {
+function createEconomy(econRules) {
   const income = [];
   for (let i = 0; i < econRules.islandIncome.length; i++) {
     income.push({
@@ -118,11 +169,25 @@ function createEconomy(econRules, unitsPerMetre) {
   }
   return {
     incomeEvery: econRules.incomeEveryTicks,
-    resupplyRange: econRules.resupplyRangeMetres * unitsPerMetre,
-    resupplyFuel: econRules.resupplyFuelPerAccrual,
-    resupplyHull: econRules.resupplyHullPerAccrual,
+    factoryIn: econRules.factoryMaterialsIn,
+    factoryFuel: econRules.factoryFuelOut,
+    factoryOrdnance: econRules.factoryOrdnanceOut,
+    networkPermil: econRules.networkSharePermil,
+    stockCap: econRules.islandStockCap,
+    repairPerMaterial: econRules.repairPerMaterial,
     income: income,
   };
 }
 
-export { stepEconomy, accrueIncome, resupplyCarriers, resupplyPointFor, createEconomy, copyEconomy };
+export {
+  stepEconomy,
+  produce,
+  refine,
+  shipToStockpile,
+  claimDefaultStockpile,
+  teamHoldings,
+  teamById,
+  islandById,
+  createEconomy,
+  copyEconomy,
+};

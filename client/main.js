@@ -26,6 +26,7 @@ import {
   describeHangar,
   describeIslands,
   describeStores,
+  describeSupply,
   describeUnit,
 } from './hud.js';
 
@@ -219,6 +220,39 @@ function togglePause() {
   requestSpeed(state.speed === 0 ? 1 : 0);
 }
 
+function toggleSupplyRun() {
+  if (state.carrierId < 0 || state.view === undefined) return;
+  const carrier = ownCarrierOf(state.view);
+  if (carrier === undefined) return;
+  state.transport.send({
+    type: 'set_supply_run',
+    carrierId: state.carrierId,
+    active: carrier.supplyRun === 1 ? 0 : 1,
+  });
+}
+
+// Nominate the nearest island you hold as the depot everything is shipped to.
+function nominateDepot() {
+  if (state.carrierId < 0 || state.view === undefined) return;
+  const carrier = ownCarrierOf(state.view);
+  if (carrier === undefined) return;
+  let best;
+  let bestDistance = Infinity;
+  for (const island of state.view.islands) {
+    if (island.owner !== state.view.team) continue;
+    const distance = Math.hypot(island.x - carrier.x, island.y - carrier.y);
+    if (distance >= bestDistance) continue;
+    bestDistance = distance;
+    best = island;
+  }
+  if (best === undefined) {
+    setHud(state.hud, 'status', state.t('status.noOwnedIsland'));
+    return;
+  }
+  state.transport.send({ type: 'set_stockpile', carrierId: state.carrierId, islandId: best.id });
+  setHud(state.hud, 'status', state.t('status.stockpileSet', { island: best.id }));
+}
+
 function cycleGraphics(currentLevel) {
   const names = presetNames();
   const next = names[(names.indexOf(currentLevel) + 1) % names.length];
@@ -244,6 +278,8 @@ function bindInput(level) {
     else if (key === 'r') recallSelected();
     else if (key === 't') togglePiloting();
     else if (key === 'p') deployPod();
+    else if (key === 'l') toggleSupplyRun();
+    else if (key === 'k') nominateDepot();
     else if (key === ',') nudgeSpeed(-1);
     else if (key === '.') nudgeSpeed(1);
     else if (key === ' ') togglePause();
@@ -346,12 +382,13 @@ function frame(nowMs) {
   setHud(state.hud, 'unit', describeUnit(state.t, selectedUnit(), state.view.params));
   setHud(state.hud, 'islands', describeIslands(state.t, state.view));
   setHud(state.hud, 'stores', describeStores(state.t, state.view));
+  setHud(state.hud, 'supply', describeSupply(state.t, state.view));
 }
 
 function renderHelp(t) {
   const help = document.getElementById('help');
   help.textContent = '';
-  for (const key of ['help.helm', 'help.units', 'help.orders', 'help.time']) {
+  for (const key of ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.time']) {
     const line = document.createElement('div');
     line.textContent = t(key);
     help.append(line);

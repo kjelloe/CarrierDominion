@@ -58,5 +58,15 @@
   "help.units": "1 launch Manta - 2 launch Walrus - N next unit - click sea to send it",
   "help.orders": "T take the controls - R recall - P deploy ACCB pod",
   "help.time": ", / . time compression - space pause",
-  "gpu.detecting": "detecting GPU..."
+  "gpu.detecting": "detecting GPU...",
+  "hud.supply": "supply",
+  "supply.off": "no run",
+  "supply.on": "running",
+  "supply.noDepot": "no depot",
+  "supply.depot": "depot #{island}",
+  "supply.laden": "boat {percent}% laden",
+  "supply.atSea": "boat at sea",
+  "status.stockpileSet": "island #{island} is now the depot",
+  "status.noOwnedIsland": "you hold no island to make a depot of",
+  "help.supply": "L supply run - K make the nearest island your depot"
 }

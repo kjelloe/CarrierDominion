@@ -35,6 +35,8 @@ function stepUnits(state) {
       unit.targetY = carrier.y;
     }
 
+    // A lighter uses the surface drive model, like a Walrus - it simply never
+    // gets an order that would take it ashore.
     const outcome = unit.kind === KIND_MANTA
       ? stepManta(unit, sizeUnits)
       : stepWalrus(unit, state.islands, sizeUnits);

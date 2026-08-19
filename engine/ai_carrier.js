@@ -24,7 +24,8 @@ import {
   UNIT_RETURNING,
   UNIT_STOWED,
 } from './units.js';
-import { EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
+import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
+import { teamById } from './economy.js';
 
 const AI_SEEK = 0; // steaming toward the chosen island
 const AI_INVADE = 1; // in position, getting a Walrus to the node
@@ -221,10 +222,34 @@ function backOff(state, brain, carrier) {
   return 1;
 }
 
+// Fuel management, such as it is: call for a supply run when the tanks get
+// low, call it off when they are nearly full. The AI has to do this or it
+// simply stops in the middle of the ocean two hours in - the placeholder
+// economy used to refuel it for free, and ruling #3 took that away.
+const SUPPLY_CALL_PERMIL = 500;
+const SUPPLY_STAND_DOWN_PERMIL = 900;
+
+function manageSupply(state, brain, carrier) {
+  const team = teamById(state, brain.team);
+  if (team === -1 || team.stockpileIsland < 0) {
+    carrier.supplyRun = 0;
+    return;
+  }
+  const level = mulDiv(carrier.fuel, 1000, carrier.fuelCapacity);
+  if (carrier.supplyRun === 0 && level < SUPPLY_CALL_PERMIL) {
+    carrier.supplyRun = 1;
+    pushEvent(state.events, EVT_SUPPLY_RUN, carrier.id, carrier.team, 1);
+  } else if (carrier.supplyRun === 1 && level > SUPPLY_STAND_DOWN_PERMIL) {
+    carrier.supplyRun = 0;
+    pushEvent(state.events, EVT_SUPPLY_RUN, carrier.id, carrier.team, 0);
+  }
+}
+
 // One AI turn for one team. Called from the reducer on the AI cadence.
 function stepAiTeam(state, brain, standoffExtra) {
   const carrier = findCarrierForTeam(state, brain.team);
   if (carrier === -1) return;
+  manageSupply(state, brain, carrier);
   if (backOff(state, brain, carrier) === 1) return;
   if (brain.mode === AI_SEEK) seek(state, brain, carrier, standoffExtra);
   else if (brain.mode === AI_INVADE) invade(state, brain, carrier);
@@ -261,6 +286,8 @@ function copyBrain(brain) {
 
 export {
   BACKOFF_TICKS,
+  SUPPLY_CALL_PERMIL,
+  manageSupply,
   AI_SEEK,
   AI_INVADE,
   AI_WAIT,

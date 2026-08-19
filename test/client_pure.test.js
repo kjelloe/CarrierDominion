@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { suggestGraphicsLevel, describeGpu } from '../client/diagnostics.js';
 import { presetFor, presetNames, resolveGraphics, readOverride, writeOverride } from '../client/graphics.js';
 import { headingToYaw, yawToHeading, forwardFromHeading, toMetres, toUnits } from '../client/render/coords.js';
-import { degreesFrom, knotsFrom } from '../client/hud.js';
+import { degreesFrom, describeSupply, knotsFrom } from '../client/hud.js';
 import { checkAuthority } from '../engine/authority.js';
 import { createInitialState } from '../engine/state.js';
 import { loadRules } from '../server/rules.js';
@@ -102,4 +102,49 @@ test('authority is the same rule in solo and on the wire', () => {
   assert.match(checkAuthority(state, 0, { type: 'advance_tick' }), /server-owned/);
   assert.match(checkAuthority(state, 0, { type: 'set_throttle', carrierId: 7, throttle: 50 }), /no such carrier/);
   assert.match(checkAuthority(state, 0, { type: 'set_throttle', carrierId: 0, throttle: 900 }), /out of range/);
+});
+
+test('authority covers the logistics commands too', () => {
+  const state = createInitialState(1, rules);
+  assert.equal(checkAuthority(state, 0, { type: 'set_supply_run', carrierId: 0, active: 1 }), '');
+  assert.match(
+    checkAuthority(state, 0, { type: 'set_supply_run', carrierId: 1, active: 1 }),
+    /another team/,
+  );
+  assert.equal(checkAuthority(state, 0, { type: 'set_stockpile', carrierId: 0, islandId: 2 }), '');
+  assert.match(
+    checkAuthority(state, 0, { type: 'set_stockpile', carrierId: 1, islandId: 2 }),
+    /another team/,
+  );
+  assert.equal(checkAuthority(state, 0, { type: 'launch_unit', carrierId: 0, kind: 2 }), '');
+  assert.match(
+    checkAuthority(state, 0, { type: 'launch_unit', carrierId: 0, kind: 3 }),
+    /no such unit kind/,
+  );
+  assert.match(
+    checkAuthority(state, 0, { type: 'set_supply_run', carrierId: 0, active: 7 }),
+    /active must be/,
+  );
+});
+
+test('the supply readout says what is happening', () => {
+  const t = (key, vars) => (vars === undefined ? key : `${key}:${JSON.stringify(vars)}`);
+  const idle = describeSupply(t, {
+    team: 0,
+    carriers: [{ team: 0, contact: 0, supplyRun: 0 }],
+    units: [],
+    resources: { stockpileIsland: -1 },
+  });
+  assert.match(idle, /supply\.off/);
+  assert.match(idle, /supply\.noDepot/);
+
+  const running = describeSupply(t, {
+    team: 0,
+    carriers: [{ team: 0, contact: 0, supplyRun: 1 }],
+    units: [{ kind: 2, team: 0, state: 1, cargoFuel: 5000, cargoMaterials: 0, cargoCap: 10000 }],
+    resources: { stockpileIsland: 3 },
+  });
+  assert.match(running, /supply\.on/);
+  assert.match(running, /supply\.depot/);
+  assert.match(running, /"percent":50/);
 });

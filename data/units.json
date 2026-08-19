@@ -9,8 +9,8 @@
     "turnRateBamPerTick": 24,
     "radarRangeMetres": 8000,
     "fuelCapacity": 100000,
-    "fuelBurnFullPer100Ticks": 20,
-    "fuelBurnIdlePer100Ticks": 2,
+    "fuelBurnFullPer100Ticks": 90,
+    "fuelBurnIdlePer100Ticks": 8,
     "draughtMetres": 12,
     "lookaheadMetres": 250,
     "deckHeightMetres": 22,
@@ -20,7 +20,8 @@
     "hangarWalruses": 4,
     "shallowBandMetres": 45,
     "slowestSpeedUnitsPerTick": 6,
-    "groundedHullPer100Ticks": 6
+    "groundedHullPer100Ticks": 6,
+    "hangarLighters": 2
   },
   "manta": {
     "hull": 60,
@@ -47,5 +48,19 @@
     "fuelBurnPer100Ticks": 25,
     "maxClimbPermil": 500,
     "arriveRadiusMetres": 40
+  },
+  "lighter": {
+    "comment": "The logistics boat. It never goes ashore - it stands off the beach and works cargo, which is also why it never meets a slope it cannot climb.",
+    "hull": 80,
+    "maxSpeedUnitsPerTick": 130,
+    "accelUnitsPerTickSq": 4,
+    "turnRateBamPerTick": 200,
+    "radarRangeMetres": 1200,
+    "fuelCapacity": 20000,
+    "fuelBurnPer100Ticks": 30,
+    "cargoCapacity": 25000,
+    "loadRangeMetres": 400,
+    "workPerTick": 400,
+    "arriveRadiusMetres": 90
   }
 }

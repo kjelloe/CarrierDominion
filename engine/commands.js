@@ -15,6 +15,8 @@ const CMD_TAKE_CONTROL = 'take_control';
 const CMD_RELEASE_CONTROL = 'release_control';
 const CMD_SET_UNIT_HELM = 'set_unit_helm';
 const CMD_DEPLOY_POD = 'deploy_pod';
+const CMD_SET_STOCKPILE = 'set_stockpile';
+const CMD_SET_SUPPLY_RUN = 'set_supply_run';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -67,7 +69,18 @@ function validateCommand(command) {
   if (type === CMD_LAUNCH_UNIT) {
     if (!isInt(command.carrierId)) return 'carrierId must be an integer';
     if (!isInt(command.kind)) return 'kind must be an integer';
-    if (command.kind < 0 || command.kind > 1) return 'no such unit kind';
+    if (command.kind < 0 || command.kind > 2) return 'no such unit kind';
+    return '';
+  }
+  if (type === CMD_SET_STOCKPILE) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.islandId)) return 'islandId must be an integer';
+    return '';
+  }
+  if (type === CMD_SET_SUPPLY_RUN) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.active)) return 'active must be 0 or 1';
+    if (command.active < 0 || command.active > 1) return 'active must be 0 or 1';
     return '';
   }
   if (type === CMD_DEPLOY_POD) {
@@ -108,6 +121,8 @@ export {
   CMD_RELEASE_CONTROL,
   CMD_SET_UNIT_HELM,
   CMD_DEPLOY_POD,
+  CMD_SET_STOCKPILE,
+  CMD_SET_SUPPLY_RUN,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

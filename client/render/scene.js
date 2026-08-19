@@ -12,6 +12,7 @@ import {
   buildCarrier,
   buildCommandNode,
   buildIslandMesh,
+  buildLighter,
   buildManta,
   buildOcean,
   buildWalrus,
@@ -182,7 +183,9 @@ function syncUnits(view3d, view) {
     let group = view3d.units[unit.id];
     if (group === undefined) {
       const colour = TEAM_COLOURS[unit.team % TEAM_COLOURS.length];
-      group = unit.kind === 0 ? buildManta(colour) : buildWalrus(colour);
+      if (unit.kind === 0) group = buildManta(colour);
+      else if (unit.kind === 2) group = buildLighter(colour);
+      else group = buildWalrus(colour);
       if (unit.contact === 1) dimForContact(group);
       view3d.units[unit.id] = group;
       view3d.scene.add(group);
