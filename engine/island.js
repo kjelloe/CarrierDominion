@@ -106,7 +106,11 @@ function payForBuild(state, island, cost) {
         if (candidate.owner === island.owner) depot = candidate;
       }
     }
-    if (depot === -1 || depot.stockMaterials < left) return 0;
+    // The site IS the depot: there is no second pile to draw on, and taking
+    // the shortfall from it as well spends the same materials twice. That was
+    // a real bug, and it left island stock NEGATIVE - found by the playtest
+    // watchdog on its first full run, at tick 13,401.
+    if (depot === -1 || depot === island || depot.stockMaterials < left) return 0;
   }
   island.stockMaterials = island.stockMaterials - fromSite;
   if (left > 0) depot.stockMaterials = depot.stockMaterials - left;

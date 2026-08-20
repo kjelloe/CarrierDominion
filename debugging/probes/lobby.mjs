@@ -57,6 +57,12 @@ const guestSaw = await guest.evaluate(
   () => [...document.querySelectorAll('.start-row')].map((n) => n.textContent).join(' | '),
 );
 
+// A word between them, which is the other half of a room.
+await host.fill('#lobby-say', 'seed is fine, going 16 islands');
+await host.press('#lobby-say', 'Enter');
+await guest.waitForTimeout(500);
+const heard = await guest.evaluate(() => document.getElementById('lobby-log').textContent);
+
 await host.screenshot({ path: join(SHOTS, 'lobby.png') });
 
 // Both ready, then the host starts. The room closes and a war arrives.
@@ -81,12 +87,14 @@ const started = await Promise.all([host, guest].map(async (page) => {
 }));
 
 console.log(`room: ${seen.title}`);
+console.log(`the guest heard: ${JSON.stringify(heard)}`);
 console.log(`host sees ${seen.clickable} settable rows, guest sees ${guestView.clickable}`);
 const guestSawIt = /islands16/.test(guestSaw.replace(/\s/g, ''));
 console.log(`guest saw the host's change: ${guestSawIt}`);
 console.log(`after start: ${JSON.stringify(started)}`);
 
 const ok = seen.clickable === 4 && guestView.clickable === 0 && guestSawIt
+  && /16 islands/.test(heard)
   && started.every((s) => s.menuGone && s.tick > 5 && s.islands === 16);
 if (!ok) {
   console.log('FAIL: the room did not become one war for both of them');

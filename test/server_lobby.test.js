@@ -6,6 +6,8 @@ import assert from 'node:assert/strict';
 
 import { loadRules } from '../server/rules.js';
 import {
+  CHAT_KEPT,
+  CHAT_MAX,
   allReady,
   applyLobby,
   canStart,
@@ -14,6 +16,7 @@ import {
   isHost,
   joinCode,
   lobbyView,
+  say,
   setName,
   setOption,
   setReady,
@@ -142,4 +145,41 @@ test('the room folds into a ruleset, which is all a war ever is', () => {
   assert.equal(chosen.rules.pointCap, 0);
   // And the ruleset it came from is untouched: a lobby does not edit the disk.
   assert.equal(rules.world.islandCount, 8);
+});
+
+test('a word in the room reaches the room, trimmed to something printable', () => {
+  const seats = room(0, 1);
+  const room1 = lobby();
+  assert.equal(say(room1, seats, seats[0], '  going 16 islands  '), '');
+  assert.equal(room1.chat.length, 1);
+  assert.equal(room1.chat[0].text, 'going 16 islands');
+  assert.equal(room1.chat[0].name, 'Commander 1');
+  assert.equal(room1.chat[0].team, 0);
+
+  assert.match(say(room1, seats, seats[1], '   '), /nothing to say/);
+  assert.match(say(room1, seats, seats[1], 42), /must be text/);
+  assert.equal(room1.chat.length, 1, 'an empty line was still recorded');
+
+  // A long line with a terminal escape in it: bounded, and stripped to
+  // printable ASCII before it goes anywhere near another client.
+  const nasty = 'x'.repeat(400) + String.fromCharCode(27) + '[31m';
+  say(room1, seats, seats[1], nasty);
+  assert.equal(room1.chat[1].text.length, CHAT_MAX, 'a very long line was let through whole');
+  assert.match(room1.chat[1].text, /^[ -~]+$/, 'control characters reached the other clients');
+});
+
+test('the room remembers a conversation, but not an unbounded one', () => {
+  const seats = room(0);
+  const room1 = lobby();
+  for (let i = 0; i < CHAT_KEPT + 10; i++) say(room1, seats, seats[0], `line ${i}`);
+  assert.equal(room1.chat.length, CHAT_KEPT);
+  assert.equal(room1.chat[CHAT_KEPT - 1].text, `line ${CHAT_KEPT + 9}`);
+  assert.equal(lobbyView(room1, seats).chat.length, CHAT_KEPT);
+});
+
+test('a spectator may still talk - they are in the room, just not sailing', () => {
+  const seats = room(-1);
+  const room1 = lobby();
+  assert.equal(say(room1, seats, seats[0], 'good luck'), '');
+  assert.equal(room1.chat[0].team, -1);
 });

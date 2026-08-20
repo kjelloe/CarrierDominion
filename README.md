@@ -12,6 +12,7 @@ Design of record: [`plan-version1.md`](plan-version1.md).
 ```bash
 ./run.sh              # http://127.0.0.1:8135 - opens a war room with a join code
 LOBBY=0 ./run.sh      # skip the room and sail on data/rules.json
+WATCH=0 ./run.sh      # without the playtest watchdog (on by default)
 ./run.sh --lan        # also reachable from other machines on the LAN
 PORT=9000 SEED=42 ./run.sh
 ```
@@ -23,7 +24,8 @@ PORT=9000 SEED=42 ./run.sh
 | `/` (no query) | the start menu: choose the war, then sail |
 | `/?graphics=low\|medium\|high` | override the auto-detected graphics tier |
 | `/?style=retro\|modern\|hybrid` | art direction (default `retro`) - cosmetic only, same war, same hash |
-| `/healthz` | tick, state hash, seats, rss - for monitoring |
+| `/healthz` | tick, state hash, seats, status, join code, rss - for monitoring |
+| `/watch` | the playtest watchdog's findings, if it is running |
 
 Controls:
 

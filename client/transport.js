@@ -69,14 +69,30 @@ function createLocalTransport(seed, rules, team, speed) {
   };
 }
 
+// Reconnect policy, mirroring multiciv's: doubling from a short base, capped,
+// and only so many times before the client stops pretending.
+const MAX_RETRIES = 6;
+const RETRY_BASE_MS = 800;
+const RETRY_CAP_MS = 8000;
+
 function createWsTransport(url) {
-  const state = { socket: 0, handlers: 0 };
-  return {
+  const state = { socket: 0, handlers: 0, attempts: 0, closing: false };
+  const transport = {
     kind: 'ws',
     connect(handlers) {
       state.handlers = handlers;
-      const socket = new WebSocket(url);
+      // The seat token, kept for this TAB only: two tabs on one machine are two
+      // players, and sessionStorage is what says so. Presenting it on a
+      // reconnect is what gets the same carrier back.
+      let token = '';
+      try {
+        token = window.sessionStorage.getItem('carrier-dominion-seat') ?? '';
+      } catch {
+        token = '';
+      }
+      const socket = new WebSocket(token === '' ? url : `${url}/?token=${token}`);
       state.socket = socket;
+      socket.addEventListener('open', () => { state.attempts = 0; });
       socket.addEventListener('message', (event) => {
         let message;
         try {
@@ -84,14 +100,31 @@ function createWsTransport(url) {
         } catch {
           return;
         }
-        if (message.type === 'welcome') handlers.onWelcome(message);
+        if (message.type === 'welcome') {
+          if (typeof message.token === 'string' && message.token !== '') {
+            try {
+              window.sessionStorage.setItem('carrier-dominion-seat', message.token);
+            } catch {
+              // A browser with storage switched off simply cannot resume, which
+              // is a worse experience rather than a broken one.
+            }
+          }
+          handlers.onWelcome(message);
+        }
         else if (message.type === 'snapshot') handlers.onSnapshot(message);
         else if (message.type === 'speed') handlers.onSpeed(message.speed);
         else if (message.type === 'vote') handlers.onVote(message);
         else if (message.type === 'lobby') handlers.onLobby(message.lobby);
         else if (message.type === 'rejected') handlers.onRejected(message.reason);
       });
-      socket.addEventListener('close', () => handlers.onClosed('disconnected'));
+      // A dropped socket is retried with a backoff before it is called dead:
+      // the server is holding the seat for a grace window, and most drops are a
+      // sleeping laptop rather than a server that has gone away.
+      socket.addEventListener('close', () => {
+        if (state.closing) return;
+        handlers.onClosed('disconnected');
+        retry(handlers);
+      });
       socket.addEventListener('error', () => handlers.onClosed('connection error'));
     },
     send(command) {
@@ -113,10 +146,25 @@ function createWsTransport(url) {
       state.socket.send(JSON.stringify({ type: 'set_speed', speed: multiplier }));
     },
     close() {
+      state.closing = true;
       if (state.socket !== 0) state.socket.close();
       state.socket = 0;
     },
   };
+
+  // Doubling, capped, and only so many times: a server that is really gone
+  // should stop being retried rather than being retried forever.
+  function retry(handlers) {
+    if (state.attempts >= MAX_RETRIES) {
+      handlers.onClosed('closed');
+      return;
+    }
+    state.attempts += 1;
+    const wait = Math.min(RETRY_CAP_MS, RETRY_BASE_MS * (2 ** (state.attempts - 1)));
+    window.setTimeout(() => transport.connect(handlers), wait);
+  }
+
+  return transport;
 }
 
-export { createLocalTransport, createWsTransport };
+export { createLocalTransport, createWsTransport, MAX_RETRIES, RETRY_BASE_MS, RETRY_CAP_MS };

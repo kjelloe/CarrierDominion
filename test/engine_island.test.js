@@ -242,3 +242,19 @@ test('the view reports the works, and hides an enemy island stock', () => {
   assert.equal(theirs.role, ROLE_FACTORY, 'what an island is for is visible from the sea');
   assert.equal(theirs.stockChassis, -1, 'the enemy counted our spare parts');
 });
+
+test('a site that is its own depot cannot pay twice out of one pile', () => {
+  const state = fresh();
+  const island = held(state, 0, 0);
+  island.role = ROLE_FACTORY;
+  state.teams[0].stockpileIsland = island.id;
+  const cost = econ.builds[BUILD_FACTORY].materials;
+  // Enough to look affordable if the same materials are counted twice, and not
+  // enough if they are counted once. Paying from "the site, then the depot"
+  // when the site IS the depot spent this pile twice and left it negative.
+  island.stockMaterials = cost - 100;
+
+  assert.equal(startBuild(state, island, BUILD_FACTORY, state.economy), 0, 'built on credit');
+  assert.equal(island.stockMaterials, cost - 100, 'a refused build still took the materials');
+  assert.ok(island.stockMaterials >= 0);
+});

@@ -50,10 +50,16 @@ function joinCode(bootId) {
   return code;
 }
 
+// How much of the conversation the room remembers. A lobby is not a chat
+// client; this is enough to see what was agreed while you were connecting.
+const CHAT_KEPT = 24;
+const CHAT_MAX = 160;
+
 function createLobby(bootId, defaults) {
   return {
     code: joinCode(bootId),
     status: 'lobby',
+    chat: [],
     options: {
       seed: defaults.seed,
       islands: defaults.islands,
@@ -119,6 +125,23 @@ function setOption(lobby, seats, seat, key, value) {
   return '';
 }
 
+// One line of conversation. Trimmed to something printable and short, because
+// the room's text goes to every other client and the same rule that keeps the
+// state hash honest - printable ASCII, bounded length - is a good rule for
+// anything a stranger can type.
+function say(lobby, seats, seat, text) {
+  if (typeof text !== 'string') return 'a message must be text';
+  const clean = text.slice(0, CHAT_MAX).replace(/[^ -~]/g, '').trim();
+  if (clean === '') return 'nothing to say';
+  lobby.chat.push({
+    team: seat.team,
+    name: seat.name === undefined ? '' : seat.name,
+    text: clean,
+  });
+  while (lobby.chat.length > CHAT_KEPT) lobby.chat.shift();
+  return '';
+}
+
 // Everybody seated has said yes. One player alone is unanimous by definition,
 // which is the same rule the clock vote uses and needs no special case.
 function allReady(seats) {
@@ -161,6 +184,7 @@ function lobbyView(lobby, seats) {
     },
     seats: roster,
     ready: allReady(seats) ? 1 : 0,
+    chat: lobby.chat.map((line) => ({ team: line.team, name: line.name, text: line.text })),
   };
 }
 
@@ -178,6 +202,8 @@ function applyLobby(rules, options) {
 }
 
 export {
+  CHAT_KEPT,
+  CHAT_MAX,
   OPTION_VALUES,
   fnv32,
   joinCode,
@@ -188,6 +214,7 @@ export {
   setName,
   setReady,
   setOption,
+  say,
   allReady,
   canStart,
   lobbyView,

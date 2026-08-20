@@ -27,7 +27,41 @@ const OPTION_ROWS = [
 ];
 
 function createLobbyPanel(ctx) {
-  return { ctx: ctx, room: undefined, stamp: '' };
+  return { ctx: ctx, room: undefined, stamp: '', wired: false };
+}
+
+// The chat line is wired once and lives outside the rebuilt body, so typing
+// into it survives the room changing under you - which it does every time
+// anybody readies, joins or leaves.
+function wireChat(panel) {
+  if (panel.wired) return;
+  panel.wired = true;
+  const input = document.getElementById('lobby-say');
+  input.placeholder = panel.ctx.t('lobby.sayPlaceholder');
+  input.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    const text = input.value;
+    input.value = '';
+    if (text.trim() !== '') panel.ctx.send({ type: 'lobby_say', text: text });
+  });
+}
+
+function drawChat(panel, room) {
+  const box = document.getElementById('lobby-chat');
+  box.hidden = false;
+  const log = document.getElementById('lobby-log');
+  log.textContent = '';
+  for (const line of room.chat) {
+    const row = document.createElement('div');
+    const who = document.createElement('span');
+    who.className = 'who';
+    who.textContent = `${line.name}: `;
+    const said = document.createElement('span');
+    said.textContent = line.text;
+    row.append(who, said);
+    log.append(row);
+  }
+  log.scrollTop = log.scrollHeight;
 }
 
 function labelFor(t, option, value) {
@@ -93,6 +127,7 @@ function renderLobbyPanel(panel, room, team) {
   if (room === undefined || room.status !== 'lobby') {
     root.classList.remove('open');
     document.body.classList.remove('menu');
+    document.getElementById('lobby-chat').hidden = true;
     panel.stamp = '';
     return;
   }
@@ -136,6 +171,8 @@ function renderLobbyPanel(panel, room, team) {
   document.getElementById('start-note').textContent = host
     ? t('lobby.hostNote')
     : t('lobby.guestNote');
+  wireChat(panel);
+  drawChat(panel, room);
 }
 
 export { OPTION_ROWS, createLobbyPanel, renderLobbyPanel };

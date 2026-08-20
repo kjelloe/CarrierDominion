@@ -123,6 +123,16 @@
     }
     #start-begin:hover { background: var(--hud-ink); color: #05070b; }
     #start-note { color: var(--hud-dim); margin-top: 14px; font-size: 12px; }
+    #lobby-chat { margin-top: 16px; border-top: 1px solid var(--hud-dim); padding-top: 10px; }
+    #lobby-log { min-height: 84px; max-height: 140px; overflow-y: auto; font-size: 12px; }
+    #lobby-log div { line-height: 1.5; }
+    #lobby-log .who { color: var(--hud-dim); }
+    #lobby-say {
+      width: 100%; margin-top: 6px; padding: 4px 6px;
+      background: transparent; color: var(--hud-ink);
+      border: 1px solid var(--hud-dim); font: 12px var(--hud-font);
+    }
+    #lobby-say:focus { outline: none; border-color: var(--hud-ink); }
   </style>
   <script type="importmap">
     { "imports": { "three": "/client/vendor/three.module.min.js" } }
@@ -152,6 +162,10 @@
       <div id="start-title"></div>
       <div id="start-body"></div>
       <div id="start-note"></div>
+      <div id="lobby-chat" hidden>
+        <div id="lobby-log"></div>
+        <input id="lobby-say" maxlength="160" autocomplete="off">
+      </div>
     </div>
   </div>
   <script type="module" src="/client/main.js"></script>

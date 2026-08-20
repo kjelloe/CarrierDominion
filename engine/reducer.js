@@ -13,6 +13,7 @@ import {
   CMD_DEPLOY_VIRUS,
   CMD_FIRE_FLARES,
   CMD_FIRE_UNIT,
+  CMD_SET_AI,
   CMD_LAUNCH_UNIT,
   CMD_ORDER_UNIT_ATTACK,
   CMD_ORDER_UNIT_MOVE,
@@ -43,12 +44,13 @@ import {
   EVT_UNIT_ORDERED,
   EVT_STOCKPILE_SET,
   EVT_SUPPLY_RUN,
+  EVT_AI_SEAT,
   pushEvent,
 } from './events.js';
 import { stepCarriers } from './carrier.js';
 import { checkDeploy, deployPod, stepCapture } from './capture.js';
 import { checkVirus, deployVirus, stepVirus } from './virus.js';
-import { stepAi } from './ai_carrier.js';
+import { createBrain, stepAi } from './ai_carrier.js';
 import { checkVictory } from './victory.js';
 import { stepEconomy, teamById } from './economy.js';
 import { stepSupply } from './supply.js';
@@ -243,6 +245,30 @@ function applyFlares(next, command) {
   return next;
 }
 
+// A seat handed to the machine, or taken back from it. This is a COMMAND
+// rather than something the server does to the state directly, because the
+// command log is the replay: a war where the AI took over at tick 40,000 has to
+// replay as a war where the AI took over at tick 40,000.
+function applySetAi(next, command) {
+  const has = [];
+  for (let i = 0; i < next.ai.length; i++) has.push(next.ai[i].team);
+  if (command.active === 1) {
+    if (command.team < 0 || command.team >= next.teams.length) return reject(next);
+    if (has.includes(command.team)) return next;
+    next.ai.push(createBrain(command.team));
+    pushEvent(next.events, EVT_AI_SEAT, command.team, 1, 0);
+    return next;
+  }
+  if (!has.includes(command.team)) return next;
+  const kept = [];
+  for (let i = 0; i < next.ai.length; i++) {
+    if (next.ai[i].team !== command.team) kept.push(next.ai[i]);
+  }
+  next.ai = kept;
+  pushEvent(next.events, EVT_AI_SEAT, command.team, 0, 0);
+  return next;
+}
+
 function applyDeployPod(next, command) {
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
@@ -374,6 +400,7 @@ function apply(state, command) {
   if (type === CMD_DEPLOY_VIRUS) return applyDeployVirus(next, command);
   if (type === CMD_FIRE_UNIT) return applyFire(next, command);
   if (type === CMD_FIRE_FLARES) return applyFlares(next, command);
+  if (type === CMD_SET_AI) return applySetAi(next, command);
   if (type === CMD_SELECT_WEAPON) return applySelectWeapon(next, command);
   if (type === CMD_SET_STOCKPILE) return applySetStockpile(next, command);
   if (type === CMD_SET_SUPPLY_RUN) return applySetSupplyRun(next, command);

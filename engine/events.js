@@ -42,6 +42,7 @@ const EVT_TURRET_LOST = 34; // a = turretId, b = team, c = islandId
 const EVT_VIRUS_DEPLOYED = 35; // a = islandId, b = the team bombing it, c = unitId
 const EVT_ISLAND_CONVERTED = 36; // a = islandId, b = the team it changed to
 const EVT_FLARES = 37; // a = carrierId, b = team, c = seekers blinded
+const EVT_AI_SEAT = 38; // a = team, b = 1 the machine has it / 0 a human does
 
 function makeEvent(code, a, b, c) {
   return { code: code, a: a, b: b, c: c };
@@ -90,6 +91,7 @@ export {
   EVT_VIRUS_DEPLOYED,
   EVT_ISLAND_CONVERTED,
   EVT_FLARES,
+  EVT_AI_SEAT,
   makeEvent,
   pushEvent,
 };

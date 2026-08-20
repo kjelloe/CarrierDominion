@@ -176,5 +176,6 @@
   "panel.flares": "fakler",
   "panel.ready": "KLAR",
   "panel.reloading": "lader",
-  "status.flaresReloading": "fakkelutskyterne lader fortsatt"
+  "status.flaresReloading": "fakkelutskyterne lader fortsatt",
+  "lobby.sayPlaceholder": "si noe - ENTER sender"
 }

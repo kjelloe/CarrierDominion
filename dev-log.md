@@ -5,6 +5,66 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — Coming back to your own war, a room that talks, and a watchdog
+
+351 tests + smoke gate green. Three things asked for before a playtest, and one
+of them found a bug in its first three seconds.
+
+### A dropped player keeps their carrier
+
+Adapted from multiciv's seat-grace. A seat is now HELD rather than freed: the
+same player, presenting the token they were issued, gets their own seat back
+with their own name on it, and a stranger cannot be handed a seat somebody is
+coming back to. After ninety seconds the seat is released and **the AI takes the
+war over**, because a dropped player's carrier sitting at anchor for the rest of
+the war is worse for their opponent than losing to a machine.
+
+The takeover is a COMMAND (`set_ai`), not something the server does to the state
+behind the reducer's back: the command log is the replay, so a war where the AI
+took over at tick 40,000 has to replay as one where it did.
+
+A late player is still let back in if nobody took the seat. The grace window
+exists to stop a race, not to punish somebody whose train went into a tunnel.
+
+**One thing the probe found:** a human joining a war whose second seat was
+AI-held ended up sharing one carrier with the AI, both steering. A human at a
+seat now takes it off the machine, whether they are returning to it or sitting
+down for the first time.
+
+### The room talks
+
+Chat in the war room, bounded and stripped to printable ASCII before it goes
+anywhere near another client - the same rule that keeps the state hash honest is
+a good rule for anything a stranger can type. The input lives outside the
+rebuilt body, so typing into it survives the room changing under you, which it
+does every time anybody readies, joins or leaves.
+
+### The watchdog
+
+`server/watch.js`, on by default for the server binary, findings at `/watch`. It
+reads the state every tick and never writes it - watching a war cannot change
+it, and there is a test that says so by hashing a watched war against an
+unwatched one.
+
+It looks for the shapes that mean the simulation has gone somewhere it should
+not be: a hull off the map or under the sea, a negative store, a magazine
+holding more than it can, more built than the slots allow, the war going quiet
+for an implausibly long time, a tick slower than the tick it simulates. One
+finding per KIND with the first tick and a count, because a playtest that trips
+the same bug four hundred times should report it once.
+
+**It earned itself on the first run.** A build paid for from "the island's own
+stock, then the depot" spent the same materials TWICE when the site was itself
+the stockpile island, leaving island stock negative from tick 13,401 onward.
+Nothing in 339 tests had caught it; a full AI-vs-AI war under the watchdog
+caught it in three seconds.
+
+Its one remaining finding is real rather than a false alarm, and is for the
+playtest to judge: **the endgame has a 60,000-tick lull** - nothing happened
+between ticks 331,050 and 391,050 of a war that ended at 396,491.
+
+---
+
 ## 2026-08-20 — Decoy flares
 
 327 tests + smoke gate green. A warning you cannot act on is only bad news

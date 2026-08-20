@@ -33,10 +33,13 @@ import {
   canStart,
   createLobby,
   lobbyView,
+  say,
   setName,
   setOption,
   setReady,
 } from './lobby.js';
+import { createHolder, expired, holdSeat, isHeld, reclaim, release } from './reconnect.js';
+import { createWatch, watchReport, watchTick } from './watch.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -57,6 +60,14 @@ function createApp(options) {
     httpServer: 0,
     wss: 0,
     clock: 0,
+    // The playtest watchdog, when it is asked for: reads the state every tick
+    // and never writes it, so it cannot change a war it is watching.
+    watch: options.watch === true ? createWatch({ stuckAfter: options.stuckAfter }) : 0,
+    // Seats held for players who dropped, and the tokens they come back with.
+    holder: createHolder(
+      options.nowFn ?? (() => Date.now()),
+      options.tokenFn ?? (() => Math.random().toString(36).slice(2, 12)),
+    ),
     lobby: options.lobby === true
       ? createLobby(options.bootId ?? `${seed}-${Date.now()}`, {
         seed: seed,
@@ -80,14 +91,36 @@ function createApp(options) {
     return { socket: socket, team: -1 };
   }
 
-  // One human per team; anyone after that watches team 0's view.
+  // One human per team; anyone after that watches team 0's view. A seat being
+  // held for somebody who dropped is not free - handing it to a newcomer is how
+  // a reconnecting player finds a stranger flying their carrier.
   function claimTeam() {
     const taken = [];
     for (const seat of app.seats) taken.push(seat.team);
     for (let t = 0; t < rules.rules.teamCount; t++) {
-      if (!taken.includes(t)) return t;
+      if (!taken.includes(t) && !isHeld(app.holder, t)) return t;
     }
     return -1;
+  }
+
+  // The token in the socket's URL, if it brought one back.
+  function tokenFrom(req) {
+    const url = String(req.url ?? '');
+    const at = url.indexOf('token=');
+    if (at === -1) return '';
+    return url.slice(at + 6).split('&')[0];
+  }
+
+  // A seat handed to the machine when its grace window runs out, so the other
+  // side is fighting somebody rather than an anchored ship.
+  function sweepHeldSeats() {
+    for (const record of expired(app.holder)) {
+      record.aiTaken = 1;
+      release(app.holder, record.team);
+      if (app.lobby === 0 || app.lobby.status !== 'lobby') {
+        enqueueCommand(app.game, { type: 'set_ai', team: record.team, active: 1 });
+      }
+    }
   }
 
   function playerSeats() {
@@ -123,6 +156,7 @@ function createApp(options) {
       stateHash: snapshot === -1 ? '' : snapshot.stateHash,
       rulesHash: app.game.state.rulesHash,
       seats: app.seats.length,
+      watching: app.watch === 0 ? 0 : app.watch.findings.length,
       // A monitor watching only the tick would read a lobby as a hung server,
       // because a war that has not started does not tick. Say which it is.
       status: app.lobby === 0 ? 'running' : app.lobby.status,
@@ -134,6 +168,12 @@ function createApp(options) {
   };
 
   app.httpServer = createServer((req, res) => {
+    // The watchdog's findings, for a playtest to read at the end - or during.
+    if (req.url === '/watch') {
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(app.watch === 0 ? { watching: false } : watchReport(app.watch)));
+      return;
+    }
     if (req.url === '/healthz') {
       res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify(app.health()));
@@ -161,8 +201,27 @@ function createApp(options) {
 
   app.wss = new WebSocketServer({ server: app.httpServer });
 
-  app.wss.on('connection', (socket) => {
-    const seat = { socket: socket, team: claimTeam(), vote: NO_VOTE };
+  app.wss.on('connection', (socket, req) => {
+    sweepHeldSeats();
+    // Somebody coming back gets their own seat, with their own name on it, and
+    // takes the war back off the machine if it had been handed over.
+    const returning = reclaim(app.holder, tokenFrom(req));
+    const seat = returning === -1
+      ? { socket: socket, team: claimTeam(), vote: NO_VOTE, token: app.holder.tokenFn() }
+      : {
+        socket: socket,
+        team: returning.team,
+        vote: NO_VOTE,
+        token: returning.token,
+        name: returning.name,
+      };
+    // A human at a seat takes it off the machine, whether they are coming back
+    // to it or sitting down at it for the first time. Without this a player who
+    // joins a war whose second seat is AI-held ends up sharing one carrier with
+    // the AI, and both of them steer.
+    if (seat.team !== -1) {
+      enqueueCommand(app.game, { type: 'set_ai', team: seat.team, active: 0 });
+    }
     app.seats.push(seat);
     send(socket, {
       type: 'welcome',
@@ -174,9 +233,12 @@ function createApp(options) {
       speed: app.clock.speed,
       speedLocked: playerSeats() > 1 ? 1 : 0,
       lobby: inLobby() ? 1 : 0,
+      // Keep this: presenting it after a drop is what gets this seat back.
+      token: seat.token,
+      resumed: returning === -1 ? 0 : 1,
     });
     if (inLobby()) {
-      seat.name = `Commander ${seat.team + 1}`;
+      if (seat.name === undefined) seat.name = `Commander ${seat.team + 1}`;
       seat.ready = 0;
       broadcastLobby();
     }
@@ -239,7 +301,11 @@ function createApp(options) {
 
     const drop = () => {
       const index = app.seats.indexOf(seat);
-      if (index >= 0) app.seats.splice(index, 1);
+      if (index < 0) return; // already dropped; a socket can fire both events
+      app.seats.splice(index, 1);
+      // Hold the seat rather than freeing it: a locked phone should not cost
+      // somebody their carrier, and the war should not stop for them either.
+      if (seat.team !== -1) holdSeat(app.holder, seat);
       // Somebody leaving can complete a vote the rest had already agreed on.
       settleVote();
       // And in the lobby it can pass the host seat, or make the room ready.
@@ -249,7 +315,7 @@ function createApp(options) {
     socket.on('error', drop);
   });
 
-  const LOBBY_TYPES = ['lobby_name', 'lobby_ready', 'lobby_option', 'lobby_start'];
+  const LOBBY_TYPES = ['lobby_name', 'lobby_ready', 'lobby_option', 'lobby_start', 'lobby_say'];
 
   function isLobbyMessage(type) {
     return LOBBY_TYPES.includes(type);
@@ -295,6 +361,7 @@ function createApp(options) {
     const seat = seatFor(socket);
     let problem = '';
     if (message.type === 'lobby_name') problem = setName(seat, message.name);
+    else if (message.type === 'lobby_say') problem = say(app.lobby, app.seats, seat, message.text);
     else if (message.type === 'lobby_ready') problem = setReady(seat, message.ready);
     else if (message.type === 'lobby_option') {
       problem = setOption(app.lobby, app.seats, seat, message.key, message.value);
@@ -349,7 +416,11 @@ function createApp(options) {
   // because there was already a war on screen.
   app.clock = createClock(rules.rules.msPerTick, () => {
     if (inLobby()) return;
-    broadcast(stepGame(app.game));
+    sweepHeldSeats();
+    const startedMs = app.watch === 0 ? 0 : performance.now();
+    const snapshot = stepGame(app.game);
+    if (app.watch !== 0) watchTick(app.watch, app.game.state, performance.now() - startedMs);
+    broadcast(snapshot);
   }, app.speed);
 
   app.listen = function listen(port, host) {

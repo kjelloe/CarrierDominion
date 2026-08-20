@@ -176,5 +176,6 @@
   "panel.flares": "flares",
   "panel.ready": "READY",
   "panel.reloading": "reloading",
-  "status.flaresReloading": "the flare launchers are still reloading"
+  "status.flaresReloading": "the flare launchers are still reloading",
+  "lobby.sayPlaceholder": "say something - ENTER sends"
 }
