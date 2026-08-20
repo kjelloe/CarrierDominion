@@ -34,9 +34,41 @@ function readyToLaunch(state, carrierId, kind) {
     if (unit.kind !== kind) continue;
     if (unit.state !== UNIT_STOWED) continue;
     if (unit.hp <= 0) continue;
+    // An empty tank stays on the deck. Fuel comes from the ship's own bunker
+    // now, and a dry ship launching a dry aircraft is a unit thrown away.
+    if (unit.fuel <= 0) continue;
     return unit;
   }
   return -1;
+}
+
+// Fuel is drawn from the carrier's own bunker (ruling #3): a partial tank is
+// what a short bunker buys, exactly like a partial rearm.
+function refuelFromCarrier(unit, carrier) {
+  const wanted = unit.fuelCapacity - unit.fuel;
+  if (wanted <= 0) return 0;
+  const taken = wanted < carrier.fuel ? wanted : carrier.fuel;
+  carrier.fuel = carrier.fuel - taken;
+  unit.fuel = unit.fuel + taken;
+  unit.fuelAccum = 0;
+  return taken;
+}
+
+// A Walrus payload is drawn from the ship's stores, and only when it is
+// missing: the pod costs materials (it is a construction device), the virus
+// bomb costs ordnance (it is a munition). A store too short to pay issues
+// nothing, and the vehicle goes out without.
+function provisionWalrus(unit, carrier) {
+  if (unit.kind !== KIND_WALRUS) return unit;
+  if (unit.pod === 0 && carrier.materials >= carrier.podMaterials) {
+    carrier.materials = carrier.materials - carrier.podMaterials;
+    unit.pod = 1;
+  }
+  if (unit.virus === 0 && carrier.ordnance >= carrier.virusOrdnance) {
+    carrier.ordnance = carrier.ordnance - carrier.virusOrdnance;
+    unit.virus = 1;
+  }
+  return unit;
 }
 
 // Puts the unit on the map ahead of its carrier. A Manta leaves the deck at
@@ -62,6 +94,10 @@ function launchUnit(unit, carrier, deckHeightUnits) {
     unit.z = 0;
     unit.speed = 0;
   }
+  // A payload the stores could not issue at recovery is issued now if they can
+  // pay: what a Walrus carries out is decided at the ramp, not remembered from
+  // its last trip.
+  provisionWalrus(unit, carrier);
   unit.targetX = unit.x;
   unit.targetY = unit.y;
   return unit;
@@ -78,9 +114,9 @@ function withinRecoveryRange(unit, carrier, recoverRangeUnits) {
   return dist2D(unit.x, unit.y, carrier.x, carrier.y) <= recoverRangeUnits;
 }
 
-// Back in the hangar. Refuelling and rearming are instant for now - the fuel
-// economy slice will make them draw on the carrier's own tank and magazines
-// over time.
+// Back in the hangar. Everything the unit takes aboard comes out of the ship's
+// own stores (ruling #3): fuel from the bunker, rounds from the ordnance store,
+// payloads from materials and ordnance. Short stores mean short issues.
 function recoverUnit(unit, carrier, weapons) {
   unit.state = UNIT_STOWED;
   unit.order = ORDER_HOLD;
@@ -88,16 +124,10 @@ function recoverUnit(unit, carrier, weapons) {
   unit.speed = 0;
   unit.throttle = 0;
   unit.rudder = 0;
-  unit.fuel = unit.fuelCapacity;
-  unit.fuelAccum = 0;
   unit.blocked = 0;
+  refuelFromCarrier(unit, carrier);
   rearm(unit, weapons, carrier);
-  // A Walrus draws a fresh pod and a fresh virus bomb from the carrier's stores
-  // when it comes aboard.
-  if (unit.kind === KIND_WALRUS) {
-    unit.pod = 1;
-    unit.virus = 1;
-  }
+  provisionWalrus(unit, carrier);
   unit.x = carrier.x;
   unit.y = carrier.y;
   unit.z = 0;
@@ -110,6 +140,8 @@ export {
   LAUNCH_AHEAD_UNITS,
   LAUNCH_ABEAM_UNITS,
   readyToLaunch,
+  refuelFromCarrier,
+  provisionWalrus,
   launchUnit,
   orderReturn,
   withinRecoveryRange,

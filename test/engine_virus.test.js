@@ -39,14 +39,17 @@ function atTheirNode(state, islandId = 0) {
   walrus.state = UNIT_ACTIVE;
   walrus.x = island.nodeX;
   walrus.y = island.nodeY;
+  // Issued at the ramp in play (engine/hangar.js provisionWalrus); these tests
+  // are about what the bomb DOES, so it is simply aboard.
+  walrus.virus = 1;
   return { island: island, walrus: walrus };
 }
 
-test('a Walrus sails with a pod and a bomb, and they are different things', () => {
+test('a Walrus sails with a pod; the bomb is bought at the ramp', () => {
   const state = fresh();
   const walrus = state.units.find((u) => u.kind === KIND_WALRUS);
-  assert.equal(walrus.pod, 1);
-  assert.equal(walrus.virus, 1);
+  assert.equal(walrus.pod, 1, 'pods are standard complement');
+  assert.equal(walrus.virus, 0, 'a virus bomb is a munition, not shipyard equipment');
   const manta = state.units.find((u) => u.kind === KIND_MANTA);
   assert.equal(manta.virus, 0, 'an aircraft cannot carry a virus bomb');
 });

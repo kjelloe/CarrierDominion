@@ -136,6 +136,20 @@ function unloadToCarrier(state, unit, carrier) {
 
 // One lighter's tick. Returns nothing; it works purely through the unit's
 // order and target, which the drive model then acts on.
+// The boat bunkers at the depot, out of the depot's own fuel stock. Bunkering
+// at the SHIP made the logistics network drink the bunker it existed to fill:
+// a lighter's tank is a fifth of the carrier's, and every round trip recovered
+// aboard cost more fuel than a thin economy could make back.
+function bunkerBoat(unit, depot) {
+  const wanted = unit.fuelCapacity - unit.fuel;
+  if (wanted <= 0) return 0;
+  const taken = wanted < depot.stockFuel ? wanted : depot.stockFuel;
+  depot.stockFuel = depot.stockFuel - taken;
+  unit.fuel = unit.fuel + taken;
+  unit.fuelAccum = 0;
+  return taken;
+}
+
 function runLighter(state, unit, carrier, depot) {
   if (unit.order === ORDER_LOAD) {
     const station = loadingStation(depot, carrier);
@@ -144,6 +158,7 @@ function runLighter(state, unit, carrier, depot) {
     unit.state = UNIT_ACTIVE;
     const offshore = dist2D(unit.x, unit.y, depot.x, depot.y) - depot.radius;
     if (offshore > unit.loadRange) return;
+    bunkerBoat(unit, depot);
     const worked = loadFromDepot(state, unit, depot);
     const full = laden(unit) >= unit.cargoCap;
     // Nothing left to load is as good a reason to sail as a full hold.
@@ -187,6 +202,11 @@ function runLighter(state, unit, carrier, depot) {
 // it: the fuel is still carried, by a boat, from the stockpile.
 function dispatchBoat(state, carrier, depot) {
   if (depot.stockChassis < state.economy.chassisPerHull) return -1;
+  // A boat with a dry tank never leaves the slip - and would never run dry at
+  // sea either, which is worse: the lost-at-zero rule only fires on the tick
+  // the tank EMPTIES. Its bunker fuel comes out of the depot's stock, like
+  // everything else it will ever carry.
+  if (depot.stockFuel <= 0) return -1;
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
     if (unit.carrierId !== carrier.id || unit.kind !== KIND_LIGHTER) continue;
@@ -201,7 +221,8 @@ function dispatchBoat(state, carrier, depot) {
     unit.state = UNIT_ACTIVE;
     unit.order = ORDER_LOAD;
     unit.hp = unit.maxHp;
-    unit.fuel = unit.fuelCapacity;
+    unit.fuel = depot.stockFuel < unit.fuelCapacity ? depot.stockFuel : unit.fuelCapacity;
+    depot.stockFuel = depot.stockFuel - unit.fuel;
     unit.fuelAccum = 0;
     unit.speed = 0;
     unit.throttle = 0;
@@ -262,6 +283,7 @@ export {
   stepSupply,
   runLighter,
   loadingStation,
+  bunkerBoat,
   loadFromDepot,
   unloadToCarrier,
   lighterFor,

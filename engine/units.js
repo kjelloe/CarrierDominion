@@ -126,8 +126,11 @@ function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
     blocked: 0,
     avoidTicks: 0,
     avoidHeading: 0,
+    // A pod is standard complement - the original sailed with them - but a
+    // virus bomb is a munition, drawn from the ship's ordnance store at the
+    // ramp (engine/hangar.js provisionWalrus), not carried from the shipyard.
     pod: 1,
-    virus: 1,
+    virus: 0,
     orderTargetKind: -1,
     orderTargetId: -1,
     cargoFuel: 0,

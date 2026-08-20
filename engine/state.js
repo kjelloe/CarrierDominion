@@ -111,6 +111,8 @@ function copyCarrier(carrier) {
     flareReload: carrier.flareReload,
     flareRadius: carrier.flareRadius,
     flareCooldown: carrier.flareCooldown,
+    podMaterials: carrier.podMaterials,
+    virusOrdnance: carrier.virusOrdnance,
     maxSpeedBase: carrier.maxSpeedBase,
     turnRateBase: carrier.turnRateBase,
     radarBase: carrier.radarBase,
@@ -259,6 +261,11 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     flareReload: carrierRules.flareReloadTicks,
     flareRadius: carrierRules.flareRadiusMetres * unitsPerMetre,
     flareCooldown: 0,
+    // What the ship's stores charge for a Walrus payload: an ACCB pod is a
+    // construction device and costs materials; a virus bomb is a munition and
+    // costs ordnance. Ruling #3 - neither is conjured.
+    podMaterials: carrierRules.podMaterials,
+    virusOrdnance: carrierRules.virusOrdnance,
     // Undamaged capability. maxSpeed, turnRate and radar above are DERIVED
     // from these and the section health, and are recomputed on every hit and
     // every repair, so the rest of the engine can keep reading them directly.
@@ -271,9 +278,10 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     // there is hitting topside whatever else it was aimed at.
     topsideHeight: carrierRules.deckHeightMetres * unitsPerMetre,
     armourLossPermil: carrierRules.armourLossPermil,
-    // The ship's own yard stores. The lighter fills these; the repair system
-    // spends them.
-    materials: 0,
+    // The ship's own yard stores. The lighter refills these; the repair system
+    // and the pod locker spend them. The ship SAILS with a finite issue, like
+    // its bunker and its ordnance - enough for the opening moves, not the war.
+    materials: carrierRules.startMaterials,
     materialsCapacity: carrierRules.materialsCapacity,
     // Replacement hulls, in parts. A factory island makes them, the boat brings
     // them, and the hangar assembles one when there is a gap to fill. The ship

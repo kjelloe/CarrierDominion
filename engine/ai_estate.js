@@ -14,6 +14,7 @@
 // own stock can pay for.
 
 import { floorDiv } from '../shared/fixed.js';
+import { EVT_STOCKPILE_SET, pushEvent } from './events.js';
 import {
   BUILD_FACTORY,
   BUILD_TURRET,
@@ -92,9 +93,33 @@ function nextBuild(state, island, economy) {
   return -1;
 }
 
+// The stockpile belongs at the FACTORY. The network ships every island's stock
+// toward the depot; a factory refines only what is piled on its own ground. So
+// depot-at-the-mine starves the plant on an 8-materials-a-beat trickle while
+// sixty a beat sit under the digger - measured: both AI carriers drifted to
+// zero fuel at tick ~350,000 with their materials at capacity. Depot at the
+// plant, and the mine's output flows INTO the refinery on its own.
+function siteStockpile(state, brain) {
+  for (let t = 0; t < state.teams.length; t++) {
+    const team = state.teams[t];
+    if (team.id !== brain.team) continue;
+    let held = -1;
+    for (let i = 0; i < state.islands.length; i++) {
+      const island = state.islands[i];
+      if (island.owner !== team.id) continue;
+      if (island.id === team.stockpileIsland && island.role === ROLE_FACTORY) return;
+      if (held === -1 && island.role === ROLE_FACTORY) held = island.id;
+    }
+    if (held === -1) return;
+    team.stockpileIsland = held;
+    pushEvent(state.events, EVT_STOCKPILE_SET, held, team.id, 0);
+  }
+}
+
 // One estate decision for one team, on the AI cadence. It does at most one
 // thing per island per turn: this runs alongside a war, not instead of it.
 function manageIslands(state, brain) {
+  siteStockpile(state, brain);
   for (let i = 0; i < state.islands.length; i++) {
     const island = state.islands[i];
     if (island.owner !== brain.team) continue;
@@ -109,4 +134,4 @@ function manageIslands(state, brain) {
   }
 }
 
-export { countRole, planFor, nextBuild, manageIslands };
+export { countRole, planFor, nextBuild, siteStockpile, manageIslands };

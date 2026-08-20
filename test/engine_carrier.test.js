@@ -204,6 +204,10 @@ test('a carrier held aground grinds its hull down, and can be lost', () => {
   carrier.x = island.x;
   carrier.y = island.y - island.radius * 2;
   carrier.heading = 16384;
+  // A supplied ship out-repairs a gentle grounding (8 repair points per 100
+  // ticks against the reef's 6): the reef costs materials instead of hull.
+  // This test is about the grinding itself, so the yard stores are emptied.
+  carrier.materials = 0;
   state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: 100 });
 
   let ticks = 0;
