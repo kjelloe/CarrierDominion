@@ -5,6 +5,35 @@ golden hash and why.
 
 ---
 
+## 2026-08-21 — The AI reads the same chart
+
+The follow-up the memory slice promised: `ai_strike` now acts on ghosts. When
+a team's brain holds a remembered enemy carrier and nothing live, it sends
+**one scout** - not a strike package - to the last-known spot.
+
+The design earns its keep by what it does NOT need: no search timer, no patrol
+state in the brain, no new fields to copy. The ghost mechanics terminate the
+search on their own - the scout's radar either re-acquires the carrier (live
+target, and the strike machinery takes over on the next cadence) or scans the
+spot clean, which DISPROVES the ghost, and with nothing left to look for the
+scout is recalled. The disprove rule from the last slice turns out to be the
+whole patrol-management system for free.
+
+A small correctness gain came with it: the old "nothing in sight" branch only
+recalled aircraft on the cadence the target was lost (`strikeCarrier !== -1`),
+so an ACTIVE Manta with no target and no flag circled until dry. Recall now
+runs whenever there is neither sighting nor memory; RETURNING aircraft are
+not in the airborne list, so nothing is double-recalled.
+
+Measured: the reference war is unchanged - tick 229,482, won by sinking -
+because that seed's ending happens in live contact, where ghosts never come
+into play. The hunt is insurance for the wars where contact breaks. The worst
+quiet stretch of the whole war is now 46,897 ticks starting at tick 19,003 -
+an early steaming leg, not an endgame lull; the old 60,000-tick tail silence
+is gone. 384 tests + smoke green.
+
+---
+
 ## 2026-08-21 — The chart remembers, and the war ends on a screen
 
 Two Milestone 2 items, by owner ruling (which amends 24.3 - the original said

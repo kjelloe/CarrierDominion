@@ -165,12 +165,12 @@ flight respect terrain, the post-war world decides nothing new, the cargo
 network conserves goods, and spectators see a chart instead of one side's war.
 
 Since then: **the chart remembers** — an enemy that leaves your radar leaves a
-ghost on the scope, kept until you scan the spot and find it gone — and the war
-ends on a proper **war-over screen** (result, reason, the scoreboard the fog
-hid, RETURN TO PORT / KEEP WATCHING).
+ghost on the scope, kept until you scan the spot and find it gone, and the AI
+reads the same chart: break contact and expect one aircraft to come looking at
+where you were. And the war ends on a proper **war-over screen** (result,
+reason, the scoreboard the fog hid, RETURN TO PORT / KEEP WATCHING).
 
-Not yet built: a richer observer mode, AI use of contact memory (it still hunts
-on live sightings only), and the Luau/Roblox twin.
+Not yet built: a richer observer mode, and the Luau/Roblox twin.
 
 See [`docs/`](docs/00-index.md) for how it all works, [`dev-log.md`](dev-log.md)
 for what changed and why, and `dev-questions.md` for what needs an owner ruling.

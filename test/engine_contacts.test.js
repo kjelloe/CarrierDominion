@@ -131,3 +131,76 @@ test('units leave ghosts too, and each team remembers only for itself', () => {
   // Team 1 has no mark for its own aircraft: memory is of ENEMIES.
   assert.equal(remembered(state.contacts, 1, CONTACT_UNIT, enemyManta.id), -1);
 });
+
+// --- The AI acting on the chart's memory (engine/ai_strike.js) ---
+
+test('a ghost on the chart is worth one scout, and the search disproves itself', () => {
+  const aiRules = loadRules();
+  aiRules.rules = { ...aiRules.rules, aiTeams: [0] };
+  let state = createInitialState(SEED, aiRules);
+  const own = state.carriers[0];
+  const enemy = state.carriers[1];
+
+  // Park the enemy out of everyone's sight, and plant a memory of it at a spot
+  // a few kilometres from our carrier - as if it had been seen and lost.
+  const spotX = own.x + 12000 * 256;
+  const spotY = own.y;
+  state.contacts = [{
+    team: 0, kind: CONTACT_CARRIER, id: enemy.id, unitKind: -1,
+    x: spotX, y: spotY, heading: 0, tick: 1,
+  }];
+  state.tick = 10;
+
+  // The AI sends exactly one aircraft to look.
+  let scouts = 0;
+  for (let i = 0; i < 40 && scouts === 0; i++) {
+    state = apply(state, TICK);
+    scouts = state.units.filter(
+      (u) => u.team === 0 && u.kind === KIND_MANTA && u.state === UNIT_ACTIVE,
+    ).length;
+  }
+  assert.equal(scouts, 1, 'a memory is worth one scout, not a strike package');
+  const scout = state.units.find(
+    (u) => u.team === 0 && u.kind === KIND_MANTA && u.state === UNIT_ACTIVE,
+  );
+  assert.equal(scout.targetX, spotX, 'the scout was not sent at the ghost');
+
+  // It flies there, scans the empty spot, the ghost is disproved, and with
+  // nothing left to look for the scout is recalled - no timer anywhere.
+  let ticks = 0;
+  while (ticks < 30000
+    && remembered(state.contacts, 0, CONTACT_CARRIER, enemy.id) !== -1) {
+    state = apply(state, TICK);
+    ticks += 1;
+  }
+  assert.notEqual(ticks, 30000, 'the scout never disproved the ghost');
+  for (let i = 0; i < 10; i++) state = apply(state, TICK);
+  const after = state.units.find((u) => u.id === scout.id);
+  assert.notEqual(after.state, UNIT_ACTIVE, 'the scout kept searching for a disproved memory');
+});
+
+test('a hunt that finds the carrier becomes a strike', () => {
+  const aiRules = loadRules();
+  aiRules.rules = { ...aiRules.rules, aiTeams: [0] };
+  let state = createInitialState(SEED, aiRules);
+  const own = state.carriers[0];
+  const enemy = state.carriers[1];
+
+  // The enemy is NEAR the remembered spot - moved a little, as real ones do.
+  enemy.x = own.x + 12000 * 256;
+  enemy.y = own.y + 1500 * 256;
+  state.contacts = [{
+    team: 0, kind: CONTACT_CARRIER, id: enemy.id, unitKind: -1,
+    x: own.x + 12000 * 256, y: own.y, heading: 0, tick: 1,
+  }];
+  state.tick = 10;
+
+  // The scout closes on the spot, its radar re-acquires the hull, and the
+  // strike machinery takes over: the brain marks the carrier under attack.
+  let ticks = 0;
+  while (ticks < 30000 && state.ai[0].strikeCarrier === -1) {
+    state = apply(state, TICK);
+    ticks += 1;
+  }
+  assert.equal(state.ai[0].strikeCarrier, enemy.id, 'the hunt never became a strike');
+});

@@ -248,9 +248,15 @@ the deterministic war and every replay and every headless sim covers it.
 | `ai_estate.js` | what should this island be, what should I build on it, and where does the stockpile belong (at the factory — see the supply chain) |
 
 It reads the same state a player does but is written to look only at what its
-own hulls could see — the same sensor rule the fog filter uses. When real fog of
-war grows a memory, `ai_strike.js` is the module to audit against it.
+own hulls could see — the same sensor rule the fog filter uses, and the same
+**chart memory**: when it holds a ghost of your carrier and nothing live, it
+sends **one scout** to the remembered spot. The search is self-terminating by
+the ghost mechanics themselves — the scout's radar either re-acquires you
+(live target, and the strike takes over) or scans the spot clean, which
+disproves the ghost, and with nothing left to look for the scout comes home.
+No search timer, no patrol state.
 
-Two behaviours worth knowing when you play against it: it **withdraws** below
-half its hull rather than trading to the death, and it **fires flares** only
-when something locked on is close enough for the burst to catch.
+Three behaviours worth knowing when you play against it: it **withdraws** below
+half its hull rather than trading to the death, it **fires flares** only when
+something locked on is close enough for the burst to catch — and after you
+break contact, **expect one aircraft to come looking at where you were**.

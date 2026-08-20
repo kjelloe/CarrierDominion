@@ -10,6 +10,7 @@
 
 import { dist2D, mulDiv } from '../shared/fixed.js';
 import { atan2B } from '../shared/trig.js';
+import { CONTACT_CARRIER, remembered } from './contacts.js';
 import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import { fireUnit, roundsOf, selectWeapon } from './weapons.js';
@@ -101,6 +102,47 @@ function vectorTo(unit, x, y) {
   unit.targetY = y;
 }
 
+// The ghost of an enemy carrier on this team's chart, or -1. When there is
+// more than one (bigger wars), the one remembered most recently.
+function carrierGhost(state, team) {
+  let best = -1;
+  for (let i = 0; i < state.carriers.length; i++) {
+    const enemy = state.carriers[i];
+    if (enemy.team === team) continue;
+    const ghost = remembered(state.contacts, team, CONTACT_CARRIER, enemy.id);
+    if (ghost === -1 || ghost.tick >= state.tick) continue;
+    if (best === -1 || ghost.tick > best.tick) best = ghost;
+  }
+  return best;
+}
+
+// One aircraft goes to look at a memory. The ghost mechanics make the search
+// self-terminating: the scout's own radar either re-acquires the carrier -
+// live target, and the strike takes over next cadence - or scans the spot
+// clean, which DISPROVES the ghost, and with no ghost left the scout is
+// recalled. No search timer, no patrol state in the brain.
+function huntGhost(state, brain, ghost, flying, carrier) {
+  let scout = -1;
+  for (let i = 0; i < flying.length; i++) {
+    const manta = flying[i];
+    if (scout === -1 && fuelPermil(manta) > STRIKE_FUEL_PERMIL) {
+      scout = manta;
+      continue;
+    }
+    // One pair of eyes is enough for a memory; everything else goes home.
+    orderReturn(manta);
+  }
+  if (scout === -1) {
+    if (carrier === -1) return;
+    const ready = readyToLaunch(state, carrier.id, KIND_MANTA);
+    if (ready === -1 || fuelPermil(ready) <= STRIKE_FUEL_PERMIL) return;
+    launchUnit(ready, carrier, state.params.deckHeight);
+    pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
+    scout = ready;
+  }
+  vectorTo(scout, ghost.x, ghost.y);
+}
+
 // One strike decision for one team. Returns the enemy carrier id under attack,
 // or -1 when there is nothing to attack - which the brain stores so the client
 // and the tests can see what it is doing.
@@ -109,12 +151,22 @@ function manageStrike(state, brain) {
   const flying = airborneMantas(state, brain.team);
 
   if (target === -1) {
-    // Nothing in sight. Bring anything that is up back home rather than
-    // letting it circle until the tanks run dry.
-    if (brain.strikeCarrier !== -1) {
-      for (let i = 0; i < flying.length; i++) orderReturn(flying[i]);
-    }
     brain.strikeCarrier = -1;
+    // Nothing in sight - but is anything REMEMBERED? A ghost on the chart is
+    // worth one scout (owner ruling 2026-08-21: the chart remembers, and an
+    // AI that reads the same chart should act on it).
+    const ghost = carrierGhost(state, brain.team);
+    if (ghost !== -1) {
+      let carrier = -1;
+      for (let i = 0; i < state.carriers.length; i++) {
+        if (state.carriers[i].team === brain.team) carrier = state.carriers[i];
+      }
+      huntGhost(state, brain, ghost, flying, carrier);
+      return -1;
+    }
+    // Nothing in sight, nothing remembered. Bring anything that is up back
+    // home rather than letting it circle until the tanks run dry.
+    for (let i = 0; i < flying.length; i++) orderReturn(flying[i]);
     return -1;
   }
 
@@ -204,6 +256,8 @@ export {
   WITHDRAW_TICKS,
   spotted,
   findStrikeTarget,
+  carrierGhost,
+  huntGhost,
   hullPermil,
   withdraw,
   manageStrike,
