@@ -211,6 +211,18 @@ function cycleWeapon() {
   state.transport.send({ type: 'select_weapon', unitId: unit.id, weapon: next });
 }
 
+// A burst of flares. The engine refuses it while the launchers are reloading
+// or the store is short, so this only has to know how to ask.
+function fireFlares() {
+  if (state.carrierId === -1) return;
+  const own = state.view === undefined ? undefined : ownCarrierOf(state.view);
+  if (own !== undefined && own.flareCooldown > 0) {
+    setHud(state.hud, 'status', state.t('status.flaresReloading'));
+    return;
+  }
+  state.transport.send({ type: 'fire_flares', carrierId: state.carrierId });
+}
+
 function fireSelected() {
   const unit = selectedUnit();
   if (unit === undefined) return;
@@ -403,6 +415,7 @@ function bindInput(level) {
     else if (key === 'p') deployPod();
     else if (key === 'b') deployVirus();
     else if (key === 'f') fireSelected();
+    else if (key === 'e') fireFlares();
     else if (key === 'z') toggleDamagePanel(state.damage);
     else if (key === 'v') cycleWeapon();
     else if (key === 'h') document.getElementById('help').classList.toggle('hidden');
@@ -642,6 +655,13 @@ function drawPanel(deltaSeconds) {
     materialsFigure: own === undefined ? '' : String(own.materials),
     bow: state.t('panel.bow'),
     stern: state.t('panel.stern'),
+    flares: state.t('panel.flares'),
+    flaresFigure: own === undefined || own.flareCooldown < 0
+      ? ''
+      : (own.flareCooldown > 0 ? state.t('panel.reloading') : state.t('panel.ready')),
+    flaresPermil: own === undefined || own.flareReload <= 0
+      ? 1000
+      : Math.round(((own.flareReload - own.flareCooldown) * 1000) / own.flareReload),
     weapon: weaponName(state.t, holder),
     tally: holder === undefined ? '' : String(roundsOf(holder)),
   }, deltaSeconds, state.instrumentColours);

@@ -60,6 +60,10 @@ function ownCarrierView(carrier) {
     ordnanceCapacity: carrier.ordnanceCapacity,
     materials: carrier.materials,
     materialsCapacity: carrier.materialsCapacity,
+    chassis: carrier.chassis,
+    flareCooldown: carrier.flareCooldown,
+    flareReload: carrier.flareReload,
+    flareCost: carrier.flareCost,
     sections: sectionsView(carrier.sections),
     contact: 0,
   };
@@ -92,6 +96,9 @@ function contactView(carrier) {
     ordnanceCapacity: -1,
     materials: -1,
     materialsCapacity: -1,
+    flareCooldown: -1,
+    flareReload: -1,
+    flareCost: -1,
     // What is broken aboard an enemy ship is exactly what you would most like
     // to know, so a radar contact tells you nothing about it.
     sections: [],

@@ -23,6 +23,7 @@ const CMD_SET_REPAIR_PRIORITY = 'set_repair_priority';
 const CMD_SELECT_WEAPON = 'select_weapon';
 const CMD_ORDER_UNIT_ATTACK = 'order_unit_attack';
 const CMD_SET_CARRIER_AIM = 'set_carrier_aim';
+const CMD_FIRE_FLARES = 'fire_flares';
 const CMD_SET_ISLAND_ROLE = 'set_island_role';
 const CMD_BUILD_ON_ISLAND = 'build_on_island';
 
@@ -111,6 +112,10 @@ function validateCommand(command) {
     if (command.what < 0 || command.what > 2) return 'no such building';
     return '';
   }
+  if (type === CMD_FIRE_FLARES) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    return '';
+  }
   if (type === CMD_SET_SUPPLY_RUN) {
     if (!isInt(command.carrierId)) return 'carrierId must be an integer';
     if (!isInt(command.active)) return 'active must be 0 or 1';
@@ -189,6 +194,7 @@ export {
   CMD_SELECT_WEAPON,
   CMD_ORDER_UNIT_ATTACK,
   CMD_SET_CARRIER_AIM,
+  CMD_FIRE_FLARES,
   CMD_SET_ISLAND_ROLE,
   CMD_BUILD_ON_ISLAND,
   UNIT_COMMANDS,

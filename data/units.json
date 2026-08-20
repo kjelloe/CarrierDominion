@@ -41,7 +41,10 @@
     "armourLossPermil": 500,
     "materialsCapacity": 8000,
     "repairPointsPer100Ticks": 8,
-    "startChassis": 0
+    "startChassis": 0,
+    "flareOrdnance": 24,
+    "flareReloadTicks": 240,
+    "flareRadiusMetres": 900
   },
   "manta": {
     "hull": 60,

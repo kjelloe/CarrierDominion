@@ -107,6 +107,10 @@ function copyCarrier(carrier) {
     ordnanceCapacity: carrier.ordnanceCapacity,
     reloadRate: carrier.reloadRate,
     reloadAccum: carrier.reloadAccum,
+    flareCost: carrier.flareCost,
+    flareReload: carrier.flareReload,
+    flareRadius: carrier.flareRadius,
+    flareCooldown: carrier.flareCooldown,
     maxSpeedBase: carrier.maxSpeedBase,
     turnRateBase: carrier.turnRateBase,
     radarBase: carrier.radarBase,
@@ -249,6 +253,12 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     ordnanceCapacity: carrierRules.ordnanceCapacity,
     reloadRate: carrierRules.reloadRoundsPer100Ticks,
     reloadAccum: 0,
+    // Decoy flares: a burst costs ordnance out of the same store that feeds
+    // the guns, so defending yourself and arming yourself compete.
+    flareCost: carrierRules.flareOrdnance,
+    flareReload: carrierRules.flareReloadTicks,
+    flareRadius: carrierRules.flareRadiusMetres * unitsPerMetre,
+    flareCooldown: 0,
     // Undamaged capability. maxSpeed, turnRate and radar above are DERIVED
     // from these and the section health, and are recomputed on every hit and
     // every repair, so the rest of the engine can keep reading them directly.

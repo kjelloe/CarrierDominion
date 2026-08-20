@@ -32,6 +32,7 @@ const VOICES = {
   32: { freq: 420, to: 700, ms: 220, type: 'square', gain: 0.06 }, // hull replaced
   34: { freq: 260, to: 80, ms: 340, type: 'sawtooth', gain: 0.08 }, // turret lost
   36: { freq: 500, to: 900, ms: 400, type: 'triangle', gain: 0.09 }, // island converted
+  37: { freq: 1400, to: 300, ms: 260, type: 'sawtooth', gain: 0.07 }, // flares away
 };
 
 // The lock warning: two tones, over and over, at a pace that is hard to ignore

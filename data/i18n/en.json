@@ -55,7 +55,7 @@
   "war.unknown": "somehow",
   "help.helm": "W/S throttle - A/D rudder - X all stop - C camera - G graphics tier",
   "help.units": "1 launch Manta - 2 launch Walrus - N next unit - click sea to send it",
-  "help.orders": "T take the controls - R recall - P deploy ACCB pod - B virus bomb",
+  "help.orders": "T take the controls - R recall - P deploy ACCB pod - B virus bomb - E flares",
   "help.time": ", / . time compression - space pause",
   "gpu.detecting": "detecting GPU...",
   "hud.supply": "supply",
@@ -172,5 +172,9 @@
   "lobby.unready": "NOT READY AFTER ALL",
   "lobby.start": "START THE WAR",
   "lobby.hostNote": "you set the war - it starts when everybody is ready",
-  "lobby.guestNote": "the host sets the war - say when you are ready"
+  "lobby.guestNote": "the host sets the war - say when you are ready",
+  "panel.flares": "flares",
+  "panel.ready": "READY",
+  "panel.reloading": "reloading",
+  "status.flaresReloading": "the flare launchers are still reloading"
 }

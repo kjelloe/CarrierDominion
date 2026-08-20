@@ -55,7 +55,7 @@
   "war.unknown": "på et vis",
   "help.helm": "W/S pådrag - A/D ror - X full stopp - C kamera - G grafikknivå",
   "help.units": "1 send opp Manta - 2 sett ut Walrus - N neste enhet - klikk sjøen for å sende den",
-  "help.orders": "T ta kontrollen - R kall tilbake - P slipp ACCB-kapsel - B virusbombe",
+  "help.orders": "T ta kontrollen - R kall tilbake - P slipp ACCB-kapsel - B virusbombe - E fakler",
   "help.time": ", / . tidskompresjon - mellomrom pause",
   "gpu.detecting": "finner GPU...",
   "hud.supply": "forsyning",
@@ -172,5 +172,9 @@
   "lobby.unready": "IKKE KLAR LIKEVEL",
   "lobby.start": "START KRIGEN",
   "lobby.hostNote": "du setter krigen - den starter når alle er klare",
-  "lobby.guestNote": "verten setter krigen - si fra når du er klar"
+  "lobby.guestNote": "verten setter krigen - si fra når du er klar",
+  "panel.flares": "fakler",
+  "panel.ready": "KLAR",
+  "panel.reloading": "lader",
+  "status.flaresReloading": "fakkelutskyterne lader fortsatt"
 }

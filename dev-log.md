@@ -5,6 +5,33 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — Decoy flares
+
+327 tests + smoke gate green. A warning you cannot act on is only bad news
+delivered early; flares are what turn the missile-lock alarm into a decision.
+
+`E` fires a burst. Every hostile heat-seeker within 900 m loses its lock and
+**flies on blind** on whatever heading it was holding - it is not deleted, which
+is both more honest and means a badly timed burst can still leave a round
+arriving by luck. Three things make the timing a decision rather than a button:
+
+- a burst is **24 ordnance** out of the same store that feeds the guns and
+  rearms the aircraft, so defending yourself and arming yourself compete;
+- the launchers take **240 ticks** to reload, so it is a moment you pick;
+- the burst is **local**, so a salvo still on its way in is untouched.
+
+The AI plays by the same rule and fires when something is locked on *and* close
+enough for the burst to reach it. Firing at the moment of launch wastes it: the
+missile is thirty seconds out and the launchers will not have reloaded when it
+arrives.
+
+The panel gained a launcher bar that fills as they reload, because what you need
+to know in the half second after a warning is whether you may fire yet. The four
+ship bars are now two columns: stacked, the fourth pushed the weapon line out
+through the bottom of its own bezel.
+
+---
+
 ## 2026-08-20 — A war room for LAN play
 
 317 tests + smoke gate green. Adapted from multiciv's lobby

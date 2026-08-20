@@ -29,6 +29,7 @@ import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { teamById } from './economy.js';
 import { manageStrike, withdraw } from './ai_strike.js';
 import { manageIslands } from './ai_estate.js';
+import { fireFlares, shouldFlare } from './flare.js';
 
 const AI_SEEK = 0; // steaming toward the chosen island
 const AI_INVADE = 1; // in position, getting a Walrus to the node
@@ -266,6 +267,9 @@ function manageSupply(state, brain, carrier) {
 function stepAiTeam(state, brain, standoffExtra) {
   const carrier = findCarrierForTeam(state, brain.team);
   if (carrier === -1 || carrier.hull <= 0) return;
+  // Flares first: a missile arriving is more urgent than anything else on the
+  // list, and the burst is worthless once it has landed.
+  if (shouldFlare(state, carrier)) fireFlares(state, carrier);
   manageSupply(state, brain, carrier);
   // An island the AI takes and never develops produces nothing, so the estate
   // is managed before anything else: it is what pays for the rest.

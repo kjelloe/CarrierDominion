@@ -197,20 +197,28 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   ctx.fillText(readout.bow, rightX + 16 + shipW - 22, pad + 148);
   ctx.fillText(readout.stern, rightX + 16, pad + 148);
 
+  // Four bars in two columns rather than four stacked: stacked, the fourth
+  // pushed the weapon line out through the bottom of its own bezel.
   const barX = rightX + shipW + 40;
   const barW = Math.max(120, rightW - shipW - 56);
-  bar(ctx, barX, pad + 46, barW, 12, permilOf(own.hull, own.maxHull), colours,
+  const half = Math.floor((barW - 24) / 2);
+  const rightCol = barX + half + 24;
+  bar(ctx, barX, pad + 46, half, 12, permilOf(own.hull, own.maxHull), colours,
     readout.hull, readout.hullFigure);
-  bar(ctx, barX, pad + 86, barW, 12, permilOf(own.ordnance, own.ordnanceCapacity), colours,
-    readout.ordnance, readout.ordnanceFigure);
-  bar(ctx, barX, pad + 126, barW, 12, permilOf(own.materials, own.materialsCapacity), colours,
+  bar(ctx, rightCol, pad + 46, half, 12, permilOf(own.materials, own.materialsCapacity), colours,
     readout.materials, readout.materialsFigure);
+  bar(ctx, barX, pad + 92, half, 12, permilOf(own.ordnance, own.ordnanceCapacity), colours,
+    readout.ordnance, readout.ordnanceFigure);
+  // The launchers: a bar that fills as they reload, because what you need to
+  // know in the half second after a warning is whether you may fire yet.
+  bar(ctx, rightCol, pad + 92, half, 12, readout.flaresPermil, colours,
+    readout.flares, readout.flaresFigure);
   ctx.fillStyle = colours.dim;
   ctx.font = '10px ui-monospace, monospace';
-  ctx.fillText(readout.weapon, barX, pad + 162);
+  ctx.fillText(readout.weapon, barX, pad + 136);
   ctx.textAlign = 'right';
   ctx.fillStyle = colours.ink;
-  ctx.fillText(readout.tally, barX + barW, pad + 162);
+  ctx.fillText(readout.tally, barX + barW, pad + 136);
   ctx.textAlign = 'left';
 }
 

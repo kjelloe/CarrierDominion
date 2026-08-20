@@ -11,6 +11,7 @@ import {
   CMD_ADVANCE_TICK,
   CMD_DEPLOY_POD,
   CMD_DEPLOY_VIRUS,
+  CMD_FIRE_FLARES,
   CMD_FIRE_UNIT,
   CMD_LAUNCH_UNIT,
   CMD_ORDER_UNIT_ATTACK,
@@ -55,6 +56,7 @@ import { stepRepair } from './repair.js';
 import { stepScore } from './score.js';
 import { setRole, startBuild, stepBuild } from './island.js';
 import { setPriority } from './damage.js';
+import { checkFlares, fireFlares, stepFlares } from './flare.js';
 import { stepUnits } from './fleet.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
@@ -231,6 +233,16 @@ function applySelectWeapon(next, command) {
   return next;
 }
 
+// A burst of flares. Refused when the launchers are reloading or the store is
+// short, because both are the cost that makes the timing a decision.
+function applyFlares(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  if (checkFlares(carrier) !== '') return reject(next);
+  fireFlares(next, carrier);
+  return next;
+}
+
 function applyDeployPod(next, command) {
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
@@ -322,6 +334,7 @@ function advanceTick(next) {
   }
   stepCarriers(next);
   stepUnits(next);
+  stepFlares(next);
   stepWeapons(next, next.params);
   stepCapture(next, next.params.podBuildTicks);
   stepVirus(next, next.params.virusBuildTicks);
@@ -360,6 +373,7 @@ function apply(state, command) {
   if (type === CMD_DEPLOY_POD) return applyDeployPod(next, command);
   if (type === CMD_DEPLOY_VIRUS) return applyDeployVirus(next, command);
   if (type === CMD_FIRE_UNIT) return applyFire(next, command);
+  if (type === CMD_FIRE_FLARES) return applyFlares(next, command);
   if (type === CMD_SELECT_WEAPON) return applySelectWeapon(next, command);
   if (type === CMD_SET_STOCKPILE) return applySetStockpile(next, command);
   if (type === CMD_SET_SUPPLY_RUN) return applySetSupplyRun(next, command);

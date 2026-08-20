@@ -39,6 +39,7 @@ Controls:
 | `P` | deploy the ACCB pod at the command node you are standing on |
 | `B` | virus bomb: take an enemy island whole, works and guns included |
 | `F` | fire - down the nose when you are flying, at what is in range when you are not |
+| `E` | decoy flares: break the lock on every seeker near the ship |
 | `V` | next weapon: laser / cluster / napalm / missile, or cannon / mines |
 | `L` `K` | supply run on or off / make the nearest island your depot |
 | `Z` | the damage control board - click a section to set its repair priority |
