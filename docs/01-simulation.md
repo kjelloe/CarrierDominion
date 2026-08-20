@@ -78,7 +78,11 @@ Two orderings that were chosen rather than fallen into:
   pod on the tick it died.
 
 A finished war still ticks — the world does not freeze — but nothing new is
-decided.
+decided, and that clause is enforced: after `PHASE_OVER` no gun chooses a
+target, no pod completes, no virus converts, no site finishes, no accrual lands
+and no point scores. Hulls still move, boats still deliver, the yard still
+mends, and a round already in the air still flies — it was decided when it left
+the rail — and still hits.
 
 ## State shape
 

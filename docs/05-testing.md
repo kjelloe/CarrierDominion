@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test     351 unit and integration tests, node --test
+npm test      the unit and integration suite (367 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 ```
@@ -46,7 +46,7 @@ is the measuring instrument for everything that only shows up over hours:
 - the logistics deadlock (two wars stopped dead when the last lighter died),
 - the factory that could not be fed,
 - the pacing numbers in these documents — the current war resolves at tick
-  396,491, won by sinking.
+  229,498, won by sinking (the provisioning and terrain slices moved it from 396,491).
 
 If a change makes the AI stupider or the economy tighter, the sim says so in a
 minute and no unit test would have.

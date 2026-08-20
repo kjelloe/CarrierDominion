@@ -99,6 +99,14 @@ cast by somebody who has since left is not consent.
 The speed ladder is `shared/speeds.js` — the same rungs everywhere so a client
 cannot propose a rate the server has no name for.
 
+## Spectators
+
+One human per team; anyone after that watches **team 0's view**, fog and all.
+That is a deliberate simplicity and a known intelligence channel — on a trusted
+LAN it is "watch over the host's shoulder", but a third person in a two-human
+war is seeing one side's private picture. A real observer mode (own fog rules,
+or the referee's view) is future work.
+
 ## What is deliberately not here
 
 - **No lockstep.** The server simulates and ships views; clients do not simulate

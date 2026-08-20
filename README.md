@@ -128,6 +128,11 @@ Repairs are part of the same chain: materials land in the ship's yard stores and
 are spent at a fixed rate on the seven damage sections, in the priority you set
 on the damage board (`Z`).
 
+The chain reaches the flight deck too: recovery refuels from the ship's own
+bunker, rearming draws the ordnance store, a replacement pod costs materials, a
+virus bomb costs ordnance, and a rebuilt hull comes off the line empty and is
+fitted out from stores. Nothing a unit takes aboard is conjured.
+
 ## Winning
 
 Four ways, resolved in this order: nobody left afloat (a draw), last carrier

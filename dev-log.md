@@ -5,6 +5,108 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — The review, and what it found
+
+The owner asked for a full review of docs, specs and implementation before the
+playtest. Reading every engine module end to end against the documents found
+ten things worth fixing and a handful worth writing down. Three slices landed
+(1668fc7, 11738bb, 9284f31); 367 tests + smoke gate green after each.
+
+### Four plain bugs
+
+1. **A missile chasing a turret homed on the wrong entity.** Turret ids and
+   unit ids are separate sequences that both start at zero, and
+   `findTargetPosition` had no turret branch - a round aimed at turret 3
+   re-aimed every tick at *unit* 3, wherever that was.
+2. **Cycling weapons cleared laser overheat.** Heat lives on the hull but
+   cooling followed the SELECTED weapon, and a heatless one zeroed the
+   accumulator: overheat, press V to the cluster bomb, V back, fire. The mount
+   that heats is now the mount that cools, whatever is selected.
+3. **Event fog routing was wrong for three codes.** Scored (29) and AI-seat
+   (38) carry the team in slot `a`, not `b` - score events were routed to
+   whichever team the *point value* equalled. And a virus conversion (36) was
+   heard only by the side that fired it; it is a capture, and the victim is
+   the side that most needs to hear it. Conversions and sinkings (21) are now
+   chart-level news, like captures.
+4. **An attack order classified air by altitude.** `ordered.z > 0` where every
+   other module rules by KIND - a Manta parked at sea level was a legal
+   Walrus-cannon target.
+
+None of the four moved the pinned fixture: the scripted opening has no
+turrets, no overheats, and no parked aircraft under attack orders. Which is
+also the honest limit of a 300-tick pin.
+
+### Three holes in ruling #3 (the provisioning slice)
+
+Recovery set `unit.fuel = fuelCapacity` - the comment admitted "instant for
+now" and the promised slice never came. Every returning Walrus got a free pod
+AND a free virus bomb from a comment that *claimed* they came from stores. A
+rebuilt hull got full magazines without touching the ordnance store - four
+conjured missiles per rebuild - while a merely-recovered Manta paid.
+
+Now (owner ruling on the costs): fuel from the bunker, partial when short; a
+pod is 80 **materials** (a construction device), a virus bomb 120 **ordnance**
+(a munition), issued at the ramp only when missing and only when the store can
+pay; a Walrus sails with a pod as standard complement but buys every bomb; a
+rebuilt hull comes off the line empty and is fitted out from stores; an empty
+tank stays on the deck; the ship sails with a finite 400-materials issue.
+
+**What the sim taught before it would resolve again**, because tightening an
+economy is measurable and we measured:
+
+- *The lighter must bunker at the depot.* Refuelled from the carrier, the
+  logistics network drank the bunker it existed to fill - a boat's tank is a
+  fifth of the ship's.
+- *The AI's stockpile belongs at the factory.* The network ships everything
+  toward the depot and a factory refines only its own pile; depot-at-the-mine
+  starved the plant on its 8-a-beat trickle while 60 a beat sat under the
+  digger. Both AI carriers drifted to zero fuel at tick ~350,000 with
+  materials at capacity. `siteStockpile` in ai_estate fixes the plan.
+- *A supplied ship out-repairs a gentle grounding* (8 repair points per 100
+  ticks against the reef's 6) - the reef now costs materials instead of hull,
+  which reads as a feature and is noted in the grounding test.
+
+M0-A re-pinned - hash drift from the new carrier fields
+(`podMaterials`, `virusOrdnance`, `startMaterials`), zero event drift - and
+the golden world hash with it; the map is byte-identical.
+
+### Three broken contracts (the aftermath slice)
+
+- **"Nothing new is decided" was only true of the AI.** Guns kept choosing,
+  pods completed, viruses converted, points accrued after PHASE_OVER. All
+  gated now; hulls still move, boats deliver, the yard mends, and a round
+  already in the air still flies - and still hits - because it was decided
+  when it left the rail.
+- **Nothing collided with terrain except hulls.** Missiles flew through
+  mountains, and the tallest peaks (420 m) out-top a Manta's 400 m cruise. A
+  shot now flies INTO a hillside (splash rounds detonate on impact; the check
+  is at the endpoint - a laser pulse can clip a razor-thin crest and nobody
+  will notice). The Manta autopilot flies the contour: 30 m clear of the
+  ground here and 1400 m ahead, no crash mechanic (owner ruling).
+- **The cargo network destroyed goods.** Source debited, arrival capped,
+  difference gone - silently, every accrual. It now ships only what the depot
+  has room for, per good, so stock piling at the mine is the visible signal
+  the depot needs a warehouse.
+
+The AI-vs-AI war now resolves at tick 229,498, won by sinking (was 396,491 -
+the tighter fuel economy shortens the drift phases).
+
+### Found, documented, not fixed
+
+- **Spectators watch team 0's view** - deliberate simplicity, now written down
+  in docs/03 as the intelligence channel it is.
+- **Virus edge cases**: re-deploying onto an island already being subverted
+  (even by your own side) resets progress and wastes the bomb; in a >2-team
+  war a virus survives the island changing hands between two *other* teams.
+  Both are 2-player-invisible; queued for when team count grows.
+- **`game.commandLog` grows unbounded** - fine for a LAN session, worth a cap
+  eventually.
+- The watchdog has no check for goods conservation; the network bug above was
+  found by reading, not by tripwire. A conservation check would be a good
+  fourth eye.
+
+---
+
 ## 2026-08-20 — Writing down what was built, before the playtest
 
 No code changed; no hash moved. Milestone 1 closed with the reasoning behind it

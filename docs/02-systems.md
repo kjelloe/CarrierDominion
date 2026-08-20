@@ -18,15 +18,17 @@ to the waiting, not a faster ship.
 
 Two ways, and they answer different questions.
 
-| Payload | Works on | You get | Cost |
-|---|---|---|---|
-| **ACCB pod** (`P`) | any island that is not yours | the island **bare** — the previous owner's works are cleared | 1200 ticks |
-| **Virus bomb** (`B`) | one somebody else **holds** | the island **intact** — factories, warehouses, stores, and the turrets that were shooting at you | 2400 ticks |
+| Payload | Works on | You get | Time | Costs the ship |
+|---|---|---|---|---|
+| **ACCB pod** (`P`) | any island that is not yours | the island **bare** — the previous owner's works are cleared | 1200 ticks | 80 materials per replacement |
+| **Virus bomb** (`B`) | one somebody else **holds** | the island **intact** — factories, warehouses, stores, and the turrets that were shooting at you | 2400 ticks | 120 ordnance, every one |
 
-Both are deployed by a Walrus within 60 m of the command node. A pod being built
-is displaced by an enemy pod, which restarts the clock for the newcomer. A
-conversion is abandoned if the island changes hands under it — a virus needs a
-command centre to subvert, and the one it was working on is gone.
+Both are deployed by a Walrus within 60 m of the command node. A Walrus sails
+with a pod as standard complement but **buys every virus bomb** — both are
+issued at the ramp, only when missing, and only when the store can pay. A pod
+being built is displaced by an enemy pod, which restarts the clock for the
+newcomer. A conversion is abandoned if the island changes hands under it — a
+virus needs a command centre to subvert, and the one it was working on is gone.
 
 ## What an island is for
 
@@ -67,12 +69,31 @@ carrier          burns fuel, feeds its magazines, repairs itself, rebuilds hulls
 
 Goods have a **location**. Losing the island that was making your fuel costs you
 the fuel it had not shipped yet; losing the stockpile strands everything
-upstream of it.
+upstream of it. The network ships each accrual's share only as far as the depot
+has **room** — a full depot leaves goods where they are, so stock piling up at
+the mine is the visible signal that the depot needs a warehouse.
+
+**Site the stockpile at the factory.** The network ships everything toward the
+depot, and a factory refines only what is piled on its own ground — a depot at
+the mine starves the plant on its own eight-a-beat trickle while sixty a beat
+sit under the digger. The AI learned this the measured way: both its carriers
+drifted to zero fuel with materials at capacity until it was taught to put the
+depot at the plant.
+
+The same rule reaches the flight deck: **everything a unit takes aboard comes
+out of the ship's stores.** Recovery refuels from the bunker (a short bunker
+buys a partial tank, like a partial rearm), a rebuilt hull comes off the line
+empty and is fuelled and armed from stores — the chassis pays for the airframe,
+not the war load — and an empty tank stays on the deck. The ship sails with a
+finite materials issue (400), like its bunker and its ordnance. The lighter
+bunkers its own tank at the **depot**, not from the carrier: its tank is a
+fifth of the ship's, and a network that drinks the bunker it exists to fill is
+not a network.
 
 A side that loses every lighter would be unable to receive the parts to build a
 lighter — parts arrive in a lighter. So a depot holding the parts **launches one
-itself** and it sails out to the ship. That is not an exception to the ruling;
-it is what a supply network is for.
+itself** (fuelled from the depot's own stock) and it sails out to the ship. That
+is not an exception to the ruling; it is what a supply network is for.
 
 ## Weapons
 
@@ -97,6 +118,14 @@ and it can be outrun. `life = range / speed`, so a round that misses runs out of
 flight rather than being deleted by a special case. Hit tests are against the
 **segment travelled this tick** — a missile covers 15 m per tick and a Manta is
 12 m across, so an endpoint test would tunnel straight through.
+
+**The ground is in the fight.** A round that flies into a hillside stops there —
+splash rounds throw their blast from the point of impact — so an island is
+something to shoot *around*, and a ridge is worth keeping between you and a
+missile. The tallest summits (420 m) out-top a Manta's 400 m cruise, and the
+autopilot flies the contour over them: at least 30 m clear of the ground here
+and 1400 m ahead, at cruise wherever cruise is higher. No crash mechanic — it
+pops over the summit and settles back.
 
 ## Who pulls the trigger
 
@@ -129,8 +158,9 @@ is, and a ship with an empty store sends its aircraft back up as they are. The
 ready magazine for point defence is fed from the same store at a fixed rate,
 because a ship does not teleport shells to the mounts.
 
-A burst of flares costs 24 from that same store, so defending yourself and
-arming yourself compete for one pile.
+A burst of flares costs 24 from that same store, and every virus bomb costs 120,
+so defending yourself, arming yourself and subverting islands all compete for
+one pile.
 
 ## Damage
 
@@ -183,7 +213,7 @@ a salvo still on its way in is untouched.
 
 ## How a war ends
 
-Four routes, resolved in this order, which is part of the contract:
+Five routes, resolved in this order, which is part of the contract:
 
 1. **Annihilation** — nobody afloat. A draw, because two air groups can and do
    finish each other on the same tick, and without this the war never ends.
@@ -198,6 +228,10 @@ Four routes, resolved in this order, which is part of the contract:
 Points: islands pay on the hundred-tick beat, a kill pays the shooter, sinking a
 carrier pays well, and a unit lost to an empty tank pays nobody — rewarding that
 would make waiting a tactic.
+
+After the whistle nothing new is decided: no gun chooses, no pod completes, no
+point scores. The final score is final. Rounds already in the air still fly —
+and still hit — because they were decided when they left the rail.
 
 ## The AI
 
