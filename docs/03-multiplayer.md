@@ -117,6 +117,20 @@ an earlier build did, was a free intelligence channel for one side. A richer
 observer mode (following a hull, the referee's full picture) is future work,
 but whatever it shows will be built on this view, not on a team's.
 
+## Saving and resuming
+
+There is no save format to design, so none was designed: a war IS its seed
+plus its ordered command log (docs/01), and that is what `data/autosave.json`
+holds — plus the lobby options it sailed under, the tick it had reached, and
+the state hash it had. The server writes it every thirty seconds and on
+shutdown; `RESUME=1` replays the log through the same reducer and **refuses**
+if the result does not hash to what was saved — a save made under different
+rules or different code does not limp back as a subtly different war.
+
+Seats do not survive the restart (tokens are per-process); players rejoin and
+claim their teams again. The AI keeps any seat the log says it holds, because
+`set_ai` is a command and commands are the save.
+
 ## What is deliberately not here
 
 - **No lockstep.** The server simulates and ships views; clients do not simulate

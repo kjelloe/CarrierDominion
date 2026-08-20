@@ -15,6 +15,7 @@
 
 import { createApp } from './app.js';
 import { loadRules } from './rules.js';
+import { readSave } from './save.js';
 
 const PORT = Number(process.env.PORT ?? 8135);
 const HOST = process.env.HOST ?? '127.0.0.1';
@@ -22,6 +23,21 @@ const SEED = Number(process.env.SEED ?? 20260818);
 const SPEED = Number(process.env.SPEED ?? 1);
 const LOBBY = (process.env.LOBBY ?? '1') !== '0';
 const WATCH = (process.env.WATCH ?? '1') !== '0';
+// The war is autosaved here every thirty seconds and on shutdown (SAVE=0
+// turns it off); RESUME=1 replays the file back into the exact same war -
+// same seed, same command log, same hash - and refuses if it cannot.
+const SAVE = process.env.SAVE ?? 'data/autosave.json';
+const RESUME = (process.env.RESUME ?? '0') === '1';
+
+let resume = 0;
+if (RESUME) {
+  try {
+    resume = readSave(SAVE);
+  } catch (error) {
+    process.stderr.write(`cannot read ${SAVE}: ${error.message}\n`);
+    process.exit(1);
+  }
+}
 
 const app = createApp({
   seed: SEED,
@@ -29,12 +45,22 @@ const app = createApp({
   speed: SPEED,
   lobby: LOBBY,
   watch: WATCH,
+  savePath: SAVE === '0' ? 0 : SAVE,
+  resume: resume,
   bootId: `${SEED}-${PORT}-${Date.now()}`,
 });
 
+if (RESUME && app.resumed === 0) {
+  process.stderr.write(`refusing to resume: ${app.resumeProblem}\n`);
+  process.exit(1);
+}
+
 app.listen(PORT, HOST).then(() => {
-  process.stdout.write(`Carrier Dominion on http://${HOST}:${PORT}  seed ${SEED}  speed x${SPEED}\n`);
-  if (LOBBY) {
+  process.stdout.write(`Carrier Dominion on http://${HOST}:${PORT}  seed ${app.seed}  speed x${SPEED}\n`);
+  if (app.resumed === 1) {
+    process.stdout.write(`Resumed the saved war at tick ${app.game.state.tick}.\n`);
+  }
+  if (LOBBY && app.lobby !== 0) {
     process.stdout.write(`War room open - join code ${app.lobby.code}\n`);
   }
   if (WATCH) {

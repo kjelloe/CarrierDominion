@@ -5,6 +5,31 @@ golden hash and why.
 
 ---
 
+## 2026-08-21 — A war on disk is a seed and a log
+
+Save and resume, with no format invented: the autosave is the seed, the
+ordered command log, the lobby options the war sailed under, the tick, and
+the state hash (`server/save.js`). Resume replays the log through the same
+reducer and REFUSES if the result does not hash to what was saved - a save
+made under moved data files or changed code says so and stops, instead of
+limping back as a subtly different war. Write-then-rename, so a crash
+mid-write leaves the previous save whole.
+
+This is the payoff of two earlier decisions arriving at once: "the command
+log is the replay" meant the save format already existed, and stripping
+advance_tick from the log (the metronome fix) is what made the file small
+enough to write every thirty seconds forever.
+
+`SAVE=` names the file (data/autosave.json by default, gitignored), `SAVE=0`
+turns it off, `RESUME=1` picks the war back up - and exits with the reason if
+it cannot. Seats do not survive the restart; players rejoin and claim their
+teams, and the AI keeps whatever seats the log says it holds, because set_ai
+is a command and commands are the save. Tests cover the round trip, the
+tampered save, the app-level resume, and the lobby (which has no war worth
+saving). 390 tests + smoke green.
+
+---
+
 ## 2026-08-21 — The battery, the patrol, and the parts that never sailed
 
 `npm run battery`: the headless sim times five, fixed seeds, each war under

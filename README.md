@@ -16,6 +16,8 @@ LOBBY=0 ./run.sh      # skip the room and sail on data/rules.json
 WATCH=0 ./run.sh      # without the playtest watchdog (on by default)
 ./run.sh --lan        # also reachable from other machines on the LAN
 PORT=9000 SEED=42 ./run.sh
+RESUME=1 ./run.sh     # pick the saved war back up exactly where it stood
+SAVE=0 ./run.sh       # without the 30-second autosave (data/autosave.json)
 ```
 
 | URL | What it does |

@@ -39,6 +39,7 @@ import {
   setReady,
 } from './lobby.js';
 import { createHolder, expired, holdSeat, isHeld, reclaim, release } from './reconnect.js';
+import { resumeGame, saveGame, writeSave } from './save.js';
 import { createWatch, watchReport, watchTick } from './watch.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -49,12 +50,35 @@ const ROOT = join(HERE, '..');
 // still gets a war that is already running; server/index.js turns it on.
 function createApp(options) {
   const rules = options.rules;
-  const seed = options.seed;
+  let seed = options.seed;
+
+  // A save on the table takes precedence over everything: a resumed war is
+  // already running, so there is no lobby, and the seed comes from the save.
+  // A save that does not replay to its own hash is REFUSED - the reason is
+  // kept for /healthz and the log - and a fresh war starts instead, because
+  // silently resuming a subtly different war is worse than admitting it.
+  let resumedGame = -1;
+  let resumeProblem = '';
+  if (options.resume !== undefined && options.resume !== 0) {
+    const problem = { reason: '' };
+    resumedGame = resumeGame(options.resume, rules, problem);
+    if (resumedGame === -1) resumeProblem = problem.reason;
+    else seed = options.resume.seed;
+  }
+
   const app = {
     rules: rules,
     seed: seed,
     speed: isSpeed(options.speed) ? options.speed : 1,
-    game: createGame(seed, rules),
+    game: resumedGame === -1 ? createGame(seed, rules) : resumedGame,
+    resumed: resumedGame === -1 ? 0 : 1,
+    resumeProblem: resumeProblem,
+    // Where the war is written, and when it last was. 0 means never write.
+    savePath: options.savePath ?? 0,
+    lastSaveMs: 0,
+    savedOptions: options.resume !== undefined && options.resume !== 0 && resumedGame !== -1
+      ? options.resume.options
+      : 0,
     seats: [],
     startedAtMs: Date.now(),
     httpServer: 0,
@@ -68,7 +92,7 @@ function createApp(options) {
       options.nowFn ?? (() => Date.now()),
       options.tokenFn ?? (() => Math.random().toString(36).slice(2, 12)),
     ),
-    lobby: options.lobby === true
+    lobby: options.lobby === true && resumedGame === -1
       ? createLobby(options.bootId ?? `${seed}-${Date.now()}`, {
         seed: seed,
         islands: rules.world.islandCount,
@@ -80,6 +104,31 @@ function createApp(options) {
 
   function inLobby() {
     return app.lobby !== 0 && app.lobby.status === 'lobby';
+  }
+
+  // Write the war to disk: seed + command log + the options it sailed under.
+  // Nothing to save while the room is still arguing about what to fight.
+  app.saveNow = function saveNow() {
+    if (app.savePath === 0 || inLobby()) return 0;
+    const wrote = saveGame(app.game, app.seed, app.savedOptions);
+    try {
+      writeSave(app.savePath, wrote);
+    } catch (error) {
+      process.stderr.write(`autosave failed: ${error.message}\n`);
+      return 0;
+    }
+    return 1;
+  };
+
+  const AUTOSAVE_MS = 30000;
+  const nowMs = options.nowFn ?? (() => Date.now());
+
+  function maybeAutosave() {
+    if (app.savePath === 0 || inLobby()) return;
+    const now = nowMs();
+    if (now - app.lastSaveMs < AUTOSAVE_MS) return;
+    app.lastSaveMs = now;
+    app.saveNow();
   }
 
   function send(socket, message) {
@@ -162,6 +211,8 @@ function createApp(options) {
       // A monitor watching only the tick would read a lobby as a hung server,
       // because a war that has not started does not tick. Say which it is.
       status: app.lobby === 0 ? 'running' : app.lobby.status,
+      resumed: app.resumed,
+      resumeProblem: app.resumeProblem,
       joinCode: app.lobby === 0 ? '' : app.lobby.code,
       speed: app.clock === 0 ? app.speed : app.clock.speed,
       uptimeS: Math.floor((Date.now() - app.startedAtMs) / 1000),
@@ -336,6 +387,15 @@ function createApp(options) {
     const chosen = applyLobby(rules, app.lobby.options);
     app.seed = app.lobby.options.seed;
     app.game = createGame(app.seed, chosen);
+    // The choices ride with every save: resume rebuilds the ruleset from
+    // data/*.json plus exactly these, the same path a fresh war takes.
+    app.savedOptions = {
+      seed: app.lobby.options.seed,
+      islands: app.lobby.options.islands,
+      enemy: app.lobby.options.enemy,
+      ending: app.lobby.options.ending,
+      speed: app.lobby.options.speed,
+    };
     app.lobby.status = 'running';
     setClockSpeed(app.clock, app.lobby.options.speed);
     broadcastLobby();
@@ -423,6 +483,7 @@ function createApp(options) {
     const snapshot = stepGame(app.game);
     if (app.watch !== 0) watchTick(app.watch, app.game.state, performance.now() - startedMs);
     broadcast(snapshot);
+    maybeAutosave();
   }, app.speed);
 
   app.listen = function listen(port, host) {
@@ -436,6 +497,8 @@ function createApp(options) {
 
   app.close = function close() {
     stopClock(app.clock);
+    // The last word on disk is the war as it stood when the process left.
+    app.saveNow();
     for (const seat of app.seats.slice()) seat.socket.terminate();
     return new Promise((resolve) => {
       app.wss.close(() => app.httpServer.close(() => resolve(true)));
