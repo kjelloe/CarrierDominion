@@ -43,6 +43,8 @@ Controls:
 | `C` | chase camera / strategic pull-back |
 | `,` `.` | time compression down / up (`space` pauses; in LAN it takes a vote) |
 | `G` | cycle the graphics tier |
+| `[` `]` | scope range, 1 km to 32 km |
+| `M` | sound on / off |
 | `H` | hide this key list |
 | click sea | send the selected unit there |
 | click enemy | attack it with the selected unit, or hand it to the ship's laser |

@@ -159,5 +159,7 @@
   "panel.bow": "bow",
   "panel.stern": "stern",
   "status.scope": "scope range {range} m",
-  "help.scope": "[ ] scope range - H hides this list"
+  "help.scope": "[ ] scope range - M sound - H hides this list",
+  "status.muted": "sound off",
+  "status.unmuted": "sound on"
 }

@@ -159,5 +159,7 @@
   "panel.bow": "baug",
   "panel.stern": "akter",
   "status.scope": "radarrekkevidde {range} m",
-  "help.scope": "[ ] radarrekkevidde - H skjuler listen"
+  "help.scope": "[ ] radarrekkevidde - M lyd - H skjuler listen",
+  "status.muted": "lyd av",
+  "status.unmuted": "lyd på"
 }

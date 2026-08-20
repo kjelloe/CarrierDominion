@@ -18,6 +18,7 @@ import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './dia
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
 import { createScene, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
 import { createInstruments, drawInstruments } from './render/instruments.js';
+import { createSound, playEvents, playWarning, toggleMute, wakeSound } from './sound.js';
 import { createDamagePanel, renderDamagePanel, toggleDamagePanel } from './panels/damage.js';
 import {
   createIslandPanel,
@@ -93,6 +94,7 @@ const state = {
   panel: undefined,
   instrumentColours: undefined,
   scopeRange: 8000,
+  sound: createSound(),
   buildCosts: [0, 0, 0],
   lastFrameMs: 0,
 };
@@ -377,6 +379,11 @@ function cycleGraphics(currentLevel) {
 
 function bindInput(level) {
   const held = { a: false, d: false };
+  // A browser will not make a sound before the user has done something, so the
+  // audio context is built on the first gesture and not at load.
+  const wake = () => wakeSound(state.sound);
+  window.addEventListener('keydown', wake, { once: true });
+  window.addEventListener('pointerdown', wake, { once: true });
   window.addEventListener('keydown', (event) => {
     if (event.repeat) return;
     const key = event.key.toLowerCase();
@@ -398,6 +405,10 @@ function bindInput(level) {
     else if (key === 'h') document.getElementById('help').classList.toggle('hidden');
     else if (key === '[') zoomScope(1);
     else if (key === ']') zoomScope(-1);
+    else if (key === 'm') {
+      const muted = toggleMute(state.sound);
+      setHud(state.hud, 'status', state.t(muted ? 'status.muted' : 'status.unmuted'));
+    }
     else if (key === 'l') toggleSupplyRun();
     else if (key === 'k') nominateDepot();
     else if (key === ',') nudgeSpeed(-1);
@@ -505,6 +516,9 @@ function onWelcome(message) {
 
 function onSnapshot(message) {
   state.view = message.view;
+  // Sound follows the VIEW's events, which are already fog-filtered: you hear
+  // your own hulls and your own ship, and nothing over the horizon.
+  playEvents(state.sound, message.view.events, window.performance.now());
   // The last view, for probes. It is the same object the renderer is about to
   // draw, so a probe that asserts on it is asserting on what is on screen.
   window.__lastView = message.view;
@@ -555,6 +569,8 @@ function frame(nowMs) {
   setHud(state.hud, 'hangar', describeHangar(state.t, state.view.units, state.view.team));
   setHud(state.hud, 'unit', describeUnit(state.t, selectedUnit(), state.view.params));
   drawPanel(deltaSeconds);
+  const locked = playWarning(state.sound, state.view, nowMs);
+  document.getElementById('sight').classList.toggle('warn', locked);
   setHud(state.hud, 'islands', describeIslands(state.t, state.view));
   setHud(state.hud, 'score', describeScore(state.t, state.view));
   setHud(state.hud, 'damage', describeDamage(state.t, state.view));

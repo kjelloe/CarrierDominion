@@ -228,7 +228,22 @@ function detectedBy(state, team, target) {
 // A shot in the air is visible the way anything else is: your own always, an
 // enemy's only where one of your hulls can see it. Nothing about a shot is
 // hidden once it IS visible - it is a missile, not a secret.
-function shotView(shot) {
+//
+// `warn` is the exception that proves it: a guided round with THIS team's
+// carrier as its target. A ship knows when something has locked onto it - that
+// is what a lock warning is - and it is the piece of information that makes
+// evasion a decision rather than a surprise.
+function aimedAtTeam(state, shot, team) {
+  if (shot.guided !== 1 || shot.targetKind !== 1) return false;
+  for (let i = 0; i < state.carriers.length; i++) {
+    const carrier = state.carriers[i];
+    if (carrier.id === shot.targetId && carrier.team === team) return true;
+  }
+  return false;
+}
+
+function shotView(state, shot, team) {
+  const warn = aimedAtTeam(state, shot, team) ? 1 : 0;
   return {
     id: shot.id,
     team: shot.team,
@@ -236,6 +251,7 @@ function shotView(shot) {
     y: shot.y,
     z: shot.z,
     heading: shot.heading,
+    warn: warn,
   };
 }
 
@@ -278,7 +294,14 @@ function buildView(state, team) {
   const shots = [];
   for (let i = 0; i < state.shots.length; i++) {
     const shot = state.shots[i];
-    if (shot.team === team || detectedBy(state, team, shot)) shots.push(shotView(shot));
+    // A round aimed at YOUR ship is on your scope whether or not anything of
+    // yours can see it: the ship's own warning receiver is what sees it. One
+    // aimed at somebody else is not - checking only "is it guided at a carrier"
+    // would have shown every side every missile in the war.
+    const aimedHere = aimedAtTeam(state, shot, team);
+    if (shot.team === team || aimedHere || detectedBy(state, team, shot)) {
+      shots.push(shotView(state, shot, team));
+    }
   }
 
   const turrets = [];

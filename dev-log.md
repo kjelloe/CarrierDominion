@@ -5,6 +5,36 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — Sound, and the missile-lock warning
+
+302 tests + smoke gate green. No audio files: every sound is an oscillator and
+an envelope, which is what a 1988 machine did and what keeps the repo a repo
+rather than a media library. A sound is a few numbers - pitch, shape, length -
+so it can be tuned by reading rather than by re-exporting a file.
+
+Sound follows the **view's event list**, which is already fog-filtered: you hear
+your own hulls firing and your own ship being hit, and nothing over the horizon.
+Gunfire is throttled to one tone per 90 ms, because a hundred overlapping clicks
+a second is noise rather than sound. `M` mutes.
+
+**The missile-lock warning is the reason to have sound at all.** It is not an
+event, it is a standing condition: a guided round is in the air with your ship's
+name on it, and it repeats while that is true. The gunsight goes red and pulses
+with it, so it is visible as well as audible.
+
+That needed one new thing in the view, and it is a fog decision rather than a
+sound one: a round aimed at YOUR ship is on your scope whether or not anything
+of yours can see it, because the ship's own warning receiver is what sees it.
+The first version of that check asked only "is it guided at a carrier", which
+would have shown every side every missile in the war. It now checks whose
+carrier - and a test covers both directions.
+
+`client/sound.js` touches no DOM at all: the two-tone warning is scheduled on
+the AUDIO clock rather than with a timer, which is sample-accurate and is why
+the whole module can be tested in Node with a fake context.
+
+---
+
 ## 2026-08-20 — The 1988 instrument panel
 
 295 tests + smoke gate green. The HUD was a table of labelled numbers; it is now

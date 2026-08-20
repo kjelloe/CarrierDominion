@@ -58,6 +58,11 @@
       border-radius: 50%; opacity: 0.7;
     }
     #sight.lock .ring { border-color: #ff5f3a; opacity: 1; }
+    /* Something has locked onto the ship. The sight says so even when you are
+       not flying, because it is the ship that is being shot at. */
+    #sight.warn { display: block; }
+    #sight.warn .ring { border-color: #ff2d1a; border-width: 2px; animation: pulse 0.7s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
     /* The damage control board: hidden until Z, and pointer-active when open -
        it is the one part of the overlay you click rather than read. */
     #damage-panel {

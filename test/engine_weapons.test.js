@@ -197,11 +197,11 @@ test('a shot expires at the end of its range instead of flying forever', () => {
   assert.equal(state.shots.length, 0, 'a missile outlived its range');
 });
 
-test('shots are fog-filtered like everything else', () => {
-  const state = fresh();
-  state.shots.push({
+function farShot(state, overrides) {
+  return {
     id: 0,
     team: 1,
+    weapon: 3,
     // Far from every team-0 hull: an enemy missile over the horizon.
     x: state.params.sizeUnits - 1000,
     y: state.params.sizeUnits - 1000,
@@ -212,13 +212,41 @@ test('shots are fog-filtered like everything else', () => {
     damage: 40,
     blast: 5632,
     life: 200,
-    guided: 1,
+    guided: 0,
+    splash: 0,
+    trigger: 0,
     turn: 900,
     targetKind: 1,
-    targetId: 0,
-  });
+    targetId: 1,
+    ...overrides,
+  };
+}
+
+test('shots are fog-filtered like everything else', () => {
+  const state = fresh();
+  // Unguided, and aimed at the enemy's own carrier: nothing of team 0's can
+  // see it, so team 0 does not.
+  state.shots.push(farShot(state, {}));
   assert.equal(buildView(state, 1).shots.length, 1, 'a team cannot see its own shot');
   assert.equal(buildView(state, 0).shots.length, 0, 'an unseen enemy shot leaked');
+});
+
+test('a missile with your name on it is on your scope, wherever it is', () => {
+  const state = fresh();
+  // Guided, and locked onto team 0's carrier: the ship's warning receiver sees
+  // it even though no hull of team 0's is anywhere near it.
+  state.shots.push(farShot(state, { guided: 1, targetKind: 1, targetId: 0 }));
+  const warned = buildView(state, 0).shots;
+  assert.equal(warned.length, 1, 'a lock on your own ship was hidden from you');
+  assert.equal(warned[0].warn, 1);
+
+  // The same missile the other way round: fired by team 0 at team 1's ship.
+  // Team 1 is warned; team 0 sees its own round and is warned about nothing,
+  // because you know what you fired.
+  const other = fresh();
+  other.shots.push(farShot(other, { team: 0, guided: 1, targetKind: 1, targetId: 1 }));
+  assert.equal(buildView(other, 1).shots[0].warn, 1, 'the target was not warned');
+  assert.equal(buildView(other, 0).shots[0].warn, 0, 'a shooter was warned about its own shot');
 });
 
 test('coming aboard rearms as well as refuels', () => {
