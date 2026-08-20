@@ -179,7 +179,12 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   const scopeX = pad * 2 + helmW;
   bezel(ctx, scopeX, pad, scopeSize, scopeSize, colours, readout.scopeTitle);
   drawRadar(ctx, view, own, { x: scopeX + 8, y: pad + 8, size: scopeSize - 16 },
-    panel.elapsed, colours);
+    panel.elapsed, colours, readout.scopeRange);
+  ctx.fillStyle = colours.dim;
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(readout.scopeLabel, scopeX + scopeSize - 10, pad + 18);
+  ctx.textAlign = 'left';
 
   // Condition: the ship in plan on the left, what it is carrying on the right.
   // Two columns rather than one, because a schematic stretched to the width of

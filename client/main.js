@@ -92,6 +92,7 @@ const state = {
   island: undefined,
   panel: undefined,
   instrumentColours: undefined,
+  scopeRange: 8000,
   buildCosts: [0, 0, 0],
   lastFrameMs: 0,
 };
@@ -395,6 +396,8 @@ function bindInput(level) {
     else if (key === 'z') toggleDamagePanel(state.damage);
     else if (key === 'v') cycleWeapon();
     else if (key === 'h') document.getElementById('help').classList.toggle('hidden');
+    else if (key === '[') zoomScope(1);
+    else if (key === ']') zoomScope(-1);
     else if (key === 'l') toggleSupplyRun();
     else if (key === 'k') nominateDepot();
     else if (key === ',') nudgeSpeed(-1);
@@ -563,6 +566,18 @@ function frame(nowMs) {
   updateSight();
 }
 
+// Scope ranges, in metres. The narrow end is a knife fight alongside the ship;
+// the wide end is most of an archipelago, where the scope stops being a sensor
+// and becomes a chart - contacts still only appear where the fog allows.
+const SCOPE_RANGES = [1000, 2000, 4000, 8000, 16000, 32000];
+
+function zoomScope(direction) {
+  const index = SCOPE_RANGES.indexOf(state.scopeRange);
+  const next = Math.min(SCOPE_RANGES.length - 1, Math.max(0, index + direction));
+  state.scopeRange = SCOPE_RANGES[next];
+  setHud(state.hud, 'status', state.t('status.scope', { range: state.scopeRange }));
+}
+
 // The instrument panel. What it is handed is the fog-filtered view and a
 // handful of already-translated strings: the drawing code does no wording, and
 // the wording code does no drawing.
@@ -577,6 +592,8 @@ function drawPanel(deltaSeconds) {
   drawInstruments(state.panel, state.view, own, {
     helmTitle: state.t('panel.helm'),
     scopeTitle: state.t('panel.scope'),
+    scopeRange: state.scopeRange * params.unitsPerMetre,
+    scopeLabel: `${state.scopeRange >= 1000 ? `${state.scopeRange / 1000}k` : state.scopeRange} m`,
     shipTitle: state.t('panel.ship'),
     throttle: state.t('hud.throttle'),
     speed: state.t('hud.speed'),
@@ -637,7 +654,7 @@ function renderHelp(t) {
   const help = document.getElementById('help');
   help.textContent = '';
   const lines = ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.weapons', 'help.targeting', 'help.island',
-    'help.damage', 'help.time'];
+    'help.damage', 'help.scope', 'help.time'];
   for (const key of lines) {
     const line = document.createElement('div');
     line.textContent = t(key);

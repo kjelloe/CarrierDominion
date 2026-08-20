@@ -56,7 +56,7 @@
   "help.helm": "W/S throttle - A/D rudder - X all stop - C camera - G graphics tier",
   "help.units": "1 launch Manta - 2 launch Walrus - N next unit - click sea to send it",
   "help.orders": "T take the controls - R recall - P deploy ACCB pod - B virus bomb",
-  "help.time": ", / . time compression - space pause - H hides this list",
+  "help.time": ", / . time compression - space pause",
   "gpu.detecting": "detecting GPU...",
   "hud.supply": "supply",
   "supply.off": "no run",
@@ -157,5 +157,7 @@
   "hud.hull": "hull",
   "panel.materials": "materials",
   "panel.bow": "bow",
-  "panel.stern": "stern"
+  "panel.stern": "stern",
+  "status.scope": "scope range {range} m",
+  "help.scope": "[ ] scope range - H hides this list"
 }

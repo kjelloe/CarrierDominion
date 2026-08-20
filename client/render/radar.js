@@ -120,14 +120,15 @@ function drawHeadingMark(ctx, cx, cy, radius, headingBam, colours) {
   ctx.fill();
 }
 
-// `rangeUnits` is the ship's own radar reach, so the scope shrinks when the
-// mast is shot away - the instrument tells the truth about the sensor.
-function drawRadar(ctx, view, own, box, seconds, colours) {
+// `range` is what the scope is set to show, in engine units - not what the ship
+// can detect. Zooming out never reveals more than the fog allows, because the
+// view it is drawing has already been filtered: a wider scope shows more empty
+// sea and more of the chart, and exactly as many contacts.
+function drawRadar(ctx, view, own, box, seconds, colours, range) {
   const cx = box.x + box.size / 2;
   const cy = box.y + box.size / 2;
   const radius = box.size / 2 - 2;
-  const range = own.radar > 0 ? own.radar : 1;
-  const scale = radius / range;
+  const scale = radius / (range > 0 ? range : 1);
 
   ctx.save();
   ctx.beginPath();
@@ -142,6 +143,11 @@ function drawRadar(ctx, view, own, box, seconds, colours) {
 
   drawGrid(ctx, cx, cy, radius, colours);
   drawHeadingMark(ctx, cx, cy, radius, own.heading, colours);
+  // A ring the ship cannot see past, drawn only when the scope is set wider
+  // than the radar: past it the scope is a chart, not a sensor.
+  if (own.radar > 0 && own.radar < range) {
+    ring(ctx, cx, cy, own.radar * scale, colours.grid, 1);
+  }
   return { cx: cx, cy: cy, radius: radius, rangeUnits: range };
 }
 
