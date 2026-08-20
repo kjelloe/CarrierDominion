@@ -86,3 +86,30 @@ test('views are hygienic enough to hash and to send as JSON', () => {
   assert.doesNotThrow(() => canonicalize(view));
   assert.deepEqual(JSON.parse(JSON.stringify(view)), view);
 });
+
+test('score and AI-seat events route by the team in slot a, not the payload in b', () => {
+  const state = createInitialState(SEED, rules);
+  state.events = [
+    { code: 29, a: 1, b: 25, c: 1 }, // team 1 scored 25 for a kill
+    { code: 38, a: 0, b: 1, c: 0 }, // team 0's seat went to the machine
+  ];
+  const view0 = buildView(state, 0);
+  const view1 = buildView(state, 1);
+  assert.ok(!view0.events.some((e) => e.code === 29), 'team 0 heard team 1 scoring');
+  assert.ok(view1.events.some((e) => e.code === 29), 'team 1 never heard its own score');
+  assert.ok(view0.events.some((e) => e.code === 38), 'team 0 never heard its seat change hands');
+  assert.ok(!view1.events.some((e) => e.code === 38), 'team 1 heard about a seat not its own');
+});
+
+test('a conversion and a sinking are chart-level news for everybody', () => {
+  const state = createInitialState(SEED, rules);
+  state.events = [
+    { code: 36, a: 3, b: 1, c: 0 }, // island 3 converted to team 1
+    { code: 21, a: 0, b: 0, c: 0 }, // team 0's carrier went down
+  ];
+  for (const team of [0, 1]) {
+    const view = buildView(state, team);
+    assert.ok(view.events.some((e) => e.code === 36), `team ${team} did not hear the conversion`);
+    assert.ok(view.events.some((e) => e.code === 21), `team ${team} did not hear the sinking`);
+  }
+});

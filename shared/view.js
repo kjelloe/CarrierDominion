@@ -330,15 +330,24 @@ function buildView(state, team) {
   // carry a unit id in `a` and the owning team in `b`. Either way a team hears
   // only about its own. Code 1 (command rejected) is feedback to whoever sent
   // the command and is passed through.
+  //
+  // Chart-level common knowledge is announced to everyone: a displaced pod
+  // (16), a capture (17), a CONVERSION (36) - it is a capture, and the side
+  // that just lost its island working is the side that most needs to hear it -
+  // a carrier sinking (21), and the end of the war (18).
+  //
+  // Two codes carry the team in `a` rather than `b` and are routed by it:
+  // scored (29, b is the points) and an AI seat change (38, b is the flag).
+  // Routing those by `b` sent score events to whichever team the point value
+  // happened to equal.
   const events = [];
   for (let i = 0; i < state.events.length; i++) {
     const event = state.events[i];
-    // Island ownership is chart-level common knowledge in this design, so a
-    // capture (17) and a displaced pod (16) are announced to everyone - you
-    // would notice losing an island - and so is the end of the war (18).
-    // Everything else is private.
-    let mine = event.code === 1 || event.code === 16 || event.code === 17 || event.code === 18;
-    if (event.code >= 8) {
+    let mine = event.code === 1 || event.code === 16 || event.code === 17
+      || event.code === 18 || event.code === 21 || event.code === 36;
+    if (event.code === 29 || event.code === 38) {
+      mine = mine || event.a === team;
+    } else if (event.code >= 8) {
       mine = mine || event.b === team;
     } else {
       for (let c = 0; c < carriers.length; c++) {

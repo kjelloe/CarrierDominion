@@ -9,6 +9,8 @@ import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
 import { buildView } from '../shared/view.js';
 import { dist2D } from '../shared/fixed.js';
+import { atan2B } from '../shared/trig.js';
+import { TARGET_TURRET, guide } from '../engine/shots.js';
 import { BUILD_TURRET, ROLE_DEFENCE, raiseTurret } from '../engine/island.js';
 import { TURRET_LASER, TURRET_MISSILE, turretsOn } from '../engine/turret.js';
 import { KIND_MANTA, UNIT_ACTIVE } from '../engine/units.js';
@@ -165,4 +167,35 @@ test('turrets keep the state hygienic', () => {
   fortify(state, 3, 2, 1);
   state = drive(state, 200);
   assert.doesNotThrow(() => canonicalize(state));
+});
+
+test('a missile chasing a turret chases the turret, not the unit that shares its number', () => {
+  const state = fresh();
+  // Turret ids and unit ids are separate sequences that both start at zero:
+  // hostile turret 0, and a friendly unit 0 somewhere else entirely.
+  fortify(state, 1, 1, 1);
+  const turret = state.turrets[0];
+  const decoy = state.units.find((u) => u.id === turret.id);
+  decoy.state = UNIT_ACTIVE;
+  decoy.x = turret.x + 5000 * 256;
+  decoy.y = turret.y - 5000 * 256;
+  decoy.z = 300 * 256;
+
+  // A guided round south of the gun, aimed at it, already flying north.
+  const toTurret = atan2B(1, 0);
+  const shot = {
+    id: 0, team: 0, weapon: 3,
+    x: turret.x, y: turret.y - 1500 * 256, z: 200 * 256,
+    heading: toTurret, climb: 0, speed: 3840, damage: 40, blast: 0, life: 100,
+    guided: 1, splash: 0, trigger: 0, turn: 900,
+    targetKind: TARGET_TURRET, targetId: turret.id,
+  };
+  guide(state, shot);
+  assert.equal(shot.heading, toTurret, 'the seeker wandered off toward whatever unit shared the id');
+
+  // And a dead turret is a dead lock: the round flies on, it does not re-home.
+  turret.hp = 0;
+  shot.heading = toTurret;
+  guide(state, shot);
+  assert.equal(shot.heading, toTurret);
 });

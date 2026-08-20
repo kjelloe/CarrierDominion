@@ -14,7 +14,7 @@
 
 import { angleDelta, dist2D } from '../shared/fixed.js';
 import { atan2B, mulCos, mulSin } from '../shared/trig.js';
-import { unitEngageable } from './units.js';
+import { KIND_MANTA, unitEngageable } from './units.js';
 
 const TARGET_UNIT = 0;
 const TARGET_CARRIER = 1;
@@ -24,15 +24,17 @@ const TARGET_CARRIER = 1;
 // aircraft is the skill.
 const SEEKER_CONE = 4096;
 
-// A designated target as { kind, id, x, y, z }, or -1 when it is gone, dead, or
-// was never set. Callers treat -1 as "no preference" rather than as an error.
+// A designated target as { kind, id, x, y, z, air }, or -1 when it is gone,
+// dead, or was never set. Callers treat -1 as "no preference" rather than as an
+// error. `air` classifies by KIND, the same rule the rest of the engine uses -
+// a Manta is an air target sitting on the water just as much as at cruise.
 function designated(state, kind, id) {
   if (id < 0) return -1;
   if (kind === TARGET_CARRIER) {
     for (let i = 0; i < state.carriers.length; i++) {
       const carrier = state.carriers[i];
       if (carrier.id === id && carrier.hull > 0) {
-        return { kind: TARGET_CARRIER, id: carrier.id, x: carrier.x, y: carrier.y, z: 0 };
+        return { kind: TARGET_CARRIER, id: carrier.id, x: carrier.x, y: carrier.y, z: 0, air: 0 };
       }
     }
     return -1;
@@ -40,7 +42,14 @@ function designated(state, kind, id) {
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
     if (unit.id === id && unitEngageable(unit)) {
-      return { kind: TARGET_UNIT, id: unit.id, x: unit.x, y: unit.y, z: unit.z };
+      return {
+        kind: TARGET_UNIT,
+        id: unit.id,
+        x: unit.x,
+        y: unit.y,
+        z: unit.z,
+        air: unit.kind === KIND_MANTA ? 1 : 0,
+      };
     }
   }
   return -1;
@@ -107,7 +116,7 @@ function aimFor(state, unit, weapon, fallback) {
   }
   const ordered = designated(state, unit.orderTargetKind, unit.orderTargetId);
   if (ordered !== -1) {
-    const isAir = ordered.kind === TARGET_UNIT && ordered.z > 0;
+    const isAir = ordered.air === 1;
     if (engageable(weapon, unit.team, -1, isAir) && dist2D(unit.x, unit.y, ordered.x, ordered.y) <= weapon.range) {
       return ordered;
     }

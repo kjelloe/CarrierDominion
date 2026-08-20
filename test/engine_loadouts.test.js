@@ -141,7 +141,7 @@ test('a laser held down overheats, and comes back when it has cooled', () => {
   let shots = 0;
   for (let tick = 0; tick < 200 && manta.overheated === 0; tick++) {
     shots += fireUnit(state, manta);
-    coolDown(manta, laser);
+    coolDown(state, manta);
   }
   assert.equal(manta.overheated, 1, 'the mount never overheated');
   assert.ok(shots > 3, 'it overheated before it had fired anything worth firing');
@@ -149,9 +149,9 @@ test('a laser held down overheats, and comes back when it has cooled', () => {
 
   // Let go, and it comes back - but only once it is properly cool, not the
   // instant it dips below the maximum.
-  for (let tick = 0; tick < 4; tick++) coolDown(manta, laser);
+  for (let tick = 0; tick < 4; tick++) coolDown(state, manta);
   assert.equal(manta.overheated, 1, 'it came back the moment it stopped firing');
-  for (let tick = 0; tick < 400 && manta.overheated === 1; tick++) coolDown(manta, laser);
+  for (let tick = 0; tick < 400 && manta.overheated === 1; tick++) coolDown(state, manta);
   assert.equal(manta.overheated, 0, 'it never cooled down');
   assert.ok(manta.heat <= (laser.heatMax * laser.heatReady) / 1000);
 });
@@ -191,4 +191,34 @@ test('the view carries the loadout, and tells an enemy nothing about it', () => 
   assert.notEqual(theirs, undefined, 'the contact was not seen at all');
   assert.equal(theirs.weapon, -1);
   assert.deepEqual(theirs.arms, [], 'radar reported what was in an enemy magazine');
+});
+
+test('cycling to a heatless weapon is not a way to cool the laser', () => {
+  const state = fresh();
+  const manta = state.units.find((u) => u.team === 0 && u.kind === KIND_MANTA);
+  const enemy = state.units.find((u) => u.team === 1 && u.kind === KIND_WALRUS);
+  place(manta, 7000 * 256, 7000 * 256, 200 * 256);
+  place(enemy, manta.x + 400 * 256, manta.y, 0);
+  selectWeapon(manta, W_LASER);
+
+  for (let tick = 0; tick < 200 && manta.overheated === 0; tick++) {
+    fireUnit(state, manta);
+    coolDown(state, manta);
+  }
+  assert.equal(manta.overheated, 1);
+
+  // Heat lives on the hull, and the mount that heated it is the mount that
+  // cools it: a few ticks with the cluster bomb selected must not reset it.
+  selectWeapon(manta, W_CLUSTER);
+  for (let tick = 0; tick < 4; tick++) coolDown(state, manta);
+  assert.equal(manta.overheated, 1, 'cycling weapons cleared the overheat');
+  assert.ok(manta.heat > 0, 'cycling weapons dumped the heat');
+
+  selectWeapon(manta, W_LASER);
+  assert.equal(fireUnit(state, manta), 0, 'the laser fired straight after the cycle trick');
+
+  // Left alone it still cools on the laser's own schedule, whatever is selected.
+  selectWeapon(manta, W_CLUSTER);
+  for (let tick = 0; tick < 400 && manta.overheated === 1; tick++) coolDown(state, manta);
+  assert.equal(manta.overheated, 0, 'it never cooled with another weapon selected');
 });

@@ -248,12 +248,32 @@ function needsTrigger(unit) {
   return unit.kind === KIND_MANTA && unit.control !== -1;
 }
 
+// The mount that heats is the mount that cools. Heat lives on the HULL, so
+// cooling must follow the hull's heat-capable weapon, never the selected one:
+// cooling with the selection let a pilot clear an overheated laser instantly by
+// cycling to the cluster bomb (heatMax 0 zeroes the accumulator) and back.
+function heatWeaponOf(state, holder) {
+  for (let i = 0; i < holder.arms.length; i++) {
+    const weapon = state.weapons[holder.arms[i].w];
+    if (weapon !== undefined && weapon.heatMax > 0) return weapon;
+  }
+  return -1;
+}
+
 // Cooling down is not the same as choosing to shoot, and separating them is the
 // whole reason this is its own function: a trigger-fired Manta that is never
 // fired would otherwise never become ready again.
-function coolDown(holder, weapon) {
+function coolDown(state, holder) {
   if (holder.cooldown > 0) holder.cooldown = holder.cooldown - 1;
-  coolHeat(holder, weapon);
+  const mount = heatWeaponOf(state, holder);
+  if (mount === -1) {
+    // No heat-capable mount aboard: the accumulator has nothing to hold.
+    holder.heat = 0;
+    holder.heatAccum = 0;
+    holder.overheated = 0;
+  } else {
+    coolHeat(holder, mount);
+  }
   return holder.cooldown;
 }
 
@@ -288,8 +308,7 @@ function fireTurrets(state) {
   for (let i = 0; i < state.turrets.length; i++) {
     const turret = state.turrets[i];
     if (turret.hp <= 0 || turret.arms.length === 0) continue;
-    const weapon = state.weapons[turret.weapon];
-    coolDown(turret, weapon);
+    coolDown(state, turret);
     serveWeapon(state, turret.team, turret.x, turret.y, turret.z, turret, 0);
   }
 }
@@ -300,7 +319,7 @@ function fireAll(state) {
     if (carrier.hull <= 0) continue;
     const weapon = state.weapons[carrier.weapon];
     reloadCarrier(carrier, weapon);
-    coolDown(carrier, weapon);
+    coolDown(state, carrier);
     // A chewed-up mount fires slowly and a destroyed one not at all.
     const cooldown = gunCooldown(carrier, weapon.cooldown);
     if (cooldown < 0) continue;
@@ -315,7 +334,7 @@ function fireAll(state) {
     if (unit.arms.length === 0) continue;
     if (!unitEngageable(unit)) continue;
     const selected = state.weapons[unit.weapon];
-    coolDown(unit, selected);
+    coolDown(state, unit);
     if (needsTrigger(unit)) continue;
     // A mine is laid deliberately, like the ACCB pod - never by an autopilot
     // that happens to be carrying some. Otherwise a Walrus with mines selected

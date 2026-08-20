@@ -136,6 +136,18 @@ function findTargetPosition(state, shot) {
     }
     return -1;
   }
+  // Turret and unit ids are separate sequences that both start at zero, so a
+  // shot chasing a turret must look in the turret list: falling through to the
+  // unit search sent missiles homing on whichever UNIT shared the number.
+  if (shot.targetKind === TARGET_TURRET) {
+    for (let i = 0; i < state.turrets.length; i++) {
+      const turret = state.turrets[i];
+      if (turret.id === shot.targetId && turret.hp > 0) {
+        return { x: turret.x, y: turret.y, z: turret.z };
+      }
+    }
+    return -1;
+  }
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
     if (unit.id === shot.targetId && unitEngageable(unit)) {

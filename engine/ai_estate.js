@@ -13,6 +13,7 @@
 // Then it builds, one site at a time, whatever the island's role allows and its
 // own stock can pay for.
 
+import { floorDiv } from '../shared/fixed.js';
 import {
   BUILD_FACTORY,
   BUILD_TURRET,
@@ -72,7 +73,7 @@ function materialsPermil(state, team) {
     cap = cap + state.economy.stockCap;
   }
   if (cap <= 0) return 0;
-  return Math.floor((have * 1000) / cap);
+  return floorDiv(have * 1000, cap);
 }
 
 // What to put up next on an island that already has a purpose. Factories first

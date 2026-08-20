@@ -14,6 +14,7 @@ import {
   SEEKER_CONE,
   TARGET_CARRIER,
   TARGET_UNIT,
+  aimFor,
   boresight,
   designated,
   lockOn,
@@ -236,4 +237,27 @@ test('an attack order survives the canonical walk', () => {
   const after = state.units.find((u) => u.id === manta.id);
   assert.equal(after.orderTargetKind, TARGET_CARRIER);
   assert.ok(dist2D(after.targetX, after.targetY, state.carriers[1].x, state.carriers[1].y) < 256);
+});
+
+test('an attack order classifies air by kind: a Manta on the deck is still an air target', () => {
+  const state = fresh();
+  const walrus = state.units.find((u) => u.team === 0 && u.kind === KIND_WALRUS);
+  const parked = state.units.find((u) => u.team === 1 && u.kind === KIND_MANTA);
+  place(walrus, 5000 * 256, 5000 * 256, 0);
+  place(parked, walrus.x + 300 * 256, walrus.y, 0); // at sea level, well in range
+  walrus.order = ORDER_ATTACK;
+  walrus.orderTargetKind = TARGET_UNIT;
+  walrus.orderTargetId = parked.id;
+
+  const cannon = state.weapons[4];
+  assert.equal(cannon.hitsAir, 0);
+  const aim = aimFor(state, walrus, cannon, -1);
+  assert.equal(aim, -1, 'the cannon elevated onto an aircraft because it was parked');
+
+  // The same order against a surface hull is obeyed.
+  const truck = state.units.find((u) => u.team === 1 && u.kind === KIND_WALRUS);
+  place(truck, walrus.x + 300 * 256, walrus.y - 100 * 256, 0);
+  walrus.orderTargetId = truck.id;
+  const surface = aimFor(state, walrus, cannon, -1);
+  assert.equal(surface.id, truck.id);
 });
