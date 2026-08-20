@@ -123,6 +123,10 @@ function createApp(options) {
       stateHash: snapshot === -1 ? '' : snapshot.stateHash,
       rulesHash: app.game.state.rulesHash,
       seats: app.seats.length,
+      // A monitor watching only the tick would read a lobby as a hung server,
+      // because a war that has not started does not tick. Say which it is.
+      status: app.lobby === 0 ? 'running' : app.lobby.status,
+      joinCode: app.lobby === 0 ? '' : app.lobby.code,
       speed: app.clock === 0 ? app.speed : app.clock.speed,
       uptimeS: Math.floor((Date.now() - app.startedAtMs) / 1000),
       rssMb: Math.round(process.memoryUsage().rss / 1048576),

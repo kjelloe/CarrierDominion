@@ -67,7 +67,24 @@ test('healthz reports a live, ticking war', async () => {
     assert.match(body.stateHash, /^[0-9a-f]{16}$/);
     assert.equal(body.rulesHash, app.game.state.rulesHash);
     assert.ok(body.rssMb > 0);
+    assert.equal(body.status, 'running');
+    assert.equal(body.joinCode, '');
   });
+});
+
+test('healthz says a lobby is a lobby, not a hung server', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-health' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const body = await (await fetch(`http://127.0.0.1:${address.port}/healthz`)).json();
+    assert.equal(body.ok, true);
+    assert.equal(body.status, 'lobby');
+    assert.match(body.joinCode, /^[0-9A-HJKMNP-TV-Z]{5}$/);
+    assert.equal(body.tick, 0, 'a war nobody started should not be ticking');
+  } finally {
+    await app.close();
+  }
 });
 
 test('the client page and its module graph are served', async () => {
