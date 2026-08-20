@@ -76,13 +76,17 @@ async function checkMode(browser, baseUrl, mode) {
     problems.push(`[${mode}] wrong transport: ${transport}`);
   }
 
-  // Drive the helm through the transport and prove the engine answered.
+  // Drive the helm through the transport and prove the engine answered. Read
+  // the VIEW rather than a HUD cell: the throttle is an instrument now, and a
+  // gate that breaks when the panel is redesigned is testing the wrong thing.
   await page.keyboard.press('w');
   await page.keyboard.press('w');
   await page.waitForFunction(
     () => {
-      const cell = document.getElementById('hud-throttle');
-      return cell !== null && parseInt(cell.textContent, 10) >= 20;
+      const view = window.__lastView;
+      if (view === undefined) return false;
+      const own = view.carriers.find((c) => c.team === view.team && c.contact === 0);
+      return own !== undefined && own.throttle >= 20;
     },
     undefined,
     { timeout: 10000 },

@@ -16,6 +16,8 @@
     }
     html, body { margin: 0; height: 100%; overflow: hidden; background: #05070b; }
     #view { display: block; width: 100vw; height: 100vh; }
+    /* The diagnostic strip. The instruments below say what the ship is doing;
+       this says what the SIMULATION is doing, which is a different audience. */
     #hud {
       position: fixed; top: 12px; left: 12px; min-width: 220px;
       padding: 10px 12px; border-radius: 6px;
@@ -23,17 +25,23 @@
       font: 12px/1.5 var(--hud-font);
       pointer-events: none; user-select: none;
     }
+    /* The 1988 panel: bezelled instruments across the bottom. */
+    #panel {
+      position: fixed; left: 0; right: 0; bottom: 0; height: 196px;
+      pointer-events: none; user-select: none;
+    }
     .hud-row { display: flex; justify-content: space-between; gap: 18px; }
     .hud-label { color: var(--hud-dim); }
     .hud-value { color: var(--hud-ink); }
     #help {
-      position: fixed; bottom: 12px; left: 12px;
+      position: fixed; bottom: 206px; left: 12px;
       padding: 8px 12px; border-radius: 6px;
       background: var(--hud-panel); color: var(--hud-dim);
       font: 12px/1.6 var(--hud-font);
       pointer-events: none; user-select: none;
     }
     #gpu { color: var(--hud-dim); opacity: 0.75; }
+    #help.hidden { display: none; }
     /* The gunsight. Only visible with a hull under direct control, because it
        is only then that where the nose points decides where the round goes. */
     #sight {
@@ -53,8 +61,10 @@
     /* The damage control board: hidden until Z, and pointer-active when open -
        it is the one part of the overlay you click rather than read. */
     #damage-panel {
-      position: fixed; top: 50%; right: 24px; transform: translateY(-50%);
-      width: 420px; padding: 12px 14px; border-radius: 6px;
+      /* Top-right and bounded, so it never sits over the instrument panel. */
+      position: fixed; top: 24px; right: 24px;
+      width: 420px; max-height: calc(100vh - 240px); overflow: auto;
+      padding: 12px 14px; border-radius: 6px;
       background: var(--hud-panel); color: var(--hud-ink);
       font: 12px/1.5 var(--hud-font);
       display: none; user-select: none;
@@ -69,8 +79,8 @@
     /* The island board: what a captured island is for, and what is going up on
        it. Opens by clicking an island you hold. */
     #island-panel {
-      /* Clear of the legend, which is bottom-left and about 140px tall. */
-      position: fixed; left: 50%; bottom: 170px; transform: translateX(-50%);
+      /* Above the instrument panel and clear of the legend. */
+      position: fixed; left: 50%; bottom: 360px; transform: translateX(-50%);
       min-width: 420px; padding: 12px 14px; border-radius: 6px;
       background: var(--hud-panel); color: var(--hud-ink);
       font: 12px/1.5 var(--hud-font);
@@ -115,6 +125,7 @@
 </head>
 <body>
   <canvas id="view"></canvas>
+  <canvas id="panel"></canvas>
   <div id="hud"></div>
   <!-- The legend is rendered from the language catalogue by main.js. -->
   <div id="help"></div>

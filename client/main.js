@@ -17,6 +17,7 @@ import { createLocalTransport, createWsTransport } from './transport.js';
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
 import { createScene, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
+import { createInstruments, drawInstruments } from './render/instruments.js';
 import { createDamagePanel, renderDamagePanel, toggleDamagePanel } from './panels/damage.js';
 import {
   createIslandPanel,
@@ -45,6 +46,8 @@ import {
   describeStores,
   describeWeapons,
   roundsOf,
+  weaponName,
+  knotsFrom,
   describeDamage,
   describeScore,
   describeSupply,
@@ -87,6 +90,8 @@ const state = {
   hud: undefined,
   damage: undefined,
   island: undefined,
+  panel: undefined,
+  instrumentColours: undefined,
   buildCosts: [0, 0, 0],
   lastFrameMs: 0,
 };
@@ -389,6 +394,7 @@ function bindInput(level) {
     else if (key === 'f') fireSelected();
     else if (key === 'z') toggleDamagePanel(state.damage);
     else if (key === 'v') cycleWeapon();
+    else if (key === 'h') document.getElementById('help').classList.toggle('hidden');
     else if (key === 'l') toggleSupplyRun();
     else if (key === 'k') nominateDepot();
     else if (key === ',') nudgeSpeed(-1);
@@ -545,6 +551,7 @@ function frame(nowMs) {
   updateCarrierHud(state.hud, ownCarrierOf(state.view), state.view.params);
   setHud(state.hud, 'hangar', describeHangar(state.t, state.view.units, state.view.team));
   setHud(state.hud, 'unit', describeUnit(state.t, selectedUnit(), state.view.params));
+  drawPanel(deltaSeconds);
   setHud(state.hud, 'islands', describeIslands(state.t, state.view));
   setHud(state.hud, 'score', describeScore(state.t, state.view));
   setHud(state.hud, 'damage', describeDamage(state.t, state.view));
@@ -554,6 +561,43 @@ function frame(nowMs) {
   renderDamagePanel(state.damage, deltaSeconds);
   renderIslandPanel(state.island);
   updateSight();
+}
+
+// The instrument panel. What it is handed is the fog-filtered view and a
+// handful of already-translated strings: the drawing code does no wording, and
+// the wording code does no drawing.
+function drawPanel(deltaSeconds) {
+  if (state.panel === undefined || state.view === undefined) return;
+  const own = ownCarrierOf(state.view);
+  const unit = selectedUnit();
+  const holder = unit !== undefined && unit.arms !== undefined && unit.arms.length > 0
+    ? unit
+    : own;
+  const params = state.view.params;
+  drawInstruments(state.panel, state.view, own, {
+    helmTitle: state.t('panel.helm'),
+    scopeTitle: state.t('panel.scope'),
+    shipTitle: state.t('panel.ship'),
+    throttle: state.t('hud.throttle'),
+    speed: state.t('hud.speed'),
+    knots: own === undefined
+      ? ''
+      : `${knotsFrom(own.speed, params.unitsPerMetre, params.tickHz)} ${state.t('hud.knots')}`,
+    fuel: state.t('hud.fuel'),
+    fuelFigure: own === undefined || own.fuelCapacity <= 0
+      ? ''
+      : `${Math.round((own.fuel * 100) / own.fuelCapacity)}%`,
+    hull: state.t('hud.hull'),
+    hullFigure: own === undefined ? '' : `${Math.round((own.hull * 100) / own.maxHull)}%`,
+    ordnance: state.t('panel.ordnance'),
+    ordnanceFigure: own === undefined ? '' : String(own.ordnance),
+    materials: state.t('panel.materials'),
+    materialsFigure: own === undefined ? '' : String(own.materials),
+    bow: state.t('panel.bow'),
+    stern: state.t('panel.stern'),
+    weapon: weaponName(state.t, holder),
+    tally: holder === undefined ? '' : String(roundsOf(holder)),
+  }, deltaSeconds, state.instrumentColours);
 }
 
 // The gunsight: shown while flying, and marked when a seeker has something on
@@ -664,6 +708,8 @@ async function main() {
   // corners of a big archipelago outside the water.
   const sizeMetres = worldSizeMetres(rules.world);
   state.scene3d = createScene(document.getElementById('view'), preset, sizeMetres, style);
+  state.panel = createInstruments(document.getElementById('panel'));
+  state.instrumentColours = style.instruments;
   // Probes open the island board without having to hit an island with a
   // screen-space click; the board itself is the same one a click opens.
   window.__openIsland = (islandId) => {

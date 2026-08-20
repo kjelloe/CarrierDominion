@@ -9,9 +9,13 @@
 // overlay - it is how the catalogues stay honest while the HUD is still small
 // enough to fix cheaply.
 
+// What the SIMULATION is doing. The ship's own numbers - speed, throttle,
+// heading, fuel, hull, weapons, damage - moved to the instrument panel, where
+// they are shapes rather than figures. What is left here is the developer's
+// view of a deterministic engine, plus the few standing orders that have
+// nowhere better to live yet.
 const HUD_ROWS = [
-  'transport', 'seat', 'tick', 'speedx', 'hash', 'seed', 'graphics',
-  'fps', 'speed', 'throttle', 'heading', 'fuel', 'damage', 'weapons',
+  'transport', 'seat', 'tick', 'speedx', 'hash', 'seed', 'graphics', 'fps',
   'stores', 'hangar', 'unit', 'islands', 'score', 'supply', 'status',
 ];
 

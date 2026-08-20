@@ -5,6 +5,46 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — The 1988 instrument panel
+
+295 tests + smoke gate green. The HUD was a table of labelled numbers; it is now
+a panel of instruments across the bottom of the screen, drawn on one 2D canvas.
+
+**The rule the whole panel is built on:** an instrument says ONE thing, in a
+shape you can read without stopping to parse it. A bar a third full, a schematic
+with a red section, a compass point off the bow. The figures are still there for
+when you want the exact number - they are not what you read the situation from.
+
+- **Helm** (left): a heading-up compass rose, and bars for throttle, speed and
+  fuel.
+- **Scope** (centre): a plan-position indicator, north up, with range rings and
+  a sweep. It is fed the **fog-filtered view** like everything else, so it
+  cannot show a contact your hulls have not detected - there is no separate
+  "radar truth". Its range is the ship's own radar, so it shrinks when the mast
+  is shot away: the instrument tells the truth about the sensor.
+- **Ship** (right): the damage schematic in plan - the always-on version of the
+  `Z` board, no priorities and no numbers, just where the ship is hurt - beside
+  bars for hull, ordnance and materials, and what the selected hull is holding.
+
+Instrument colours are part of the art direction (`client/styles.js`), so the
+panel changes with `?style=` along with everything else.
+
+What is left of the old overlay is the DIAGNOSTIC strip: tick, hash, seed, fps,
+graphics tier. That is the developer's view of a deterministic engine, and it is
+a different audience from the ship's own instruments.
+
+**One thing this broke and how it was caught:** the smoke gate proved the helm
+answered by reading `#hud-throttle`, a cell that no longer exists. It now reads
+the throttle out of the VIEW - a gate that fails when the panel is redesigned is
+testing the wrong thing.
+
+**One bug a screenshot caught:** the compass rose was mirrored. Engine bearings
+grow counter-clockwise from east and counter-clockwise on screen is to the left,
+so the sine has to be subtracted, not added. Facing east, north belongs at nine
+o'clock; it was at three, and nothing but looking at it would have said so.
+
+---
+
 ## 2026-08-20 — The virus bomb
 
 295 tests + smoke gate green. The last 1988 payload, and the one that makes

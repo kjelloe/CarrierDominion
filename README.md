@@ -43,6 +43,7 @@ Controls:
 | `C` | chase camera / strategic pull-back |
 | `,` `.` | time compression down / up (`space` pauses; in LAN it takes a vote) |
 | `G` | cycle the graphics tier |
+| `H` | hide this key list |
 | click sea | send the selected unit there |
 | click enemy | attack it with the selected unit, or hand it to the ship's laser |
 | click island | the island board: what it is for, and what to build on it |

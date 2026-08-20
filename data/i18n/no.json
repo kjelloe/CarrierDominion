@@ -56,7 +56,7 @@
   "help.helm": "W/S pådrag - A/D ror - X full stopp - C kamera - G grafikknivå",
   "help.units": "1 send opp Manta - 2 sett ut Walrus - N neste enhet - klikk sjøen for å sende den",
   "help.orders": "T ta kontrollen - R kall tilbake - P slipp ACCB-kapsel - B virusbombe",
-  "help.time": ", / . tidskomprimering - mellomrom pause",
+  "help.time": ", / . tidskompresjon - mellomrom pause - H skjuler listen",
   "gpu.detecting": "finner GPU...",
   "hud.supply": "forsyning",
   "supply.off": "ingen tur",
@@ -149,5 +149,13 @@
   "start.styleModern": "moderne",
   "start.styleRemaster": "remaster",
   "start.begin": "START",
-  "start.note": "klikk en linje for å endre - ENTER for å seile"
+  "start.note": "klikk en linje for å endre - ENTER for å seile",
+  "panel.helm": "ROR",
+  "panel.scope": "RADAR",
+  "panel.ship": "SKIP",
+  "panel.ordnance": "ammo",
+  "hud.hull": "skrog",
+  "panel.materials": "materialer",
+  "panel.bow": "baug",
+  "panel.stern": "akter"
 }
