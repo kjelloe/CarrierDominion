@@ -24,18 +24,24 @@ const SPEED = Number(process.env.SPEED ?? 1);
 const LOBBY = (process.env.LOBBY ?? '1') !== '0';
 const WATCH = (process.env.WATCH ?? '1') !== '0';
 // The war is autosaved here every thirty seconds and on shutdown (SAVE=0
-// turns it off); RESUME=1 replays the file back into the exact same war -
+// turns it off). RESUME=1 replays the file back into the exact same war -
 // same seed, same command log, same hash - and refuses if it cannot.
+// RESUME=auto is the service setting: resume when possible, start fresh with
+// a loud notice when not - a unit file with Restart=on-failure must never be
+// able to crash-loop on a save the code has outgrown.
 const SAVE = process.env.SAVE ?? 'data/autosave.json';
-const RESUME = (process.env.RESUME ?? '0') === '1';
+const RESUME = process.env.RESUME ?? '0';
+const STRICT_RESUME = RESUME === '1';
+const WANT_RESUME = STRICT_RESUME || RESUME === 'auto';
 
 let resume = 0;
-if (RESUME) {
+if (WANT_RESUME) {
   try {
     resume = readSave(SAVE);
   } catch (error) {
     process.stderr.write(`cannot read ${SAVE}: ${error.message}\n`);
-    process.exit(1);
+    if (STRICT_RESUME) process.exit(1);
+    resume = 0;
   }
 }
 
@@ -50,9 +56,10 @@ const app = createApp({
   bootId: `${SEED}-${PORT}-${Date.now()}`,
 });
 
-if (RESUME && app.resumed === 0) {
-  process.stderr.write(`refusing to resume: ${app.resumeProblem}\n`);
-  process.exit(1);
+if (resume !== 0 && app.resumed === 0) {
+  process.stderr.write(`cannot resume: ${app.resumeProblem}\n`);
+  if (STRICT_RESUME) process.exit(1);
+  process.stderr.write('starting a fresh war instead (RESUME=auto).\n');
 }
 
 app.listen(PORT, HOST).then(() => {

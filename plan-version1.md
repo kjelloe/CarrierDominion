@@ -211,7 +211,8 @@ state at all) are recorded in `dev-log.md` and put to the owner in
 
 **Status 2026-08-20: Milestone 1 is complete on `dev_night`** — 373 tests
 plus the smoke gate green, and an AI-vs-AI war that resolves end to end
-(tick 229,482, won by sinking). A full pre-playtest review then hardened
+(all five battery seeds resolve, ticks 33,252–172,941 — see
+`npm run battery`). A full pre-playtest review then hardened
 it: four engine bugs fixed, provisioning closed the last holes in ruling
 #3, the aftermath/terrain/cargo contracts are enforced, and the review's
 minor findings were fixed by ruling rather than deferred. The rulings

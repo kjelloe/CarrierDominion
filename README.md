@@ -17,6 +17,7 @@ WATCH=0 ./run.sh      # without the playtest watchdog (on by default)
 ./run.sh --lan        # also reachable from other machines on the LAN
 PORT=9000 SEED=42 ./run.sh
 RESUME=1 ./run.sh     # pick the saved war back up exactly where it stood
+RESUME=auto ./run.sh  # resume if the save still replays, fresh war if not
 SAVE=0 ./run.sh       # without the 30-second autosave (data/autosave.json)
 ```
 
@@ -65,6 +66,7 @@ npm test        # node --test, no test framework, no browser
 npm run smoke   # Playwright: the real client in a real Chromium
 npm run gate    # both - what a slice must pass before it closes
 npm run sim     # headless sim probe: trajectory + tick rate
+npm run battery # the sim across five seeds, under the watchdog
 npm run repin   # re-pin the M0-A fixture (refuses on event drift)
 npm run trig    # regenerate the committed trig tables
 ```

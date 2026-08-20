@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (373 tests and growing), node --test
+npm test      the unit and integration suite (390 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 ```
@@ -45,8 +45,8 @@ is the measuring instrument for everything that only shows up over hours:
 
 - the logistics deadlock (two wars stopped dead when the last lighter died),
 - the factory that could not be fed,
-- the pacing numbers in these documents — the current war resolves at tick
-  229,482, won by sinking (the provisioning and terrain slices moved it from 396,491).
+- the pacing numbers in these documents — with search and resupply both
+  working, the five battery seeds resolve between ticks 33,252 and 172,941.
 
 If a change makes the AI stupider or the economy tighter, the sim says so in a
 minute and no unit test would have.
@@ -73,7 +73,10 @@ wrapped its messages. Two real browsers found it immediately.
 
 Current probes: `ai_trace`, `combat_shot`, `damage_board`, `gunsight`,
 `island_board`, `lobby`, `rejoin`, `scope_zoom`, `start_menu`,
-`strategic_probe`, `style_shots`, `turret_shot`, `war_trace`, `watch_run`.
+`strategic_probe`, `style_shots`, `turret_shot`, `war_over`, `war_trace`,
+`watch_run`. `war_over` photographs states a live war takes hours to reach -
+the ending screen, a scope full of ghosts - by pausing the solo war and
+swapping in a doctored view through the `__debugView` hook.
 
 ## The playtest watchdog
 

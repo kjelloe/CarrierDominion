@@ -101,6 +101,13 @@ After the full engine review, the owner ruled on the numbers it opened:
   explicitly; the original 24.3 said "no contact memory".)
 - **The war ends on a screen**, not a HUD line: result, reason, the scoreboard
   the fog hid until it stopped mattering, RETURN TO PORT or KEEP WATCHING.
+- **The AI reads the same chart** (follow-up of the same ruling): a lost
+  contact draws one scout to the ghost; thirty thousand ticks of silence draw
+  a rotating patrol over the islands you hold. The pacing consequence - the
+  enemy comes looking - is the owner's to judge in the playtest.
+- **Wars survive restarts**: the server autosaves seed + command log and
+  resumes to the exact hash, or says why it will not (`RESUME=1` strict,
+  `RESUME=auto` for the service).
 
 ## Standing constraints that follow from the rulings
 
