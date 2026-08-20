@@ -39,6 +39,8 @@ const EVT_ISLAND_BUILT = 31; // a = islandId, b = owning team, c = what was buil
 const EVT_HULL_REPLACED = 32; // a = unitId, b = team, c = kind - a chassis became a hull
 const EVT_TURRET_BUILT = 33; // a = turretId, b = team, c = islandId
 const EVT_TURRET_LOST = 34; // a = turretId, b = team, c = islandId
+const EVT_VIRUS_DEPLOYED = 35; // a = islandId, b = the team bombing it, c = unitId
+const EVT_ISLAND_CONVERTED = 36; // a = islandId, b = the team it changed to
 
 function makeEvent(code, a, b, c) {
   return { code: code, a: a, b: b, c: c };
@@ -84,6 +86,8 @@ export {
   EVT_HULL_REPLACED,
   EVT_TURRET_BUILT,
   EVT_TURRET_LOST,
+  EVT_VIRUS_DEPLOYED,
+  EVT_ISLAND_CONVERTED,
   makeEvent,
   pushEvent,
 };

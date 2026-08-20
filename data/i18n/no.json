@@ -55,7 +55,7 @@
   "war.unknown": "på et vis",
   "help.helm": "W/S pådrag - A/D ror - X full stopp - C kamera - G grafikknivå",
   "help.units": "1 send opp Manta - 2 sett ut Walrus - N neste enhet - klikk sjøen for å sende den",
-  "help.orders": "T ta kontrollen - R kall tilbake - P slipp ACCB-kapsel - F skyt",
+  "help.orders": "T ta kontrollen - R kall tilbake - P slipp ACCB-kapsel - B virusbombe",
   "help.time": ", / . tidskomprimering - mellomrom pause",
   "gpu.detecting": "finner GPU...",
   "hud.supply": "forsyning",
@@ -130,5 +130,7 @@
   "build.turret": "kanontårn",
   "help.island": "klikk en øy du eier for å planlegge den",
   "status.speedVote": "fart foreslått - klokka endres når alle er enige",
-  "speed.vote": "avstemning {speed}: {agreed}/{players}"
+  "speed.vote": "avstemning {speed}: {agreed}/{players}",
+  "status.noVirus": "ingen virusbombe om bord",
+  "status.noCentre": "ingen fiendtlig kommandosentral her"
 }

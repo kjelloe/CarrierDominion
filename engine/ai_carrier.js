@@ -15,6 +15,7 @@
 import { dist2D, mulDiv } from '../shared/fixed.js';
 import { atan2B } from '../shared/trig.js';
 import { checkDeploy, deployPod } from './capture.js';
+import { checkVirus, deployVirus } from './virus.js';
 import { skirtRadius } from './heightmap.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import {
@@ -126,7 +127,7 @@ function invade(state, brain, carrier) {
     brain.targetIsland = -1;
     return;
   }
-  if (island.podTeam === carrier.team) {
+  if (island.podTeam === carrier.team || island.virusTeam === carrier.team) {
     brain.mode = AI_WAIT;
     return;
   }
@@ -149,6 +150,14 @@ function invade(state, brain, carrier) {
   if (walrus.pod !== 1) {
     orderReturn(walrus);
     brain.walrusId = -1;
+    return;
+  }
+  // A developed island is worth taking whole. The bomb is slower, so it is
+  // only worth the wait when there is something on the island to inherit.
+  const worthConverting = island.factories + island.warehouses + island.turrets > 0;
+  if (worthConverting && checkVirus(walrus, island, state.params.virusRange) === '') {
+    deployVirus(state, walrus, island);
+    brain.mode = AI_WAIT;
     return;
   }
   if (checkDeploy(walrus, island, state.params.podRange) === '') {
@@ -181,7 +190,7 @@ function waitForPod(state, brain, carrier) {
     brain.mode = AI_SEEK;
     return;
   }
-  if (island.podTeam !== carrier.team) {
+  if (island.podTeam !== carrier.team && island.virusTeam !== carrier.team) {
     // Somebody displaced us. Try again with whatever is still aboard.
     brain.mode = AI_INVADE;
   }

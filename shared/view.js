@@ -126,6 +126,7 @@ function ownUnitView(unit) {
     cargoMaterials: unit.cargoMaterials,
     cargoOrdnance: unit.cargoOrdnance,
     cargoCap: unit.cargoCap,
+    virus: unit.virus,
     weapon: unit.weapon,
     arms: armsView(unit.arms),
     heat: unit.heat,
@@ -161,6 +162,7 @@ function unitContactView(unit) {
     cargoMaterials: -1,
     cargoOrdnance: -1,
     cargoCap: -1,
+    virus: 0,
     weapon: -1,
     arms: [],
     heat: -1,
@@ -189,6 +191,8 @@ function islandView(island, team) {
     nodeY: island.nodeY,
     podTeam: island.podTeam,
     podTicks: island.podTicks,
+    virusTeam: island.virusTeam,
+    virusTicks: island.virusTicks,
     // What an island has been made INTO is visible from the sea - you can see
     // a factory - but what is piled up inside it is not.
     role: island.role,

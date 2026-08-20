@@ -5,6 +5,29 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — The virus bomb
+
+295 tests + smoke gate green. The last 1988 payload, and the one that makes
+taking an island a choice rather than a procedure.
+
+| Payload | What it takes | What you get |
+|---|---|---|
+| ACCB pod | any island that is not yours | the island, **bare** - the previous owner's works are cleared |
+| Virus bomb | an island somebody else **holds** | the island **intact** - factories, warehouses, stores, and the guns that were shooting at you |
+
+The bomb takes twice as long as the pod (2400 ticks against 1200), which is the
+whole trade: a longer wait, deeper inside somebody else's defended island, for a
+prize that is already built. A conversion is abandoned if the island changes
+hands under it - a virus needs a command centre to subvert, and the one it was
+working on is gone.
+
+The AI uses it the way you would: only when there is something on the island to
+inherit. A bare rock gets the pod.
+
+`B` deploys it. The Walrus sails with one of each and the hangar restocks both.
+
+---
+
 ## 2026-08-20 — The clock is a table decision
 
 286 tests + smoke gate green. Time compression in a shared war now moves when

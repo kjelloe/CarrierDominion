@@ -55,7 +55,7 @@
   "war.unknown": "somehow",
   "help.helm": "W/S throttle - A/D rudder - X all stop - C camera - G graphics tier",
   "help.units": "1 launch Manta - 2 launch Walrus - N next unit - click sea to send it",
-  "help.orders": "T take the controls - R recall - P deploy ACCB pod - F fire",
+  "help.orders": "T take the controls - R recall - P deploy ACCB pod - B virus bomb",
   "help.time": ", / . time compression - space pause",
   "gpu.detecting": "detecting GPU...",
   "hud.supply": "supply",
@@ -130,5 +130,7 @@
   "build.turret": "turret",
   "help.island": "click an island you hold to plan it",
   "status.speedVote": "speed proposed - the clock moves when everybody agrees",
-  "speed.vote": "vote {speed}: {agreed}/{players}"
+  "speed.vote": "vote {speed}: {agreed}/{players}",
+  "status.noVirus": "no virus bomb aboard that Walrus",
+  "status.noCentre": "no enemy command centre here to subvert"
 }

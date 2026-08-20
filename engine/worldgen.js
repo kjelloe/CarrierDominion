@@ -102,6 +102,9 @@ function createIslands(seed, world, unitsPerMetre) {
       nodeY: ry.value,
       podTeam: -1,
       podTicks: 0,
+      // A virus bomb working on this island's command centre, if any.
+      virusTeam: -1,
+      virusTicks: 0,
       stockFuel: 0,
       stockMaterials: 0,
       stockOrdnance: 0,

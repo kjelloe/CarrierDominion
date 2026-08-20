@@ -15,6 +15,7 @@ const CMD_TAKE_CONTROL = 'take_control';
 const CMD_RELEASE_CONTROL = 'release_control';
 const CMD_SET_UNIT_HELM = 'set_unit_helm';
 const CMD_DEPLOY_POD = 'deploy_pod';
+const CMD_DEPLOY_VIRUS = 'deploy_virus';
 const CMD_SET_STOCKPILE = 'set_stockpile';
 const CMD_SET_SUPPLY_RUN = 'set_supply_run';
 const CMD_FIRE_UNIT = 'fire_unit';
@@ -39,6 +40,7 @@ const UNIT_COMMANDS = [
   CMD_RELEASE_CONTROL,
   CMD_SET_UNIT_HELM,
   CMD_DEPLOY_POD,
+  CMD_DEPLOY_VIRUS,
   CMD_FIRE_UNIT,
   CMD_SELECT_WEAPON,
   CMD_ORDER_UNIT_ATTACK,
@@ -115,7 +117,7 @@ function validateCommand(command) {
     if (command.active < 0 || command.active > 1) return 'active must be 0 or 1';
     return '';
   }
-  if (type === CMD_DEPLOY_POD) {
+  if (type === CMD_DEPLOY_POD || type === CMD_DEPLOY_VIRUS) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
     if (!isInt(command.islandId)) return 'islandId must be an integer';
     return '';
@@ -181,6 +183,7 @@ export {
   CMD_DEPLOY_POD,
   CMD_SET_STOCKPILE,
   CMD_SET_SUPPLY_RUN,
+  CMD_DEPLOY_VIRUS,
   CMD_FIRE_UNIT,
   CMD_SET_REPAIR_PRIORITY,
   CMD_SELECT_WEAPON,

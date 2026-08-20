@@ -130,7 +130,10 @@ function assembleKind(state, carrier, kind, cost) {
     unit.heatAccum = 0;
     unit.overheated = 0;
     unit.cooldown = 0;
-    if (unit.kind === KIND_WALRUS) unit.pod = 1;
+    if (unit.kind === KIND_WALRUS) {
+      unit.pod = 1;
+      unit.virus = 1;
+    }
     pushEvent(state.events, EVT_HULL_REPLACED, unit.id, unit.team, unit.kind);
     return 1;
   }

@@ -24,5 +24,7 @@
   "pointsPerCarrierSunk": 600,
   "hitRadiusTurretMetres": 14,
   "turretRingPermil": 620,
-  "turretHull": 260
+  "turretHull": 260,
+  "virusRangeMetres": 60,
+  "virusBuildTicks": 2400
 }

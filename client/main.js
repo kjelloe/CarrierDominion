@@ -250,6 +250,35 @@ function nearestNode(unit) {
   return { island: best, distance: bestDistance };
 }
 
+// The virus bomb: for an island somebody else is holding and has developed.
+// The pod is for ground you have cleared; this is for a working island.
+function deployVirus() {
+  const unit = selectedUnit();
+  if (unit === undefined || unit.kind !== KIND_WALRUS) {
+    setHud(state.hud, 'status', state.t('status.needWalrus'));
+    return;
+  }
+  if (unit.virus !== 1) {
+    setHud(state.hud, 'status', state.t('status.noVirus'));
+    return;
+  }
+  const near = nearestNode(unit);
+  if (near.island === undefined) return;
+  if (near.distance > POD_RANGE_UNITS) {
+    setHud(state.hud, 'status', state.t('status.tooFar', {
+      metres: Math.round(near.distance / 256),
+    }));
+    return;
+  }
+  if (near.island.owner < 0 || near.island.owner === state.view.team) {
+    setHud(state.hud, 'status', state.t('status.noCentre'));
+    return;
+  }
+  state.transport.send({
+    type: 'deploy_virus', unitId: unit.id, islandId: near.island.id,
+  });
+}
+
 function deployPod() {
   const unit = selectedUnit();
   if (unit === undefined || unit.kind !== KIND_WALRUS) {
@@ -350,6 +379,7 @@ function bindInput(level) {
     else if (key === 'r') recallSelected();
     else if (key === 't') togglePiloting();
     else if (key === 'p') deployPod();
+    else if (key === 'b') deployVirus();
     else if (key === 'f') fireSelected();
     else if (key === 'z') toggleDamagePanel(state.damage);
     else if (key === 'v') cycleWeapon();

@@ -10,6 +10,7 @@ import { PHASE_RUNNING } from './victory.js';
 import {
   CMD_ADVANCE_TICK,
   CMD_DEPLOY_POD,
+  CMD_DEPLOY_VIRUS,
   CMD_FIRE_UNIT,
   CMD_LAUNCH_UNIT,
   CMD_ORDER_UNIT_ATTACK,
@@ -45,6 +46,7 @@ import {
 } from './events.js';
 import { stepCarriers } from './carrier.js';
 import { checkDeploy, deployPod, stepCapture } from './capture.js';
+import { checkVirus, deployVirus, stepVirus } from './virus.js';
 import { stepAi } from './ai_carrier.js';
 import { checkVictory } from './victory.js';
 import { stepEconomy, teamById } from './economy.js';
@@ -263,6 +265,18 @@ function applyIslandBuild(next, command) {
   return next;
 }
 
+// The virus bomb: the other way to take an island, and the one that takes it
+// with everything on it.
+function applyDeployVirus(next, command) {
+  const unit = findUnit(next, command.unitId);
+  if (unit === -1) return reject(next);
+  const island = findIsland(next, command.islandId);
+  if (island === -1) return reject(next);
+  if (checkVirus(unit, island, next.params.virusRange) !== '') return reject(next);
+  deployVirus(next, unit, island);
+  return next;
+}
+
 function applySetStockpile(next, command) {
   const carrier = findCarrier(next, command.carrierId);
   if (carrier === -1) return reject(next);
@@ -310,6 +324,7 @@ function advanceTick(next) {
   stepUnits(next);
   stepWeapons(next, next.params);
   stepCapture(next, next.params.podBuildTicks);
+  stepVirus(next, next.params.virusBuildTicks);
   stepBuild(next);
   stepEconomy(next);
   stepSupply(next);
@@ -343,6 +358,7 @@ function apply(state, command) {
   if (type === CMD_RELEASE_CONTROL) return applyReleaseControl(next, command);
   if (type === CMD_SET_UNIT_HELM) return applyUnitHelm(next, command);
   if (type === CMD_DEPLOY_POD) return applyDeployPod(next, command);
+  if (type === CMD_DEPLOY_VIRUS) return applyDeployVirus(next, command);
   if (type === CMD_FIRE_UNIT) return applyFire(next, command);
   if (type === CMD_SELECT_WEAPON) return applySelectWeapon(next, command);
   if (type === CMD_SET_STOCKPILE) return applySetStockpile(next, command);
