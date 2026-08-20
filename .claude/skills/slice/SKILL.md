@@ -36,7 +36,10 @@ dev-log honest. This is the procedure.
    module, named and commented.
 6. **A new entity kind is not done** until it has a line in **both**
    `createInitialState` and `copyState` in `engine/state.js`. This is the
-   aliasing bug every sibling project has lost a day to.
+   aliasing bug every sibling project has lost a day to. A new **field** on an
+   existing kind needs: the creator (for islands that is `engine/worldgen.js`,
+   not state.js), the copier, and a decision about `shared/view.js` — and it
+   moves BOTH pins (see below).
 7. **Stats are copied onto records** at build time; per-tick code never reaches
    for the ruleset.
 
@@ -55,7 +58,10 @@ dev-log honest. This is the procedure.
 5. If the state shape moved: `npm run repin`. It **refuses on event drift** —
    a hash change with the same events is bookkeeping; a hash change with
    different events means the war plays differently, and that needs
-   understanding, not a tool.
+   understanding, not a tool. There are **two pins**: the M0-A fixture and
+   `GOLDEN_WORLD_HASH` in `test/engine_worldgen.test.js` — a state-shape
+   change moves both; update the golden hash by hand with a comment saying
+   why, and say whether the MAP itself changed (usually it did not).
 6. If it touches the UI, write or run a probe in `debugging/probes/` and look at
    the screenshot. Unit tests structurally cannot see a mirrored compass or a
    panel row rebuilt under the pointer.

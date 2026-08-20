@@ -209,9 +209,13 @@ state at all) are recorded in `dev-log.md` and put to the owner in
 
 ## 4. Milestone 1 — vertical slice (condensed; detailed plan after M0)
 
-**Status 2026-08-20: Milestone 1 is complete on `dev_night`** — 351 tests
+**Status 2026-08-20: Milestone 1 is complete on `dev_night`** — 373 tests
 plus the smoke gate green, and an AI-vs-AI war that resolves end to end
-(tick 229,482, won by sinking).
+(tick 229,482, won by sinking). A full pre-playtest review then hardened
+it: four engine bugs fixed, provisioning closed the last holes in ruling
+#3, the aftermath/terrain/cargo contracts are enforced, and the review's
+minor findings were fixed by ruling rather than deferred. The rulings
+themselves are now a public document: `docs/06-rulings.md`.
 
 Landed since the 08-19 note, each as its own slice and commit: ordnance
 logistics (#17), the Manta trigger rule (#18), seven geometric damage

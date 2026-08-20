@@ -245,7 +245,7 @@ the deterministic war and every replay and every headless sim covers it.
 |---|---|
 | `ai_carrier.js` | which island next, and am I aground |
 | `ai_strike.js` | is there something to kill right now, and am I too hurt to stay |
-| `ai_estate.js` | what should this island be, and what should I build on it |
+| `ai_estate.js` | what should this island be, what should I build on it, and where does the stockpile belong (at the factory — see the supply chain) |
 
 It reads the same state a player does but is written to look only at what its
 own hulls could see — the same sensor rule the fog filter uses. When real fog of

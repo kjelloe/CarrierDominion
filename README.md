@@ -158,8 +158,14 @@ scoring and four end conditions, an instrument panel with a radar scope and a
 damage schematic, LAN play with a war room, chat, seat grace with AI takeover, a
 speed vote, sound, and a playtest watchdog.
 
+A full pre-playtest review (2026-08-20) then hardened the build: guided rounds
+chase the right entity, overheat cannot be cheated away, event fog routes
+correctly, provisioning closed the last "conjured goods" holes, shots and
+flight respect terrain, the post-war world decides nothing new, the cargo
+network conserves goods, and spectators see a chart instead of one side's war.
+
 Not yet built: fog of war with a **memory** (detection is radar-range only, with
-no remembered contacts), and the Luau/Roblox twin.
+no remembered contacts), a richer observer mode, and the Luau/Roblox twin.
 
 See [`docs/`](docs/00-index.md) for how it all works, [`dev-log.md`](dev-log.md)
 for what changed and why, and `dev-questions.md` for what needs an owner ruling.

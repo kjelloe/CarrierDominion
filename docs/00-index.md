@@ -12,6 +12,7 @@ order, see [`../dev-log.md`](../dev-log.md).
 | [03-multiplayer.md](03-multiplayer.md) | Transports, fog, the war room, seat grace, the clock vote |
 | [04-client.md](04-client.md) | Renderer, instruments, panels, sound, art direction |
 | [05-testing.md](05-testing.md) | The gate, the fixture, the probes, and the playtest watchdog |
+| [06-rulings.md](06-rulings.md) | The design of record: every owner ruling, dated, in one place |
 
 ## The three rules everything else hangs off
 

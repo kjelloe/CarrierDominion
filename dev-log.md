@@ -5,6 +5,33 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — The rulings become a document, and the review becomes a skill
+
+Two records that lived in the wrong places. The owner's rulings were scattered
+across an owner-local question queue, this log, and session memory — so
+`docs/06-rulings.md` is now the public design of record: every decision, dated,
+with its question number where it has one, plus the standing constraints that
+follow ("nothing is conjured", "nothing may hard-code two teams", "nothing new
+is decided after the end"). The queue itself stays owner-local; what was
+*decided* is now in the repo where a contributor can be pointed at it.
+
+And the review method that found ten real issues is written down as
+`.claude/skills/engine-review/SKILL.md` — the reading order and, more
+usefully, the failure classes that actually produced bugs here: id collisions
+across entity lists, per-hull state updated by per-selection rules, event
+payload slot routing, conjured goods, contracts described but not enforced,
+movers that collide with nothing, transfers that cap away the difference,
+classification by the wrong axis, and edges the current config cannot reach.
+The next review starts from that list instead of from zero.
+
+Also: plan and README status updated to reflect the review hardening, the AI
+table in docs/02 now mentions stockpile siting, and the slice skill records
+that a state-shape change moves BOTH pins (M0-A and the golden world hash).
+
+No code changed; no hash moved. 373 tests + smoke gate green.
+
+---
+
 ## 2026-08-20 — The minor list, closed, and a reef that means it
 
 The owner read the review, ruled on the one open number, and asked for the
