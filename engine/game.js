@@ -43,6 +43,11 @@ function enqueueCommand(game, command) {
 
 function recordCommand(game, command) {
   if (game.recordCommands === 0) return;
+  // Ticks are not recorded: every entry carries the tick it applied on, so a
+  // replay reconstructs the advances by ticking until the stamps match.
+  // Recording them made the log grow twenty entries a second forever - 1.7
+  // million a day of {type: 'advance_tick'} saying nothing the stamps do not.
+  if (command.type === CMD_ADVANCE_TICK) return;
   const entry = { tick: game.state.tick };
   const keys = Object.keys(command);
   for (let i = 0; i < keys.length; i++) entry[keys[i]] = command[keys[i]];

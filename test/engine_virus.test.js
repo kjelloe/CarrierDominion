@@ -178,3 +178,34 @@ test('the hangar restocks the bomb along with the pod', () => {
   assert.equal(back.pod, 1);
   assert.equal(back.virus, 1);
 });
+
+test('a second bomb on your own running conversion is refused, not wasted', () => {
+  const state = fresh();
+  const { island, walrus } = atTheirNode(state);
+  deployVirus(state, walrus, island);
+  const again = state.units.find(
+    (u) => u.team === 0 && u.kind === KIND_WALRUS && u.id !== walrus.id,
+  );
+  again.state = UNIT_ACTIVE;
+  again.x = island.nodeX;
+  again.y = island.nodeY;
+  again.virus = 1;
+  assert.match(checkVirus(again, island, state.params.virusRange), /already at work/);
+  assert.equal(again.virus, 1, 'the refused bomb was spent anyway');
+});
+
+test('any change of owner abandons a conversion, not only the obvious two', () => {
+  let state = fresh();
+  const { island, walrus } = atTheirNode(state);
+  state = apply(state, { type: 'deploy_virus', unitId: walrus.id, islandId: island.id });
+  state = drive(state, 30);
+  assert.equal(state.islands[island.id].virusTeam, 0);
+
+  // A THIRD team takes the island out from under the bomb. Two-team wars
+  // cannot produce this; the rule must hold when team counts grow.
+  state.islands[island.id].owner = 2;
+  state = apply(state, TICK);
+  assert.equal(state.islands[island.id].virusTeam, -1, 'the virus kept subverting a stranger');
+  assert.equal(state.islands[island.id].virusVictim, -1);
+  assert.equal(state.islands[island.id].owner, 2, 'abandoning must not touch ownership');
+});

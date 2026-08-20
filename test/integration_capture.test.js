@@ -115,3 +115,14 @@ function headingTo(from, x, y) {
   const turns = angle / (Math.PI * 2);
   return ((Math.round(turns * 65536) % 65536) + 65536) % 65536;
 }
+
+test('the command log records commands, never the ticks between them', () => {
+  const game = createGame(20260818, loadRules());
+  stepGame(game);
+  enqueueCommand(game, { type: 'set_throttle', carrierId: 0, throttle: 60 });
+  stepGame(game);
+  stepGame(game);
+  assert.equal(game.commandLog.length, 1, 'ticks leaked into the replay log');
+  assert.equal(game.commandLog[0].type, 'set_throttle');
+  assert.equal(typeof game.commandLog[0].tick, 'number', 'a replay needs the tick stamp');
+});

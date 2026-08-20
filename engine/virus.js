@@ -28,6 +28,9 @@ function checkVirus(unit, island, rangeUnits) {
   if (unit.virus !== 1) return 'no virus bomb aboard';
   if (island.owner < 0) return 'there is no command centre here to subvert';
   if (island.owner === unit.team) return 'the island is already yours';
+  // A second bomb on a conversion your side already has running would only
+  // reset the clock - a wasted bomb, refused rather than silently obeyed.
+  if (island.virusTeam === unit.team) return 'a virus is already at work here';
   if (dist2D(unit.x, unit.y, island.nodeX, island.nodeY) > rangeUnits) {
     return 'too far from the command centre';
   }
@@ -37,6 +40,10 @@ function checkVirus(unit, island, rangeUnits) {
 function deployVirus(state, unit, island) {
   island.virusTeam = unit.team;
   island.virusTicks = 0;
+  // The command centre it went in against. Any change of owner - recapture,
+  // a rival's pod, anything - is a different command centre, and the
+  // conversion is abandoned rather than delivered to the wrong war.
+  island.virusVictim = island.owner;
   unit.virus = 0;
   pushEvent(state.events, EVT_VIRUS_DEPLOYED, island.id, unit.team, unit.id);
   return island;
@@ -49,6 +56,7 @@ function convert(state, island) {
   island.owner = team;
   island.virusTeam = -1;
   island.virusTicks = 0;
+  island.virusVictim = -1;
   // A pod being built here is somebody else's plan for an island that is now
   // spoken for.
   island.podTeam = -1;
@@ -67,10 +75,14 @@ function stepVirus(state, virusTicks) {
   for (let i = 0; i < state.islands.length; i++) {
     const island = state.islands[i];
     if (island.virusTeam === -1) continue;
-    // The island changed hands, or fell neutral, while the bomb was working.
-    if (island.owner < 0 || island.owner === island.virusTeam) {
+    // ANY change of owner abandons the conversion - recapture by the victim,
+    // the virus team's own pod finishing first, or (in a bigger war) a third
+    // team taking it. The command centre the bomb was subverting is gone;
+    // comparing against the owner AT DEPLOYMENT is what catches all three.
+    if (island.owner !== island.virusVictim) {
       island.virusTeam = -1;
       island.virusTicks = 0;
+      island.virusVictim = -1;
       continue;
     }
     island.virusTicks = island.virusTicks + 1;

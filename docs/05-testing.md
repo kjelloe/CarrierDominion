@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (367 tests and growing), node --test
+npm test      the unit and integration suite (373 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 ```
@@ -46,7 +46,7 @@ is the measuring instrument for everything that only shows up over hours:
 - the logistics deadlock (two wars stopped dead when the last lighter died),
 - the factory that could not be fed,
 - the pacing numbers in these documents — the current war resolves at tick
-  229,498, won by sinking (the provisioning and terrain slices moved it from 396,491).
+  229,482, won by sinking (the provisioning and terrain slices moved it from 396,491).
 
 If a change makes the AI stupider or the economy tighter, the sim says so in a
 minute and no unit test would have.
@@ -80,6 +80,7 @@ not be:
 | off the map | integration or pathfinding has run away |
 | under the sea / on dry land | the height model and the movement model disagree |
 | negative store, hull above max, magazine overfull | arithmetic somewhere is not clamped |
+| island stock above its cap | a path that adds stock stopped respecting the cap |
 | more built than the slots allow | a build check is not holding |
 | the war has stopped happening | the shape every deadlock so far has had |
 | tick slower than real time | the only way a LAN war falls behind |

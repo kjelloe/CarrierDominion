@@ -154,3 +154,11 @@ test('a server without the watchdog says so rather than pretending', async () =>
     await app.close();
   }
 });
+
+test('an island store above its cap is noticed', () => {
+  const state = fresh();
+  const watch = createWatch();
+  state.islands[0].stockMaterials = 999999;
+  watchTick(watch, state, 1);
+  assert.ok(kinds(watch).includes('island stock above its cap'));
+});

@@ -113,3 +113,39 @@ test('a conversion and a sinking are chart-level news for everybody', () => {
     assert.ok(view.events.some((e) => e.code === 21), `team ${team} did not hear the sinking`);
   }
 });
+
+test('the spectator view is the chart: common knowledge, and nobody secrets', () => {
+  const state = createInitialState(SEED, rules);
+  // A war in full swing: hulls out, a shot in the air, stock on an island.
+  state.units[0].state = 1;
+  state.islands[0].owner = 0;
+  state.islands[0].stockMaterials = 4321;
+  state.shots.push({
+    id: 0, team: 0, weapon: 4, x: 1000, y: 1000, z: 0, heading: 0, climb: 0,
+    speed: 100, damage: 1, blast: 0, life: 10, guided: 0, splash: 0, trigger: 0,
+    turn: 0, targetKind: 0, targetId: 0,
+  });
+  state.nextShot = 1;
+
+  const view = buildView(state, -1);
+  assert.equal(view.carriers.length, 0, 'a spectator was shown somebody hulls');
+  assert.equal(view.units.length, 0);
+  assert.equal(view.shots.length, 0);
+  assert.equal(view.islands.length, state.islands.length, 'the chart is common knowledge');
+  assert.equal(view.islands[0].owner, 0, 'ownership is on the chart');
+  assert.equal(view.islands[0].stockMaterials, -1, 'a spectator was shown a stockpile');
+  assert.deepEqual(
+    view.resources,
+    { id: -1, fuel: 0, materials: 0, ordnance: 0, chassis: 0, stockpileIsland: -1, score: 0 },
+  );
+  assert.equal(JSON.stringify(view).includes('4321'), false);
+});
+
+test('a snapshot carries the spectator chart alongside the team views', async () => {
+  const { createSnapshot } = await import('../engine/snapshot.js');
+  const state = createInitialState(SEED, rules);
+  const snapshot = createSnapshot(state);
+  assert.equal(snapshot.views.length, state.teams.length);
+  assert.equal(snapshot.spectator.team, -1);
+  assert.equal(snapshot.spectator.carriers.length, 0);
+});

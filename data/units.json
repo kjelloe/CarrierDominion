@@ -19,7 +19,7 @@
     "hangarWalruses": 4,
     "shallowBandMetres": 45,
     "slowestSpeedUnitsPerTick": 6,
-    "groundedHullPer100Ticks": 6,
+    "groundedHullPer100Ticks": 9,
     "hangarLighters": 2,
     "ordnanceCapacity": 6000,
     "reloadRoundsPer100Ticks": 40,

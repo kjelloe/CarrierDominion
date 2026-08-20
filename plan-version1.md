@@ -211,7 +211,7 @@ state at all) are recorded in `dev-log.md` and put to the owner in
 
 **Status 2026-08-20: Milestone 1 is complete on `dev_night`** — 351 tests
 plus the smoke gate green, and an AI-vs-AI war that resolves end to end
-(tick 229,498, won by sinking).
+(tick 229,482, won by sinking).
 
 Landed since the 08-19 note, each as its own slice and commit: ordnance
 logistics (#17), the Manta trigger rule (#18), seven geometric damage

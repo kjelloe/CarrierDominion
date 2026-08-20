@@ -130,7 +130,9 @@ function createApp(options) {
   }
 
   function viewFor(seat, snapshot) {
-    return snapshot.views[seat.team === -1 ? 0 : seat.team];
+    // A seat watches its own war; anyone without a seat gets the chart view -
+    // islands and common knowledge, nobody's hulls and nobody's stores.
+    return seat.team === -1 ? snapshot.spectator : snapshot.views[seat.team];
   }
 
   function broadcast(snapshot) {

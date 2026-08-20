@@ -145,7 +145,10 @@ changed".
 
 `engine/commands.js` is the complete vocabulary. A command is a plain object
 with a string `type` and integer fields only — no floats, no timestamps, no
-references, because the command log is the replay.
+references, because the command log is the replay. The log records commands
+with the tick each applied on, and never the ticks between them: a replay
+reconstructs the advances by ticking until the stamps match, so the log grows
+with player activity, not with time.
 
 Validation returns an empty string or a short reason; malformed commands are
 dropped by the reducer rather than thrown on, because they arrive from a network

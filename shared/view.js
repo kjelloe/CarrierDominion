@@ -179,7 +179,9 @@ function unitContactView(unit) {
 }
 
 function islandView(island, team) {
-  const mine = island.owner === team;
+  // team -1 is the spectator, who owns nothing - without the guard, an
+  // UNOWNED island (owner -1) would count as "mine" and show its stocks.
+  const mine = team >= 0 && island.owner === team;
   return {
     id: island.id,
     kind: island.kind,
@@ -265,7 +267,7 @@ function shotView(state, shot, team) {
 // A turret is a building: visible to anyone who can see the island, because a
 // gun emplacement is not a secret. Its magazine is.
 function turretView(turret, team) {
-  const mine = turret.team === team;
+  const mine = team >= 0 && turret.team === team;
   return {
     id: turret.id,
     island: turret.island,
@@ -324,7 +326,11 @@ function buildView(state, team) {
     stockpileIsland = state.teams[i].stockpileIsland;
     score = state.teams[i].score;
   }
-  const holdings = teamHoldings(state, team);
+  // Spectators hold nothing; summing "islands owned by -1" would total the
+  // unowned ones.
+  const holdings = team >= 0
+    ? teamHoldings(state, team)
+    : { fuel: 0, materials: 0, ordnance: 0, chassis: 0 };
 
   // Carrier events carry a carrier id in `a`; unit events (code 8 and up)
   // carry a unit id in `a` and the owning team in `b`. Either way a team hears

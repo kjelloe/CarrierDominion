@@ -27,8 +27,11 @@ Both are deployed by a Walrus within 60 m of the command node. A Walrus sails
 with a pod as standard complement but **buys every virus bomb** — both are
 issued at the ramp, only when missing, and only when the store can pay. A pod
 being built is displaced by an enemy pod, which restarts the clock for the
-newcomer. A conversion is abandoned if the island changes hands under it — a
-virus needs a command centre to subvert, and the one it was working on is gone.
+newcomer. A second bomb on a conversion your side already has running is
+**refused**, not spent — it would only reset your own clock. A conversion is
+abandoned on **any** change of owner — recapture, a rival's pod, anyone — the
+bomb remembers whose command centre it went in against, and a different owner
+is a different command centre.
 
 ## What an island is for
 

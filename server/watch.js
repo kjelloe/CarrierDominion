@@ -25,6 +25,7 @@
 //                    which is the only way a LAN war falls behind
 
 import { worldHeightAt } from '../engine/heightmap.js';
+import { stockCapOf } from '../engine/island.js';
 
 // Sixty thousand ticks is fifty minutes of game time at x1. It sounds enormous
 // until you remember the pacing: one island takes about 37,000 ticks to take,
@@ -124,6 +125,14 @@ function checkIslands(watch, state) {
     }
     if (island.factories > 3 || island.turrets > 4 || island.warehouses > 2) {
       note(watch, 'more built than the slots allow', state.tick, `island ${island.id}`);
+    }
+    // Every path that adds stock respects the cap; a store above it means one
+    // stopped. The cargo network destroyed goods for days against a full depot
+    // and nothing tripped - this is the tripwire that was missing.
+    const cap = stockCapOf(island, state.economy);
+    if (island.stockFuel > cap || island.stockMaterials > cap
+      || island.stockOrdnance > cap || island.stockChassis > cap) {
+      note(watch, 'island stock above its cap', state.tick, `island ${island.id}`);
     }
   }
 }

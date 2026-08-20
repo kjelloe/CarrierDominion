@@ -52,6 +52,7 @@ function copyIsland(island) {
     podTicks: island.podTicks,
     virusTeam: island.virusTeam,
     virusTicks: island.virusTicks,
+    virusVictim: island.virusVictim,
     stockFuel: island.stockFuel,
     stockMaterials: island.stockMaterials,
     stockOrdnance: island.stockOrdnance,

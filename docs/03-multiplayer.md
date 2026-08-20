@@ -101,11 +101,13 @@ cannot propose a rate the server has no name for.
 
 ## Spectators
 
-One human per team; anyone after that watches **team 0's view**, fog and all.
-That is a deliberate simplicity and a known intelligence channel — on a trusted
-LAN it is "watch over the host's shoulder", but a third person in a two-human
-war is seeing one side's private picture. A real observer mode (own fog rules,
-or the referee's view) is future work.
+One human per team; anyone after that gets **the chart view** — the fog filter
+run for a seat that owns nothing. Islands, ownership, works and capture
+progress (all chart-level common knowledge), the war's phase and its ending;
+no hulls, no shots, and nobody's stores. Handing spectators team 0's view, as
+an earlier build did, was a free intelligence channel for one side. A richer
+observer mode (following a hull, the referee's full picture) is future work,
+but whatever it shows will be built on this view, not on a team's.
 
 ## What is deliberately not here
 

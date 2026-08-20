@@ -5,6 +5,54 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — The minor list, closed, and a reef that means it
+
+The owner read the review, ruled on the one open number, and asked for the
+"documented, not fixed" list to be fixed after all. 373 tests + smoke green.
+
+### Grounding out-hurts repair, by exactly one
+
+Ruling: a gentle grounding should cost **one point over the repair rate** — 9
+hull per 100 ticks against the yard's 8. A supplied ship on a reef now loses
+hull slowly while burning materials fast, instead of shrugging; a ship with an
+empty yard grinds down as before. One number in `data/units.json`.
+
+### Spectators get the chart, not team 0's secrets
+
+The fog filter run for a seat that owns nothing turned out to already be the
+right observer view: islands, ownership, works, capture progress — the common
+knowledge — and no hulls, shots or stores. `buildView(state, -1)` needed three
+guards (an UNOWNED island's `owner === -1` matched the spectator's team and
+showed its stocks), the snapshot now carries a `spectator` view alongside the
+team views, and the server hands it to anyone without a seat.
+
+### The virus bomb learns whose door it went in
+
+`island.virusVictim` records the owner at deployment, and **any** change of
+owner abandons the conversion — recapture, the virus team's own pod finishing
+first, or a third team taking it, which two-team wars cannot produce and the
+rule now survives anyway. And a second bomb on a conversion your own side has
+running is **refused** rather than spent: it would only have reset your clock.
+
+### The command log stops recording the metronome
+
+`recordCommand` logged every `advance_tick` — twenty entries a second, 1.7
+million a day, each saying nothing that the tick stamps on the real commands
+do not. Ticks are no longer recorded; a replay reconstructs the advances by
+ticking until the stamps match.
+
+### The watchdog gets the tripwire the network bug earned
+
+`island stock above its cap`: every path that adds stock respects the cap, so
+a store above it means one stopped. The cargo network destroyed goods for days
+against a full depot and nothing tripped; that class of bug now has an alarm.
+
+M0-A and the golden world hash re-pinned once more (islands grew
+`virusVictim`, grounding damage moved) — zero event drift, map byte-identical.
+The AI war resolves at tick 229,482.
+
+---
+
 ## 2026-08-20 — The review, and what it found
 
 The owner asked for a full review of docs, specs and implementation before the

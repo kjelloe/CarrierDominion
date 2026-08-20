@@ -35,6 +35,11 @@ function createSnapshot(state) {
     stateHash: hashState(state),
     // State is never exposed here: only fog-filtered views are transport payloads.
     views: views,
+    // The chart view for anyone without a seat: islands, ownership, works and
+    // capture progress - the common knowledge - and no hulls, shots or stores
+    // of anybody's. A spectator handed team 0's view was a free intelligence
+    // channel for one side.
+    spectator: buildView(state, -1),
   };
 }
 

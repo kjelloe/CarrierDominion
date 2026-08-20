@@ -102,9 +102,12 @@ function createIslands(seed, world, unitsPerMetre) {
       nodeY: ry.value,
       podTeam: -1,
       podTicks: 0,
-      // A virus bomb working on this island's command centre, if any.
+      // A virus bomb working on this island's command centre, if any - and
+      // WHOSE command centre it was subverting when it went in. A change of
+      // owner, any change, abandons the conversion (engine/virus.js).
       virusTeam: -1,
       virusTicks: 0,
+      virusVictim: -1,
       stockFuel: 0,
       stockMaterials: 0,
       stockOrdnance: 0,
