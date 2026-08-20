@@ -151,3 +151,31 @@ test('the supply readout says what is happening', () => {
   assert.match(running, /supply\.depot/);
   assert.match(running, /"percent":50/);
 });
+
+test('the war-over screen says who, how, and what it cost', async () => {
+  const { outcomeModel } = await import('../client/panels/warover.js');
+  const t = (key, vars) => `${key}${vars === undefined ? '' : ' ' + JSON.stringify(vars)}`;
+  const view = {
+    team: 0,
+    winner: 0,
+    winReason: 2,
+    tick: 229482,
+    params: { tickHz: 20 },
+    scores: [{ id: 0, score: 1240 }, { id: 1, score: 830 }],
+    islands: [{ owner: 0 }, { owner: 0 }, { owner: 1 }, { owner: -1 }],
+  };
+  const won = outcomeModel(view, t);
+  assert.equal(won.title, 'war.won');
+  assert.equal(won.reason, 'war.byCarrier');
+  assert.equal(won.scores.length, 2);
+  assert.match(won.scores[0], /scoreYou.*1240/);
+  assert.match(won.scores[1], /scoreTheirs.*"team":2.*830/);
+  assert.match(won.islands, /"held":2,"total":4/);
+  assert.match(won.length, /"hours":3,"minutes":11/);
+
+  const lost = outcomeModel({ ...view, winner: 1 }, t);
+  assert.equal(lost.title, 'war.lost');
+  const draw = outcomeModel({ ...view, winner: -1, winReason: 3 }, t);
+  assert.equal(draw.title, 'warover.drawTitle');
+  assert.equal(draw.reason, 'war.draw');
+});

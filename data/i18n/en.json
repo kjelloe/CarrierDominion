@@ -177,5 +177,12 @@
   "panel.ready": "READY",
   "panel.reloading": "reloading",
   "status.flaresReloading": "the flare launchers are still reloading",
-  "lobby.sayPlaceholder": "say something - ENTER sends"
+  "lobby.sayPlaceholder": "say something - ENTER sends",
+  "warover.drawTitle": "THE WAR IS A DRAW",
+  "warover.scoreYou": "your score {score}",
+  "warover.scoreTheirs": "team {team} score {score}",
+  "warover.islands": "islands held {held} of {total}",
+  "warover.length": "the war ran {hours} h {minutes} min of its own time",
+  "warover.menu": "RETURN TO PORT",
+  "warover.watch": "KEEP WATCHING"
 }

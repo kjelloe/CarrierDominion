@@ -92,6 +92,16 @@ After the full engine review, the owner ruled on the numbers it opened:
   chart view rather than team 0's, the virus bomb refuses to double-deploy and
   abandons on any change of owner, and the command log stops recording ticks.
 
+## Amendments (2026-08-21)
+
+- **24.3 amended: the chart remembers.** Detection stays radar-range only and
+  there is still no stealth, but a contact that leaves your radar now leaves a
+  ghost — last position, heading and time — kept until disproved by scanning
+  the spot, never expired by a timer. (Owner asked for fog-with-memory
+  explicitly; the original 24.3 said "no contact memory".)
+- **The war ends on a screen**, not a HUD line: result, reason, the scoreboard
+  the fog hid until it stopped mattering, RETURN TO PORT or KEEP WATCHING.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

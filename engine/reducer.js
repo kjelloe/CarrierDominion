@@ -59,6 +59,7 @@ import { stepScore } from './score.js';
 import { setRole, startBuild, stepBuild } from './island.js';
 import { setPriority } from './damage.js';
 import { checkFlares, fireFlares, stepFlares } from './flare.js';
+import { stepContacts } from './contacts.js';
 import { stepUnits } from './fleet.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
@@ -362,6 +363,10 @@ function advanceTick(next) {
   stepUnits(next);
   stepFlares(next);
   stepWeapons(next, next.params);
+  // Memory follows the shooting: everything has moved and this tick's dead
+  // are dead, so what each team saw - and stopped seeing - is settled now.
+  // It runs after the war ends too: eyes do not close when the whistle blows.
+  stepContacts(next);
   // "Nothing new is decided" after the war ends, and these are the deciders:
   // no capture completes, no virus converts, no site finishes, no accrual
   // lands, no point scores. Hulls still move, rounds already in the air still

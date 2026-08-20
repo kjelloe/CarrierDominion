@@ -9,8 +9,8 @@
 // carriers are fully visible, enemy carriers appear only inside radar range and
 // then only as a contact - position and heading, no fuel, no hull, no orders.
 
-import { distSq2D } from './fixed.js';
 import { teamHoldings } from '../engine/economy.js';
+import { covered, ghostsFor } from '../engine/contacts.js';
 
 // What is in the magazines. A contact gets an empty list: how many missiles an
 // enemy has left is not something radar tells you.
@@ -219,19 +219,12 @@ function islandView(island, team) {
 
 // Every hull a team owns is a sensor: carriers reach furthest, but a Manta out
 // on patrol is how you see anything at all beyond the carrier's own horizon.
+// The rule itself lives in engine/contacts.js so the memory system, the AI and
+// this filter can never disagree about what a team's sensors reach - and it
+// says a sunk carrier senses nothing, which an earlier version of this file
+// forgot.
 function detectedBy(state, team, target) {
-  for (let i = 0; i < state.carriers.length; i++) {
-    const sensor = state.carriers[i];
-    if (sensor.team !== team) continue;
-    if (distSq2D(sensor.x, sensor.y, target.x, target.y) <= sensor.radar * sensor.radar) return true;
-  }
-  for (let i = 0; i < state.units.length; i++) {
-    const sensor = state.units[i];
-    if (sensor.team !== team) continue;
-    if (sensor.state !== 1 && sensor.state !== 2) continue; // active or returning
-    if (distSq2D(sensor.x, sensor.y, target.x, target.y) <= sensor.radar * sensor.radar) return true;
-  }
-  return false;
+  return covered(state, team, target.x, target.y);
 }
 
 // A shot in the air is visible the way anything else is: your own always, an
@@ -282,6 +275,16 @@ function turretView(turret, team) {
   };
 }
 
+// Empty while the war runs; every team's final score once it is over.
+function scoreboard(state) {
+  const out = [];
+  if (state.phase === 0) return out;
+  for (let i = 0; i < state.teams.length; i++) {
+    out.push({ id: state.teams[i].id, score: state.teams[i].score });
+  }
+  return out;
+}
+
 function buildView(state, team) {
   const carriers = [];
   for (let i = 0; i < state.carriers.length; i++) {
@@ -315,6 +318,10 @@ function buildView(state, team) {
 
   const turrets = [];
   for (let i = 0; i < state.turrets.length; i++) turrets.push(turretView(state.turrets[i], team));
+
+  // The chart's memory: marks for hulls this team HAS seen and no longer does
+  // - position, heading and when, nothing live. A spectator remembers nothing.
+  const contacts = team >= 0 ? ghostsFor(state, team) : [];
 
   const islands = [];
   for (let i = 0; i < state.islands.length; i++) islands.push(islandView(state.islands[i], team));
@@ -391,7 +398,12 @@ function buildView(state, team) {
     units: units,
     shots: shots,
     turrets: turrets,
+    contacts: contacts,
     islands: islands,
+    // Everybody's final score, revealed only when the war is over: during it,
+    // the enemy's score is fog like everything else of theirs, but an ending
+    // is a result and a result has a scoreboard.
+    scores: scoreboard(state),
     events: events,
   };
 }

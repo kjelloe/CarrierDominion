@@ -81,6 +81,24 @@ function drawIslands(ctx, view, own, cx, cy, radius, scale, colours) {
   }
 }
 
+// The chart's memory: a hollow mark where an enemy WAS, drawn faint, because a
+// ghost that looked like a live contact would be the scope lying about how
+// much it knows. Live contacts are solid; memories are outlines.
+function drawGhosts(ctx, view, own, cx, cy, radius, scale, colours) {
+  if (view.contacts === undefined) return;
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  for (const ghost of view.contacts) {
+    const spot = project(cx, cy, own.x, own.y, ghost.x, ghost.y, scale);
+    if (!inScope(cx, cy, spot.x, spot.y, radius - 2)) continue;
+    const size = ghost.kind === 1 ? 4 : 3;
+    ctx.strokeStyle = colours.enemy;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(spot.x - size, spot.y - size, size * 2, size * 2);
+  }
+  ctx.restore();
+}
+
 function drawContacts(ctx, view, own, cx, cy, radius, scale, colours) {
   for (const turret of view.turrets) {
     const spot = project(cx, cy, own.x, own.y, turret.x, turret.y, scale);
@@ -138,6 +156,7 @@ function drawRadar(ctx, view, own, box, seconds, colours, range) {
   ctx.clip();
   drawSweep(ctx, cx, cy, radius, seconds, colours);
   drawIslands(ctx, view, own, cx, cy, radius, scale, colours);
+  drawGhosts(ctx, view, own, cx, cy, radius, scale, colours);
   drawContacts(ctx, view, own, cx, cy, radius, scale, colours);
   ctx.restore();
 

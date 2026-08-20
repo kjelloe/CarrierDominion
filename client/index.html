@@ -133,6 +133,23 @@
       border: 1px solid var(--hud-dim); font: 12px var(--hud-font);
     }
     #lobby-say:focus { outline: none; border-color: var(--hud-ink); }
+    /* The war-over screen: the result, over a world that keeps winding down
+       behind it. Semi-transparent on purpose - KEEP WATCHING is a real offer. */
+    #warover-panel {
+      position: fixed; inset: 0; display: none; z-index: 9;
+      align-items: center; justify-content: center;
+      background: rgba(5, 7, 11, 0.93); color: var(--hud-ink);
+      font: 14px/2 var(--hud-font); user-select: none; text-align: center;
+    }
+    #warover-panel.open { display: flex; }
+    #warover-title { font-size: 26px; letter-spacing: 8px; margin-bottom: 6px; }
+    #warover-reason { color: var(--hud-dim); margin-bottom: 18px; }
+    #warover-body { margin-bottom: 22px; }
+    .warover-button {
+      display: block; margin: 8px auto 0; padding: 6px 26px; cursor: pointer;
+      border: 1px solid var(--hud-ink); letter-spacing: 4px; width: fit-content;
+    }
+    .warover-button:hover { background: var(--hud-ink); color: #05070b; }
   </style>
   <script type="importmap">
     { "imports": { "three": "/client/vendor/three.module.min.js" } }
@@ -156,6 +173,15 @@
     <div id="island-title"></div>
     <div id="island-body"></div>
     <div id="island-note"></div>
+  </div>
+  <div id="warover-panel">
+    <div>
+      <div id="warover-title"></div>
+      <div id="warover-reason"></div>
+      <div id="warover-body"></div>
+      <div id="warover-menu" class="warover-button"></div>
+      <div id="warover-watch" class="warover-button"></div>
+    </div>
   </div>
   <div id="start-panel">
     <div id="start-inner">

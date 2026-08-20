@@ -44,7 +44,10 @@ adding it mirrors the rose. It looked plausible until you turned.
 `client/render/radar.js` is a proper PPI scope with its own range control
 (`[` and `]`). When you widen the scope past what the ship can actually detect
 it draws a ring at the real radar limit, so an empty sweep at long range reads
-as "nothing detected there" rather than "nothing there".
+as "nothing detected there" rather than "nothing there". Remembered contacts —
+the chart's ghosts — draw as faint hollow marks, deliberately unlike the solid
+dots of live contacts: a scope that drew a memory like a sighting would be
+lying about how much it knows.
 
 `client/render/damageboard.js` is the seven-section schematic: a 3D wireframe of
 the ship with each section shaded by health, and a click cycling that section's
@@ -54,7 +57,11 @@ repair priority between High, Medium and Low.
 
 `client/panels/` holds the screens that are lists rather than instruments:
 `damage.js`, `island.js`, `lobby.js` (the war room), `start.js` (the game-start
-menu — map, islands, opponents, caps, style, language).
+menu — map, islands, opponents, caps, style, language), and `warover.js` — the
+full-screen result when the war ends: who won, how, the scoreboard the fog hid,
+the islands, the war's own running time, and the choice between RETURN TO PORT
+and KEEP WATCHING (the world winds down behind it; it does not freeze). It
+shows once per war, on the tick the phase flips.
 
 Rows are **built once and updated in place**. Rebuilding them every frame
 replaced elements under the pointer, so a click landed on a node that had

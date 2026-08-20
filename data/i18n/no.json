@@ -177,5 +177,12 @@
   "panel.ready": "KLAR",
   "panel.reloading": "lader",
   "status.flaresReloading": "fakkelutskyterne lader fortsatt",
-  "lobby.sayPlaceholder": "si noe - ENTER sender"
+  "lobby.sayPlaceholder": "si noe - ENTER sender",
+  "warover.drawTitle": "KRIGEN ENDTE UAVGJORT",
+  "warover.scoreYou": "din poengsum {score}",
+  "warover.scoreTheirs": "lag {team} poengsum {score}",
+  "warover.islands": "øyer holdt {held} av {total}",
+  "warover.length": "krigen varte {hours} t {minutes} min i egen tid",
+  "warover.menu": "TILBAKE TIL HAVN",
+  "warover.watch": "FORTSETT Å SE"
 }

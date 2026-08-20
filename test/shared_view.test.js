@@ -149,3 +149,37 @@ test('a snapshot carries the spectator chart alongside the team views', async ()
   assert.equal(snapshot.spectator.team, -1);
   assert.equal(snapshot.spectator.carriers.length, 0);
 });
+
+test('ghosts reach only the team that remembers them, and only when stale', () => {
+  const state = createInitialState(SEED, rules);
+  state.tick = 100;
+  state.contacts = [
+    { team: 0, kind: 1, id: 1, unitKind: -1, x: 5000, y: 6000, heading: 0, tick: 40 },
+    { team: 1, kind: 0, id: 3, unitKind: 0, x: 7000, y: 8000, heading: 0, tick: 90 },
+    // Fresh this tick: the hull is on radar and reaches the view live, so the
+    // ghost channel must NOT carry it too.
+    { team: 0, kind: 1, id: 0, unitKind: -1, x: 1, y: 2, heading: 0, tick: 100 },
+  ];
+  const view0 = buildView(state, 0);
+  assert.equal(view0.contacts.length, 1);
+  assert.equal(view0.contacts[0].id, 1);
+  assert.equal(view0.contacts[0].tick, 40);
+  assert.equal(view0.contacts[0].team, undefined, 'a ghost record leaked whose memory it is');
+  const view1 = buildView(state, 1);
+  assert.equal(view1.contacts.length, 1);
+  assert.equal(view1.contacts[0].unitKind, 0);
+  // The spectator remembers nothing.
+  assert.equal(buildView(state, -1).contacts.length, 0);
+});
+
+test('the scoreboard is fog while the war runs and a result once it ends', () => {
+  const state = createInitialState(SEED, rules);
+  state.teams[0].score = 120;
+  state.teams[1].score = 340;
+  assert.deepEqual(buildView(state, 0).scores, [], 'the enemy score leaked mid-war');
+  state.phase = 1;
+  state.winner = 1;
+  state.winReason = 2;
+  const over = buildView(state, 0);
+  assert.deepEqual(over.scores, [{ id: 0, score: 120 }, { id: 1, score: 340 }]);
+});

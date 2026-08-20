@@ -24,6 +24,7 @@ import {
   createWeapons,
 } from './weapons.js';
 import { copyShot } from './shots.js';
+import { copyContacts } from './contacts.js';
 import { copySections, createSections } from './damage.js';
 import { copyTurrets } from './turret.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
@@ -209,6 +210,7 @@ function copyState(state) {
     nextShot: state.nextShot,
     turrets: copyTurrets(state.turrets),
     nextTurret: state.nextTurret,
+    contacts: copyContacts(state.contacts),
     events: events,
   };
 }
@@ -414,6 +416,9 @@ function createInitialState(seed, rules) {
     nextShot: 0,
     turrets: [],
     nextTurret: 0,
+    // What each team remembers seeing (engine/contacts.js). Empty at the
+    // start: nobody has seen anything yet.
+    contacts: [],
     events: [],
   };
 }

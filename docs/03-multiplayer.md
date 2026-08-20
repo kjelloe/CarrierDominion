@@ -43,12 +43,20 @@ Only `shared/view.js` output, per team, every tick:
   carrying.
 - **Islands** always — they are on the chart. Ownership and works are visible;
   another side's stockpile is not.
+- **Ghosts** — the chart's memory (`engine/contacts.js`): a mark for every
+  enemy hull this team HAS seen and no longer does — position, heading and
+  when, nothing live. Kept until disproved by scanning the spot properly (the
+  rim of the sweep is deliberately ambiguous), never expired by a timer. The
+  memory lives in state, per team, so replays remember exactly what the war
+  remembered; only your own team's ghosts reach your view.
+- **The scoreboard**, empty while the war runs — the enemy score is fog like
+  everything else of theirs — and everybody's final score once it ends.
 - **Events** are filtered too, so an explosion you could not have seen does not
   arrive as a sound cue.
 
-Detection is radar range only (owner ruling): there is no separate visual sense
-and no remembered contact yet. A ship with a wrecked topside goes blind, which
-is the single most expensive damage state in the game.
+Detection is radar range only (owner ruling): there is no separate visual
+sense. A ship with a wrecked topside goes blind, which is the single most
+expensive damage state in the game — though the chart keeps its ghosts.
 
 ## The war room
 

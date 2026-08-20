@@ -33,6 +33,7 @@ import {
   showStartPanel,
 } from './panels/start.js';
 import { createLobbyPanel, renderLobbyPanel } from './panels/lobby.js';
+import { createWaroverPanel, updateWaroverPanel } from './panels/warover.js';
 import { nextWeapon } from '../engine/weapons.js';
 import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
 import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.js';
@@ -606,6 +607,7 @@ function frame(nowMs) {
   setHud(state.hud, 'supply', describeSupply(state.t, state.view));
   renderDamagePanel(state.damage, deltaSeconds);
   renderIslandPanel(state.island);
+  updateWaroverPanel(state.warover, state.view);
   updateSight();
 }
 
@@ -759,6 +761,7 @@ async function main() {
   };
   state.damage = createDamagePanel(panelContext);
   state.island = createIslandPanel(panelContext);
+  state.warover = createWaroverPanel(panelContext.t);
   // The lobby speaks to the SERVER, not to the reducer: its own sender, which
   // puts the message on the wire as it is.
   state.lobbyPanel = createLobbyPanel({
@@ -794,6 +797,10 @@ async function main() {
   // Render probes reach the scene graph through this; nothing in the game uses
   // it, and it holds no state the client does not already own.
   window.__scene3d = state.scene3d;
+  // Probes photograph states a live war takes hours to reach - a finished war,
+  // a scope full of remembered ghosts - by pausing and swapping the view. The
+  // next real snapshot overwrites it, which is why the probe pauses first.
+  window.__debugView = (view) => { state.view = view; };
   resize(state.scene3d);
   window.addEventListener('resize', () => resize(state.scene3d));
 

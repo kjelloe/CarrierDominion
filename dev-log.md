@@ -5,6 +5,60 @@ golden hash and why.
 
 ---
 
+## 2026-08-21 — The chart remembers, and the war ends on a screen
+
+Two Milestone 2 items, by owner ruling (which amends 24.3 - the original said
+"no contact memory", and the owner has now asked for exactly that). 382 tests
++ smoke green; the AI-vs-AI endpoint did not move (tick 229,482), because the
+AI deliberately does not use the memory yet.
+
+### Contact memory (`engine/contacts.js`)
+
+A contact that leaves your radar leaves a GHOST: last position, heading, and
+when. The rules that took thinking:
+
+- **Ghosts are disproved, never expired.** A mark is dropped when your sensors
+  scan the remembered spot and find nothing - a chart mark does not fade
+  because you looked away, it fades because you looked back.
+- **The rim is ambiguous on purpose.** The first implementation disproved a
+  ghost when the spot was merely COVERED - but a hull that sails over the
+  horizon was last seen essentially at the rim, which is still-covered ground,
+  so every naturally-departing contact was disproved on the very next tick.
+  The whole feature quietly deleted itself. Disproof now needs the spot 400 m
+  inside a sweep.
+- **Memory lives in state, per team** - a replay must remember exactly what
+  the war remembered, and the fog filter is pure per-tick and cannot hold
+  anything. Rebuilt in entity-list order each tick so the array is
+  deterministic regardless of when things were first seen.
+- **The view carries only ghosts** (stale marks); a hull currently on radar
+  arrives through the normal channels, and a scope that drew it twice would be
+  lying about how much it knows. Spectators remember nothing.
+- Unifying the sensor rule into `covered()` fixed a fog bug on the way: a
+  SUNK carrier was still painting contacts for its team - the view's own
+  detectedBy never checked hull.
+
+The AI still hunts on live sightings only - `ai_strike` using ghosts is the
+next slice, and it is a balance change to measure, not sneak in.
+
+### The war-over screen (`client/panels/warover.js`)
+
+A four-hour war used to end as one HUD line. Now: the result, the reason, the
+scoreboard the fog hid until it stopped mattering (`view.scores` is empty
+while the war runs and everybody's total once it ends - an ending is a result,
+and a result has a scoreboard), islands held, and the war's own running time.
+RETURN TO PORT goes back to the menu; KEEP WATCHING dismisses it and the world
+keeps winding down behind it. Shows once per war, on the tick the phase flips.
+
+The probe (`war_over.mjs`) photographs both new surfaces in seconds via a
+`__debugView` hook - pause the solo war, swap in a doctored view - because
+the states it needs take hours to reach honestly. The screenshots are the
+review: the ghosts read as memories (faint outlines against solid dots), and
+the screen says YOU WON in the right places.
+
+Both pins re-pinned once (state grew `contacts`; zero event drift).
+
+---
+
 ## 2026-08-20 — The rulings become a document, and the review becomes a skill
 
 Two records that lived in the wrong places. The owner's rulings were scattered
