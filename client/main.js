@@ -24,6 +24,12 @@ import {
   openIslandPanel,
   renderIslandPanel,
 } from './panels/island.js';
+import {
+  applyChoices,
+  createStartPanel,
+  seedFromClock,
+  showStartPanel,
+} from './panels/start.js';
 import { nextWeapon } from '../engine/weapons.js';
 import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
 import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.js';
@@ -612,6 +618,22 @@ async function main() {
   setHud(state.hud, 'status', state.t('status.loading'));
 
   const rules = await fetchRules();
+
+  // A URL that already says what to run is somebody who has chosen - a shared
+  // link, a probe, the smoke gate. Everybody else gets the menu.
+  let seed = Number(params.get('seed') ?? 20260818);
+  let startSpeed = START_SPEED;
+  let styleName = params.get('style');
+  if (!params.has('mode')) {
+    const panel = createStartPanel(state.t, seedFromClock());
+    const chosen = await showStartPanel(panel);
+    seed = chosen.seed;
+    const extras = applyChoices(rules, chosen.choices);
+    startSpeed = extras.speed;
+    state.speed = startSpeed;
+    if (styleName === null) styleName = extras.style;
+  }
+
   state.podBuildTicks = rules.rules.podBuildTicks;
   state.buildCosts = rules.economy.builds.map((row) => row.materials);
   // The two boards get a context rather than the client: a translator, the
@@ -633,7 +655,7 @@ async function main() {
   setHud(state.hud, 'graphics', `${preset.label} (${resolved.source})`);
   document.getElementById('gpu').textContent = describeGpu(diag);
 
-  const style = styleFor(resolveStyle(params.get('style')));
+  const style = styleFor(resolveStyle(styleName));
   applyStyleToDocument(style, document.documentElement);
   setHud(state.hud, 'graphics', `${preset.label} / ${style.label} (${resolved.source})`);
 
@@ -660,8 +682,7 @@ async function main() {
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
     state.transport = createWsTransport(`${scheme}://${window.location.host}`);
   } else {
-    const seed = Number(params.get('seed') ?? 20260818);
-    state.transport = createLocalTransport(seed, rules, SEAT, START_SPEED);
+    state.transport = createLocalTransport(seed, rules, SEAT, startSpeed);
   }
   setHud(state.hud, 'transport', state.t(MODE === 'lan' ? 'transport.ws' : 'transport.local'));
   bindInput(resolved.level);

@@ -83,6 +83,31 @@
     .island-act:hover { text-decoration: underline; }
     .island-act.off { color: var(--hud-dim); cursor: default; text-decoration: none; }
     #island-note { color: var(--hud-dim); margin-top: 8px; }
+    /* The start menu: what war you are about to fight. Shown only when the URL
+       does not already say - a link with ?mode= is somebody who has chosen. */
+    #start-panel {
+      position: fixed; inset: 0; display: none; z-index: 10;
+      align-items: center; justify-content: center;
+      background: #05070b; color: var(--hud-ink);
+      font: 14px/1.9 var(--hud-font); user-select: none;
+    }
+    #start-panel.open { display: flex; }
+    /* Nothing behind the menu: the instruments belong to a war that has not
+       started yet, and reading them through it is worse than not seeing them. */
+    body.menu #hud, body.menu #help { display: none; }
+    #start-inner { min-width: 460px; }
+    #start-title { letter-spacing: 6px; margin-bottom: 18px; font-size: 20px; }
+    .start-row {
+      display: flex; justify-content: space-between; gap: 40px; cursor: pointer;
+      padding: 2px 0;
+    }
+    .start-row:hover .start-value { text-decoration: underline; }
+    #start-begin {
+      margin-top: 20px; padding: 6px 0; text-align: center; cursor: pointer;
+      border: 1px solid var(--hud-ink); letter-spacing: 4px;
+    }
+    #start-begin:hover { background: var(--hud-ink); color: #05070b; }
+    #start-note { color: var(--hud-dim); margin-top: 14px; font-size: 12px; }
   </style>
   <script type="importmap">
     { "imports": { "three": "/client/vendor/three.module.min.js" } }
@@ -105,6 +130,13 @@
     <div id="island-title"></div>
     <div id="island-body"></div>
     <div id="island-note"></div>
+  </div>
+  <div id="start-panel">
+    <div id="start-inner">
+      <div id="start-title"></div>
+      <div id="start-body"></div>
+      <div id="start-note"></div>
+    </div>
   </div>
   <script type="module" src="/client/main.js"></script>
 </body>
