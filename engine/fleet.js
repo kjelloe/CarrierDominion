@@ -61,7 +61,7 @@ function stepUnits(state) {
     // A lighter uses the surface drive model, like a Walrus - it simply never
     // gets an order that would take it ashore.
     const outcome = unit.kind === KIND_MANTA
-      ? stepManta(unit, sizeUnits)
+      ? stepManta(unit, state.islands, sizeUnits)
       : stepWalrus(unit, state.islands, sizeUnits);
 
     if (outcome === FLIGHT_OUT_OF_FUEL || outcome === DRIVE_OUT_OF_FUEL) {

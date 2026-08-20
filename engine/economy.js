@@ -89,6 +89,18 @@ function refine(state) {
   }
 }
 
+// What actually moves: the network's share, but never more than the depot has
+// room for. Shipping the share and capping the arrival DESTROYED the excess -
+// the source was debited, the depot was full, and the difference vanished
+// silently every accrual. A full depot now leaves goods where they are, which
+// is also the signal a player can see: stock piling up at the mine means the
+// depot needs a warehouse.
+function shipAmount(available, sharePermil, room) {
+  if (room <= 0) return 0;
+  const share = mulDiv(available, sharePermil, 1000);
+  return share < room ? share : room;
+}
+
 // The cargo network, abstracted: each accrual, every owned island ships a
 // share of what it holds toward the team's stockpile island. No drone
 // entities - the interesting decision is WHICH island is the stockpile and
@@ -100,21 +112,22 @@ function shipToStockpile(state) {
     const depot = islandById(state, team.stockpileIsland);
     if (depot === -1 || depot.owner !== team.id) continue;
     const cap = stockCapOf(depot, state.economy);
+    const share = state.economy.networkPermil;
     for (let i = 0; i < state.islands.length; i++) {
       const island = state.islands[i];
       if (island.owner !== team.id || island.id === depot.id) continue;
-      const fuel = mulDiv(island.stockFuel, state.economy.networkPermil, 1000);
-      const materials = mulDiv(island.stockMaterials, state.economy.networkPermil, 1000);
-      const ordnance = mulDiv(island.stockOrdnance, state.economy.networkPermil, 1000);
-      const chassis = mulDiv(island.stockChassis, state.economy.networkPermil, 1000);
+      const fuel = shipAmount(island.stockFuel, share, cap - depot.stockFuel);
+      const materials = shipAmount(island.stockMaterials, share, cap - depot.stockMaterials);
+      const ordnance = shipAmount(island.stockOrdnance, share, cap - depot.stockOrdnance);
+      const chassis = shipAmount(island.stockChassis, share, cap - depot.stockChassis);
       island.stockFuel = island.stockFuel - fuel;
       island.stockMaterials = island.stockMaterials - materials;
       island.stockOrdnance = island.stockOrdnance - ordnance;
       island.stockChassis = island.stockChassis - chassis;
-      depot.stockFuel = capped(depot.stockFuel + fuel, cap);
-      depot.stockMaterials = capped(depot.stockMaterials + materials, cap);
-      depot.stockOrdnance = capped(depot.stockOrdnance + ordnance, cap);
-      depot.stockChassis = capped(depot.stockChassis + chassis, cap);
+      depot.stockFuel = depot.stockFuel + fuel;
+      depot.stockMaterials = depot.stockMaterials + materials;
+      depot.stockOrdnance = depot.stockOrdnance + ordnance;
+      depot.stockChassis = depot.stockChassis + chassis;
     }
   }
 }

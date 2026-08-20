@@ -409,8 +409,12 @@ function reloadCarrier(carrier, weapon) {
 }
 
 function stepWeapons(state, params) {
-  fireAll(state);
-  fireTurrets(state);
+  // Firing is a decision and a finished war decides nothing new; a round
+  // already in the air was decided when it left the rail, so it still flies.
+  if (state.phase === 0) {
+    fireAll(state);
+    fireTurrets(state);
+  }
   stepShots(state, params);
   sweepTurrets(state);
 }

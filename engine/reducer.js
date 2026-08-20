@@ -362,15 +362,24 @@ function advanceTick(next) {
   stepUnits(next);
   stepFlares(next);
   stepWeapons(next, next.params);
-  stepCapture(next, next.params.podBuildTicks);
-  stepVirus(next, next.params.virusBuildTicks);
-  stepBuild(next);
-  stepEconomy(next);
+  // "Nothing new is decided" after the war ends, and these are the deciders:
+  // no capture completes, no virus converts, no site finishes, no accrual
+  // lands, no point scores. Hulls still move, rounds already in the air still
+  // fly (stepWeapons stops the FIRING, not the flight), boats still deliver
+  // and the yard still mends - the world winds down, it does not freeze.
+  if (next.phase === PHASE_RUNNING) {
+    stepCapture(next, next.params.podBuildTicks);
+    stepVirus(next, next.params.virusBuildTicks);
+    stepBuild(next);
+    stepEconomy(next);
+  }
   stepSupply(next);
   // Repairs last: the boat has landed this tick's materials, and the yard
   // spends what is in the store, not what is in the hold.
   stepRepair(next);
-  stepScore(next, next.params.pointsPerIsland);
+  if (next.phase === PHASE_RUNNING) {
+    stepScore(next, next.params.pointsPerIsland);
+  }
   checkVictory(next, next.params);
   return next;
 }

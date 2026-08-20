@@ -26,6 +26,7 @@ import {
 } from './events.js';
 import { UNIT_LOST, unitEngageable } from './units.js';
 import { armourMultiplierPermil, damageSection, sectionAt } from './damage.js';
+import { worldHeightAt } from './heightmap.js';
 import { SCORE_CARRIER, SCORE_KILL, addScore } from './score.js';
 
 // What a shot is chasing, so a guided round can be re-aimed at the right list.
@@ -317,6 +318,18 @@ function stepShots(state, params) {
         hitTurret(state, state.turrets[hit.index], shot.damage, shot.team);
       } else {
         hitUnit(state, state.units[hit.index], shot.damage, shot.team);
+      }
+      continue;
+    }
+    // The ground is in the fight: a round that flies into a hillside stops
+    // there, and a splash round throws its blast from the point of impact -
+    // which is what makes an island something to shoot AROUND, and a ridge
+    // worth keeping between you and a missile. The test is at the endpoint,
+    // which is coarser than the segment test hulls get; a laser pulse can
+    // still clip a razor-thin crest, and nobody will ever notice.
+    if (nz < worldHeightAt(state.islands, nx, ny)) {
+      if (shot.splash === 1) {
+        detonate(state, shot, nx, ny, worldHeightAt(state.islands, nx, ny), params);
       }
       continue;
     }

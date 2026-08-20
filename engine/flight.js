@@ -11,6 +11,7 @@
 
 import { clampI, mulDiv, stepToward, turnToward, wrapAngle } from '../shared/fixed.js';
 import { atan2B, mulCos, mulSin } from '../shared/trig.js';
+import { worldHeightAt } from './heightmap.js';
 import {
   ORDER_HOLD,
   ORDER_MOVE,
@@ -20,6 +21,15 @@ import {
   arrivedAtTarget,
   burnUnitFuel,
 } from './units.js';
+
+// The tallest islands out-top the cruise altitude (peaks reach 420 m, cruise
+// is 400), so the autopilot flies the CONTOUR: at least this clear of the
+// ground, at cruise wherever cruise is higher. The probe looks far enough
+// ahead that the climb rate can actually deliver the clearance by the time the
+// summit arrives - the extra height needed is small (tens of metres), but the
+// climb is slow.
+const TERRAIN_CLEARANCE_UNITS = 30 * 256;
+const TERRAIN_PROBE_UNITS = 1400 * 256;
 
 // What stepManta reports back to the orchestrator, which turns it into events.
 const FLIGHT_NOTHING = 0;
@@ -49,13 +59,26 @@ function targetSpeedFor(unit) {
   return clampI(mulDiv(unit.maxSpeed, unit.throttle, 100), unit.minSpeed, unit.maxSpeed);
 }
 
-function stepManta(unit, sizeUnits) {
+// Where the nose should settle: cruise, or clear of the ground here and a
+// probe ahead, whichever is higher. No crash mechanic - the airframe pops over
+// the summit and settles back to cruise on the far side.
+function targetAltitudeFor(unit, islands, sizeUnits) {
+  let ground = worldHeightAt(islands, unit.x, unit.y);
+  const aheadX = clampI(unit.x + mulCos(TERRAIN_PROBE_UNITS, unit.heading), 0, sizeUnits);
+  const aheadY = clampI(unit.y + mulSin(TERRAIN_PROBE_UNITS, unit.heading), 0, sizeUnits);
+  const ahead = worldHeightAt(islands, aheadX, aheadY);
+  if (ahead > ground) ground = ahead;
+  const clear = ground + TERRAIN_CLEARANCE_UNITS;
+  return clear > unit.cruiseAltitude ? clear : unit.cruiseAltitude;
+}
+
+function stepManta(unit, islands, sizeUnits) {
   unit.heading = steerManta(unit);
   unit.speed = stepToward(unit.speed, targetSpeedFor(unit), unit.accel);
 
   unit.x = clampI(unit.x + mulCos(unit.speed, unit.heading), 0, sizeUnits);
   unit.y = clampI(unit.y + mulSin(unit.speed, unit.heading), 0, sizeUnits);
-  unit.z = stepToward(unit.z, unit.cruiseAltitude, unit.climbRate);
+  unit.z = stepToward(unit.z, targetAltitudeFor(unit, islands, sizeUnits), unit.climbRate);
 
   if (burnUnitFuel(unit, unit.fuelBurn) === 1) {
     // Dry over the sea: the airframe is gone. Nothing to recover.
@@ -78,6 +101,8 @@ export {
   FLIGHT_OUT_OF_FUEL,
   FLIGHT_ARRIVED,
   FLIGHT_HOME,
+  TERRAIN_CLEARANCE_UNITS,
   stepManta,
+  targetAltitudeFor,
   desiredHeading,
 };
