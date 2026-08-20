@@ -204,7 +204,11 @@ inside each tier — sections before plating.
 Lost hulls come back: a factory island makes chassis, the boat brings them, and
 the hangar assembles one into its **own unit record**. The lighter is rebuilt
 first, and while there is no boat at all it is the only thing the yard will
-build.
+build. When hulls are down, **the yard's shopping list rides first**: the boat
+loads the missing chassis before anything else, because a depot with abundant
+fuel otherwise fills the entire hold with fuel every run and the parts never
+sail — measured: both AI air groups once sat annihilated for 60,000 ticks with
+full warehouses of parts ashore.
 
 ## Flares
 
@@ -260,3 +264,11 @@ Three behaviours worth knowing when you play against it: it **withdraws** below
 half its hull rather than trading to the death, it **fires flares** only when
 something locked on is close enough for the burst to catch — and after you
 break contact, **expect one aircraft to come looking at where you were**.
+
+When it knows nothing at all — no sighting, no ghost — and the silence has run
+30,000 ticks, it **patrols**: one scout over the islands you hold, in rotation,
+least-defended first, and only while its bunker is above half. The quiet gate
+matters: without it the first patrol flew the moment anybody owned an island,
+and autonomous strike cycles sank somebody by tick 11,000 — the entire economy
+game deleted by eagerness. Patrols are for re-finding a lost war, not for
+opening-move rushes.

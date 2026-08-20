@@ -304,6 +304,10 @@ function createBrain(team) {
     strikeCarrier: -1,
     retreatTicks: 0,
     retreatHeading: 0,
+    // The last tick this team had LIVE contact with an enemy carrier. The
+    // patrol gate reads it: patrols are for re-finding a lost war, not for
+    // opening-move rushes (engine/ai_strike.js).
+    lastContactTick: 0,
   };
 }
 
@@ -318,6 +322,7 @@ function copyBrain(brain) {
     strikeCarrier: brain.strikeCarrier,
     retreatTicks: brain.retreatTicks,
     retreatHeading: brain.retreatHeading,
+    lastContactTick: brain.lastContactTick,
   };
 }
 

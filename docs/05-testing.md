@@ -51,6 +51,15 @@ is the measuring instrument for everything that only shows up over hours:
 If a change makes the AI stupider or the economy tighter, the sim says so in a
 minute and no unit test would have.
 
+`npm run battery` is the sim times five: fixed seeds (20260818, 31337, 424242,
+777001, 900913), each war run to its end under the playtest watchdog, failing
+loudly on a war that does not resolve or trips a finding. A report with
+endpoints, winners, worst quiet stretches and wall time lands in
+`reports/sweeps/`. On its first run it caught seed 424242 stalled for 60,586
+ticks — both air groups annihilated and the replacement chassis never sailing,
+because the boat's hold filled entirely with fuel every trip. One seed is a
+measurement; five is a distribution.
+
 ## Probes
 
 `debugging/probes/*.mjs` drive a real Chromium through Playwright, do something,

@@ -65,15 +65,44 @@ function moveAmount(available, budget, room) {
   return moved > 0 ? moved : 0;
 }
 
+// What the hangar is waiting for: enough chassis to rebuild every hull it has
+// lost, minus what is already aboard the ship or in this boat's hold. Loaded
+// FIRST, because a depot with abundant fuel otherwise fills the entire hold
+// with fuel every single run and the parts never sail - both AI air groups
+// once sat annihilated for 60,000 ticks with full warehouses of chassis
+// ashore, two toothless fleets staring at each other in radar range.
+function chassisWanted(state, unit, carrier) {
+  let lost = 0;
+  for (let i = 0; i < state.units.length; i++) {
+    const hull = state.units[i];
+    if (hull.carrierId === carrier.id && hull.state === UNIT_LOST) lost = lost + 1;
+  }
+  const wanted = lost * state.economy.chassisPerHull - carrier.chassis - unit.cargoChassis;
+  return wanted > 0 ? wanted : 0;
+}
+
 // Loaded in priority order, because a lighter is smaller than the ship's
-// appetite: fuel keeps the carrier moving, ordnance keeps it dangerous, and
-// materials - which become hull repair at the other end - ride in what is left.
+// appetite: the yard's shopping list rides first when hulls are down, then
+// fuel keeps the carrier moving, ordnance keeps it dangerous, and materials -
+// which become hull repair at the other end - ride in what is left.
 function loadFromDepot(state, unit, depot) {
   const room = unit.cargoCap - laden(unit);
   if (room <= 0) return 0;
   let worked = 0;
 
-  const fuel = moveAmount(depot.stockFuel, unit.workRate, room);
+  const carrier = carrierFor(state, unit.carrierId);
+  if (carrier !== -1) {
+    const parts = moveAmount(
+      depot.stockChassis,
+      unit.workRate,
+      chassisWanted(state, unit, carrier) < room ? chassisWanted(state, unit, carrier) : room,
+    );
+    depot.stockChassis = depot.stockChassis - parts;
+    unit.cargoChassis = unit.cargoChassis + parts;
+    worked = worked + parts;
+  }
+
+  const fuel = moveAmount(depot.stockFuel, unit.workRate - worked, room - worked);
   depot.stockFuel = depot.stockFuel - fuel;
   unit.cargoFuel = unit.cargoFuel + fuel;
   worked = worked + fuel;

@@ -8,7 +8,7 @@
 // Mantas fly the strike. The carrier itself never manoeuvres to attack: it is
 // the airfield, and steering it into a gunfight is how you lose one.
 
-import { dist2D, mulDiv } from '../shared/fixed.js';
+import { dist2D, floorDiv, mulDiv } from '../shared/fixed.js';
 import { atan2B } from '../shared/trig.js';
 import { CONTACT_CARRIER, remembered } from './contacts.js';
 import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
@@ -116,12 +116,13 @@ function carrierGhost(state, team) {
   return best;
 }
 
-// One aircraft goes to look at a memory. The ghost mechanics make the search
-// self-terminating: the scout's own radar either re-acquires the carrier -
-// live target, and the strike takes over next cadence - or scans the spot
-// clean, which DISPROVES the ghost, and with no ghost left the scout is
-// recalled. No search timer, no patrol state in the brain.
-function huntGhost(state, brain, ghost, flying, carrier) {
+// One aircraft goes to look at a mark on the chart - a remembered ghost, or a
+// patrol point. For a ghost the search is self-terminating: the scout's own
+// radar either re-acquires the carrier - live target, and the strike takes
+// over next cadence - or scans the spot clean, which DISPROVES the ghost, and
+// with no ghost left the scout is recalled. No search timer, no patrol state
+// in the brain.
+function huntGhost(state, brain, mark, flying, carrier) {
   let scout = -1;
   for (let i = 0; i < flying.length; i++) {
     const manta = flying[i];
@@ -140,7 +141,55 @@ function huntGhost(state, brain, ghost, flying, carrier) {
     pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
     scout = ready;
   }
-  vectorTo(scout, ghost.x, ghost.y);
+  vectorTo(scout, mark.x, mark.y);
+}
+
+// Patrolling costs bunker fuel every sortie, so it is a luxury the ship only
+// affords above half a tank: insurance flights must never be what strands it.
+const PATROL_SHIP_FUEL_PERMIL = 500;
+
+// And it is a MID-WAR luxury. Without this gate the first patrol flew the
+// moment anybody owned an island, found the enemy carrier in the opening, and
+// autonomous strike cycles sank somebody by tick 11,000-20,000 on three of
+// five battery seeds - the entire economy game deleted by eagerness. Patrols
+// exist to break the 60,000-tick silences the watchdog flags, so they begin at
+// half that: long enough for a war to develop, early enough that the scout's
+// transit still beats the tripwire.
+const PATROL_QUIET_TICKS = 30000;
+
+// How long a patrol dwells on one island before the search moves on. Long
+// enough for the transit and a proper look; short enough that a full sweep of
+// the enemy's holdings finishes inside one watchdog window. Without rotation
+// the patrol re-checked the same nearest island forever while the enemy
+// carrier sat two islands further on - seed 424242 stalled 60,000 ticks with
+// scouts dutifully airborne the whole time.
+const PATROL_ROTATE_TICKS = 9000;
+
+// Where to look when you know NOTHING: over the islands the enemy HOLDS, in
+// rotation. Ownership is chart-level common knowledge, a carrier is most
+// often found near its conquests - and its guns are on the chart too, so the
+// sweep walks them least-defended first. A scout is a pair of eyes, not a
+// raid. Rotation is driven by the tick, so it is replay-deterministic and
+// needs no state in the brain.
+function patrolMark(state, team, carrier) {
+  const marks = [];
+  for (let i = 0; i < state.islands.length; i++) {
+    const island = state.islands[i];
+    if (island.owner < 0 || island.owner === team) continue;
+    marks.push(island);
+  }
+  if (marks.length === 0) return -1;
+  // Least guns first, nearest first inside a tier: the sweep starts where a
+  // scout is most likely to come home.
+  marks.sort((a, b) => {
+    if (a.turrets !== b.turrets) return a.turrets - b.turrets;
+    const da = dist2D(carrier.x, carrier.y, a.nodeX, a.nodeY);
+    const db = dist2D(carrier.x, carrier.y, b.nodeX, b.nodeY);
+    if (da !== db) return da - db;
+    return a.id - b.id;
+  });
+  const island = marks[floorDiv(state.tick, PATROL_ROTATE_TICKS) % marks.length];
+  return { x: island.nodeX, y: island.nodeY };
 }
 
 // One strike decision for one team. Returns the enemy carrier id under attack,
@@ -152,25 +201,42 @@ function manageStrike(state, brain) {
 
   if (target === -1) {
     brain.strikeCarrier = -1;
+    let carrier = -1;
+    for (let i = 0; i < state.carriers.length; i++) {
+      if (state.carriers[i].team === brain.team) carrier = state.carriers[i];
+    }
     // Nothing in sight - but is anything REMEMBERED? A ghost on the chart is
     // worth one scout (owner ruling 2026-08-21: the chart remembers, and an
     // AI that reads the same chart should act on it).
     const ghost = carrierGhost(state, brain.team);
     if (ghost !== -1) {
-      let carrier = -1;
-      for (let i = 0; i < state.carriers.length; i++) {
-        if (state.carriers[i].team === brain.team) carrier = state.carriers[i];
-      }
       huntGhost(state, brain, ghost, flying, carrier);
       return -1;
     }
-    // Nothing in sight, nothing remembered. Bring anything that is up back
-    // home rather than letting it circle until the tanks run dry.
+    // Nothing in sight, nothing remembered: patrol, if the silence has grown
+    // long enough to be worth breaking and the bunker can afford eyes in the
+    // air. This is what keeps two blind fleets from spending fifty quiet
+    // minutes failing to find each other - without turning the opening into
+    // a carrier hunt.
+    if (carrier !== -1
+      && state.tick - brain.lastContactTick >= PATROL_QUIET_TICKS
+      && carrier.fuelCapacity > 0
+      && mulDiv(carrier.fuel, 1000, carrier.fuelCapacity) > PATROL_SHIP_FUEL_PERMIL) {
+      const mark = patrolMark(state, brain.team, carrier);
+      if (mark !== -1) {
+        huntGhost(state, brain, mark, flying, carrier);
+        return -1;
+      }
+    }
+    // Nothing to see, nothing remembered, nowhere worth looking. Bring
+    // anything that is up back home rather than letting it circle until the
+    // tanks run dry.
     for (let i = 0; i < flying.length; i++) orderReturn(flying[i]);
     return -1;
   }
 
   brain.strikeCarrier = target.id;
+  brain.lastContactTick = state.tick;
   for (let i = 0; i < flying.length; i++) {
     if (fuelPermil(flying[i]) <= STRIKE_FUEL_PERMIL) {
       orderReturn(flying[i]);
@@ -258,6 +324,8 @@ export {
   findStrikeTarget,
   carrierGhost,
   huntGhost,
+  patrolMark,
+  PATROL_SHIP_FUEL_PERMIL,
   hullPermil,
   withdraw,
   manageStrike,

@@ -5,6 +5,42 @@ golden hash and why.
 
 ---
 
+## 2026-08-21 — The battery, the patrol, and the parts that never sailed
+
+`npm run battery`: the headless sim times five, fixed seeds, each war under
+the playtest watchdog, failing loudly on a stall or a finding, report to
+reports/sweeps/. One seed is a measurement; five is a distribution - and the
+distribution paid for itself within an hour, twice.
+
+**First find: patrols, and why they need a gate.** With nothing seen and
+nothing remembered the AI now flies one scout over the islands the enemy
+holds (chart-level knowledge, like the works and the guns - so the sweep goes
+least-defended first, rotating islands every 9,000 ticks, only while the
+bunker is above half). The first version had no quiet gate, and the battery
+showed wars ending at tick 11,000-20,000 on three of five seeds: the first
+patrol flew the moment anybody owned an island, found the enemy carrier in
+the opening, and autonomous strike cycles deleted the entire economy game.
+Patrols now wait for 30,000 ticks of lost contact - they are for re-finding a
+lost war, not for opening-move rushes. The brain grew `lastContactTick`.
+
+**Second find: the parts never sailed.** Seed 424242 stalled for 60,586 ticks
+- the watchdog's exact nightmare - and the trace showed why: both air groups
+annihilated, full warehouses of replacement chassis ashore, and every boat
+run loading nothing but fuel, because fuel loads first and the depot's fuel
+alone filled the 25,000-unit hold every time. Two toothless fleets in radar
+range of each other, staring. The boat now loads the yard's shopping list
+FIRST - exactly the chassis the hangar is waiting for, no more - and parts
+travel last again once nothing is lost.
+
+The battery after both: all five seeds resolve, no findings, wars from tick
+33,252 to 172,941 (one draw), worst lull anywhere 33,890 ticks. The reference
+seed now ends at 36,073 - much earlier than the old 229,482, because a war
+with working search and working resupply CONVERGES once contact is made.
+That pacing is a real change for the owner to feel in the playtest: the enemy
+comes looking now.
+
+---
+
 ## 2026-08-21 — The AI reads the same chart
 
 The follow-up the memory slice promised: `ai_strike` now acts on ghosts. When

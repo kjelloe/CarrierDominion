@@ -11,7 +11,7 @@ import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { recoverUnit, provisionWalrus, readyToLaunch } from '../engine/hangar.js';
 import { replaceHull } from '../engine/repair.js';
-import { dispatchBoat } from '../engine/supply.js';
+import { dispatchBoat, loadFromDepot } from '../engine/supply.js';
 import { roundsOf } from '../engine/weapons.js';
 import {
   KIND_LIGHTER,
@@ -156,4 +156,37 @@ test('an empty tank stays on the deck', () => {
   assert.equal(readyToLaunch(state, carrier.id, KIND_MANTA), -1);
   const next = apply(state, { type: 'launch_unit', carrierId: carrier.id, kind: KIND_MANTA });
   assert.ok(next.units.every((u) => u.kind !== KIND_MANTA || u.state === UNIT_STOWED));
+});
+
+test('the yard shopping list rides first: parts beat fuel onto a boat when hulls are down', () => {
+  const state = fresh();
+  const carrier = state.carriers[0];
+  const boat = state.units.find((u) => u.carrierId === carrier.id && u.kind === KIND_LIGHTER);
+  boat.state = UNIT_ACTIVE;
+  const manta = state.units.find((u) => u.carrierId === carrier.id && u.kind === KIND_MANTA);
+  manta.state = UNIT_LOST;
+  manta.hp = 0;
+
+  const depot = state.islands[0];
+  depot.owner = 0;
+  // Fuel abundant enough to fill the whole hold on its own; twelve parts on
+  // the quay. Without the priority the parts never sail.
+  depot.stockFuel = boat.cargoCap * 2;
+  depot.stockChassis = state.economy.chassisPerHull;
+
+  while (loadFromDepot(state, boat, depot) > 0) { /* work the quay dry or full */ }
+  assert.equal(boat.cargoChassis, state.economy.chassisPerHull,
+    'the hold filled with fuel and the parts stayed ashore');
+  assert.ok(boat.cargoFuel > 0, 'the priority starved the fuel entirely');
+
+  // With nothing lost, parts are back to travelling last, in the spare room.
+  const second = fresh();
+  const boat2 = second.units.find((u) => u.kind === KIND_LIGHTER);
+  boat2.state = UNIT_ACTIVE;
+  const depot2 = second.islands[0];
+  depot2.owner = 0;
+  depot2.stockFuel = boat2.cargoCap * 2;
+  depot2.stockChassis = second.economy.chassisPerHull;
+  while (loadFromDepot(second, boat2, depot2) > 0) { /* again */ }
+  assert.equal(boat2.cargoChassis, 0, 'parts hogged a hold no yard was waiting for');
 });

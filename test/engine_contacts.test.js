@@ -204,3 +204,27 @@ test('a hunt that finds the carrier becomes a strike', () => {
   }
   assert.equal(state.ai[0].strikeCarrier, enemy.id, 'the hunt never became a strike');
 });
+
+test('patrols wait for a real silence, then sweep the enemy holdings', () => {
+  const aiRules = loadRules();
+  aiRules.rules = { ...aiRules.rules, aiTeams: [0] };
+  let state = createInitialState(SEED, aiRules);
+  state.islands[2].owner = 1; // the enemy holds something worth looking at
+
+  // Too early: no contact has ever been lost and the war is young. No scout.
+  for (let i = 0; i < 6; i++) state = apply(state, TICK);
+  assert.equal(
+    state.units.filter((u) => u.team === 0 && u.kind === KIND_MANTA && u.state === UNIT_ACTIVE).length,
+    0,
+    'the opening became a carrier hunt',
+  );
+
+  // Thirty thousand quiet ticks later, the silence is worth breaking.
+  state.tick = 30010;
+  for (let i = 0; i < 6; i++) state = apply(state, TICK);
+  const scout = state.units.find(
+    (u) => u.team === 0 && u.kind === KIND_MANTA && u.state === UNIT_ACTIVE,
+  );
+  assert.notEqual(scout, undefined, 'a long silence never sent anybody to look');
+  assert.equal(scout.targetX, state.islands[2].nodeX, 'the scout was not sent at enemy ground');
+});

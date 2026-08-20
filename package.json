@@ -15,7 +15,8 @@
     "gate": "node --test test/ && node test/client_smoke.mjs",
     "trig": "node tools/gen_trig.mjs",
     "repin": "node tools/repin_m0a.mjs",
-    "sim": "node test/headless/sim_m0.mjs"
+    "sim": "node test/headless/sim_m0.mjs",
+    "battery": "node tools/sim_battery.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"
