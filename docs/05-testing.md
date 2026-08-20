@@ -1,0 +1,106 @@
+# 05 — How it is checked
+
+No test framework. `node --test`, `node:assert/strict`, and files that read like
+prose. A test whose name is a sentence about the game (`a splash round has to
+strike something`) is worth more than one called `test_shots_3`, because the
+name is what somebody reads at 2 a.m. when it goes red.
+
+## The gate
+
+```
+npm test     351 unit and integration tests, node --test
+npm run smoke a real Chromium boots the client and plays a little
+npm run gate  both, in that order
+```
+
+Nothing lands unless the gate is green. The one thing to know about the order:
+`npm test` can pass on a client that does not start, which is why the smoke gate
+exists and why it is part of `gate` rather than optional.
+
+## The pinned fixture
+
+`test/fixtures/m0a.json` holds the state hash after each of 300 scripted ticks
+from a fixed seed. Any change that moves the war fails at **the tick it moved**,
+which turns "something is different" into "the third tick after the launch
+order" — usually enough to know the cause without a debugger.
+
+Re-pinning is `npm run repin`, and `tools/repin_m0a.mjs` **refuses** if the
+event stream drifted. A hash change with the same events is bookkeeping — a
+field added, a value widened. A hash change with different events means the war
+plays differently, and that is not something to wave through by running a tool.
+That distinction is also why `shared/statehash.js` offers `trajectoryHash()`
+(state minus events) and `behaviorHash()` (state minus the ruleset stamp).
+
+## The hashing walk is also a linter
+
+Canonicalising the state throws on a float, a `null`, or a non-printable string,
+naming the path. So every test that hashes a state is also asserting the state
+is clean — which is how a stray `-0` or a `NaN` gets caught on the tick it is
+created rather than three days later on somebody else's machine.
+
+## Headless wars
+
+`npm run sim` runs an AI-vs-AI war to its end with no browser and no clock. It
+is the measuring instrument for everything that only shows up over hours:
+
+- the logistics deadlock (two wars stopped dead when the last lighter died),
+- the factory that could not be fed,
+- the pacing numbers in these documents — the current war resolves at tick
+  396,491, won by sinking.
+
+If a change makes the AI stupider or the economy tighter, the sim says so in a
+minute and no unit test would have.
+
+## Probes
+
+`debugging/probes/*.mjs` drive a real Chromium through Playwright, do something,
+and screenshot it. They catch what unit tests structurally cannot: the compass
+rose that was mirrored, the panel row that was replaced under the pointer, the
+smoke gate reading a HUD cell that no longer existed.
+
+The lobby bug is the clearest case for having them at all — every socket test
+passed, because socket tests write raw JSON and the bug was in how the *client*
+wrapped its messages. Two real browsers found it immediately.
+
+Current probes: `ai_trace`, `combat_shot`, `damage_board`, `gunsight`,
+`island_board`, `lobby`, `rejoin`, `scope_zoom`, `start_menu`,
+`strategic_probe`, `style_shots`, `turret_shot`, `war_trace`, `watch_run`.
+
+## The playtest watchdog
+
+`server/watch.js`, served at `/watch`. It reads state and never writes it, and
+the first test in `server_watch.test.js` proves exactly that by hashing a war
+watched and unwatched.
+
+It looks for the shapes that mean the simulation has gone somewhere it should
+not be:
+
+| Finding | What it means |
+|---|---|
+| off the map | integration or pathfinding has run away |
+| under the sea / on dry land | the height model and the movement model disagree |
+| negative store, hull above max, magazine overfull | arithmetic somewhere is not clamped |
+| more built than the slots allow | a build check is not holding |
+| the war has stopped happening | the shape every deadlock so far has had |
+| tick slower than real time | the only way a LAN war falls behind |
+
+One finding per **kind**, with the first tick and a count — a session that trips
+the same bug four hundred times should report it once.
+
+`STUCK_TICKS = 60_000` is fifty minutes of game time. It started at 20,000 and
+fired on every ordinary steaming leg, which is how a watchdog gets ignored: one
+island takes about 37,000 ticks to take and a map crossing takes 20,000, so a
+war can legitimately be quiet for a long while.
+
+It has already earned itself: on its first full run it found `payForBuild`
+double-spending when the build site *was* the stockpile island, from tick
+13,401.
+
+## Landing a change
+
+1. Write the test first, as a sentence about the game.
+2. `npm test`, then `npm run smoke`.
+3. If the state shape moved: `npm run repin`, and read what it says about events
+   before you accept it.
+4. A `dev-log.md` entry — what changed and *why*, not what the diff shows.
+5. Commit on `dev_night`. `main` and `dev` belong to the owner.

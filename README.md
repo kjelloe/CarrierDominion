@@ -5,7 +5,8 @@ aircraft carrier across an ocean, seize islands with the aircraft and vehicles
 it carries, and out-build the enemy carrier doing the same. A re-imagining of
 the 1988 classic, not a port.
 
-Design of record: [`plan-version1.md`](plan-version1.md).
+Design of record: [`plan-version1.md`](plan-version1.md). What is actually
+built, in detail: [`docs/`](docs/00-index.md).
 
 ## Running it
 
@@ -72,11 +73,15 @@ npm run trig    # regenerate the committed trig tables
 engine/    the simulation. apply(state, command) -> state. Pure, integer-only,
            no I/O, no clock, no floats. Written in a Lua-portable JS subset.
 shared/    fixed-point maths, PRNG, trig tables, state hashing, view filtering.
-server/    http + ws + the tick clock. The ONLY place that reads a clock.
-client/    three.js renderer, HUD, input, transports. Floats live here.
+server/    http + ws + the tick clock, the war room, seat grace, the watchdog.
+           The ONLY place that reads a clock.
+client/    three.js renderer, instruments, panels, input, sound, transports.
+           Floats live here and nowhere else.
 data/      every tunable number, as JSON. Never a constant in engine code.
 test/      node --test suite, the pinned fixture, headless drivers, smoke gate.
 tools/     generators and the re-pin tool.
+debugging/ probes that drive a real browser, and the screenshots they take.
+docs/      what is built, and why it is built that way.
 ```
 
 Three rules hold the whole thing up:
@@ -100,29 +105,56 @@ The ACCB pod builds over a minute; the ring around the node fills, then the mast
 turns your colour. An enemy Walrus deploying its own pod while yours is still
 building displaces it and starts again.
 
+A pod gives you the island **bare** — whatever the last owner built is cleared.
+A virus bomb (`B`) takes twice as long and only works on an island somebody
+holds, but you get it **intact**: factories, warehouses, stores, and the turrets
+that were shooting at you.
+
 ## The economy
 
-Islands pay every 100 ticks, by kind: resource islands in fuel and materials,
-factories in materials and ordnance, radar and airfield islands in nothing —
-their value is sight and reach. Lie a carrier within 900 m of an island you own
-and it refuels from the stores and repairs its hull. Rates are in
-`data/economy.json`.
+Nothing is conjured. Resource islands mine materials; factory islands convert
+them into fuel, ordnance and replacement hulls; the cargo network ships a share
+of every island's stock to your stockpile island; a lighter ferries it out to
+the ship. Lose the island that was making your fuel and you lose the fuel it had
+not shipped yet.
+
+An island's **role** is your decision once you own it — Resource, Factory or
+Defence — and worldgen's terrain is a bonus when the role suits the ground, not
+the thing that decides output. Three factories eat 90 materials per accrual,
+which is one good mine; a plant you cannot feed just sits there. Rates and costs
+are in `data/economy.json`.
+
+Repairs are part of the same chain: materials land in the ship's yard stores and
+are spent at a fixed rate on the seven damage sections, in the priority you set
+on the damage board (`Z`).
 
 ## Winning
 
-Hold two thirds of the islands (5 of 8), or be the last carrier afloat. Team 1
-is played by an AI that does the same thing you do — steams to the nearest
-island it does not hold, puts a Walrus ashore, plants a pod — and it is
-perfectly capable of winning the race. It runs inside the reducer on a 3-tick
-cadence, so it is part of the deterministic war and every replay covers it.
+Four ways, resolved in this order: nobody left afloat (a draw), last carrier
+afloat, the point cap if the host set one, two thirds of the islands, and the
+time cap if the host set one — highest score, level is a draw.
+
+Team 1 is played by an AI that does everything you do: picks islands, puts a
+Walrus ashore, decides what each island is for and what to build on it, flies
+strikes, withdraws when it is badly hurt, and fires flares at incoming seekers.
+It runs inside the reducer on a 3-tick cadence, so it is part of the
+deterministic war and every replay and every headless sim covers it. It is
+perfectly capable of winning.
 
 Turn it off, or give it both seats, with `aiTeams` in `data/rules.json`.
 
 ## Status
 
-Milestone 0 (engine scaffold) is complete. Milestone 1 has units and direct
-control, islands and ACCB capture, an enemy carrier AI, the island economy, and
-a win condition.
-Not yet built: weapons, damage, buildable structures, real fog of war, and a
-HUD that is more than a debug overlay. See [`dev-log.md`](dev-log.md), and
-[`dev-questions.md`](dev-questions.md) for what needs an owner ruling.
+Milestone 0 (engine scaffold) and Milestone 1 are complete: units and direct
+control, the 1988 weapon sets, seven-section damage with armour and automatic
+repair, replacement hulls, island roles and buildable works, defence turrets,
+ACCB and virus capture, the full supply chain, three levels of targeting,
+scoring and four end conditions, an instrument panel with a radar scope and a
+damage schematic, LAN play with a war room, chat, seat grace with AI takeover, a
+speed vote, sound, and a playtest watchdog.
+
+Not yet built: fog of war with a **memory** (detection is radar-range only, with
+no remembered contacts), and the Luau/Roblox twin.
+
+See [`docs/`](docs/00-index.md) for how it all works, [`dev-log.md`](dev-log.md)
+for what changed and why, and `dev-questions.md` for what needs an owner ruling.

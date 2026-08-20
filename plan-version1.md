@@ -209,13 +209,28 @@ state at all) are recorded in `dev-log.md` and put to the owner in
 
 ## 4. Milestone 1 — vertical slice (condensed; detailed plan after M0)
 
-**Status 2026-08-19:** units & direct control, islands & ACCB capture,
-the enemy carrier FSM, the island economy, a win condition, and now
-weapons & damage are all in on `dev_night` — 210 tests plus the smoke
-gate green, and an AI-vs-AI war that resolves end to end (tick ~234,000,
-won by sinking). Still outstanding from this milestone: ordnance
-logistics (question #17), buildable structures, real fog of war, and a
-HUD beyond the debug overlay. Details and measurements in `dev-log.md`.
+**Status 2026-08-20: Milestone 1 is complete on `dev_night`** — 351 tests
+plus the smoke gate green, and an AI-vs-AI war that resolves end to end
+(tick 396,491, won by sinking).
+
+Landed since the 08-19 note, each as its own slice and commit: ordnance
+logistics (#17), the Manta trigger rule (#18), seven geometric damage
+sections with armour, repair priorities and replacement hulls (#19), the
+1988 weapon sets, targeting at all three levels with laser overheat,
+island roles and buildable works, defence turrets, the virus bomb, point
+and time caps, the Walrus speed rise, the LAN speed vote, the start
+menu, the bezelled instrument panel with a PPI scope and damage
+schematic, the war room with chat, seat grace with AI takeover, sound,
+decoy flares, and the playtest watchdog.
+
+Carried into Milestone 2: fog of war with a **memory** — detection is
+radar-range only by ruling, and there are no remembered contacts yet;
+`ai_strike.js` is the module to audit when that changes. The Luau twin
+(D3) remains unstarted by design; the engine is written to stay portable
+to it, and nothing has been added that breaks the subset.
+
+What is built, and why, is in [`docs/`](docs/00-index.md). What changed,
+in order, is in `dev-log.md`.
 
 
 GDD week themes become slice groups: units & direct control (chase

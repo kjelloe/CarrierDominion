@@ -5,6 +5,55 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — Writing down what was built, before the playtest
+
+No code changed; no hash moved. Milestone 1 closed with the reasoning behind it
+scattered across 984 lines of this log and nowhere else, which is fine for the
+person who wrote it and useless to anyone else — including the same person in
+three weeks.
+
+### `docs/`, five numbered files
+
+Mirrors multiciv's convention. They describe **what exists**, not what is
+planned — the plan is `plan-version1.md` and the chronology is this file.
+
+| | |
+|---|---|
+| `00-index.md` | the three rules, and where everything lives |
+| `01-simulation.md` | the engine contract, fixed point, the tick order, state shape, hashing |
+| `02-systems.md` | the war as built: weapons, damage, islands, supply, capture, scoring, the AI |
+| `03-multiplayer.md` | transports, the clock, fog, the war room, seat grace, the speed vote |
+| `04-client.md` | no build step, art as data, the instrument panel, panels, sound, keys, i18n |
+| `05-testing.md` | the gate, the fixture, the probes, the watchdog, how to land a change |
+
+The bias throughout is towards recording the decisions that look wrong until
+explained: why the compass subtracts its sine, why a splash round has to strike,
+why the AI takeover is a command rather than a server-side poke, why armour is
+read before the section absorbs the hit, why `STUCK_TICKS` is 60,000. Those are
+the lines that will stop the next person re-introducing a bug that has already
+been fixed once.
+
+### The README was lying in three places
+
+It still said islands paid by *kind*, that a carrier refuelled by lying within
+900 m of one, and that weapons, damage, buildable structures and a real HUD were
+"not yet built". All four have been false for days. Rewritten, plus the virus
+bomb, the roles, the repair chain, and the four end conditions.
+
+`plan-version1.md` now records Milestone 1 as complete and names what is carried
+into Milestone 2: fog with a memory, and the Luau twin.
+
+### A skill for the procedure
+
+`.claude/skills/slice/SKILL.md` — the house rules, the gate order, the repin
+refusal, the dev-log entry, the commit style, and the branch discipline, in one
+place instead of being re-derived from context every session. It exists mostly
+so the two rules that cost a day each — a new entity kind needs a line in
+`copyState`, and `npm test` can pass on a client that will not start — are
+written where they will be read *before* the mistake rather than after.
+
+---
+
 ## 2026-08-20 — Coming back to your own war, a room that talks, and a watchdog
 
 351 tests + smoke gate green. Three things asked for before a playtest, and one
