@@ -28,10 +28,22 @@ import {
   tally,
   unanimous,
 } from './vote.js';
+import {
+  applyLobby,
+  canStart,
+  createLobby,
+  lobbyView,
+  setName,
+  setOption,
+  setReady,
+} from './lobby.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 
+// `lobby: true` holds the war in a lobby until the host starts it. Off by
+// default so every existing caller - the tests, the probes, the smoke gate -
+// still gets a war that is already running; server/index.js turns it on.
 function createApp(options) {
   const rules = options.rules;
   const seed = options.seed;
@@ -45,7 +57,19 @@ function createApp(options) {
     httpServer: 0,
     wss: 0,
     clock: 0,
+    lobby: options.lobby === true
+      ? createLobby(options.bootId ?? `${seed}-${Date.now()}`, {
+        seed: seed,
+        islands: rules.world.islandCount,
+        enemy: (rules.rules.aiTeams ?? []).length > 0 ? 1 : 0,
+        speed: isSpeed(options.speed) ? options.speed : 1,
+      })
+      : 0,
   };
+
+  function inLobby() {
+    return app.lobby !== 0 && app.lobby.status === 'lobby';
+  }
 
   function send(socket, message) {
     if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
@@ -145,14 +169,20 @@ function createApp(options) {
       spectator: seat.team === -1,
       speed: app.clock.speed,
       speedLocked: playerSeats() > 1 ? 1 : 0,
+      lobby: inLobby() ? 1 : 0,
     });
+    if (inLobby()) {
+      seat.name = `Commander ${seat.team + 1}`;
+      seat.ready = 0;
+      broadcastLobby();
+    }
     // A seat arriving mid-vote resets it: everybody at the table has to agree,
     // and this one has not been asked.
     if (openProposal(app.seats) !== NO_VOTE) {
       clearVotes(app.seats);
       broadcastVote();
     }
-    const snapshot = latestSnapshot(app.game);
+    const snapshot = inLobby() ? -1 : latestSnapshot(app.game);
     if (snapshot !== -1) {
       send(socket, {
         type: 'snapshot',
@@ -168,6 +198,16 @@ function createApp(options) {
         message = JSON.parse(raw.toString());
       } catch {
         send(socket, { type: 'rejected', reason: 'malformed json' });
+        return;
+      }
+      if (message !== null && typeof message === 'object' && isLobbyMessage(message.type)) {
+        handleLobby(socket, message);
+        return;
+      }
+      // Nothing else is answered until the war exists. A command aimed at a
+      // war that has not started is a client bug, not a seat's business.
+      if (inLobby()) {
+        send(socket, { type: 'rejected', reason: 'the war has not started' });
         return;
       }
       if (message !== null && typeof message === 'object' && message.type === 'set_speed') {
@@ -198,10 +238,75 @@ function createApp(options) {
       if (index >= 0) app.seats.splice(index, 1);
       // Somebody leaving can complete a vote the rest had already agreed on.
       settleVote();
+      // And in the lobby it can pass the host seat, or make the room ready.
+      if (inLobby()) broadcastLobby();
     };
     socket.on('close', drop);
     socket.on('error', drop);
   });
+
+  const LOBBY_TYPES = ['lobby_name', 'lobby_ready', 'lobby_option', 'lobby_start'];
+
+  function isLobbyMessage(type) {
+    return LOBBY_TYPES.includes(type);
+  }
+
+  function broadcastLobby() {
+    if (app.lobby === 0) return;
+    const view = lobbyView(app.lobby, app.seats);
+    for (const other of app.seats) send(other.socket, { type: 'lobby', lobby: view });
+  }
+
+  // The war the room agreed on. The lobby's choices are folded into the RULESET
+  // and the game rebuilt from seed - the same path the solo start menu takes,
+  // so a lobby war and a solo war are the same kind of object.
+  function startWar() {
+    const chosen = applyLobby(rules, app.lobby.options);
+    app.seed = app.lobby.options.seed;
+    app.game = createGame(app.seed, chosen);
+    app.lobby.status = 'running';
+    setClockSpeed(app.clock, app.lobby.options.speed);
+    broadcastLobby();
+    for (const seat of app.seats) {
+      send(seat.socket, {
+        type: 'welcome',
+        team: seat.team,
+        seed: app.seed,
+        tickHz: chosen.rules.tickHz,
+        rulesHash: app.game.state.rulesHash,
+        spectator: seat.team === -1,
+        speed: app.clock.speed,
+        speedLocked: playerSeats() > 1 ? 1 : 0,
+        lobby: 0,
+      });
+    }
+    broadcast(stepGame(app.game));
+  }
+
+  function handleLobby(socket, message) {
+    if (app.lobby === 0 || app.lobby.status !== 'lobby') {
+      send(socket, { type: 'rejected', reason: 'there is no lobby' });
+      return;
+    }
+    const seat = seatFor(socket);
+    let problem = '';
+    if (message.type === 'lobby_name') problem = setName(seat, message.name);
+    else if (message.type === 'lobby_ready') problem = setReady(seat, message.ready);
+    else if (message.type === 'lobby_option') {
+      problem = setOption(app.lobby, app.seats, seat, message.key, message.value);
+    } else if (message.type === 'lobby_start') {
+      problem = canStart(app.lobby, app.seats, seat);
+      if (problem === '') {
+        startWar();
+        return;
+      }
+    }
+    if (problem !== '') {
+      send(socket, { type: 'rejected', reason: problem });
+      return;
+    }
+    broadcastLobby();
+  }
 
   // Tell the table where the vote stands, so a HUD can show "2 of 3 for x4".
   function broadcastVote() {
@@ -234,7 +339,14 @@ function createApp(options) {
     broadcastVote();
   }
 
-  app.clock = createClock(rules.rules.msPerTick, () => broadcast(stepGame(app.game)), app.speed);
+  // The clock does not run a war nobody has started. Without this the game
+  // built at construction ticks away behind the lobby, seats receive snapshots
+  // of a war they never agreed to, and pressing START looks like it worked
+  // because there was already a war on screen.
+  app.clock = createClock(rules.rules.msPerTick, () => {
+    if (inLobby()) return;
+    broadcast(stepGame(app.game));
+  }, app.speed);
 
   app.listen = function listen(port, host) {
     return new Promise((resolve) => {

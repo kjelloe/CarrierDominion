@@ -5,6 +5,47 @@ golden hash and why.
 
 ---
 
+## 2026-08-20 — A war room for LAN play
+
+317 tests + smoke gate green. Adapted from multiciv's lobby
+(`../multiciv/server/lobby.js`), cut down to the shape this game has: that
+server hosts MANY games and needs a registry keyed by game id, while a Carrier
+Dominion server hosts ONE war. What was worth keeping:
+
+- **A join code** - five Crockford characters from the boot id, so a host reads
+  it down a phone instead of dictating a URL.
+- **A host seat** - the longest-seated player, computed rather than stored, so
+  it cannot go stale and the room does not die when the host leaves.
+- **Ready before sailing** - and one player alone is unanimous by definition,
+  which is the same rule the clock vote already uses.
+
+Changing the war unreadies the room: everybody had agreed to something else. A
+value off the ladder is refused rather than clamped, because a silent clamp is
+how a host ends up playing a different game from the one they set. The room
+folds into a **ruleset** at the end, which is the same path the solo start menu
+takes - a war is seed plus rules and nothing else.
+
+`LOBBY=1` is the default for `server/index.js`; `createApp` still defaults to a
+war that is already running, so every test, probe and the smoke gate are
+untouched.
+
+### Two bugs, and only one of them had a test that could have caught it
+
+**The clock ran the whole time the lobby was open.** The game is built at
+construction, and the clock pumped it regardless - so seats received snapshots
+of a war nobody had agreed to, and pressing START looked like it had worked
+because there was already a war on screen. The clock now declines to run a war
+nobody has started.
+
+**Lobby messages were being wrapped as game commands.** The client transport had
+one send path, `send(command)`, which wraps everything as `{type:'command'}`.
+The server answered every lobby click with "the war has not started" - correctly.
+The socket tests could not catch this because they write raw JSON to the wire;
+it took two real browsers in a probe. The transport now has a `sendMessage` that
+puts a message on the wire as it is, and the lobby uses it.
+
+---
+
 ## 2026-08-20 — Sound, and the missile-lock warning
 
 302 tests + smoke gate green. No audio files: every sound is an oscillator and

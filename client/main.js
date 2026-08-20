@@ -32,6 +32,7 @@ import {
   seedFromClock,
   showStartPanel,
 } from './panels/start.js';
+import { createLobbyPanel, renderLobbyPanel } from './panels/lobby.js';
 import { nextWeapon } from '../engine/weapons.js';
 import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
 import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.js';
@@ -93,6 +94,8 @@ const state = {
   island: undefined,
   panel: undefined,
   instrumentColours: undefined,
+  lobbyPanel: undefined,
+  room: undefined,
   scopeRange: 8000,
   sound: createSound(),
   buildCosts: [0, 0, 0],
@@ -482,6 +485,13 @@ function bindInput(level) {
 // A shared clock moves when everybody agrees (owner ruling 2026-08-20). The
 // HUD says where the table stands so nobody is left wondering whether their
 // key press did anything.
+// The room, when there is one. A LAN server may hold the war in a lobby until
+// the host starts it; a solo game never has one.
+function onLobby(room) {
+  state.room = room;
+  renderLobbyPanel(state.lobbyPanel, room, state.team);
+}
+
 function onVote(message) {
   if (message.speed < 0) {
     state.voteText = '';
@@ -502,6 +512,10 @@ function onSpeed(multiplier) {
 }
 
 function onWelcome(message) {
+  if ((message.lobby ?? 0) === 0 && state.room !== undefined) {
+    state.room = undefined;
+    renderLobbyPanel(state.lobbyPanel, undefined, message.team);
+  }
   state.team = message.spectator ? 0 : message.team;
   state.speed = message.speed ?? 1;
   state.speedLocked = (message.speedLocked ?? 0) === 1;
@@ -725,6 +739,12 @@ async function main() {
   };
   state.damage = createDamagePanel(panelContext);
   state.island = createIslandPanel(panelContext);
+  // The lobby speaks to the SERVER, not to the reducer: its own sender, which
+  // puts the message on the wire as it is.
+  state.lobbyPanel = createLobbyPanel({
+    t: panelContext.t,
+    send: (message) => state.transport.sendMessage(message),
+  });
   const diag = getGraphicsDiagnostics();
   const override = params.get('graphics') ?? readOverride(window.localStorage);
   const resolved = resolveGraphics(suggestGraphicsLevel(diag), override);
@@ -770,6 +790,7 @@ async function main() {
     onSnapshot: onSnapshot,
     onSpeed: onSpeed,
     onVote: onVote,
+    onLobby: onLobby,
     onRejected: onRejected,
     onClosed: onClosed,
   });

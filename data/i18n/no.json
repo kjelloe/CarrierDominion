@@ -161,5 +161,16 @@
   "status.scope": "radarrekkevidde {range} m",
   "help.scope": "[ ] radarrekkevidde - M lyd - H skjuler listen",
   "status.muted": "lyd av",
-  "status.unmuted": "lyd på"
+  "status.unmuted": "lyd på",
+  "lobby.title": "KRIGSROM - KODE {code}",
+  "lobby.seat": "plass {team}",
+  "lobby.watching": "tilskuer",
+  "lobby.host": "VERT",
+  "lobby.ready": "klar",
+  "lobby.waiting": "ikke klar",
+  "lobby.iAmReady": "JEG ER KLAR",
+  "lobby.unready": "IKKE KLAR LIKEVEL",
+  "lobby.start": "START KRIGEN",
+  "lobby.hostNote": "du setter krigen - den starter når alle er klare",
+  "lobby.guestNote": "verten setter krigen - si fra når du er klar"
 }

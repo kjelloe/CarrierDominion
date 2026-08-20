@@ -88,6 +88,7 @@ function createWsTransport(url) {
         else if (message.type === 'snapshot') handlers.onSnapshot(message);
         else if (message.type === 'speed') handlers.onSpeed(message.speed);
         else if (message.type === 'vote') handlers.onVote(message);
+        else if (message.type === 'lobby') handlers.onLobby(message.lobby);
         else if (message.type === 'rejected') handlers.onRejected(message.reason);
       });
       socket.addEventListener('close', () => handlers.onClosed('disconnected'));
@@ -96,6 +97,14 @@ function createWsTransport(url) {
     send(command) {
       if (state.socket === 0 || state.socket.readyState !== WebSocket.OPEN) return;
       state.socket.send(JSON.stringify({ type: 'command', command: command }));
+    },
+    // Lobby traffic is not a game command and must not be wrapped as one: the
+    // war does not exist yet, so there is no reducer to hand it to. Sending a
+    // lobby message down the command path is answered, correctly, with "the
+    // war has not started" - which is exactly the bug the lobby probe found.
+    sendMessage(message) {
+      if (state.socket === 0 || state.socket.readyState !== WebSocket.OPEN) return;
+      state.socket.send(JSON.stringify(message));
     },
     // The server decides: alone in the war it obliges, sharing it refuses
     // until the voting slice exists.

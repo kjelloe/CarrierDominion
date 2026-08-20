@@ -283,3 +283,107 @@ test('a compressed server really does tick faster', async () => {
     await app.close();
   }
 });
+
+// A server started with lobby: true holds the war until the room says go.
+async function withLobby(run) {
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-test' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    await run(app, `ws://127.0.0.1:${address.port}`);
+  } finally {
+    await app.close();
+  }
+}
+
+test('a lobby holds the war until the host starts it', async () => {
+  await withLobby(async (app, wsUrl) => {
+    const host = connect(wsUrl);
+    await host.open();
+    const welcome = await host.next((m) => m.type === 'welcome');
+    assert.equal(welcome.lobby, 1, 'the client was not told it is in a lobby');
+    const room = await host.next((m) => m.type === 'lobby');
+    assert.match(room.lobby.code, /^[0-9A-HJKMNP-TV-Z]{5}$/);
+    assert.equal(room.lobby.seats[0].host, 1);
+
+    // No war yet, and nothing pretends otherwise.
+    host.send({ type: 'command', command: { type: 'set_throttle', carrierId: 0, throttle: 50 } });
+    const refused = await host.next((m) => m.type === 'rejected');
+    assert.match(refused.reason, /not started/);
+
+    host.send({ type: 'lobby_ready', ready: true });
+    await host.next((m) => m.type === 'lobby' && m.lobby.ready === 1);
+    host.send({ type: 'lobby_start' });
+    const started = await host.next((m) => m.type === 'welcome' && m.lobby === 0);
+    assert.equal(started.lobby, 0);
+    const snapshot = await host.next((m) => m.type === 'snapshot');
+    assert.ok(snapshot.tick >= 0);
+    host.close();
+  });
+});
+
+test('the lobby options are the war that starts', async () => {
+  await withLobby(async (app, wsUrl) => {
+    const host = connect(wsUrl);
+    await host.open();
+    await host.next((m) => m.type === 'welcome');
+
+    host.send({ type: 'lobby_option', key: 'islands', value: 4 });
+    host.send({ type: 'lobby_option', key: 'seed', value: 4242 });
+    await host.next((m) => m.type === 'lobby' && m.lobby.options.seed === 4242);
+    host.send({ type: 'lobby_ready', ready: true });
+    host.send({ type: 'lobby_start' });
+    const snapshot = await host.next((m) => m.type === 'snapshot');
+    assert.equal(snapshot.view.islands.length, 4, 'the war ignored the room');
+    assert.equal(app.seed, 4242);
+    host.close();
+  });
+});
+
+test('a guest cannot set the war, and cannot start it', async () => {
+  await withLobby(async (app, wsUrl) => {
+    const host = connect(wsUrl);
+    await host.open();
+    await host.next((m) => m.type === 'welcome');
+    const guest = connect(wsUrl);
+    await guest.open();
+    await guest.next((m) => m.type === 'welcome');
+
+    guest.send({ type: 'lobby_option', key: 'islands', value: 32 });
+    const refusedOption = await guest.next((m) => m.type === 'rejected');
+    assert.match(refusedOption.reason, /only the host/);
+
+    guest.send({ type: 'lobby_ready', ready: true });
+    guest.send({ type: 'lobby_start' });
+    const refusedStart = await guest.next(
+      (m) => m.type === 'rejected' && /only the host/.test(m.reason) && m !== refusedOption,
+    );
+    assert.match(refusedStart.reason, /only the host/);
+    assert.equal(app.lobby.status, 'lobby', 'a guest started the war');
+    host.close();
+    guest.close();
+  });
+});
+
+test('the host waits for the room', async () => {
+  await withLobby(async (app, wsUrl) => {
+    const host = connect(wsUrl);
+    await host.open();
+    await host.next((m) => m.type === 'welcome');
+    const guest = connect(wsUrl);
+    await guest.open();
+    await guest.next((m) => m.type === 'welcome');
+
+    host.send({ type: 'lobby_ready', ready: true });
+    host.send({ type: 'lobby_start' });
+    const waiting = await host.next((m) => m.type === 'rejected');
+    assert.match(waiting.reason, /not everybody/);
+
+    guest.send({ type: 'lobby_ready', ready: true });
+    await host.next((m) => m.type === 'lobby' && m.lobby.ready === 1);
+    host.send({ type: 'lobby_start' });
+    await host.next((m) => m.type === 'snapshot');
+    assert.equal(app.lobby.status, 'running');
+    host.close();
+    guest.close();
+  });
+});

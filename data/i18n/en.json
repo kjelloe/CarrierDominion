@@ -161,5 +161,16 @@
   "status.scope": "scope range {range} m",
   "help.scope": "[ ] scope range - M sound - H hides this list",
   "status.muted": "sound off",
-  "status.unmuted": "sound on"
+  "status.unmuted": "sound on",
+  "lobby.title": "WAR ROOM - JOIN CODE {code}",
+  "lobby.seat": "seat {team}",
+  "lobby.watching": "watching",
+  "lobby.host": "HOST",
+  "lobby.ready": "ready",
+  "lobby.waiting": "not ready",
+  "lobby.iAmReady": "I AM READY",
+  "lobby.unready": "NOT READY AFTER ALL",
+  "lobby.start": "START THE WAR",
+  "lobby.hostNote": "you set the war - it starts when everybody is ready",
+  "lobby.guestNote": "the host sets the war - say when you are ready"
 }
