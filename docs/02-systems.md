@@ -122,6 +122,10 @@ flight rather than being deleted by a special case. Hit tests are against the
 **segment travelled this tick** — a missile covers 15 m per tick and a Manta is
 12 m across, so an endpoint test would tunnel straight through.
 
+A **piloted** Manta also answers the stick vertically: climb toward the
+800 m ceiling, dive toward the 12 m wavetops, hold what you have — and the
+same contour rule out-votes a pilot diving at a hillside.
+
 **The ground is in the fight.** A round that flies into a hillside stops there —
 splash rounds throw their blast from the point of impact — so an island is
 something to shoot *around*, and a ridge is worth keeping between you and a

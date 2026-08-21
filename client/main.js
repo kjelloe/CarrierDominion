@@ -81,6 +81,7 @@ const state = {
   team: SEAT,
   throttle: 0,
   rudder: 0,
+  climb: 0,
   selectedUnitId: -1,
   piloting: false,
   podBuildTicks: 1200,
@@ -129,6 +130,7 @@ function sendThrottle(next) {
     state.throttle = wanted;
     state.transport.send({
       type: 'set_unit_helm', unitId: unit.id, throttle: wanted, rudder: state.rudder,
+      climb: state.climb,
     });
     return;
   }
@@ -144,12 +146,26 @@ function sendRudder(next) {
     state.rudder = next;
     state.transport.send({
       type: 'set_unit_helm', unitId: unit.id, throttle: state.throttle, rudder: next,
+      climb: state.climb,
     });
     return;
   }
   if (next === state.rudder || state.carrierId < 0) return;
   state.rudder = next;
   state.transport.send({ type: 'set_rudder', carrierId: state.carrierId, rudder: next });
+}
+
+// The stick's vertical axis: only a piloted aircraft has one. Held keys, like
+// the rudder - release and the nose levels.
+function sendClimb(next) {
+  if (!state.piloting) return;
+  const unit = selectedUnit();
+  if (unit === undefined || next === state.climb) return;
+  state.climb = next;
+  state.transport.send({
+    type: 'set_unit_helm', unitId: unit.id, throttle: state.throttle, rudder: state.rudder,
+    climb: next,
+  });
 }
 
 function cycleSelection() {
@@ -247,6 +263,7 @@ function stopPiloting() {
   const carrier = ownCarrierOf(state.view);
   state.throttle = carrier === undefined ? 0 : carrier.throttle;
   state.rudder = 0;
+  state.climb = 0;
 }
 
 function togglePiloting() {
@@ -259,6 +276,7 @@ function togglePiloting() {
   state.piloting = true;
   state.throttle = 100;
   state.rudder = 0;
+  state.climb = 0;
   state.scene3d.followUnitId = unit.id;
   state.transport.send({ type: 'take_control', unitId: unit.id });
 }
@@ -393,8 +411,23 @@ function cycleGraphics(currentLevel) {
   window.location.reload();
 }
 
+// Three ways to look at a war: over the shoulder, down the gunsight, and the
+// map. C walks them in that order.
+function cycleCamera() {
+  const scene = state.scene3d;
+  if (!scene.gunsight && !scene.strategic) scene.gunsight = true;
+  else if (scene.gunsight) { scene.gunsight = false; scene.strategic = true; }
+  else scene.strategic = false;
+}
+
+// The legend and its button agree about whether it is open.
+function toggleHelp() {
+  const hidden = document.getElementById('help').classList.toggle('hidden');
+  document.getElementById('help-button').classList.toggle('open', !hidden);
+}
+
 function bindInput(level) {
-  const held = { a: false, d: false };
+  const held = { a: false, d: false, up: false, down: false };
   // A browser will not make a sound before the user has done something, so the
   // audio context is built on the first gesture and not at load.
   const wake = () => wakeSound(state.sound);
@@ -406,8 +439,10 @@ function bindInput(level) {
     if (key === 'w') sendThrottle(state.throttle + THROTTLE_STEP);
     else if (key === 's') sendThrottle(state.throttle - THROTTLE_STEP);
     else if (key === 'x') sendThrottle(0);
-    else if (key === 'a') { held.a = true; sendRudder(1); }
-    else if (key === 'd') { held.d = true; sendRudder(-1); }
+    else if (key === 'a' || key === 'arrowleft') { held.a = true; sendRudder(1); }
+    else if (key === 'd' || key === 'arrowright') { held.d = true; sendRudder(-1); }
+    else if (key === 'arrowup') { held.up = true; sendClimb(1); }
+    else if (key === 'arrowdown') { held.down = true; sendClimb(-1); }
     else if (key === '1') launch(KIND_MANTA);
     else if (key === '2') launch(KIND_WALRUS);
     else if (key === 'n') cycleSelection();
@@ -419,7 +454,7 @@ function bindInput(level) {
     else if (key === 'e') fireFlares();
     else if (key === 'z') toggleDamagePanel(state.damage);
     else if (key === 'v') cycleWeapon();
-    else if (key === 'h') document.getElementById('help').classList.toggle('hidden');
+    else if (key === 'h') toggleHelp();
     else if (key === '[') zoomScope(1);
     else if (key === ']') zoomScope(-1);
     else if (key === 'm') {
@@ -433,16 +468,23 @@ function bindInput(level) {
     else if (key === ' ') togglePause();
     else if (key === 'c' || key === 'tab') {
       event.preventDefault();
-      state.scene3d.strategic = !state.scene3d.strategic;
+      cycleCamera();
     } else if (key === 'g') cycleGraphics(level);
     else return;
     event.preventDefault();
   });
   window.addEventListener('keyup', (event) => {
     const key = event.key.toLowerCase();
-    if (key === 'a') held.a = false;
-    if (key === 'd') held.d = false;
-    if (key === 'a' || key === 'd') sendRudder(held.a ? 1 : (held.d ? -1 : 0));
+    if (key === 'a' || key === 'arrowleft') held.a = false;
+    if (key === 'd' || key === 'arrowright') held.d = false;
+    if (['a', 'd', 'arrowleft', 'arrowright'].includes(key)) {
+      sendRudder(held.a ? 1 : (held.d ? -1 : 0));
+    }
+    if (key === 'arrowup') held.up = false;
+    if (key === 'arrowdown') held.down = false;
+    if (key === 'arrowup' || key === 'arrowdown') {
+      sendClimb(held.up ? 1 : (held.down ? -1 : 0));
+    }
   });
   window.addEventListener('blur', () => sendRudder(0));
 
@@ -674,8 +716,12 @@ function drawPanel(deltaSeconds) {
 function updateSight() {
   const sight = document.getElementById('sight');
   const unit = state.piloting ? selectedUnit() : undefined;
-  sight.classList.toggle('on', unit !== undefined);
-  if (unit === undefined) return;
+  const aiming = unit !== undefined || state.scene3d.gunsight === true;
+  sight.classList.toggle('on', aiming);
+  if (unit === undefined) {
+    sight.classList.remove('lock');
+    return;
+  }
   sight.classList.toggle('lock', hasLock(unit));
 }
 
@@ -728,6 +774,7 @@ async function main() {
   const hudRoot = document.getElementById('hud');
   state.hud = createHud(hudRoot, state.t);
   renderHelp(state.t);
+  document.getElementById('help-button').addEventListener('click', toggleHelp);
   setHud(state.hud, 'status', state.t('status.loading'));
 
   const rules = await fetchRules();

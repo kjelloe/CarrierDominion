@@ -176,6 +176,12 @@ function validateCommand(command) {
     if (command.throttle < THROTTLE_MIN || command.throttle > THROTTLE_MAX) return 'throttle out of range';
     if (!isInt(command.rudder)) return 'rudder must be an integer';
     if (command.rudder < -1 || command.rudder > 1) return 'rudder out of range';
+    // Optional so a command log recorded before pitch existed still replays:
+    // an absent climb is a level hand on the stick.
+    if (command.climb !== undefined) {
+      if (!isInt(command.climb)) return 'climb must be an integer';
+      if (command.climb < -1 || command.climb > 1) return 'climb out of range';
+    }
     return '';
   }
   return 'unknown command type';

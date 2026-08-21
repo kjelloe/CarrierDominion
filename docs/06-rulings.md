@@ -109,6 +109,18 @@ After the full engine review, the owner ruled on the numbers it opened:
   resumes to the exact hash, or says why it will not (`RESUME=1` strict,
   `RESUME=auto` for the service).
 
+## Playtest round one (2026-08-22)
+
+The owner's first hands-on session ruled three things:
+
+- **The key list lives behind a `?` button** — hidden until asked for. The
+  instruments are the interface; the legend is the manual.
+- **A third camera mode: the gunsight.** First person from the weapon mount,
+  crosshair centred — `C` now cycles chase / gunsight / map.
+- **A flown Manta answers the stick vertically**: arrow keys climb toward the
+  ceiling (800 m) and dive toward the wavetops (12 m); a level stick holds
+  altitude, and the no-crash terrain rule out-votes the stick either way.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

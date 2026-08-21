@@ -59,9 +59,15 @@ function targetSpeedFor(unit) {
   return clampI(mulDiv(unit.maxSpeed, unit.throttle, 100), unit.minSpeed, unit.maxSpeed);
 }
 
-// Where the nose should settle: cruise, or clear of the ground here and a
-// probe ahead, whichever is higher. No crash mechanic - the airframe pops over
-// the summit and settles back to cruise on the far side.
+// How low a pilot may fly: wavetop height. Low enough to duck under a radar
+// horizon in spirit, high enough that the sea is scenery rather than a wall.
+const PILOT_FLOOR_UNITS = 12 * 256;
+
+// Where the nose should settle. The autopilot flies cruise; a PILOT flies the
+// stick - climb toward the ceiling, dive toward the wavetops, or hold what
+// they have. Terrain always wins upward, whoever is flying: the no-crash
+// ruling holds for a pilot diving at a hillside too, and the contour probe
+// simply out-votes the stick until the rock is behind them.
 function targetAltitudeFor(unit, islands, sizeUnits) {
   let ground = worldHeightAt(islands, unit.x, unit.y);
   const aheadX = clampI(unit.x + mulCos(TERRAIN_PROBE_UNITS, unit.heading), 0, sizeUnits);
@@ -69,7 +75,13 @@ function targetAltitudeFor(unit, islands, sizeUnits) {
   const ahead = worldHeightAt(islands, aheadX, aheadY);
   if (ahead > ground) ground = ahead;
   const clear = ground + TERRAIN_CLEARANCE_UNITS;
-  return clear > unit.cruiseAltitude ? clear : unit.cruiseAltitude;
+  let wanted = unit.cruiseAltitude;
+  if (unit.control !== -1) {
+    if (unit.climb > 0) wanted = unit.ceiling;
+    else if (unit.climb < 0) wanted = PILOT_FLOOR_UNITS;
+    else wanted = unit.z;
+  }
+  return clear > wanted ? clear : wanted;
 }
 
 function stepManta(unit, islands, sizeUnits) {
@@ -102,6 +114,7 @@ export {
   FLIGHT_ARRIVED,
   FLIGHT_HOME,
   TERRAIN_CLEARANCE_UNITS,
+  PILOT_FLOOR_UNITS,
   stepManta,
   targetAltitudeFor,
   desiredHeading,

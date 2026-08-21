@@ -56,6 +56,7 @@
     "accelUnitsPerTickSq": 18,
     "turnRateBamPerTick": 300,
     "cruiseAltitudeMetres": 400,
+    "ceilingMetres": 800,
     "climbUnitsPerTick": 70,
     "radarRangeMetres": 5000,
     "fuelCapacity": 10000,

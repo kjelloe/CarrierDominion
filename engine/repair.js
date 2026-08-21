@@ -115,6 +115,7 @@ function assembleKind(state, carrier, kind, cost) {
     unit.speed = 0;
     unit.throttle = 0;
     unit.rudder = 0;
+    unit.climb = 0;
     unit.blocked = 0;
     unit.control = -1;
     unit.order = 0;

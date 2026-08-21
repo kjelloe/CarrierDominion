@@ -105,6 +105,7 @@ function createScene(canvas, preset, sizeMetres, style) {
     shots: {},
     turrets: {},
     strategic: false,
+    gunsight: false,
     followUnitId: -1,
     elapsed: 0,
     raycaster: new THREE.Raycaster(),
@@ -276,6 +277,7 @@ function chaseSubject(view3d, view) {
     // nothing to chase, so it gets the strategic pull-back over the middle of
     // the map rather than a camera that never places and stares at a corner.
     view3d.strategic = true;
+    view3d.gunsight = false;
     const middle = Math.floor((view.params?.sizeUnits ?? 0) / 2);
     return { x: middle, y: middle, z: 0, heading: 16384, back: 0, up: 0 };
   }
@@ -289,6 +291,12 @@ function chaseSubject(view3d, view) {
   };
 }
 
+// Eye heights for the gunsight view: a Manta's canopy sits just above the
+// airframe; the carrier's mount is the laser on the island, well above the
+// deck, which is also why the ship's own bow never blocks the picture.
+const GUNSIGHT_UNIT_EYE_METRES = 3;
+const GUNSIGHT_CARRIER_EYE_METRES = 24;
+
 function placeCamera(view3d, subject) {
   if (subject === undefined) return;
   const x = toMetres(subject.x);
@@ -300,6 +308,19 @@ function placeCamera(view3d, subject) {
     return;
   }
   const forward = forwardFromHeading(subject.heading);
+  if (view3d.gunsight) {
+    // Down the barrel: eye ON the mount, horizon level, crosshair centred.
+    // What the weapon can reach is what fills the screen - aiming is looking.
+    // The carrier's eye is the FORWARD mount, out past the bow spike - from
+    // anywhere on the hull the ship's own bow towers through the middle of
+    // the picture.
+    const aboard = subject.z > 0;
+    const eye = y + (aboard ? GUNSIGHT_UNIT_EYE_METRES : GUNSIGHT_CARRIER_EYE_METRES);
+    const nose = aboard ? 8 : 245;
+    view3d.camera.position.set(x + forward.x * nose, eye, z + forward.z * nose);
+    view3d.camera.lookAt(x + forward.x * 1600, eye, z + forward.z * 1600);
+    return;
+  }
   view3d.camera.position.set(
     x - forward.x * subject.back,
     y + subject.up,

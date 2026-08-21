@@ -42,6 +42,18 @@
     }
     #gpu { color: var(--hud-dim); opacity: 0.75; }
     #help.hidden { display: none; }
+    /* The key list lives behind a question mark, not on the screen (playtest
+       ruling): the instruments are the interface, the legend is the manual. */
+    #help-button {
+      position: fixed; top: 10px; right: 10px; z-index: 8;
+      width: 28px; height: 28px; line-height: 28px; text-align: center;
+      border: 1px solid var(--hud-dim); border-radius: 50%;
+      background: var(--hud-panel); color: var(--hud-dim);
+      font: 16px var(--hud-font); cursor: pointer; user-select: none;
+    }
+    #help-button:hover, #help-button.open {
+      color: var(--hud-ink); border-color: var(--hud-ink);
+    }
     /* The gunsight. Only visible with a hull under direct control, because it
        is only then that where the nose points decides where the round goes. */
     #sight {
@@ -159,8 +171,10 @@
   <canvas id="view"></canvas>
   <canvas id="panel"></canvas>
   <div id="hud"></div>
-  <!-- The legend is rendered from the language catalogue by main.js. -->
-  <div id="help"></div>
+  <!-- The legend is rendered from the language catalogue by main.js, and
+       hides behind the ? button until asked for. -->
+  <div id="help" class="hidden"></div>
+  <div id="help-button">?</div>
   <div id="sight"><span class="bar h"></span><span class="bar v"></span><span class="ring"></span></div>
   <div id="damage-panel">
     <div id="damage-title"></div>

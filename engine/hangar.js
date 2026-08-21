@@ -82,6 +82,7 @@ function launchUnit(unit, carrier, deckHeightUnits) {
   unit.control = -1;
   unit.throttle = 0;
   unit.rudder = 0;
+  unit.climb = 0;
   if (unit.kind === KIND_MANTA) {
     unit.x = carrier.x + aheadX;
     unit.y = carrier.y + aheadY;
@@ -124,6 +125,7 @@ function recoverUnit(unit, carrier, weapons) {
   unit.speed = 0;
   unit.throttle = 0;
   unit.rudder = 0;
+  unit.climb = 0;
   unit.blocked = 0;
   refuelFromCarrier(unit, carrier);
   rearm(unit, weapons, carrier);

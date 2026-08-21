@@ -37,7 +37,8 @@ Controls:
 | Key | |
 |---|---|
 | `W` `S` | throttle up / down (the carrier, or the unit you are flying) |
-| `A` `D` | rudder |
+| `A` `D` | rudder (arrow keys work too) |
+| `↑` `↓` | climb / dive, when you are flying a Manta |
 | `X` | all stop |
 | `1` `2` | launch a Manta / a Walrus |
 | `N` | select the next unit that is out |
@@ -50,12 +51,12 @@ Controls:
 | `V` | next weapon: laser / cluster / napalm / missile, or cannon / mines |
 | `L` `K` | supply run on or off / make the nearest island your depot |
 | `Z` | the damage control board - click a section to set its repair priority |
-| `C` | chase camera / strategic pull-back |
+| `C` | camera: chase / **gunsight** (first person, on the mount) / strategic map |
 | `,` `.` | time compression down / up (`space` pauses; in LAN it takes a vote) |
 | `G` | cycle the graphics tier |
 | `[` `]` | scope range, 1 km to 32 km |
 | `M` | sound on / off |
-| `H` | hide this key list |
+| `H` or `?` | this key list (hidden until asked for) |
 | click sea | send the selected unit there |
 | click enemy | attack it with the selected unit, or hand it to the ship's laser |
 | click island | the island board: what it is for, and what to build on it |

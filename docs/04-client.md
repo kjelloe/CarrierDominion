@@ -37,6 +37,11 @@ instruments across a 196-pixel strip.
 | SCOPE | the PPI radar |
 | SHIP | hull, fuel, ordnance, materials, and the damage schematic |
 
+The camera has three stops on `C`: the chase view, the **gunsight** — first
+person from the mount, crosshair centred, the carrier's eye out past the bow
+spike because from anywhere on the hull the ship's own bow towers through the
+picture — and the strategic map.
+
 The compass is **heading-up**, and the sine is *subtracted*: engine bearings grow
 counter-clockwise from +X, and counter-clockwise on a screen is to the left, so
 adding it mirrors the rose. It looked plausible until you turned.
@@ -92,7 +97,8 @@ to make noise before then.
 | | |
 |---|---|
 | `W` `S` `X` | throttle up / down / stop |
-| `A` `D` | rudder |
+| `A` `D` | rudder (arrows too) |
+| `↑` `↓` | climb / dive when flying |
 | `1` `2` | launch a Manta / a Walrus |
 | `N` `R` `T` | cycle selection / recall / take control |
 | `F` `V` | fire / cycle weapon |
@@ -100,10 +106,12 @@ to make noise before then.
 | `P` `B` | deploy the ACCB pod / the virus bomb |
 | `Z` | damage board |
 | `[` `]` | scope range |
-| `M` `K` `L` | map / nominate depot / supply run |
-| `C` `Tab` | chat |
+| `M` `K` `L` | sound / nominate depot / supply run |
+| `C` | camera: chase / gunsight / map |
 | `,` `.` `Space` | propose slower / faster / pause |
-| `G` `H` | graphics level / help |
+| `G` | graphics level |
+| `H` / `?` | the key list, hidden until asked (playtest ruling) |
+| `Tab` | chat |
 
 ## Language
 

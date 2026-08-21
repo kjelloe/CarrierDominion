@@ -5,6 +5,46 @@ golden hash and why.
 
 ---
 
+## 2026-08-22 — Playtest round one: the button, the gunsight, and the stick
+
+The owner's first session at the controls ruled three things, all landed. 396
+tests + smoke green; both pins re-pinned once (units grew `climb` and
+`ceiling`; zero event drift).
+
+### The key list hides behind a `?`
+
+The legend used to sit on screen from boot. Now it starts hidden and lives
+behind a round `?` button top-right (H still toggles it). The instruments are
+the interface; the legend is the manual, and a manual is something you open.
+
+### The gunsight: C's second stop
+
+`C` now cycles chase → **gunsight** → map. The gunsight is first person from
+the mount, horizon level, crosshair centred - what the weapon can reach is
+what fills the screen, so aiming is looking. Two placements that took the
+probe's screenshots to get right: a Manta's eye sits just above the airframe,
+but the carrier's eye had to go **out past the bow spike** - from anywhere on
+the hull, the ship's own 46 m bow cone towers through the middle of the
+picture (the first two placements photographed a handsome dark rectangle).
+
+### The stick's vertical axis (engine change)
+
+Flying had rudder and throttle but no pitch - the one thing the playtest
+could not find because it did not exist. Now: `set_unit_helm` carries an
+optional `climb` (-1/0/+1) - optional so command logs recorded before pitch
+existed still replay - the unit record carries the pilot's climb input and
+the airframe's ceiling (data: 800 m), and the flight model resolves the stick
+as climb-toward-ceiling / dive-toward-wavetops (12 m) / hold-what-you-have.
+The autopilot ignores all of it and flies the contour as before, and the
+no-crash terrain rule out-votes the stick: a pilot diving at a hillside is
+carried over the summit, same as the autopilot. Arrow keys drive it (left and
+right arrows double as rudder), held like the rudder keys - release and the
+nose levels.
+
+`playtest_round1.mjs` photographs all three and flies the climb/dive itself.
+
+---
+
 ## 2026-08-22 — The two recommendations, taken
 
 Owner ruled: do both. 393 tests + smoke green; the battery distribution is

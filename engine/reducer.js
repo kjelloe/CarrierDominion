@@ -188,6 +188,7 @@ function applyTakeControl(next, command) {
   unit.state = UNIT_ACTIVE;
   unit.throttle = 100;
   unit.rudder = 0;
+  unit.climb = 0;
   pushEvent(next.events, EVT_UNIT_CONTROL, unit.id, 1, 0);
   return next;
 }
@@ -197,6 +198,7 @@ function applyReleaseControl(next, command) {
   if (unit === -1) return reject(next);
   unit.control = -1;
   unit.rudder = 0;
+  unit.climb = 0;
   pushEvent(next.events, EVT_UNIT_CONTROL, unit.id, 0, 0);
   return next;
 }
@@ -207,6 +209,7 @@ function applyUnitHelm(next, command) {
   if (unit.control === -1) return reject(next);
   unit.throttle = command.throttle;
   unit.rudder = command.rudder;
+  unit.climb = command.climb === undefined ? 0 : command.climb;
   return next;
 }
 

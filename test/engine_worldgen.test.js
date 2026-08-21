@@ -13,13 +13,13 @@ const rules = loadRules();
 // changed - re-pin only with a note in dev-log.md saying why.
 // Re-pinned 2026-08-20 for the provisioning slice (podMaterials,
 // virusOrdnance, startMaterials; no free virus bomb), again for the
-// minor-items slice (virusVictim; grounding to 9 per 100 ticks), and twice on
-// 2026-08-21: contact memory (state grew the per-team contacts list), then
-// the patrol slice (the brain grew lastContactTick). The MAP itself has not
-// changed since the first pin: islands, nodes and start positions are
-// byte-identical throughout.
+// minor-items slice (virusVictim; grounding to 9 per 100 ticks), twice on
+// 2026-08-21 (contact memory; the brain's lastContactTick), and on 2026-08-22
+// for the pilot's vertical axis (units grew `climb` and `ceiling`). The MAP
+// itself has not changed since the first pin: islands, nodes and start
+// positions are byte-identical throughout.
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = 'be22b74d2d708c29';
+const GOLDEN_WORLD_HASH = '6485af4204154b2a';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

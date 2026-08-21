@@ -256,6 +256,7 @@ function dispatchBoat(state, carrier, depot) {
     unit.speed = 0;
     unit.throttle = 0;
     unit.rudder = 0;
+    unit.climb = 0;
     unit.blocked = 0;
     unit.control = -1;
     unit.x = station.x;
