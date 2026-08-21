@@ -101,3 +101,16 @@ test('saveNow writes the running war; a lobby writes nothing', async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('a resumed war comes back at the speed its table chose', async () => {
+  const { applyLobby } = await import('../server/lobby.js');
+  const options = { seed: SEED, islands: 8, enemy: 0, ending: 0, speed: 8 };
+  const game = createGame(SEED, applyLobby(loadRules(), options));
+  for (let i = 0; i < 20; i++) stepGame(game);
+  const saved = JSON.parse(JSON.stringify(saveGame(game, SEED, options)));
+
+  const app = createApp({ seed: SEED, rules: loadRules(), speed: 1, resume: saved });
+  assert.equal(app.resumed, 1, app.resumeProblem);
+  assert.equal(app.speed, 8, 'the table chose x8 and the environment overruled it');
+  await app.close();
+});

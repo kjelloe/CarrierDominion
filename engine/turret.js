@@ -114,6 +114,12 @@ function clearTurretsOn(state, islandId) {
 
 // Drop the wreckage. Done once a tick rather than at the moment of the killing
 // hit, so a shot resolving against a list is never removing from it.
+//
+// The island's OWN count comes down with the gun. It is what the chart shows,
+// what the build slots check, and what the AI's patrol reads - leaving it up
+// meant a defence island whose guns were shot away could never rebuild them
+// (the slot check saw four of four forever), and everybody's chart showed
+// batteries that were rubble.
 function sweepTurrets(state) {
   let lost = 0;
   const kept = [];
@@ -124,6 +130,12 @@ function sweepTurrets(state) {
       continue;
     }
     pushEvent(state.events, EVT_TURRET_LOST, turret.id, turret.team, turret.island);
+    for (let k = 0; k < state.islands.length; k++) {
+      const island = state.islands[k];
+      if (island.id === turret.island && island.turrets > 0) {
+        island.turrets = island.turrets - 1;
+      }
+    }
     lost = lost + 1;
   }
   if (lost > 0) state.turrets = kept;

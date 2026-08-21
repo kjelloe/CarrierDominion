@@ -42,7 +42,7 @@ and the role is settled once anything is built on it.
 |---|---|---|
 | Resource | materials, a little fuel | warehouses |
 | Factory | fuel, ordnance, **replacement hulls** — per factory built | up to 3 factories, 2 warehouses |
-| Defence | nothing at all | up to 4 turrets |
+| Defence | nothing at all | up to 4 turrets — a gun shot away frees its slot |
 
 Worldgen's `kind` no longer decides output; it is a **terrain bonus** when the
 role suits the ground, so resource-rich rock rewards a mine and a natural

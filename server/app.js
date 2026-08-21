@@ -59,17 +59,24 @@ function createApp(options) {
   // silently resuming a subtly different war is worse than admitting it.
   let resumedGame = -1;
   let resumeProblem = '';
+  let speed = isSpeed(options.speed) ? options.speed : 1;
   if (options.resume !== undefined && options.resume !== 0) {
     const problem = { reason: '' };
     resumedGame = resumeGame(options.resume, rules, problem);
     if (resumedGame === -1) resumeProblem = problem.reason;
-    else seed = options.resume.seed;
+    else {
+      seed = options.resume.seed;
+      // The war comes back at the speed its table chose, not at the process
+      // environment's default.
+      const saved = options.resume.options;
+      if (saved !== 0 && saved !== undefined && isSpeed(saved.speed)) speed = saved.speed;
+    }
   }
 
   const app = {
     rules: rules,
     seed: seed,
-    speed: isSpeed(options.speed) ? options.speed : 1,
+    speed: speed,
     game: resumedGame === -1 ? createGame(seed, rules) : resumedGame,
     resumed: resumedGame === -1 ? 0 : 1,
     resumeProblem: resumeProblem,

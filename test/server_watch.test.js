@@ -162,3 +162,18 @@ test('an island store above its cap is noticed', () => {
   watchTick(watch, state, 1);
   assert.ok(kinds(watch).includes('island stock above its cap'));
 });
+
+test('a resumed war is not called stuck on arrival', () => {
+  const state = fresh();
+  state.tick = 200000; // as if resumed from a long save
+  const watch = createWatch({ stuckAfter: 50 });
+  watchTick(watch, state, 1);
+  assert.deepEqual(kinds(watch), [], 'the first quiet tick read as a 200,000-tick stall');
+
+  // Silence counts from when watching began, and still trips honestly.
+  for (let i = 0; i < 60; i++) {
+    state.tick = state.tick + 1;
+    watchTick(watch, state, 1);
+  }
+  assert.ok(kinds(watch).includes('the war has stopped happening'));
+});

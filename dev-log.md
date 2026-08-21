@@ -5,6 +5,44 @@ golden hash and why.
 
 ---
 
+## 2026-08-21 — The second review: three bugs, two recommendations
+
+The owner asked for another full review after the overnight run. Method as per
+the engine-review skill; focus on the new code and its seams with the old.
+Three plain bugs, fixed in this slice; two design-tinged flaws left as
+recommendations; the rest of the new surface held up.
+
+1. **Destroyed turrets were never struck off the island's books.**
+   `sweepTurrets` removed the gun from `state.turrets` but `island.turrets`
+   only ever went up (or to zero on capture). A defence island whose guns
+   were shot away could never rebuild them - the slot check read four-of-four
+   forever - the chart showed batteries that were rubble, and the new patrol
+   ranked "least defended" over dead guns. Pre-existing; it took a consumer
+   of the count (the patrol) to make it visible. The sweep now decrements the
+   owning island.
+2. **The watchdog cried stall the moment a resumed war went quiet.**
+   `lastEventTick` started at zero, so a war resumed at tick 200,000 read its
+   first quiet moment as a 200,000-tick silence. The watchdog now baselines
+   on first sight: silence counts from when watching began.
+3. **A resumed lobby war lost its chosen speed** - the options carried
+   `speed: 8` and the clock restarted at the environment's default. The war
+   comes back at the speed its table chose.
+
+Left as recommendations (owner's call): patrol scouts overfly defended
+command nodes - the mark should stand off ~4 km, eyes not a raid; and the
+spectator camera never places (the chart view has no own carrier) - it should
+default to the strategic pull-back.
+
+What held up under the checklist, for the record: no new event codes to
+misroute, every new transfer debits a source, the save path is hash-verified
+and replays rejected commands as rejections, ghost records are integer-clean
+and per-team, and every client path guards the spectator's empty view.
+
+393 tests + smoke green; the battery is unchanged (no battery seed loses all
+four guns on one island).
+
+---
+
 ## 2026-08-21 — A war on disk is a seed and a log
 
 Save and resume, with no format invented: the autosave is the seed, the

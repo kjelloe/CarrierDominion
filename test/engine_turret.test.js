@@ -199,3 +199,26 @@ test('a missile chasing a turret chases the turret, not the unit that shares its
   guide(state, shot);
   assert.equal(shot.heading, toTurret);
 });
+
+test('a gun shot away is struck off the island, and its slot opens again', () => {
+  let state = fresh();
+  const island = fortify(state, 0, 4);
+  assert.equal(island.turrets, 4);
+
+  // Two batteries destroyed: the wreckage sweep must bring the count down.
+  state.turrets[0].hp = 0;
+  state.turrets[2].hp = 0;
+  state = drive(state, 1);
+  assert.equal(state.turrets.length, 2);
+  assert.equal(state.islands[0].turrets, 2,
+    'the chart still shows batteries that are rubble');
+
+  // And the freed slots can be built on again - a defence island whose guns
+  // were shot away used to read four-of-four forever.
+  state.islands[0].stockMaterials = econ.builds[BUILD_TURRET].materials;
+  state = apply(state, {
+    type: 'build_on_island', carrierId: 0, islandId: 0, what: BUILD_TURRET,
+  });
+  assert.ok(state.islands[0].building === BUILD_TURRET,
+    'a freed turret slot refused a new gun');
+});

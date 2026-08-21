@@ -6,7 +6,8 @@ it carries, and out-build the enemy carrier doing the same. A re-imagining of
 the 1988 classic, not a port.
 
 Design of record: [`plan-version1.md`](plan-version1.md). What is actually
-built, in detail: [`docs/`](docs/00-index.md).
+built, in detail: [`docs/`](docs/00-index.md). Putting it on a box:
+[`DEPLOYING.md`](DEPLOYING.md).
 
 ## Running it
 

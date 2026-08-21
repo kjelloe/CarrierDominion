@@ -168,6 +168,10 @@ function checkProgress(watch, state) {
 // One tick's worth of watching. `elapsedMs` is how long the reducer took, which
 // is the number that decides whether a LAN war can keep up with its own clock.
 function watchTick(watch, state, elapsedMs) {
+  // Baseline on first sight: a RESUMED war arrives at tick 200,000 and a
+  // watchdog that assumes it was present from tick zero calls the first quiet
+  // moment a 200,000-tick stall. Silence only counts from when watching began.
+  if (watch.ticks === 0) watch.lastEventTick = state.tick;
   watch.ticks = watch.ticks + 1;
   watch.totalMs = watch.totalMs + elapsedMs;
   if (elapsedMs > watch.slowestMs) watch.slowestMs = elapsedMs;
