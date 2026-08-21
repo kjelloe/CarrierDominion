@@ -115,7 +115,9 @@ progress (all chart-level common knowledge), the war's phase and its ending;
 no hulls, no shots, and nobody's stores. Handing spectators team 0's view, as
 an earlier build did, was a free intelligence channel for one side. A richer
 observer mode (following a hull, the referee's full picture) is future work,
-but whatever it shows will be built on this view, not on a team's.
+but whatever it shows will be built on this view, not on a team's. With no
+ship to chase, the spectator's camera defaults to the strategic pull-back over
+the middle of the map.
 
 ## Saving and resuming
 

@@ -266,8 +266,11 @@ something locked on is close enough for the burst to catch — and after you
 break contact, **expect one aircraft to come looking at where you were**.
 
 When it knows nothing at all — no sighting, no ghost — and the silence has run
-30,000 ticks, it **patrols**: one scout over the islands you hold, in rotation,
-least-defended first, and only while its bunker is above half. The quiet gate
+30,000 ticks, it **patrols**: one scout swept past the islands you hold, in
+rotation, least-defended first, and only while its bunker is above half. The
+scout stands **four kilometres off** the node on its homeward side — its radar
+out-reaches a missile battery, so it sweeps the anchorage without entering the
+guns' reach. The quiet gate
 matters: without it the first patrol flew the moment anybody owned an island,
 and autonomous strike cycles sank somebody by tick 11,000 — the entire economy
 game deleted by eagerness. Patrols are for re-finding a lost war, not for

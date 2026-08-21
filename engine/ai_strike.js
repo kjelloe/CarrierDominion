@@ -9,7 +9,7 @@
 // the airfield, and steering it into a gunfight is how you lose one.
 
 import { dist2D, floorDiv, mulDiv } from '../shared/fixed.js';
-import { atan2B } from '../shared/trig.js';
+import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { CONTACT_CARRIER, remembered } from './contacts.js';
 import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
@@ -165,12 +165,18 @@ const PATROL_QUIET_TICKS = 30000;
 // scouts dutifully airborne the whole time.
 const PATROL_ROTATE_TICKS = 9000;
 
-// Where to look when you know NOTHING: over the islands the enemy HOLDS, in
+// A scout is a pair of eyes, not a raid: it stands OFF the island it is
+// checking, on the side facing home. Its radar reaches 5,000 m and a missile
+// battery reaches 3,500, so from four kilometres out it sweeps the anchorage
+// without ever entering the guns' reach - overflying the node was how patrols
+// fed a fortress island a steady diet of airframes.
+const PATROL_STANDOFF_UNITS = 4000 * 256;
+
+// Where to look when you know NOTHING: the islands the enemy HOLDS, in
 // rotation. Ownership is chart-level common knowledge, a carrier is most
 // often found near its conquests - and its guns are on the chart too, so the
-// sweep walks them least-defended first. A scout is a pair of eyes, not a
-// raid. Rotation is driven by the tick, so it is replay-deterministic and
-// needs no state in the brain.
+// sweep walks them least-defended first. Rotation is driven by the tick, so
+// it is replay-deterministic and needs no state in the brain.
 function patrolMark(state, team, carrier) {
   const marks = [];
   for (let i = 0; i < state.islands.length; i++) {
@@ -189,7 +195,18 @@ function patrolMark(state, team, carrier) {
     return a.id - b.id;
   });
   const island = marks[floorDiv(state.tick, PATROL_ROTATE_TICKS) % marks.length];
-  return { x: island.nodeX, y: island.nodeY };
+  const away = dist2D(carrier.x, carrier.y, island.nodeX, island.nodeY);
+  if (away <= PATROL_STANDOFF_UNITS) {
+    // Already inside the standoff: the carrier's own radar covers the
+    // anchorage, and a mark on the node would only walk the scout into the
+    // guns for nothing.
+    return { x: carrier.x, y: carrier.y };
+  }
+  const bearing = atan2B(carrier.y - island.nodeY, carrier.x - island.nodeX);
+  return {
+    x: island.nodeX + mulCos(PATROL_STANDOFF_UNITS, bearing),
+    y: island.nodeY + mulSin(PATROL_STANDOFF_UNITS, bearing),
+  };
 }
 
 // One strike decision for one team. Returns the enemy carrier id under attack,

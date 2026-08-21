@@ -6,6 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loadRules, withoutAi } from './helpers/rules.mjs';
+import { dist2D } from '../shared/fixed.js';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
@@ -226,5 +227,16 @@ test('patrols wait for a real silence, then sweep the enemy holdings', () => {
     (u) => u.team === 0 && u.kind === KIND_MANTA && u.state === UNIT_ACTIVE,
   );
   assert.notEqual(scout, undefined, 'a long silence never sent anybody to look');
-  assert.equal(scout.targetX, state.islands[2].nodeX, 'the scout was not sent at enemy ground');
+  // The mark stands OFF the island - four kilometres on the homeward side -
+  // because the scout's radar out-reaches the island's missiles and a mark on
+  // the node would walk it into the guns.
+  const node = state.islands[2];
+  const off = dist2D(scout.targetX, scout.targetY, node.nodeX, node.nodeY);
+  assert.ok(Math.abs(off - 4000 * 256) < 300, `the scout was sent ${off} units from the node`);
+  const home = state.carriers[0];
+  assert.ok(
+    dist2D(scout.targetX, scout.targetY, home.x, home.y)
+      < dist2D(node.nodeX, node.nodeY, home.x, home.y),
+    'the standoff is on the wrong side of the island',
+  );
 });

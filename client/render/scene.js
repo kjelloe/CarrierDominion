@@ -271,7 +271,14 @@ function chaseSubject(view3d, view) {
     }
   }
   const carrier = ownCarrierOf(view);
-  if (carrier === undefined) return undefined;
+  if (carrier === undefined) {
+    // A seat with no ship - the spectator's chart view, or a sunk one - has
+    // nothing to chase, so it gets the strategic pull-back over the middle of
+    // the map rather than a camera that never places and stares at a corner.
+    view3d.strategic = true;
+    const middle = Math.floor((view.params?.sizeUnits ?? 0) / 2);
+    return { x: middle, y: middle, z: 0, heading: 16384, back: 0, up: 0 };
+  }
   return {
     x: carrier.x,
     y: carrier.y,

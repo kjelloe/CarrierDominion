@@ -5,6 +5,30 @@ golden hash and why.
 
 ---
 
+## 2026-08-22 — The two recommendations, taken
+
+Owner ruled: do both. 393 tests + smoke green; the battery distribution is
+unchanged, which is itself the measurement - standing scouts off the guns
+costs the search nothing.
+
+**Patrols stand off.** The patrol mark is now four kilometres short of the
+node, on the homeward side: a scout's radar reaches 5,000 m and a missile
+battery 3,500, so from the standoff it sweeps the whole anchorage without
+ever entering the guns' reach. Overflying the node was how a patrol fed a
+fortress island a steady diet of airframes - each one a kill paid to the
+enemy and twelve chassis owed to the yard. A carrier already inside the
+standoff keeps its scout overhead instead; its own radar covers the
+anchorage from there. Ghost hunts still fly to the exact remembered spot -
+that is usually open sea, and the point of a hunt is the spot.
+
+**Spectators watch from altitude.** A seat with no ship - the chart view -
+used to leave the camera where it booted, staring at a corner of the ocean.
+With nothing to chase, the camera now defaults to the strategic pull-back
+over the middle of the map: the spectator sees the archipelago, ownership
+colours, and the pods filling, which is exactly what the chart view knows.
+
+---
+
 ## 2026-08-21 — The second review: three bugs, two recommendations
 
 The owner asked for another full review after the overnight run. Method as per
