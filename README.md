@@ -176,6 +176,10 @@ reads the same chart: break contact and expect one aircraft to come looking at
 where you were. And the war ends on a proper **war-over screen** (result,
 reason, the scoreboard the fog hid, RETURN TO PORT / KEEP WATCHING).
 
+Playtest round one (2026-08-22) added its three rulings: the key list behind a
+`?` button, the **gunsight camera** (`C`'s second stop — first person from the
+mount), and a real vertical axis for a flown Manta (arrows climb and dive).
+
 Not yet built: a richer observer mode, and the Luau/Roblox twin.
 
 See [`docs/`](docs/00-index.md) for how it all works, [`dev-log.md`](dev-log.md)

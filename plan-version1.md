@@ -209,10 +209,10 @@ state at all) are recorded in `dev-log.md` and put to the owner in
 
 ## 4. Milestone 1 — vertical slice (condensed; detailed plan after M0)
 
-**Status 2026-08-20: Milestone 1 is complete on `dev_night`** — 373 tests
+**Status 2026-08-20: Milestone 1 is complete on `dev_night`** — the suite
 plus the smoke gate green, and an AI-vs-AI war that resolves end to end
-(all five battery seeds resolve, ticks 33,252–172,941 — see
-`npm run battery`). A full pre-playtest review then hardened
+(all five battery seeds resolve — see `npm run battery`; 396 tests as
+of 2026-08-22). A full pre-playtest review then hardened
 it: four engine bugs fixed, provisioning closed the last holes in ruling
 #3, the aftermath/terrain/cargo contracts are enforced, and the review's
 minor findings were fixed by ruling rather than deferred. The rulings

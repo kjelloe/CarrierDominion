@@ -42,6 +42,11 @@ dev-log honest. This is the procedure.
    moves BOTH pins (see below).
 7. **Stats are copied onto records** at build time; per-tick code never reaches
    for the ruleset.
+8. **New command fields are OPTIONAL in validation.** The command log is the
+   replay AND the save format: a required new field makes every log recorded
+   before it exist fail validation on replay, which turns every old autosave
+   into a refused resume. Absent means "the old behaviour" (see `climb` on
+   `set_unit_helm`).
 
 ## Order of work
 

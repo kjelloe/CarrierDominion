@@ -62,6 +62,15 @@ Look for these shapes first — every one produced a real bug:
 - **Edges the current config cannot reach.** Two-team wars cannot produce a
   third-team handover, so the virus rule was wrong invisibly. Ruling #9 says
   nothing may hard-code two teams — test the N>2 shape even though v1 ships 2.
+- **Counters with no decrement.** `island.turrets` only ever rose; the sweep
+  removed the gun from the world but not from the books, so shot-away slots
+  never reopened and the chart lied. For every counter, find the code path
+  that brings it DOWN — and note it may take a new CONSUMER of the counter
+  (the patrol) to make the staleness visible.
+- **Observers that assume presence from tick zero.** The watchdog's stall
+  detector baselined `lastEventTick` at 0, so a RESUMED war read its first
+  quiet moment as a 200,000-tick silence. Anything that measures elapsed
+  anything must baseline on first sight, not on epoch.
 
 ## Verifying and landing
 
