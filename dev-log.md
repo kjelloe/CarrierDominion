@@ -5,6 +5,51 @@ golden hash and why.
 
 ---
 
+## 2026-08-22 — Playtest round two: the mouse gets the ship
+
+Three more rulings from the owner's hands, and the middle one sent me back to
+the 1988 sources - which is where the answer was waiting. 397 tests + smoke
+green; client-only, no hash moved.
+
+### The strip goes behind DBG
+
+The diagnostic HUD (top-left) now starts hidden behind a DBG button, exactly
+like the key list behind `?`. The catch nobody asked about but somebody would
+have hit: STATUS lives in that strip, and status is feedback, not
+diagnostics - a refused command must be seen. While the strip is hidden,
+status lines surface as a transient toast above the instruments. The probe
+proves it by pressing P with no Walrus selected and watching the toast.
+
+### The panel becomes mouse-first, which is what the original WAS
+
+The operations manual, quoted in the interface notes: "click directly on
+speed scale to set target speed." So the throttle bar now IS the speed scale
+- click at four fifths, get 80 - and two rudder arrows under it act while
+held and CENTRE UP on release (the original had a dedicated icon for that;
+release-to-centre is the same idea with fewer clicks). The helm drives the
+SHIP even while a unit is being flown - it is the ship's helm.
+
+The legend's actions became the original's flanking icon columns: ship and
+logistics on the left, air and ground ops on the right, each button carrying
+the key it mirrors. A button DISPATCHES its key rather than calling a
+parallel handler, so the two input paths cannot drift - whatever F does, the
+button labelled F does, forever. The hit-test and the drawing share one
+geometry table, so the paint and the click cannot disagree either.
+
+### The models earn their silhouettes
+
+More vertices, same flat-shaded retro language. Carrier: bridge with a
+window band, mast with a radar bar, runway stripe. Manta: a real delta with
+a proud fuselage, canopy, twin canted fins, a nozzle - it reads as an
+aircraft from the wing view now. Walrus: sloped glacis, cylindrical turret
+with a barrel, wheel drums on the flanks. Lighter: raked bow, gunwales, an
+open hold with crates riding in it, a wheelhouse, a stub crane. Photographed
+in models-fleet.png and models-unit.png; two layout collisions (icon columns
+into the panel, rudder label into the fuel bar) were caught by the
+screenshots, which is what screenshots are for.
+
+---
+
 ## 2026-08-22 — One join code is an evening
 
 The last rough edge between "playtest" and "hand friends a join code": a LAN

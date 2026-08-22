@@ -286,6 +286,37 @@ function buildCarrier(teamColour, preset, style) {
   superstructure.position.set(-40, 38, 26);
   group.add(superstructure);
 
+  // The island earns its silhouette (playtest ruling 2026-08-22): a bridge
+  // with a dark window band, a mast with a radar bar, and a runway stripe on
+  // the deck - the cues that make a distant slab read as a CARRIER.
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(22, 8, 24), hullMaterial);
+  bridge.position.set(-36, 57, 26);
+  group.add(bridge);
+  const windows = new THREE.Mesh(
+    new THREE.BoxGeometry(22.4, 2.6, 24.4),
+    new THREE.MeshLambertMaterial({ color: 0x141c26 }),
+  );
+  windows.position.set(-36, 58.6, 26);
+  group.add(windows);
+  const mast = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.4, 2, 26, 6),
+    new THREE.MeshLambertMaterial({ color: 0x3c444c }),
+  );
+  mast.position.set(-48, 74, 26);
+  group.add(mast);
+  const radarBar = new THREE.Mesh(
+    new THREE.BoxGeometry(1.6, 1.6, 18),
+    new THREE.MeshLambertMaterial({ color: 0xc9d4de }),
+  );
+  radarBar.position.set(-48, 86, 26);
+  group.add(radarBar);
+  const stripe = new THREE.Mesh(
+    new THREE.BoxGeometry(300, 0.6, 4),
+    new THREE.MeshLambertMaterial({ color: 0x39424e }),
+  );
+  stripe.position.set(-6, 23.9, -8);
+  group.add(stripe);
+
   // Rotate the GEOMETRY, not the mesh: composing two Euler angles on the mesh
   // makes the bow point somewhere diagonal, which is exactly the cue the
   // player uses to read heading.
@@ -307,20 +338,57 @@ function buildCarrier(teamColour, preset, style) {
 
 // A Manta: a small delta pointing along +x, the same axis a carrier's bow uses,
 // so one heading-to-yaw rule serves every hull in the game.
+// A Manta reads as an AIRCRAFT (playtest ruling 2026-08-22: silhouettes were
+// too poor to name). Delta wing, a fuselage proud of it, a canopy, twin fins,
+// a nozzle - still low-poly flat primitives, just enough of them that the
+// shape answers "what is that" at a glance.
 function buildManta(teamColour) {
   const group = new THREE.Group();
-  const body = new THREE.Mesh(
-    new THREE.ConeGeometry(9, 26, 3),
-    new THREE.MeshLambertMaterial({ color: teamColour }),
-  );
-  body.geometry.rotateZ(-Math.PI / 2);
+  const teamMat = new THREE.MeshLambertMaterial({ color: teamColour });
+  const trimMat = new THREE.MeshLambertMaterial({ color: 0x8fa4b8 });
+
+  // The delta: a flattened three-sided cone pointing down +x.
+  const deltaGeometry = new THREE.ConeGeometry(13, 30, 3);
+  deltaGeometry.rotateZ(-Math.PI / 2);
+  deltaGeometry.scale(1, 0.16, 1.7);
+  const delta = new THREE.Mesh(deltaGeometry, teamMat);
+  delta.position.x = -3;
+  group.add(delta);
+
+  // Fuselage ridge and nose.
+  const bodyGeometry = new THREE.CylinderGeometry(2.2, 3.6, 22, 6);
+  bodyGeometry.rotateZ(-Math.PI / 2);
+  const body = new THREE.Mesh(bodyGeometry, teamMat);
+  body.position.set(2, 2.2, 0);
   group.add(body);
-  const wing = new THREE.Mesh(
-    new THREE.BoxGeometry(9, 1.4, 30),
-    new THREE.MeshLambertMaterial({ color: 0x8fa4b8 }),
+  const noseGeometry = new THREE.ConeGeometry(2.2, 8, 6);
+  noseGeometry.rotateZ(-Math.PI / 2);
+  const nose = new THREE.Mesh(noseGeometry, trimMat);
+  nose.position.set(17, 2.2, 0);
+  group.add(nose);
+
+  // Canopy, twin outward-canted fins, nozzle.
+  const canopy = new THREE.Mesh(
+    new THREE.SphereGeometry(2.6, 6, 5),
+    new THREE.MeshLambertMaterial({ color: 0x1d2b38 }),
   );
-  wing.position.x = -4;
-  group.add(wing);
+  canopy.scale.set(1.9, 0.9, 1);
+  canopy.position.set(7, 4.2, 0);
+  group.add(canopy);
+  for (const side of [-1, 1]) {
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(7, 6, 0.8), trimMat);
+    fin.position.set(-9, 4.5, side * 5.5);
+    fin.rotation.x = side * -0.35;
+    group.add(fin);
+  }
+  const nozzleGeometry = new THREE.CylinderGeometry(2.4, 1.9, 4, 6);
+  nozzleGeometry.rotateZ(-Math.PI / 2);
+  const nozzle = new THREE.Mesh(
+    nozzleGeometry,
+    new THREE.MeshLambertMaterial({ color: 0x3a4048 }),
+  );
+  nozzle.position.set(-10, 2.2, 0);
+  group.add(nozzle);
   return group;
 }
 
@@ -328,18 +396,44 @@ function buildManta(teamColour) {
 // a distance - most of the time you are reading these as silhouettes.
 function buildWalrus(teamColour) {
   const group = new THREE.Group();
-  const hull = new THREE.Mesh(
-    new THREE.BoxGeometry(16, 5, 9),
-    new THREE.MeshLambertMaterial({ color: teamColour }),
-  );
-  hull.position.y = 2.5;
+  const teamMat = new THREE.MeshLambertMaterial({ color: teamColour });
+  const darkMat = new THREE.MeshLambertMaterial({ color: 0x3c444c });
+
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(15, 4.5, 9), teamMat);
+  hull.position.y = 3.4;
   group.add(hull);
+  // The sloped glacis is what says "armoured vehicle" from the side.
+  const glacis = new THREE.Mesh(new THREE.BoxGeometry(6, 4.5, 9), teamMat);
+  glacis.position.set(9, 2.6, 0);
+  glacis.rotation.z = -0.5;
+  group.add(glacis);
+
   const turret = new THREE.Mesh(
-    new THREE.BoxGeometry(7, 4, 6),
+    new THREE.CylinderGeometry(3.6, 4.2, 3.4, 8),
     new THREE.MeshLambertMaterial({ color: 0x707c88 }),
   );
-  turret.position.set(-1, 7, 0);
+  turret.position.set(-0.5, 7.4, 0);
   group.add(turret);
+  const barrelGeometry = new THREE.CylinderGeometry(0.8, 0.8, 12, 5);
+  barrelGeometry.rotateZ(-Math.PI / 2);
+  const barrel = new THREE.Mesh(barrelGeometry, darkMat);
+  barrel.position.set(6.5, 7.8, 0);
+  group.add(barrel);
+
+  // Wheel drums low on each flank: the amphibious drive train, and the cue
+  // that this thing belongs on a beach rather than in the air.
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      const wheelGeometry = new THREE.CylinderGeometry(2.2, 2.2, 1.6, 8);
+      wheelGeometry.rotateX(Math.PI / 2);
+      const wheel = new THREE.Mesh(wheelGeometry, darkMat);
+      wheel.position.set(-5 + i * 5.5, 2.2, side * 5.1);
+      group.add(wheel);
+    }
+  }
+  const stowage = new THREE.Mesh(new THREE.BoxGeometry(4, 2, 7), darkMat);
+  stowage.position.set(-6.5, 6.6, 0);
+  group.add(stowage);
   return group;
 }
 
@@ -347,24 +441,61 @@ function buildWalrus(teamColour) {
 // never be mistaken for a Walrus - one of these is a target worth chasing.
 function buildLighter(teamColour) {
   const group = new THREE.Group();
-  const hull = new THREE.Mesh(
-    new THREE.BoxGeometry(26, 6, 11),
-    new THREE.MeshLambertMaterial({ color: teamColour }),
-  );
+  const teamMat = new THREE.MeshLambertMaterial({ color: teamColour });
+
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(26, 6, 11), teamMat);
   hull.position.y = 3;
   group.add(hull);
-  const cargo = new THREE.Mesh(
-    new THREE.BoxGeometry(13, 5, 8),
+  // Raked bow and gunwales: a barge, not a brick.
+  const bowGeometry = new THREE.CylinderGeometry(0.1, 5.5, 8, 4);
+  bowGeometry.rotateZ(-Math.PI / 2);
+  bowGeometry.rotateX(Math.PI / 4);
+  const bow = new THREE.Mesh(bowGeometry, teamMat);
+  bow.position.set(16.5, 3, 0);
+  group.add(bow);
+  for (const side of [-1, 1]) {
+    const gunwale = new THREE.Mesh(
+      new THREE.BoxGeometry(24, 1.6, 1),
+      new THREE.MeshLambertMaterial({ color: 0x62707c }),
+    );
+    gunwale.position.set(0, 6.6, side * 5);
+    group.add(gunwale);
+  }
+
+  // The open hold, darker and BELOW the gunwales, with crates riding in it.
+  const hold = new THREE.Mesh(
+    new THREE.BoxGeometry(14, 1.5, 8),
+    new THREE.MeshLambertMaterial({ color: 0x2c3238 }),
+  );
+  hold.position.set(2.5, 6.2, 0);
+  group.add(hold);
+  const crates = new THREE.Mesh(
+    new THREE.BoxGeometry(7, 3, 6),
     new THREE.MeshLambertMaterial({ color: 0x9a8f6a }),
   );
-  cargo.position.set(3, 8, 0);
-  group.add(cargo);
+  crates.position.set(4, 8, 0);
+  group.add(crates);
+
+  // Wheelhouse aft, with a window band, and a stub crane.
   const house = new THREE.Mesh(
-    new THREE.BoxGeometry(6, 6, 7),
+    new THREE.BoxGeometry(6, 6.5, 7),
     new THREE.MeshLambertMaterial({ color: 0x62707c }),
   );
   house.position.set(-9, 9, 0);
   group.add(house);
+  const windows = new THREE.Mesh(
+    new THREE.BoxGeometry(6.2, 1.6, 7.2),
+    new THREE.MeshLambertMaterial({ color: 0x1d2b38 }),
+  );
+  windows.position.set(-9, 10.6, 0);
+  group.add(windows);
+  const crane = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.7, 0.7, 9, 5),
+    new THREE.MeshLambertMaterial({ color: 0x3c444c }),
+  );
+  crane.position.set(-4.5, 10, 3.5);
+  crane.rotation.z = 0.6;
+  group.add(crane);
   return group;
 }
 

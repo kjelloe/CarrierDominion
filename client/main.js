@@ -17,7 +17,7 @@ import { createLocalTransport, createWsTransport } from './transport.js';
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
 import { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
-import { createInstruments, drawInstruments } from './render/instruments.js';
+import { createInstruments, drawInstruments, helmHitAt } from './render/instruments.js';
 import { createSound, playEvents, playWarning, toggleMute, wakeSound } from './sound.js';
 import { createDamagePanel, renderDamagePanel, toggleDamagePanel } from './panels/damage.js';
 import {
@@ -423,10 +423,93 @@ function cycleCamera() {
   else scene.strategic = false;
 }
 
+// The instrument panel is clickable (1988: "click directly on speed scale to
+// set target speed"). The HELM box drives the SHIP even while a unit is being
+// flown - it is the ship's helm, and it says so on the bezel. Rudder arrows
+// act while held and CENTRE UP on release, exactly like the keys they mirror.
+function bindPanelInput() {
+  const canvas = document.getElementById('panel');
+  canvas.style.pointerEvents = 'auto';
+  let heldRudder = 0;
+  const shipRudder = (next) => {
+    if (state.carrierId < 0) return;
+    state.transport.send({ type: 'set_rudder', carrierId: state.carrierId, rudder: next });
+  };
+  canvas.addEventListener('pointerdown', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const hit = helmHitAt(event.clientX - rect.left, event.clientY - rect.top);
+    if (hit === -1) return;
+    if (hit.kind === 'throttle') {
+      if (state.carrierId < 0) return;
+      state.transport.send({
+        type: 'set_throttle', carrierId: state.carrierId, throttle: hit.throttle,
+      });
+      if (!state.piloting) state.throttle = hit.throttle;
+      return;
+    }
+    heldRudder = hit.rudder;
+    shipRudder(heldRudder);
+  });
+  const release = () => {
+    if (heldRudder === 0) return;
+    heldRudder = 0;
+    shipRudder(0);
+  };
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointerleave', release);
+}
+
 // The legend and its button agree about whether it is open.
 function toggleHelp() {
   const hidden = document.getElementById('help').classList.toggle('hidden');
   document.getElementById('help-button').classList.toggle('open', !hidden);
+}
+
+// The diagnostic strip, likewise (playtest ruling 2026-08-22): hidden until
+// the DBG button asks for it. Status feedback survives as a toast (hud.js).
+function toggleDebug() {
+  const hidden = document.getElementById('hud').classList.toggle('hidden');
+  document.getElementById('debug-button').classList.toggle('open', !hidden);
+}
+
+// The 1988 icon columns: ship and logistics on the left, air and ground ops
+// on the right, one button per key in the legend. A button DISPATCHES its
+// key, so the two input paths cannot drift - whatever H does, the button
+// labelled H does, forever.
+const ACTIONS_LEFT = [
+  ['x', 'act.stop'], ['e', 'act.flares'], ['l', 'act.supply'], ['k', 'act.depot'],
+  ['z', 'act.damage'], ['c', 'act.camera'], ['m', 'act.sound'],
+];
+const ACTIONS_RIGHT = [
+  ['1', 'act.manta'], ['2', 'act.walrus'], ['n', 'act.next'], ['t', 'act.controls'],
+  ['r', 'act.recall'], ['f', 'act.fire'], ['v', 'act.weapon'], ['p', 'act.pod'],
+  ['b', 'act.virus'],
+];
+
+function buildActionColumns(t) {
+  const columns = [
+    ['actions-left', ACTIONS_LEFT],
+    ['actions-right', ACTIONS_RIGHT],
+  ];
+  for (const [id, actions] of columns) {
+    const root = document.getElementById(id);
+    for (const [key, label] of actions) {
+      const button = document.createElement('div');
+      button.className = 'act';
+      const keycap = document.createElement('span');
+      keycap.className = 'k';
+      keycap.textContent = key.toUpperCase();
+      const text = document.createElement('span');
+      text.className = 'l';
+      text.textContent = t(label);
+      button.append(keycap, text);
+      button.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: key }));
+      });
+      root.append(button);
+    }
+  }
 }
 
 function bindInput(level) {
@@ -793,6 +876,8 @@ async function main() {
   state.hud = createHud(hudRoot, state.t);
   renderHelp(state.t);
   document.getElementById('help-button').addEventListener('click', toggleHelp);
+  document.getElementById('debug-button').addEventListener('click', toggleDebug);
+  buildActionColumns(state.t);
   setHud(state.hud, 'status', state.t('status.loading'));
 
   const rules = await fetchRules();
@@ -856,6 +941,7 @@ async function main() {
   state.scene3d = createScene(document.getElementById('view'), preset, sizeMetres, style);
   state.panel = createInstruments(document.getElementById('panel'));
   state.instrumentColours = style.instruments;
+  bindPanelInput();
   // Probes open the island board without having to hit an island with a
   // screen-space click; the board itself is the same one a click opens.
   window.__openIsland = (islandId) => {

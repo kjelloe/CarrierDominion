@@ -41,6 +41,26 @@ instruments across a 196-pixel strip.
 | SCOPE | the PPI radar |
 | SHIP | hull, fuel, ordnance, materials, and the damage schematic |
 
+The panel is **clickable** (playtest ruling 2026-08-22, and faithful to the
+original — the 1988 manual says "click directly on speed scale to set target
+speed"): the throttle bar IS the speed scale, and two rudder arrows under it
+act while held and CENTRE UP on release, exactly like the keys they mirror.
+The HELM box drives the ship even while a unit is being flown — it is the
+ship's helm. The hit-test and the drawing share one geometry table (`HELM` in
+instruments.js), so the paint and the click cannot disagree.
+
+Flanking the screen, the **1988 icon columns**: ship and logistics on the
+left (STOP, FLARES, SUPPLY, DEPOT, DAMAGE, CAMERA, SOUND), air and ground ops
+on the right (MANTA, WALRUS, NEXT, PILOT, RECALL, FIRE, WEAPON, POD, VIRUS).
+Each button carries the key it mirrors and DISPATCHES that key, so the two
+input paths cannot drift — whatever `F` does, the button labelled F does.
+
+The diagnostic strip hides behind a **DBG** button upper-left, like the key
+list behind `?` — the instruments are for playing, the strip is for
+debugging. While it is hidden, status feedback (a refused command, "too far
+from the node") surfaces as a transient toast above the panel instead of
+vanishing into a closed panel.
+
 The camera has three stops on `C`: the chase view, the **gunsight** — first
 person from the mount, crosshair centred, the carrier's eye out past the bow
 spike because from anywhere on the hull the ship's own bow towers through the
@@ -77,6 +97,17 @@ Rows are **built once and updated in place**. Rebuilding them every frame
 replaced elements under the pointer, so a click landed on a node that had
 already been discarded and nothing happened — twice, in two different panels,
 before the rule was written down.
+
+## Models
+
+Low-poly on purpose — the retro ruling — but recognisable at a glance
+(playtest ruling 2026-08-22): the carrier's island carries a bridge with a
+window band, a mast with a radar bar, and a runway stripe; the Manta is a
+delta with a proud fuselage, canopy, twin canted fins and a nozzle; the
+Walrus has a sloped glacis, a turret with a barrel, and wheel drums on each
+flank; the lighter is a barge — raked bow, gunwales, an open hold with
+crates, a wheelhouse with windows and a stub crane. Every hull still points
+down +x so one heading-to-yaw rule serves them all.
 
 ## Sound
 

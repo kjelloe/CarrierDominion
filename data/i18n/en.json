@@ -185,5 +185,21 @@
   "warover.length": "the war ran {hours} h {minutes} min of its own time",
   "warover.menu": "RETURN TO PORT",
   "warover.watch": "KEEP WATCHING",
-  "warover.room": "BACK TO THE WAR ROOM"
+  "warover.room": "BACK TO THE WAR ROOM",
+  "act.stop": "STOP",
+  "act.flares": "FLARES",
+  "act.supply": "SUPPLY",
+  "act.depot": "DEPOT",
+  "act.damage": "DAMAGE",
+  "act.camera": "CAMERA",
+  "act.sound": "SOUND",
+  "act.manta": "MANTA",
+  "act.walrus": "WALRUS",
+  "act.next": "NEXT",
+  "act.controls": "PILOT",
+  "act.recall": "RECALL",
+  "act.fire": "FIRE",
+  "act.weapon": "WEAPON",
+  "act.pod": "POD",
+  "act.virus": "VIRUS"
 }

@@ -15,6 +15,65 @@ import { drawRadar } from './radar.js';
 const TAU = Math.PI * 2;
 const PANEL_HEIGHT = 196;
 
+// The helm's clickable geometry, shared between the drawing below and the
+// hit-test the client uses - one table, so the paint and the click can never
+// disagree. The 1988 original was mouse-first ("click directly on speed scale
+// to set target speed" - the operations manual), and this is that: the
+// throttle bar IS the speed scale, and the rudder arrows hold like the keys
+// and CENTRE UP on release.
+const HELM = {
+  pad: 10,
+  width: 250,
+  gaugeX: 10 + 250 * 0.55,
+  gaugeW: 250 * 0.38,
+  throttleY: 58,
+  throttleH: 12,
+  rudderY: 156,
+  rudderW: 34,
+  rudderH: 24,
+};
+
+// What a click at panel coordinates (x, y) means: a throttle setting, a held
+// rudder, or nothing. Slack rows above and below the bar make the scale easy
+// to hit without stealing the rest of the helm.
+function helmHitAt(x, y) {
+  if (x >= HELM.gaugeX - 4 && x <= HELM.gaugeX + HELM.gaugeW + 4
+    && y >= HELM.throttleY - 10 && y <= HELM.throttleY + HELM.throttleH + 8) {
+    const fraction = Math.max(0, Math.min(1, (x - HELM.gaugeX) / HELM.gaugeW));
+    return { kind: 'throttle', throttle: Math.round(fraction * 10) * 10 };
+  }
+  if (y >= HELM.rudderY && y <= HELM.rudderY + HELM.rudderH) {
+    if (x >= HELM.gaugeX && x <= HELM.gaugeX + HELM.rudderW) {
+      return { kind: 'rudder', rudder: 1 }; // port, like A
+    }
+    if (x >= HELM.gaugeX + HELM.gaugeW - HELM.rudderW && x <= HELM.gaugeX + HELM.gaugeW) {
+      return { kind: 'rudder', rudder: -1 }; // starboard, like D
+    }
+  }
+  return -1;
+}
+
+// The rudder buttons: two arrows that act while held, like the keys they
+// mirror. `active` is the current rudder so the pressed side reads pressed.
+// No label: two arrows either side of the helm explain themselves.
+function drawRudderButtons(ctx, colours, active) {
+  const y = HELM.rudderY;
+  for (const side of [1, -1]) {
+    const x = side === 1 ? HELM.gaugeX : HELM.gaugeX + HELM.gaugeW - HELM.rudderW;
+    const pressed = active === side;
+    ctx.fillStyle = pressed ? colours.good : colours.panel;
+    ctx.fillRect(x, y, HELM.rudderW, HELM.rudderH);
+    ctx.strokeStyle = colours.bezel;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, HELM.rudderW - 1, HELM.rudderH - 1);
+    ctx.fillStyle = pressed ? colours.panel : colours.ink;
+    ctx.font = '14px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(side === 1 ? '\u25C0' : '\u25B6', x + HELM.rudderW / 2, y + 17);
+    ctx.textAlign = 'left';
+  }
+}
+
 // Section boxes for the damage schematic, in the ship's own frame: bow forward.
 // The order is the engine's - bow, midship, stern, port, starboard, topside,
 // engine - so a section id indexes straight into it.
@@ -158,8 +217,8 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   ctx.clearRect(0, 0, width, PANEL_HEIGHT);
   if (own === undefined) return;
 
-  const pad = 10;
-  const helmW = 250;
+  const pad = HELM.pad;
+  const helmW = HELM.width;
   const scopeSize = PANEL_HEIGHT - pad * 2;
   const rightX = pad * 3 + helmW + scopeSize;
   const rightW = Math.max(220, width - rightX - pad);
@@ -167,13 +226,15 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   // Helm.
   bezel(ctx, pad, pad, helmW, PANEL_HEIGHT - pad * 2, colours, readout.helmTitle);
   drawCompass(ctx, { x: pad, y: pad, w: helmW * 0.52, h: PANEL_HEIGHT - pad * 2 }, own.heading, colours);
-  const gaugeX = pad + helmW * 0.55;
-  const gaugeW = helmW * 0.38;
-  bar(ctx, gaugeX, pad + 48, gaugeW, 12, own.throttle * 10, colours, readout.throttle, `${own.throttle}%`);
+  const gaugeX = HELM.gaugeX;
+  const gaugeW = HELM.gaugeW;
+  bar(ctx, gaugeX, HELM.throttleY, gaugeW, HELM.throttleH,
+    own.throttle * 10, colours, readout.throttle, `${own.throttle}%`);
   bar(ctx, gaugeX, pad + 88, gaugeW, 12,
     permilOf(own.speed, own.maxSpeed > 0 ? own.maxSpeed : 1), colours, readout.speed, readout.knots);
   bar(ctx, gaugeX, pad + 128, gaugeW, 12,
     permilOf(own.fuel, own.fuelCapacity), colours, readout.fuel, readout.fuelFigure);
+  drawRudderButtons(ctx, colours, own.rudder);
 
   // Scope.
   const scopeX = pad * 2 + helmW;
@@ -222,4 +283,4 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   ctx.textAlign = 'left';
 }
 
-export { PANEL_HEIGHT, SCHEMATIC, createInstruments, drawInstruments, bezel, bar };
+export { PANEL_HEIGHT, SCHEMATIC, HELM, helmHitAt, createInstruments, drawInstruments, bezel, bar };

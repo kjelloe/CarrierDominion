@@ -57,6 +57,8 @@ Controls:
 | `[` `]` | scope range, 1 km to 32 km |
 | `M` | sound on / off |
 | `H` or `?` | this key list (hidden until asked for) |
+| mouse | every action above is also a button: icon columns flank the screen, the throttle bar is a click-to-set speed scale, the rudder arrows hold |
+| `DBG` button | the diagnostic strip, hidden until asked for |
 | click sea | send the selected unit there |
 | click enemy | attack it with the selected unit, or hand it to the ship's laser |
 | click island | the island board: what it is for, and what to build on it |

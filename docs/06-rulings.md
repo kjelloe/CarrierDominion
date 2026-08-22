@@ -130,6 +130,19 @@ The owner's first hands-on session ruled three things:
   High = RTX 4070/5070 — for terrain, sea and models, **not the interface**.
   Spec and roadmap: `docs/07-graphics.md`.
 
+## Playtest round two (2026-08-22)
+
+- **The diagnostic strip hides behind a DBG button** upper-left, as the key
+  list hides behind `?`. Status feedback survives as a transient toast.
+- **The panel is mouse-first, like the original**: the throttle bar is the
+  1988 "speed scale" (click to set), rudder arrows hold and centre up, and
+  the legend's actions get clickable icon columns flanking the screen — each
+  button showing and dispatching the key it mirrors.
+- **Models must be recognisable at a glance** — more vertices, same retro
+  flat-shaded language: bridge/mast/stripe on the carrier, a real delta with
+  fins for the Manta, glacis/turret/wheels for the Walrus, a proper barge for
+  the lighter.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

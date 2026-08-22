@@ -41,6 +41,19 @@ function createHud(root, t) {
 function setHud(hud, key, text) {
   const line = hud.lines[key];
   if (line !== undefined) line.textContent = String(text);
+  // The diagnostic strip hides behind the DBG button now (playtest ruling
+  // 2026-08-22), but STATUS is feedback, not diagnostics - a refused command
+  // must still be seen. While the strip is hidden, status lines surface as a
+  // transient toast instead of vanishing into a closed panel.
+  if (key !== 'status') return;
+  const root = document.getElementById('hud');
+  const toast = document.getElementById('toast');
+  if (root === null || toast === null) return;
+  if (!root.classList.contains('hidden')) return;
+  toast.textContent = String(text);
+  toast.classList.add('on');
+  if (setHud.toastTimer !== undefined) clearTimeout(setHud.toastTimer);
+  setHud.toastTimer = setTimeout(() => toast.classList.remove('on'), 2600);
 }
 
 function tickFps(hud, nowMs) {

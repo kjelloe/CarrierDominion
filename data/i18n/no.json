@@ -185,5 +185,21 @@
   "warover.length": "krigen varte {hours} t {minutes} min i egen tid",
   "warover.menu": "TILBAKE TIL HAVN",
   "warover.watch": "FORTSETT Å SE",
-  "warover.room": "TILBAKE TIL KRIGSROMMET"
+  "warover.room": "TILBAKE TIL KRIGSROMMET",
+  "act.stop": "STOPP",
+  "act.flares": "FAKLER",
+  "act.supply": "FORSYN",
+  "act.depot": "DEPOT",
+  "act.damage": "SKADE",
+  "act.camera": "KAMERA",
+  "act.sound": "LYD",
+  "act.manta": "MANTA",
+  "act.walrus": "WALRUS",
+  "act.next": "NESTE",
+  "act.controls": "PILOT",
+  "act.recall": "TILBAKE",
+  "act.fire": "SKYT",
+  "act.weapon": "VÅPEN",
+  "act.pod": "KAPSEL",
+  "act.virus": "VIRUS"
 }
