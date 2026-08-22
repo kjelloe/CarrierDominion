@@ -184,5 +184,6 @@
   "warover.islands": "islands held {held} of {total}",
   "warover.length": "the war ran {hours} h {minutes} min of its own time",
   "warover.menu": "RETURN TO PORT",
-  "warover.watch": "KEEP WATCHING"
+  "warover.watch": "KEEP WATCHING",
+  "warover.room": "BACK TO THE WAR ROOM"
 }

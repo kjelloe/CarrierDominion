@@ -16,7 +16,7 @@ import { fetchRules } from './rules.js';
 import { createLocalTransport, createWsTransport } from './transport.js';
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
-import { createScene, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
+import { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
 import { createInstruments, drawInstruments } from './render/instruments.js';
 import { createSound, playEvents, playWarning, toggleMute, wakeSound } from './sound.js';
 import { createDamagePanel, renderDamagePanel, toggleDamagePanel } from './panels/damage.js';
@@ -102,6 +102,9 @@ const state = {
   sound: createSound(),
   buildCosts: [0, 0, 0],
   lastFrameMs: 0,
+  // Set when the room starts (or restarts) a war: the first snapshot of the
+  // new war rebuilds the world at ITS size, dropping the old war's meshes.
+  pendingWorldReset: false,
 };
 
 function afloatUnits() {
@@ -546,6 +549,8 @@ function bindInput(level) {
 function onLobby(room) {
   state.room = room;
   renderLobbyPanel(state.lobbyPanel, room, state.team);
+  // A reopened room covers the ending it follows: the result had its moment.
+  document.getElementById('warover-panel').classList.remove('open');
 }
 
 function onVote(message) {
@@ -571,6 +576,15 @@ function onWelcome(message) {
   if ((message.lobby ?? 0) === 0 && state.room !== undefined) {
     state.room = undefined;
     renderLobbyPanel(state.lobbyPanel, undefined, message.team);
+    // The room just started a war - the first one, or the next one of the
+    // evening. Whatever is on the map belongs to the LAST war: rebuild the
+    // world from the new war's first snapshot, and hand back the controls.
+    state.pendingWorldReset = true;
+    state.selectedUnitId = -1;
+    state.piloting = false;
+    state.throttle = 0;
+    state.rudder = 0;
+    state.climb = 0;
   }
   state.team = message.spectator ? 0 : message.team;
   state.speed = message.speed ?? 1;
@@ -585,6 +599,10 @@ function onWelcome(message) {
 }
 
 function onSnapshot(message) {
+  if (state.pendingWorldReset && message.view !== undefined) {
+    state.pendingWorldReset = false;
+    resetWorld(state.scene3d, Math.round(message.view.params.sizeUnits / 256));
+  }
   state.view = message.view;
   // Sound follows the VIEW's events, which are already fog-filtered: you hear
   // your own hulls and your own ship, and nothing over the horizon.
@@ -808,7 +826,12 @@ async function main() {
   };
   state.damage = createDamagePanel(panelContext);
   state.island = createIslandPanel(panelContext);
-  state.warover = createWaroverPanel(panelContext.t);
+  state.warover = createWaroverPanel(
+    panelContext.t,
+    MODE === 'lan'
+      ? () => state.transport.sendMessage({ type: 'lobby_reopen' })
+      : undefined,
+  );
   // The lobby speaks to the SERVER, not to the reducer: its own sender, which
   // puts the message on the wire as it is.
   state.lobbyPanel = createLobbyPanel({

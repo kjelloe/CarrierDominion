@@ -32,6 +32,7 @@ import {
   applyLobby,
   canStart,
   createLobby,
+  isHost,
   lobbyView,
   say,
   setName,
@@ -330,6 +331,11 @@ function createApp(options) {
         handleLobby(socket, message);
         return;
       }
+      if (message !== null && typeof message === 'object' && message.type === 'lobby_reopen') {
+        const problem = reopenRoom(seatFor(socket));
+        if (problem !== '') send(socket, { type: 'rejected', reason: problem });
+        return;
+      }
       // Nothing else is answered until the war exists. A command aimed at a
       // war that has not started is a client bug, not a seat's business.
       if (inLobby()) {
@@ -391,6 +397,9 @@ function createApp(options) {
   // and the game rebuilt from seed - the same path the solo start menu takes,
   // so a lobby war and a solo war are the same kind of object.
   function startWar() {
+    // Each war gets a fresh watchdog: findings from the last war are the last
+    // war's report, not this one's.
+    if (app.watch !== 0) app.watch = createWatch({ stuckAfter: options.stuckAfter });
     const chosen = applyLobby(rules, app.lobby.options);
     app.seed = app.lobby.options.seed;
     app.game = createGame(app.seed, chosen);
@@ -420,6 +429,44 @@ function createApp(options) {
       });
     }
     broadcast(stepGame(app.game));
+  }
+
+  // The table gets its room back when the war ends: the host reopens it, the
+  // finished war is saved one last time and then left behind, and the same
+  // join code keeps working - one code hands friends a whole evening, not one
+  // war. Reopening a war still in progress is refused: abandoning is a
+  // different decision from finishing.
+  function reopenRoom(seat) {
+    if (app.lobby === 0) return 'there is no war room';
+    if (app.lobby.status === 'lobby') return '';
+    if (app.game.state.phase === 0) return 'the war is not over';
+    if (!isHost(app.seats, seat)) return 'only the host reopens the room';
+    app.saveNow();
+    app.lobby.status = 'lobby';
+    clearVotes(app.seats);
+    for (const other of app.seats) {
+      if (other.team === -1) continue;
+      if (other.name === undefined) other.name = `Commander ${other.team + 1}`;
+      other.ready = 0;
+    }
+    for (const other of app.seats) {
+      send(other.socket, {
+        type: 'welcome',
+        team: other.team,
+        seed: app.seed,
+        tickHz: rules.rules.tickHz,
+        rulesHash: app.game.state.rulesHash,
+        spectator: other.team === -1,
+        speed: app.clock.speed,
+        speedLocked: playerSeats() > 1 ? 1 : 0,
+        lobby: 1,
+        token: other.token,
+        resumed: 0,
+      });
+    }
+    broadcastLobby();
+    broadcastVote();
+    return '';
   }
 
   function handleLobby(socket, message) {

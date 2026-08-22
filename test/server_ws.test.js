@@ -52,6 +52,21 @@ function connect(wsUrl) {
         });
       });
     },
+    // Where the inbox stands NOW: pass it to nextAfter so a wait cannot be
+    // satisfied by a stale message from an earlier phase of the same test.
+    mark() { return inbox.length; },
+    nextAfter(mark, match, timeoutMs = 4000) {
+      for (let i = mark; i < inbox.length; i++) {
+        if (match(inbox[i])) return Promise.resolve(inbox[i]);
+      }
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('timed out waiting for message')), timeoutMs);
+        waiters.push({
+          match: match,
+          resolve: (message) => { clearTimeout(timer); resolve(message); },
+        });
+      });
+    },
     send(message) { socket.send(JSON.stringify(message)); },
     close() { socket.close(); },
   };
@@ -403,4 +418,59 @@ test('the host waits for the room', async () => {
     host.close();
     guest.close();
   });
+});
+
+test('the table gets its room back when the war ends, and fights again', async () => {
+  const app = createApp({
+    seed: 20260818, rules: rules, lobby: true, watch: true, bootId: 'boot-evening',
+  });
+  const address = await app.listen(0, '127.0.0.1');
+  const client = connect(`ws://127.0.0.1:${address.port}`);
+  try {
+    await client.open();
+    await client.next((m) => m.type === 'welcome' && m.lobby === 1);
+    const code = app.lobby.code;
+
+    // Reopening a room that is already open is a harmless no-op.
+    client.send({ type: 'lobby_reopen' });
+
+    // First war of the evening.
+    client.send({ type: 'lobby_ready', ready: 1 });
+    client.send({ type: 'lobby_start' });
+    await client.next((m) => m.type === 'welcome' && m.lobby === 0);
+    await client.next((m) => m.type === 'snapshot');
+
+    // Mid-war the room stays shut: finishing and abandoning are different.
+    client.send({ type: 'lobby_reopen' });
+    await client.next((m) => m.type === 'rejected' && /not over/.test(m.reason));
+
+    // The war ends; the host reopens the room. Same join code - one code is
+    // a whole evening, not one war.
+    app.game.state.phase = 1;
+    app.game.state.winner = 0;
+    app.game.state.winReason = 2;
+    let mark = client.mark();
+    client.send({ type: 'lobby_reopen' });
+    await client.nextAfter(mark, (m) => m.type === 'welcome' && m.lobby === 1);
+    const room = await client.nextAfter(mark, (m) => m.type === 'lobby');
+    assert.equal(room.lobby.code, code, 'the join code changed between wars');
+    assert.equal(room.lobby.status, 'lobby');
+    assert.equal(room.lobby.seats[0].ready, 0, 'ready survived into the new table');
+
+    // And the second war starts clean: fresh game, fresh ticks, fresh watchdog.
+    const finished = app.game;
+    mark = client.mark();
+    client.send({ type: 'lobby_ready', ready: 1 });
+    client.send({ type: 'lobby_start' });
+    await client.nextAfter(mark, (m) => m.type === 'welcome' && m.lobby === 0);
+    const fresh = await client.nextAfter(mark, (m) => m.type === 'snapshot');
+    assert.notEqual(app.game, finished, 'the second war reused the finished game');
+    assert.equal(app.game.state.phase, 0);
+    assert.ok(fresh.tick <= 20, 'the second war inherited the first war clock');
+    assert.equal(app.watch.findings.length, 0);
+    assert.ok(app.watch.ticks <= fresh.tick, 'the watchdog carried the first war report over');
+  } finally {
+    client.close();
+    await app.close();
+  }
 });

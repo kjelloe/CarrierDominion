@@ -360,6 +360,35 @@ function renderView(view3d, view, deltaSeconds, podBuildTicks) {
   view3d.renderer.render(view3d.scene, view3d.camera);
 }
 
+// A NEW war on the same page: same renderer, same camera, fresh world. The
+// old graph is dropped whole - islands and nodes are cached by id, and a new
+// war puts different geometry under the same ids - and the ocean is rebuilt
+// at the new war's size, because the room may have chosen a different
+// archipelago. The renderer and canvas survive: a second WebGL context on the
+// same canvas is not a thing a browser hands out twice.
+function resetWorld(view3d, sizeMetres) {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(view3d.style.sky);
+  const fogDensity = view3d.preset.fogDensity * view3d.style.fogDensityScale;
+  if (fogDensity > 0) scene.fog = new THREE.FogExp2(view3d.style.sky, fogDensity);
+  createLights(scene, view3d.preset, sizeMetres, view3d.style);
+  const ocean = buildOcean(sizeMetres, view3d.preset, view3d.style);
+  scene.add(ocean);
+  if (view3d.style.oceanGrid) scene.add(buildOceanGrid(sizeMetres));
+  view3d.scene = scene;
+  view3d.ocean = ocean;
+  view3d.islands = {};
+  view3d.nodes = {};
+  view3d.carriers = {};
+  view3d.units = {};
+  view3d.shots = {};
+  view3d.turrets = {};
+  view3d.followUnitId = -1;
+  view3d.strategic = false;
+  view3d.gunsight = false;
+  return view3d;
+}
+
 function resize(view3d) {
   const width = window.innerWidth;
   const height = Math.max(1, window.innerHeight);
@@ -368,4 +397,4 @@ function resize(view3d) {
   view3d.renderer.setSize(width, height, false);
 }
 
-export { createScene, renderView, resize, ownCarrierOf, pickSea, TEAM_COLOURS };
+export { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea, TEAM_COLOURS };

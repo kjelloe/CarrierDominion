@@ -5,6 +5,43 @@ golden hash and why.
 
 ---
 
+## 2026-08-22 — One join code is an evening
+
+The last rough edge between "playtest" and "hand friends a join code": a LAN
+server could hold exactly one war per process. Now the ending screen offers
+the host BACK TO THE WAR ROOM, and the table fights again - same process,
+same join code (it is derived from the boot id, which was the right call
+twice now), fresh everything else. 397 tests + smoke green; no hash moved.
+
+Server: a `lobby_reopen` message, honoured only when the war is OVER (the
+host abandoning a live war is a different decision from finishing one, and
+stays refused), only from the host, and idempotent when the room is already
+open. Reopening saves the finished war one last time, unreadies every seat,
+clears any speed vote, and re-welcomes the room. `startWar` now also hands
+each war a fresh watchdog - findings from the last war are the last war's
+report.
+
+Client: a third button on the war-over screen, LAN only (solo's RETURN TO
+PORT is its equivalent), and the piece that took actual thought: **the world
+must be rebuilt when the room starts a war**. The renderer caches islands
+and nodes by id, and a second war puts different geometry under the same
+ids - war two would have been fought over war one's scenery. The first
+snapshot after a room-started welcome now rebuilds the scene graph at the
+NEW war's size (same renderer and canvas - a browser does not hand out a
+second WebGL context on one canvas), which also fixes a pre-existing bug
+nobody had hit: a lobby that chose 16 or 32 islands got an ocean sized for
+8, even in the first war.
+
+The ws test walks the whole evening - refuse mid-war, reopen at the end,
+same code, fresh game, fresh watchdog - and grew the test helper an inbox
+cursor (`nextAfter`), because waits that scan the whole inbox were being
+satisfied by stale messages from the previous war. `second_war.mjs` drives a
+real browser through two wars on one page: 16 islands, ending screen, back
+to the room, 32 islands, and exactly 32 island meshes in the scene at the
+end - the number that proves the rebuild.
+
+---
+
 ## 2026-08-22 — Playtest round one: the button, the gunsight, and the stick
 
 The owner's first session at the controls ruled three things, all landed. 396

@@ -64,7 +64,8 @@ repair priority between High, Medium and Low.
 `damage.js`, `island.js`, `lobby.js` (the war room), `start.js` (the game-start
 menu — map, islands, opponents, caps, style, language), and `warover.js` — the
 full-screen result when the war ends: who won, how, the scoreboard the fog hid,
-the islands, the war's own running time, and the choice between RETURN TO PORT
+the islands, the war's own running time, and the choices: on LAN, **BACK TO THE
+WAR ROOM** (the table fights again on the same join code), then RETURN TO PORT
 and KEEP WATCHING (the world winds down behind it; it does not freeze). It
 shows once per war, on the tick the phase flips.
 

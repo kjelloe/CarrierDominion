@@ -121,6 +121,10 @@ The owner's first hands-on session ruled three things:
   ceiling (800 m) and dive toward the wavetops (12 m); a level stick holds
   altitude, and the no-crash terrain rule out-votes the stick either way.
 
+- **One join code is an evening** (2026-08-22): when a LAN war ends, the
+  host reopens the room from the ending screen and the table fights again on
+  the same code.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

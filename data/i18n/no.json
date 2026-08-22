@@ -184,5 +184,6 @@
   "warover.islands": "øyer holdt {held} av {total}",
   "warover.length": "krigen varte {hours} t {minutes} min i egen tid",
   "warover.menu": "TILBAKE TIL HAVN",
-  "warover.watch": "FORTSETT Å SE"
+  "warover.watch": "FORTSETT Å SE",
+  "warover.room": "TILBAKE TIL KRIGSROMMET"
 }

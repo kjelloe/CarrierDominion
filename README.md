@@ -179,6 +179,9 @@ reason, the scoreboard the fog hid, RETURN TO PORT / KEEP WATCHING).
 Playtest round one (2026-08-22) added its three rulings: the key list behind a
 `?` button, the **gunsight camera** (`C`'s second stop — first person from the
 mount), and a real vertical axis for a flown Manta (arrows climb and dive).
+And a LAN evening is now **one join code, many wars**: when a war ends the
+host takes BACK TO THE WAR ROOM from the ending screen and the table sails
+again.
 
 Not yet built: a richer observer mode, and the Luau/Roblox twin.
 

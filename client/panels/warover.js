@@ -40,13 +40,16 @@ function outcomeModel(view, t) {
   };
 }
 
-// Built once against the ids in index.html.
-function createWaroverPanel(t) {
+// Built once against the ids in index.html. `reopen`, when given, is the LAN
+// path back to the war room - the table keeps its join code and fights again;
+// solo has no room, so the button simply is not there.
+function createWaroverPanel(t, reopen) {
   const panel = {
     root: document.getElementById('warover-panel'),
     title: document.getElementById('warover-title'),
     reason: document.getElementById('warover-reason'),
     body: document.getElementById('warover-body'),
+    room: document.getElementById('warover-room'),
     menu: document.getElementById('warover-menu'),
     watch: document.getElementById('warover-watch'),
     t: t,
@@ -56,6 +59,12 @@ function createWaroverPanel(t) {
   };
   panel.menu.textContent = t('warover.menu');
   panel.watch.textContent = t('warover.watch');
+  if (reopen === undefined) {
+    panel.room.style.display = 'none';
+  } else {
+    panel.room.textContent = t('warover.room');
+    panel.room.addEventListener('click', reopen);
+  }
   panel.menu.addEventListener('click', () => { window.location.href = '/'; });
   panel.watch.addEventListener('click', () => panel.root.classList.remove('open'));
   return panel;
