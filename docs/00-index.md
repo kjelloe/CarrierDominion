@@ -13,6 +13,7 @@ order, see [`../dev-log.md`](../dev-log.md).
 | [04-client.md](04-client.md) | Renderer, instruments, panels, sound, art direction |
 | [05-testing.md](05-testing.md) | The gate, the fixture, the probes, and the playtest watchdog |
 | [06-rulings.md](06-rulings.md) | The design of record: every owner ruling, dated, in one place |
+| [07-graphics.md](07-graphics.md) | The three graphics tiers: targets, the style×tier contract, and the High-tier roadmap |
 
 ## The three rules everything else hangs off
 

@@ -59,12 +59,20 @@ test('every preset is complete and ordered by cost', () => {
   let previousGrid = 0;
   for (const name of presetNames()) {
     const preset = presetFor(name);
-    for (const key of ['label', 'terrainGrid', 'oceanSegments', 'shadows', 'pixelRatioCap', 'drawDistanceMetres']) {
+    for (const key of [
+      'label', 'terrainGrid', 'oceanSegments', 'oceanDetail', 'shadows',
+      'shadowMapSize', 'pixelRatioCap', 'antialias', 'fogDensity', 'drawDistanceMetres',
+    ]) {
       assert.notEqual(preset[key], undefined, `${name} preset is missing ${key}`);
     }
     assert.ok(preset.terrainGrid > previousGrid, `${name} should be finer than the tier below`);
     previousGrid = preset.terrainGrid;
   }
+  // The detailed water is the High tier's own (docs/07): Medium is the pinned
+  // reference look and must not drift.
+  assert.equal(presetFor('low').oceanDetail, false);
+  assert.equal(presetFor('medium').oceanDetail, false);
+  assert.equal(presetFor('high').oceanDetail, true);
 });
 
 test('engine units and scene metres convert both ways', () => {

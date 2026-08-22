@@ -23,8 +23,12 @@ Nothing in a style reaches the simulation. **Two players on different styles see
 the same war and the same state hash** — which is exactly the property that
 makes it safe to keep three of them.
 
-`client/graphics.js` is the separate axis: a quality level, cycled with `G`, for
-machines that cannot carry the full draw.
+`client/graphics.js` is the separate axis: a quality level, cycled with `G` —
+Low for phones and integrated GPUs, Medium as the pinned reference look, High
+for RTX-4070-class desktops. Tiers touch terrain, sea, models and lighting,
+never the interface and never the art: retro at High is sharper 1988, not a
+different game. The full contract, the tier matrix and the High-water roadmap
+are `docs/07-graphics.md`.
 
 ## The panel
 

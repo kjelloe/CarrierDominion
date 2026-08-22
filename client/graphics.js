@@ -5,11 +5,20 @@
 // the same war and their hashes must match. Anything that would change the
 // simulation does not belong in this file.
 
+// The tier targets are real hardware (docs/07-graphics.md): Low is mobile and
+// integrated GPUs (the true mobile pass is deferred), Medium is the pinned
+// reference look, High is an RTX 4070/5070-class desktop. Tiers touch terrain,
+// sea, models and lighting - never the interface, never the simulation.
+//
+// `oceanDetail` is the High-only water fragment path: an analytic-normal
+// ripple field, fresnel toward the style's sky, and a sun glint. The vertex
+// swell is identical to Medium on purpose, so Medium's pixels do not drift.
 const PRESETS = {
   low: {
     label: 'Low',
     terrainGrid: 40,
     oceanShader: false,
+    oceanDetail: false,
     oceanSegments: 1,
     shadows: false,
     shadowMapSize: 0,
@@ -22,6 +31,7 @@ const PRESETS = {
     label: 'Medium',
     terrainGrid: 72,
     oceanShader: true,
+    oceanDetail: false,
     oceanSegments: 64,
     shadows: true,
     shadowMapSize: 1024,
@@ -32,11 +42,12 @@ const PRESETS = {
   },
   high: {
     label: 'High',
-    terrainGrid: 112,
+    terrainGrid: 144,
     oceanShader: true,
-    oceanSegments: 192,
+    oceanDetail: true,
+    oceanSegments: 256,
     shadows: true,
-    shadowMapSize: 2048,
+    shadowMapSize: 4096,
     pixelRatioCap: 2,
     antialias: true,
     fogDensity: 0.00003,

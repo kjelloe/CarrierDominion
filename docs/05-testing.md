@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (396 tests and growing), node --test
+npm test      the unit and integration suite (397 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 ```
@@ -67,11 +67,17 @@ and screenshot it. They catch what unit tests structurally cannot: the compass
 rose that was mirrored, the panel row that was replaced under the pointer, the
 smoke gate reading a HUD cell that no longer existed.
 
+Socket tests have one rule of their own, learned twice: a wait that scans the
+whole inbox is satisfied by stale messages from an earlier phase of the same
+test — an evening of two wars produces two `welcome` messages, and the second
+wait happily matches the first. Waits across a phase boundary use the inbox
+cursor (`mark()` / `nextAfter()` in `server_ws.test.js`).
+
 The lobby bug is the clearest case for having them at all — every socket test
 passed, because socket tests write raw JSON and the bug was in how the *client*
 wrapped its messages. Two real browsers found it immediately.
 
-Current probes: `ai_trace`, `combat_shot`, `damage_board`, `gunsight`,
+Current probes: `ai_trace`, `combat_shot`, `damage_board`, `graphics_shots`, `gunsight`,
 `island_board`, `lobby`, `rejoin`, `scope_zoom`, `start_menu`,
 `playtest_round1`, `second_war`, `strategic_probe`, `style_shots`, `turret_shot`,
 `war_over`, `war_trace`, `watch_run`. `war_over` photographs states a live war takes hours to reach -

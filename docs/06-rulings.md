@@ -125,6 +125,11 @@ The owner's first hands-on session ruled three things:
   host reopens the room from the ending screen and the table fights again on
   the same code.
 
+- **Graphics tiers get real targets** (2026-08-22): Low = mobile and
+  integrated GPUs (full mobile pass deferred), Medium = the current look,
+  High = RTX 4070/5070 — for terrain, sea and models, **not the interface**.
+  Spec and roadmap: `docs/07-graphics.md`.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on
