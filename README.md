@@ -183,6 +183,13 @@ the table's own on/off switch - the High tier's Preetham sky and mirror
 water, CI on every push, and a written plan (docs/08) for the Luau/Roblox
 twin and the true mobile tier.
 
+The showcase batch (same day) put a face on it: a live diorama of an island
+assault behind the start menu AND the war room, a title card, distant surf
+and gunfire under the menu, a live style preview on the look row, the
+High-tier models pass (working clutter on every hull, in every style), maps
+to 64 islands - the 1988 original's own count - and a basic touch pass with
+a hard rotate-to-landscape gate during a war.
+
 Since then: **the chart remembers** — an enemy that leaves your radar leaves a
 ghost on the scope, kept until you scan the spot and find it gone, and the AI
 reads the same chart: break contact and expect one aircraft to come looking at

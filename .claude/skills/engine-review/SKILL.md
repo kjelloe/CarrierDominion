@@ -71,6 +71,20 @@ Look for these shapes first — every one produced a real bug:
   detector baselined `lastEventTick` at 0, so a RESUMED war read its first
   quiet moment as a 200,000-tick silence. Anything that measures elapsed
   anything must baseline on first sight, not on epoch.
+- **One surface, many listeners.** A window-level pointerdown treated EVERY
+  click as a click on the sea - buttons included - so tapping LAUNCH also
+  laid a course to the water behind the button, silently, for weeks, on
+  desktop too. For each global listener ask: which element is this really
+  for, and does it check? (Found by the first emulated phone, 2026-08-23.)
+- **Thresholds tuned on the small map.** Fixed tick budgets (watchdog stall
+  windows, patrol gates, AI patience) were tuned when a crossing was 20k
+  ticks; a 64-island ocean makes a legitimate crossing several times that.
+  When the map scales, grep for every constant with 'TICKS' in its name and
+  ask what it means at the new size.
+- **Config the new option forgot.** A new lobby option must reach ALL of:
+  OPTION_VALUES, the start menu's OPTIONS, applyLobbyOptions (or be
+  explicitly server-side like observers), savedOptions on resume, and the
+  replay fold. Check the whole chain, not the first link.
 
 ## Verifying and landing
 
