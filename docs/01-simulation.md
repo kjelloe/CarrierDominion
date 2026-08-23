@@ -96,7 +96,7 @@ One plain object, all integers, no absent values. The top level:
 | `params` | the ruleset, flattened to integers in engine units |
 | `weapons`, `loadouts` | weapon records by id, and which ids each hull carries |
 | `economy` | production rates, build costs, network share |
-| `teams` | id, stockpile island, score |
+| `teams` | id, stockpile island, score, the quartermaster's production bias |
 | `carriers` | hulls, stores, sections, magazines, derived capability |
 | `units` | Mantas, Walruses, lighters — every one exists from tick zero |
 | `islands` | terrain seed, ownership, role, works, stock |
