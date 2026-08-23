@@ -260,6 +260,22 @@ From the Amiga-manual review (owner: "build 4, 9, 10, then 1, 2, 7; design
   stored), the location status line, rear view on `O`, direct hull select
   on `5`–`8`, and SURRENDER as a real command behind a double `ESC`.
 
+Built the same day, from the same directive ("build 4, 9, 10, then 1, 2,
+7; design 3, 5, 6"):
+
+- **7 — the hangar mends, damage slows, a cripple leaks**: deck repair
+  paying yard materials; unit speed and agility in direct proportion to
+  repair state (floored at a quarter); the 12% fuel-leak death clock.
+- **1 — the telemetry leash**: drones fade at 20 km, self-destruct at
+  26 km; the lighter exempt; a sunk carrier is a dead signal source; the
+  AI obeys the same leash. The comm-pod exception is a future refit.
+- **2 — island runways**: Resource/Defence build kind 6; approach slows,
+  strip catches inside 500 m; refuel from the island's own stock; any new
+  order relaunches; parked = Command Centre control, no telemetry; a
+  captured airfield captures what sits on it.
+- **3, 5, 6 — designed, not built**: docs/09-proposals.md carries the
+  specs and the open questions, awaiting discussion.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on
