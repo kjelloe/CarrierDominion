@@ -28,6 +28,7 @@ import { copyContacts } from './contacts.js';
 import { copySections, createSections } from './damage.js';
 import { copyTurrets } from './turret.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
+import { prepareActionStart } from './action_start.js';
 
 const PHASE_RUNNING = 0;
 const PHASE_OVER = 1;
@@ -397,7 +398,7 @@ function createInitialState(seed, rules) {
     if (team < base.teamCount) ai.push(createBrain(team));
   }
 
-  return {
+  const state = {
     tick: 0,
     seed: seedRng(seed),
     rng: generated.rngState,
@@ -446,6 +447,11 @@ function createInitialState(seed, rules) {
     contacts: [],
     events: [],
   };
+  // The Action Game (ruling 2026-08-23): the war pre-developed at tick zero.
+  // Inside createInitialState on purpose - the flag is a RULE, hashed with
+  // the rest, so a replay of an action war is an action war.
+  if (base.actionStart === 1) prepareActionStart(state);
+  return state;
 }
 
 export { PHASE_RUNNING, PHASE_OVER, createInitialState, copyState };

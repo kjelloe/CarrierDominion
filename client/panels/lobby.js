@@ -23,6 +23,12 @@ const OPTION_ROWS = [
     values: [0, 1, 2],
     text: ['start.endIslands', 'start.endPoints', 'start.endTime'],
   },
+  {
+    key: 'game',
+    label: 'start.game',
+    values: [0, 1],
+    text: ['start.gameStrategy', 'start.gameAction'],
+  },
   { key: 'speed', label: 'start.speed', values: [1, 2, 4, 8, 16] },
 ];
 

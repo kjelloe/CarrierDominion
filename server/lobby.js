@@ -27,6 +27,8 @@ const OPTION_VALUES = {
   enemy: [1, 0],
   ending: [0, 1, 2],
   speed: [1, 2, 4, 8, 16],
+  // 0 the Strategy Game (from zero), 1 the Action Game (minutes from contact).
+  game: [0, 1],
 };
 
 function fnv32(text) {
@@ -66,6 +68,7 @@ function createLobby(bootId, defaults) {
       enemy: defaults.enemy,
       ending: 0,
       speed: defaults.speed,
+      game: 0,
     },
   };
 }
@@ -181,6 +184,7 @@ function lobbyView(lobby, seats) {
       enemy: lobby.options.enemy,
       ending: lobby.options.ending,
       speed: lobby.options.speed,
+      game: lobby.options.game,
     },
     seats: roster,
     ready: allReady(seats) ? 1 : 0,

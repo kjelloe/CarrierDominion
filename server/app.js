@@ -411,6 +411,7 @@ function createApp(options) {
       enemy: app.lobby.options.enemy,
       ending: app.lobby.options.ending,
       speed: app.lobby.options.speed,
+      game: app.lobby.options.game,
     };
     app.lobby.status = 'running';
     setClockSpeed(app.clock, app.lobby.options.speed);

@@ -11,6 +11,8 @@ function applyLobbyOptions(rules, options) {
     aiTeams: options.enemy === 1 ? [1] : [],
     pointCap: options.ending === 1 ? 4000 : 0,
     timeCapTicks: options.ending === 2 ? 24000 : 0,
+    // The Action Game: the war pre-developed at tick zero (0 = strategy).
+    actionStart: options.game === 1 ? 1 : 0,
   };
   return { ...rules, world: world, rules: base };
 }

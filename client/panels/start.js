@@ -40,6 +40,13 @@ const OPTIONS = [
     },
   },
   {
+    key: 'game',
+    label: 'start.game',
+    values: [0, 1],
+    text: ['start.gameStrategy', 'start.gameAction'],
+    apply: (rules, value) => { rules.rules.actionStart = value === 1 ? 1 : 0; },
+  },
+  {
     key: 'speed',
     label: 'start.speed',
     values: [1, 2, 4, 8, 16],
