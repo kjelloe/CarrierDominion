@@ -17,12 +17,14 @@ const rules = loadRules();
 // quartermaster bias; the three carrier upgrades; actionStart joining
 // data/rules.json as a first-class rule), and again on 2026-08-23 for
 // islandCountMax 32 -> 64 in data/world.json - a documentation knob nothing
-// reads, moving only the rules hash. The MAP itself has not changed since
+// reads, moving only the rules hash. Re-pinned 2026-08-24 for the hangar
+// repair fields (unitRepairHp/unitRepairMaterials joining state.economy) -
+// zero event drift, bookkeeping only. The MAP itself has not changed since
 // the first pin: islands, nodes and start positions are byte-identical
 // throughout (the ring-walk fix in the same slice touches only tables of
 // more than four teams, which no pin covers).
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = 'fc16cce09dd719d2';
+const GOLDEN_WORLD_HASH = '84a164b338b7db4f';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

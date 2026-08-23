@@ -224,6 +224,8 @@ function copyEconomy(economy) {
     warehouseCap: economy.warehouseCap,
     terrainBonus: economy.terrainBonus,
     repairPerMaterial: economy.repairPerMaterial,
+    unitRepairHp: economy.unitRepairHp,
+    unitRepairMaterials: economy.unitRepairMaterials,
     income: copyIncome(economy.income),
     builds: copyBuilds(economy.builds),
   };
@@ -250,6 +252,10 @@ function createEconomy(econRules) {
     warehouseCap: econRules.warehouseStockCap,
     terrainBonus: econRules.terrainBonusPermil,
     repairPerMaterial: econRules.repairPerMaterial,
+    // The hangar mends what comes home (manual coverage review, item 7):
+    // hull points per beat per stowed hull, and the materials they cost.
+    unitRepairHp: econRules.unitRepairHpPer100Ticks,
+    unitRepairMaterials: econRules.unitRepairMaterialsPer100Ticks,
     income: copyIncome(econRules.roleIncome),
     builds: builds,
   };

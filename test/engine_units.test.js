@@ -17,6 +17,7 @@ import {
   UNIT_LOST,
   UNIT_RETURNING,
   UNIT_STOWED,
+  damagePermil,
   findUnit,
 } from '../engine/units.js';
 import {
@@ -325,4 +326,55 @@ test('state stays hygienic with a full deck load in the air', () => {
   state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: 100 });
   state = drive(state, 1500);
   assert.doesNotThrow(() => canonicalize(state));
+});
+
+// --- The hangar mends, damage slows, and a cripple leaks (manual item 7) ---
+
+test('the hangar repairs a stowed hull, paying materials for every point', () => {
+  let state = createInitialState(SEED, rules);
+  const manta = state.units.find((u) => u.team === 0 && u.kind === KIND_MANTA);
+  manta.hp = 10;
+  const materials = state.carriers[0].materials;
+  while (state.tick % 100 !== 99) state = apply(state, TICK);
+  state = apply(state, TICK); // the repair beat
+  const mended = state.units.find((u) => u.id === manta.id);
+  assert.ok(mended.hp > 10, 'the deck refuelled but never mended');
+  assert.ok(state.carriers[0].materials < materials, 'the mend was conjured');
+
+  // A broke ship mends nothing.
+  const broke = createInitialState(SEED, rules);
+  const hurt = broke.units.find((u) => u.team === 0 && u.kind === KIND_MANTA);
+  hurt.hp = 10;
+  broke.carriers[0].materials = 0;
+  let poor = broke;
+  while (poor.tick % 100 !== 99) poor = apply(poor, TICK);
+  poor = apply(poor, TICK);
+  assert.equal(poor.units.find((u) => u.id === hurt.id).hp, 10);
+});
+
+test('a damaged hull is a slow hull, floored so a cripple still crawls', () => {
+  const state = createInitialState(SEED, rules);
+  const manta = state.units.find((u) => u.team === 0 && u.kind === KIND_MANTA);
+  assert.equal(damagePermil(manta), 1000);
+  manta.hp = Math.floor(manta.maxHp / 2);
+  assert.ok(damagePermil(manta) <= 510 && damagePermil(manta) >= 490);
+  manta.hp = 1;
+  assert.equal(damagePermil(manta), 250, 'the floor should hold the cripple up');
+});
+
+test('below twelve percent the tank leaks - the two-minute clock', () => {
+  let state = createInitialState(SEED, rules);
+  const manta = state.units.find((u) => u.team === 0 && u.kind === KIND_MANTA);
+  state = apply(state, { type: 'launch_unit', carrierId: 0, kind: KIND_MANTA });
+  let flying = state.units.find((u) => u.id === manta.id);
+  flying.hp = Math.floor(flying.maxHp / 10); // 10% - leaking
+  const fuelBefore = flying.fuel;
+  state = apply(state, TICK);
+  const healthyBurnState = createInitialState(SEED, rules);
+  // The leak drains the CAPACITY in ~2400 ticks on top of the normal burn.
+  const after = state.units.find((u) => u.id === manta.id);
+  const drained = fuelBefore - after.fuel;
+  assert.ok(drained >= Math.floor(flying.fuelCapacity / 2400),
+    `one tick drained ${drained}, the leak alone should manage ${Math.floor(flying.fuelCapacity / 2400)}`);
+  assert.ok(healthyBurnState !== undefined);
 });

@@ -20,6 +20,8 @@ import {
   UNIT_RETURNING,
   arrivedAtTarget,
   burnUnitFuel,
+  damagePermil,
+  leakFuel,
 } from './units.js';
 
 // The tallest islands out-top the cruise altitude (peaks reach 420 m, cruise
@@ -46,17 +48,27 @@ function desiredHeading(unit) {
 function steerManta(unit) {
   if (unit.control !== -1) {
     if (unit.rudder === 0) return unit.heading;
-    return wrapAngle(unit.heading + unit.rudder * unit.turnRate);
+    return wrapAngle(unit.heading + unit.rudder * agility(unit));
   }
   if (unit.order === ORDER_HOLD) return unit.heading;
-  return turnToward(unit.heading, desiredHeading(unit), unit.turnRate);
+  return turnToward(unit.heading, desiredHeading(unit), agility(unit));
 }
 
 // Under orders a Manta flies at cruise; piloted, it obeys the throttle but
 // never drops below the airframe minimum.
+// Maneuverability degrades with the same proportion as speed.
+function agility(unit) {
+  const scaled = mulDiv(unit.turnRate, damagePermil(unit), 1000);
+  return scaled < 1 ? 1 : scaled;
+}
+
 function targetSpeedFor(unit) {
-  if (unit.control === -1) return unit.order === ORDER_HOLD ? unit.minSpeed : unit.maxSpeed;
-  return clampI(mulDiv(unit.maxSpeed, unit.throttle, 100), unit.minSpeed, unit.maxSpeed);
+  // Damage slows the airframe in proportion (manual review, item 7), but
+  // never below flying speed - the anti-stall hardware has never yet failed.
+  const top = mulDiv(unit.maxSpeed, damagePermil(unit), 1000);
+  const ceiling = top < unit.minSpeed ? unit.minSpeed : top;
+  if (unit.control === -1) return unit.order === ORDER_HOLD ? unit.minSpeed : ceiling;
+  return clampI(mulDiv(ceiling, unit.throttle, 100), unit.minSpeed, ceiling);
 }
 
 // How low a pilot may fly: wavetop height. Low enough to duck under a radar
@@ -92,6 +104,7 @@ function stepManta(unit, islands, sizeUnits) {
   unit.y = clampI(unit.y + mulSin(unit.speed, unit.heading), 0, sizeUnits);
   unit.z = stepToward(unit.z, targetAltitudeFor(unit, islands, sizeUnits), unit.climbRate);
 
+  leakFuel(unit);
   if (burnUnitFuel(unit, unit.fuelBurn) === 1) {
     // Dry over the sea: the airframe is gone. Nothing to recover.
     unit.state = UNIT_LOST;

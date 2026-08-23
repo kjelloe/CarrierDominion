@@ -61,10 +61,32 @@ function stepRepairCarrier(state, carrier) {
 
 // Reported once per hundred points rather than per tick: the event list is part
 // of the state hash, and a repair event every tick would drown everything else.
+// The hangar mends what comes home (manual coverage review, item 7): the
+// original's deck stripped, refuelled AND repaired. On the repair beat every
+// stowed hull below its maximum takes unitRepairHp points, paying
+// unitRepairMaterials from the ship's yard stores - short materials buy a
+// proportionally shorter mend, exactly like the sections above deck.
+function stepHangarRepair(state, carrier) {
+  if (carrier.hull <= 0 || state.tick % 100 !== 0) return;
+  for (let u = 0; u < state.units.length; u++) {
+    const unit = state.units[u];
+    if (unit.carrierId !== carrier.id || unit.state !== UNIT_STOWED) continue;
+    if (unit.hp <= 0 || unit.hp >= unit.maxHp) continue;
+    const price = state.economy.unitRepairMaterials;
+    const paid = price < carrier.materials ? price : carrier.materials;
+    if (paid <= 0) return;
+    carrier.materials = carrier.materials - paid;
+    const mended = price > 0 ? mulDiv(state.economy.unitRepairHp, paid, price) : 0;
+    unit.hp = unit.hp + mended;
+    if (unit.hp > unit.maxHp) unit.hp = unit.maxHp;
+  }
+}
+
 function stepRepair(state) {
   for (let i = 0; i < state.carriers.length; i++) {
     const carrier = state.carriers[i];
     replaceHull(state, carrier);
+    stepHangarRepair(state, carrier);
     const done = stepRepairCarrier(state, carrier);
     if (done <= 0) continue;
     const before = carrier.repairReported;

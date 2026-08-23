@@ -344,6 +344,26 @@ function burnUnitFuel(unit, perHundred) {
   return 0;
 }
 
+// The repair state as a drive scale (manual coverage review, item 7): the
+// original slowed a hull in direct proportion to its damage. Floored at a
+// quarter so a cripple still crawls home rather than becoming scenery.
+function damagePermil(unit) {
+  if (unit.maxHp <= 0) return 1000;
+  const permil = floorDiv(unit.hp * 1000, unit.maxHp);
+  return permil < 250 ? 250 : (permil > 1000 ? 1000 : permil);
+}
+
+// Below this repair state the hull leaks fuel (the original's two-minute
+// clock): the whole tank in FUEL_LEAK_TICKS on top of the normal burn.
+const LEAK_BELOW_PERMIL = 120;
+const FUEL_LEAK_TICKS = 2400;
+
+function leakFuel(unit) {
+  if (unit.fuel <= 0 || damagePermil(unit) === 1000) return;
+  if (floorDiv(unit.hp * 1000, unit.maxHp) >= LEAK_BELOW_PERMIL) return;
+  burnUnitFuel(unit, floorDiv(unit.fuelCapacity * 100, FUEL_LEAK_TICKS));
+}
+
 // Fraction of the tank left, in per-mil, for the AI's "can I still get home?"
 // test and for the HUD.
 function fuelPermil(unit) {
@@ -352,6 +372,8 @@ function fuelPermil(unit) {
 }
 
 export {
+  damagePermil,
+  leakFuel,
   KIND_MANTA,
   KIND_WALRUS,
   KIND_LIGHTER,

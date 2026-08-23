@@ -22,6 +22,8 @@ import {
   UNIT_RETURNING,
   arrivedAtTarget,
   burnUnitFuel,
+  damagePermil,
+  leakFuel,
 } from './units.js';
 
 const DRIVE_NOTHING = 0;
@@ -62,16 +64,23 @@ function slopeAhead(unit, islands, surfaceHere, bam, sizeUnits) {
 function steerWalrus(unit) {
   if (unit.control !== -1) {
     if (unit.rudder === 0) return unit.heading;
-    return wrapAngle(unit.heading + unit.rudder * unit.turnRate);
+    return wrapAngle(unit.heading + unit.rudder * agility(unit));
   }
-  if (unit.avoidTicks > 0) return turnToward(unit.heading, unit.avoidHeading, unit.turnRate);
+  if (unit.avoidTicks > 0) return turnToward(unit.heading, unit.avoidHeading, agility(unit));
   if (unit.order === ORDER_HOLD) return unit.heading;
-  return turnToward(unit.heading, atan2B(unit.targetY - unit.y, unit.targetX - unit.x), unit.turnRate);
+  return turnToward(unit.heading, atan2B(unit.targetY - unit.y, unit.targetX - unit.x), agility(unit));
 }
 
 // Ashore the tracks are slower than the water jets.
+function agility(unit) {
+  const scaled = mulDiv(unit.turnRate, damagePermil(unit), 1000);
+  return scaled < 1 ? 1 : scaled;
+}
+
 function targetSpeedFor(unit, ashore) {
-  const top = ashore === 1 ? unit.landSpeed : unit.maxSpeed;
+  // Damage slows the drive train in proportion (manual review, item 7).
+  const sound = ashore === 1 ? unit.landSpeed : unit.maxSpeed;
+  const top = mulDiv(sound, damagePermil(unit), 1000);
   if (unit.control !== -1) return clampI(mulDiv(top, unit.throttle, 100), 0, top);
   if (unit.avoidTicks > 0) return top;
   return unit.order === ORDER_HOLD ? 0 : top;
@@ -114,6 +123,7 @@ function stepWalrus(unit, islands, sizeUnits) {
     }
   }
 
+  leakFuel(unit);
   if (burnUnitFuel(unit, unit.fuelBurn) === 1) {
     unit.state = UNIT_LOST;
     unit.speed = 0;
