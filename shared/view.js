@@ -130,6 +130,8 @@ function ownUnitView(unit) {
     heading: unit.heading,
     speed: unit.speed,
     hp: unit.hp,
+    maxHp: unit.maxHp,
+    ceiling: unit.ceiling,
     fuel: unit.fuel,
     fuelCapacity: unit.fuelCapacity,
     targetX: unit.targetX,

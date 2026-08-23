@@ -283,4 +283,82 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   ctx.textAlign = 'left';
 }
 
-export { PANEL_HEIGHT, SCHEMATIC, HELM, helmHitAt, createInstruments, drawInstruments, bezel, bar };
+// The panel while PILOTING (playtest ruling 2026-08-24): the instruments are
+// the craft's, not the ship's. Same three-bezels layout and the same helm
+// geometry - the throttle scale and rudder arrows drive the craft through
+// the same hit-test - but the left box is FLIGHT or DRIVE, the scope centres
+// on the hull you are flying, and the right box is that hull's condition:
+// hull, altitude or magazine, the weapon, and the way home.
+function drawFlightInstruments(panel, view, unit, readout, deltaSeconds, colours) {
+  const canvas = panel.canvas;
+  const width = window.innerWidth;
+  if (canvas.width !== width || canvas.height !== PANEL_HEIGHT) {
+    canvas.width = width;
+    canvas.height = PANEL_HEIGHT;
+  }
+  panel.elapsed += deltaSeconds;
+  const ctx = panel.ctx;
+  ctx.clearRect(0, 0, width, PANEL_HEIGHT);
+  if (unit === undefined) return;
+
+  const pad = HELM.pad;
+  const helmW = HELM.width;
+  const scopeSize = PANEL_HEIGHT - pad * 2;
+  const rightX = pad * 3 + helmW + scopeSize;
+  const rightW = Math.max(220, width - rightX - pad);
+
+  // The stick: compass, throttle, speed, fuel - the craft's own.
+  bezel(ctx, pad, pad, helmW, PANEL_HEIGHT - pad * 2, colours, readout.helmTitle);
+  drawCompass(ctx, { x: pad, y: pad, w: helmW * 0.52, h: PANEL_HEIGHT - pad * 2 }, unit.heading, colours);
+  bar(ctx, HELM.gaugeX, HELM.throttleY, HELM.gaugeW, HELM.throttleH,
+    unit.throttle * 10, colours, readout.throttle, `${unit.throttle}%`);
+  bar(ctx, HELM.gaugeX, pad + 88, HELM.gaugeW, 12,
+    permilOf(unit.speed, unit.maxSpeed > 0 ? unit.maxSpeed : 1), colours,
+    readout.speed, readout.speedFigure);
+  bar(ctx, HELM.gaugeX, pad + 128, HELM.gaugeW, 12,
+    permilOf(unit.fuel, unit.fuelCapacity), colours, readout.fuel, readout.fuelFigure);
+  drawRudderButtons(ctx, colours, readout.rudderActive);
+
+  // The scope, centred on the craft. Its picture is still the TEAM's fog -
+  // there is no per-hull sensor model - but what you see is arranged around
+  // where YOU are, which is what a cockpit scope is for.
+  const scopeX = pad * 2 + helmW;
+  bezel(ctx, scopeX, pad, scopeSize, scopeSize, colours, readout.scopeTitle);
+  drawRadar(ctx, view, unit, { x: scopeX + 8, y: pad + 8, size: scopeSize - 16 },
+    panel.elapsed, colours, readout.scopeRange);
+  ctx.fillStyle = colours.dim;
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(readout.scopeLabel, scopeX + scopeSize - 10, pad + 18);
+  ctx.textAlign = 'left';
+
+  // The craft: hull, altitude (a Manta) or the magazine (a Walrus), the
+  // selected weapon with its tally, and the bearing home.
+  bezel(ctx, rightX, pad, rightW, PANEL_HEIGHT - pad * 2, colours, readout.craftTitle);
+  const barX = rightX + 20;
+  const barW = Math.min(420, rightW - 40);
+  const half = Math.floor((barW - 24) / 2);
+  const rightCol = barX + half + 24;
+  bar(ctx, barX, pad + 46, half, 12, permilOf(unit.hp, unit.maxHp), colours,
+    readout.hull, readout.hullFigure);
+  bar(ctx, rightCol, pad + 46, half, 12, readout.secondPermil, colours,
+    readout.secondLabel, readout.secondFigure);
+  ctx.fillStyle = colours.dim;
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.fillText(readout.weapon, barX, pad + 100);
+  ctx.fillStyle = colours.ink;
+  ctx.font = '16px ui-monospace, monospace';
+  ctx.fillText(readout.tally, barX, pad + 122);
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.fillStyle = colours.dim;
+  ctx.textAlign = 'right';
+  ctx.fillText(readout.homeLabel, barX + barW, pad + 100);
+  ctx.fillStyle = colours.ink;
+  ctx.fillText(readout.homeFigure, barX + barW, pad + 118);
+  ctx.textAlign = 'left';
+}
+
+export {
+  PANEL_HEIGHT, SCHEMATIC, HELM, helmHitAt, createInstruments,
+  drawInstruments, drawFlightInstruments, bezel, bar,
+};

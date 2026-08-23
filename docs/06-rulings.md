@@ -227,6 +227,25 @@ The three findings that needed a decision, decided with the fix order:
 - **A table is never larger than its archipelago.** The fold raises the
   island count to the team count; hashed, so every path agrees.
 
+## Playtest round four (2026-08-24)
+
+From an Action Game session — all landed the same day:
+
+- **The interface says which console you are at**: camera tabs top centre —
+  HELM / WEAPON / BIRDSEYE — clickable, the lit one is current; `C` cycles.
+- **In WEAPON view the selector is the console**: the weapon chips move to
+  the bottom centre at full size. This is also the answer to "could not
+  find the carrier's gun" — LASER and its rounds stand under the crosshair.
+- **The legend opens screen-centre**, readable, not in a corner.
+- **Buttons are context-enabled**: asleep until their moment (PILOT until a
+  hull is named, POD/VIRUS until it is a Walrus, CLIMB/DIVE until flying a
+  Manta, LAUNCH until one is stowed) — and NEXT marks the hull it named
+  with a spinning ring-and-pointer.
+- **At the controls, the panel is the craft's**: FLIGHT/DRIVE instruments,
+  the scope centred on the flown hull, its hull/altitude/magazine, weapon
+  tally and bearing home. Supersedes round two's ship-always helm: the helm
+  clicks drive what the panel shows.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

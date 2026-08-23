@@ -76,7 +76,38 @@
       display: block; font-size: 15px; color: var(--hud-ink); letter-spacing: 1px;
     }
     .act .l { display: block; font-size: 9px; letter-spacing: 1px; }
-    body.menu .actions, body.menu #debug-button { display: none; }
+    body.menu .actions, body.menu #debug-button, body.menu #camera-tabs { display: none; }
+    /* The camera tabs (playtest ruling 2026-08-24): the original's interface
+       always SAID which console you were at. Three clickable tabs, top
+       centre, the lit one is where you are; C still cycles. */
+    #camera-tabs {
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 2px; z-index: 8; user-select: none;
+    }
+    .cam-tab {
+      padding: 5px 16px; cursor: pointer; text-align: center;
+      border: 1px solid var(--hud-dim); background: var(--hud-panel);
+      color: var(--hud-dim); font: 11px/1.3 var(--hud-font); letter-spacing: 2px;
+    }
+    .cam-tab.on {
+      color: var(--hud-panel); background: var(--hud-ink);
+      border-color: var(--hud-ink);
+    }
+    .cam-tab:hover { color: var(--hud-ink); }
+    .cam-tab.on:hover { color: var(--hud-panel); }
+    /* In WEAPON view the selector is the console, not a sidebar widget: the
+       weapon chips move to the bottom centre, above the panel, full size. */
+    body.weapon-mode #weapon-group {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: 216px; display: flex; flex-direction: row; gap: 6px;
+      z-index: 8;
+    }
+    body.weapon-mode #weapon-group .wep {
+      width: 92px; padding: 8px 0; font-size: 13px;
+    }
+    body.weapon-mode #weapon-group .wep .n { font-size: 11px; }
+    /* A button whose moment has not come is visible but plainly asleep. */
+    .act.off { opacity: 0.32; pointer-events: none; }
     /* Touch (ruling 2026-08-23, basic pass - real devices still to judge):
        the browser must not scroll or pinch the bridge, a coarse pointer
        gets bigger targets, and a phone held upright gets the rotate card -
@@ -138,11 +169,14 @@
     .hud-row { display: flex; justify-content: space-between; gap: 18px; }
     .hud-label { color: var(--hud-dim); }
     .hud-value { color: var(--hud-ink); }
+    /* Centre of the screen (playtest ruling 2026-08-24): a legend in the
+       corner is squinted at; a legend in the middle is read. */
     #help {
-      position: fixed; bottom: 206px; left: 12px;
-      padding: 8px 12px; border-radius: 6px;
-      background: var(--hud-panel); color: var(--hud-dim);
-      font: 12px/1.6 var(--hud-font);
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      max-height: 70vh; overflow-y: auto; z-index: 12;
+      padding: 18px 26px; border-radius: 6px;
+      background: var(--hud-panel); border: 1px solid var(--hud-dim);
+      color: var(--hud-dim); font: 13px/1.8 var(--hud-font);
       pointer-events: none; user-select: none;
     }
     #gpu { color: var(--hud-dim); opacity: 0.75; }
@@ -340,6 +374,7 @@
   <div id="tip"></div>
   <div id="actions-left" class="actions"></div>
   <div id="actions-right" class="actions"></div>
+  <div id="camera-tabs"></div>
   <div id="rotate-gate"></div>
   <!-- The legend is rendered from the language catalogue by main.js, and
        hides behind the ? button until asked for. -->

@@ -5,6 +5,45 @@ golden hash and why.
 
 ---
 
+## 2026-08-24 — Playtest round four: the interface says where you are
+
+Five rulings from an Action Game session, landed together. The thread
+through all of them is the 1988 original's virtue: the interface always
+SAID which console you were at, and ours now does.
+
+- **Camera tabs**, top centre: HELM / WEAPON / BIRDSEYE, clickable, lit
+  where you are; C still cycles. The names are the owner's.
+- **WEAPON view makes the selector the console**: the weapon chips move
+  to the bottom centre at full size - and that is where the "missing"
+  carrier gun turned out to be hiding: LASER 600 now stands under the
+  crosshair with F to fire it. Nothing about the gun changed; what
+  changed is that the interface finally pointed at it.
+- **The legend centred**: max-height + scroll, bordered, screen middle.
+- **Context-enabled buttons**: an availability map computed per frame -
+  PILOT sleeps until NEXT names a hull, POD/VIRUS until it is a Walrus,
+  CLIMB/DIVE until a Manta is flown, LAUNCH until one is stowed, and the
+  ship row (STOP/FLARES/SUPPLY/...) sleeps with the ship. A sleeping
+  button keeps its place and drops to a third opacity: the column
+  teaches the game's shape even while most of it waits.
+- **NEXT shows what it named**: a spinning ring-and-pointer marker over
+  the selected hull, hidden while piloting (the camera is the answer
+  then), rebuilt per war like every scene object.
+- **The piloting panel is the craft's** (supersedes round two's
+  ship-always helm): FLIGHT or DRIVE on the left with the craft's
+  compass/throttle/speed/fuel, the scope CENTRED ON THE FLOWN HULL (team
+  fog, arranged around you), MANTA/WALRUS on the right - hull, altitude
+  for the flyer or magazine bar for the gunner (magazine capacities come
+  from the ruleset the client already fetched; the view carries rounds,
+  not capacities), weapon tally, bearing home. The helm's clicks route
+  through sendThrottle/sendRudder now, so panel and keys drive the same
+  thing: whatever the panel shows.
+
+probe playtest_round4.mjs asserts the lot: tab flow, the centred weapon
+bar with LASER600 on the carrier, the centred legend, PILOT waking on
+NEXT with the marker up, __panelMode flight->ship round trip, CLIMB
+waking only in the air. 426 tests + smoke green; view-layer only, no
+pins.
+
 ## 2026-08-23 — The third review's nine, closed the same day
 
 The owner ruled "fix all", so all nine landed as one slice. 426 tests,

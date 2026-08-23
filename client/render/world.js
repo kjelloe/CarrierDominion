@@ -737,6 +737,25 @@ function buildTurret(teamColour, missile, detail) {
   return group;
 }
 
+// The selection marker (playtest ruling 2026-08-24): pressing NEXT has to
+// SHOW you what you now command. A ring with a pointer above it, unlit so it
+// reads as an overlay rather than an object, in the panel's own self colour.
+function buildSelectionMarker() {
+  const group = new THREE.Group();
+  const markerMat = new THREE.MeshBasicMaterial({
+    color: 0xffe08a, transparent: true, opacity: 0.85,
+  });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(16, 1.4, 6, 24), markerMat);
+  ring.rotation.x = -Math.PI / 2;
+  group.add(ring);
+  const pointerGeometry = new THREE.ConeGeometry(6, 12, 4);
+  pointerGeometry.rotateX(Math.PI); // tip down, at the hull it names
+  const pointer = new THREE.Mesh(pointerGeometry, markerMat);
+  pointer.position.y = 18;
+  group.add(pointer);
+  return group;
+}
+
 const NEUTRAL_NODE_COLOUR = 0xb9b3a4;
 
 // The command node: a mast on a plinth, tall enough to spot from the air,
@@ -796,6 +815,7 @@ export {
   buildLighter,
   buildShot,
   buildTurret,
+  buildSelectionMarker,
   buildCommandNode,
   updateCommandNode,
   NEUTRAL_NODE_COLOUR,

@@ -19,6 +19,7 @@ import {
   buildMirrorOcean,
   buildOcean,
   buildOceanGrid,
+  buildSelectionMarker,
   buildShot,
   buildTurret,
   buildWalrus,
@@ -172,6 +173,8 @@ function createScene(canvas, preset, sizeMetres, style) {
     strategic: false,
     gunsight: false,
     followUnitId: -1,
+    selectedUnitId: -1,
+    marker: null,
     elapsed: 0,
     envTarget: null,
     raycaster: new THREE.Raycaster(),
@@ -418,6 +421,33 @@ function ownCarrierOf(view) {
   return undefined;
 }
 
+// The selection marker rides above whatever NEXT last named, spinning and
+// bobbing so the eye finds it among a dozen identical silhouettes.
+function syncMarker(view3d, view) {
+  let target;
+  if (view3d.selectedUnitId !== -1) {
+    for (const unit of view.units) {
+      if (unit.id === view3d.selectedUnitId
+        && (unit.state === 1 || unit.state === 2)) target = unit;
+    }
+  }
+  if (target === undefined) {
+    if (view3d.marker !== null) view3d.marker.visible = false;
+    return;
+  }
+  if (view3d.marker === null) {
+    view3d.marker = buildSelectionMarker();
+    view3d.scene.add(view3d.marker);
+  }
+  view3d.marker.visible = true;
+  view3d.marker.position.set(
+    toMetres(target.x),
+    toMetres(target.z) + 26 + Math.sin(view3d.elapsed * 3) * 2.5,
+    -toMetres(target.y),
+  );
+  view3d.marker.rotation.y = view3d.elapsed * 1.4;
+}
+
 function renderView(view3d, view, deltaSeconds, podBuildTicks) {
   view3d.elapsed += deltaSeconds;
   syncIslands(view3d, view);
@@ -426,6 +456,7 @@ function renderView(view3d, view, deltaSeconds, podBuildTicks) {
   syncUnits(view3d, view);
   syncTurrets(view3d, view);
   syncShots(view3d, view);
+  syncMarker(view3d, view);
   placeCamera(view3d, chaseSubject(view3d, view));
   const uniforms = view3d.ocean.material.uniforms;
   if (uniforms !== undefined) {
@@ -463,6 +494,8 @@ function resetWorld(view3d, sizeMetres) {
   view3d.shots = {};
   view3d.turrets = {};
   view3d.followUnitId = -1;
+  view3d.selectedUnitId = -1;
+  view3d.marker = null;
   view3d.strategic = false;
   view3d.gunsight = false;
   return view3d;

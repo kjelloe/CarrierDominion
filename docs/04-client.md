@@ -45,9 +45,24 @@ The panel is **clickable** (playtest ruling 2026-08-22, and faithful to the
 original — the 1988 manual says "click directly on speed scale to set target
 speed"): the throttle bar IS the speed scale, and two rudder arrows under it
 act while held and CENTRE UP on release, exactly like the keys they mirror.
-The HELM box drives the ship even while a unit is being flown — it is the
-ship's helm. The hit-test and the drawing share one geometry table (`HELM` in
+The hit-test and the drawing share one geometry table (`HELM` in
 instruments.js), so the paint and the click cannot disagree.
+
+**At the controls of a craft, the whole panel is the craft's** (playtest
+ruling 2026-08-24, superseding round two's ship-always helm): FLIGHT or
+DRIVE on the left — the craft's compass, throttle, speed, fuel — the scope
+centred on the hull you are flying, and MANTA/WALRUS on the right with hull,
+altitude (or the magazine), the selected weapon's tally, and the bearing
+home. The helm clicks drive the craft too; hand back the controls (`T`) and
+the panel is the ship's again.
+
+Above the horizon sit the **camera tabs** (ruling 2026-08-24): HELM /
+WEAPON / BIRDSEYE, top centre, clickable, the lit one is where you are — the
+original's interface always said which console you were at. `C` still
+cycles. In WEAPON view the weapon selector moves to the bottom centre at
+full size: the selector is the console there, which is also where the
+carrier's laser stops being a secret — LASER and its rounds stand under the
+crosshair, `F` fires it.
 
 Flanking the screen, the **1988 icon columns**: ship and logistics on the
 left (STOP, FLARES, SUPPLY, DEPOT, DAMAGE, CAMERA, SOUND), air and ground ops
@@ -58,6 +73,15 @@ Every button grows a **tooltip** after a deliberate 600 ms hover: the label
 names it, the tooltip explains it. Between FIRE and POD sits the **weapon
 selector** — one button per weapon the selected hull carries, radio-style,
 with the live round count on each; `V` still cycles for the keyboard hand.
+
+The buttons are **context-enabled** (ruling 2026-08-24): a button whose
+moment has not come is visible but plainly asleep — PILOT sleeps until NEXT
+has named a hull, POD and VIRUS until that hull is a Walrus, CLIMB and DIVE
+until you are flying a Manta, LAUNCH until something of that kind is stowed.
+And NEXT **shows** you what it named: a spinning ring-and-pointer marker
+rides the selected hull (hidden while piloting, when the camera itself is
+the answer). The legend behind `?` opens screen-centre, where it can be
+read.
 
 The diagnostic strip hides behind a **DBG** button upper-left, like the key
 list behind `?` — the instruments are for playing, the strip is for

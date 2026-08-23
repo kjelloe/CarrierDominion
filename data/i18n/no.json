@@ -261,5 +261,14 @@
   "act.climb": "STIG",
   "act.dive": "DYKK",
   "tip.climb": "hold for å stige - Mantaen du flyr løfter nesen mens du holder",
-  "tip.dive": "hold for å dykke - Mantaen du flyr senker nesen mens du holder"
+  "tip.dive": "hold for å dykke - Mantaen du flyr senker nesen mens du holder",
+  "camera.birdseye": "FUGLEPERSPEKTIV",
+  "camera.helm": "ROR",
+  "camera.weapon": "VÅPEN",
+  "tip.cameraTabs": "de tre måtene å se krigen på - klikk en, eller bla med C",
+  "panel.flight": "FLYGING",
+  "panel.drive": "KJØRING",
+  "panel.alt": "høyde",
+  "panel.ammo": "skudd",
+  "panel.toCarrier": "skipet"
 }

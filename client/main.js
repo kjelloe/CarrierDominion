@@ -17,7 +17,7 @@ import { createLocalTransport, createReplayTransport, createWsTransport } from '
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
 import { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
-import { createInstruments, drawInstruments, helmHitAt } from './render/instruments.js';
+import { createInstruments, drawFlightInstruments, drawInstruments, helmHitAt } from './render/instruments.js';
 import { createSound, playEvents, playWarning, startAmbience, toggleMute, wakeSound } from './sound.js';
 import { createDamagePanel, renderDamagePanel, toggleDamagePanel } from './panels/damage.js';
 import {
@@ -40,6 +40,7 @@ import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
 import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.js';
 import { applyStyleToDocument, resolveStyle, styleFor } from './styles.js';
 import { startDiorama } from './render/diorama.js';
+import { dist2D } from '../shared/fixed.js';
 import { worldSizeMetres } from '../engine/worldgen.js';
 import {
   createHud,
@@ -427,6 +428,59 @@ function cycleGraphics(currentLevel) {
   window.location.reload();
 }
 
+// The camera tabs (playtest ruling 2026-08-24): the original's interface
+// always SAID which console you were at, so ours does - three clickable tabs
+// top centre, the lit one is where you are. C still cycles through them.
+const CAMERA_MODES = [
+  { name: 'helm', label: 'camera.helm' },
+  { name: 'weapon', label: 'camera.weapon' },
+  { name: 'birdseye', label: 'camera.birdseye' },
+];
+const cameraTabs = {};
+
+function cameraMode() {
+  if (state.scene3d === undefined) return 'helm';
+  if (state.scene3d.gunsight) return 'weapon';
+  if (state.scene3d.strategic) return 'birdseye';
+  return 'helm';
+}
+
+function setCameraMode(name) {
+  const scene = state.scene3d;
+  if (scene === undefined) return;
+  scene.gunsight = name === 'weapon';
+  scene.strategic = name === 'birdseye';
+  updateCameraTabs();
+}
+
+function buildCameraTabs(t) {
+  const root = document.getElementById('camera-tabs');
+  for (const mode of CAMERA_MODES) {
+    const tab = document.createElement('div');
+    tab.className = 'cam-tab';
+    tab.textContent = t(mode.label);
+    tab.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      setCameraMode(mode.name);
+    });
+    attachTip(tab, t('tip.cameraTabs'));
+    root.append(tab);
+    cameraTabs[mode.name] = tab;
+  }
+}
+
+function updateCameraTabs() {
+  const current = cameraMode();
+  for (const mode of CAMERA_MODES) {
+    if (cameraTabs[mode.name] !== undefined) {
+      cameraTabs[mode.name].classList.toggle('on', mode.name === current);
+    }
+  }
+  // In WEAPON view the selector IS the console: the chips move to the
+  // bottom centre, full size (the CSS reads this class).
+  document.body.classList.toggle('weapon-mode', current === 'weapon');
+}
+
 // Three ways to look at a war: over the shoulder, down the gunsight, and the
 // map. C walks them in that order.
 function cycleCamera() {
@@ -434,39 +488,36 @@ function cycleCamera() {
   if (!scene.gunsight && !scene.strategic) scene.gunsight = true;
   else if (scene.gunsight) { scene.gunsight = false; scene.strategic = true; }
   else scene.strategic = false;
+  updateCameraTabs();
 }
 
 // The instrument panel is clickable (1988: "click directly on speed scale to
-// set target speed"). The HELM box drives the SHIP even while a unit is being
-// flown - it is the ship's helm, and it says so on the bezel. Rudder arrows
-// act while held and CENTRE UP on release, exactly like the keys they mirror.
+// set target speed"). Rudder arrows act while held and CENTRE UP on release,
+// exactly like the keys they mirror.
 function bindPanelInput() {
   const canvas = document.getElementById('panel');
   canvas.style.pointerEvents = 'auto';
   let heldRudder = 0;
-  const shipRudder = (next) => {
-    if (state.carrierId < 0) return;
-    state.transport.send({ type: 'set_rudder', carrierId: state.carrierId, rudder: next });
-  };
+  // The helm drives whatever the panel is SHOWING (playtest ruling
+  // 2026-08-24, superseding round two's ship-always rule): at the ship's
+  // helm it is the ship's wheel; at the controls of a craft the panel is
+  // the craft's, and so is its throttle scale. sendThrottle/sendRudder
+  // already route by who is being piloted - the keys and the clicks agree.
   canvas.addEventListener('pointerdown', (event) => {
     const rect = canvas.getBoundingClientRect();
     const hit = helmHitAt(event.clientX - rect.left, event.clientY - rect.top);
     if (hit === -1) return;
     if (hit.kind === 'throttle') {
-      if (state.carrierId < 0) return;
-      state.transport.send({
-        type: 'set_throttle', carrierId: state.carrierId, throttle: hit.throttle,
-      });
-      if (!state.piloting) state.throttle = hit.throttle;
+      sendThrottle(hit.throttle);
       return;
     }
     heldRudder = hit.rudder;
-    shipRudder(heldRudder);
+    sendRudder(heldRudder);
   });
   const release = () => {
     if (heldRudder === 0) return;
     heldRudder = 0;
-    shipRudder(0);
+    sendRudder(0);
   };
   canvas.addEventListener('pointerup', release);
   canvas.addEventListener('pointerleave', release);
@@ -541,6 +592,11 @@ const ACTIONS_RIGHT = [
   ['p', 'act.pod', 'tip.pod'], ['b', 'act.virus', 'tip.virus'],
 ];
 
+// Every column button, by key, so the frame loop can wake and sleep them
+// (playtest ruling 2026-08-24: buttons are context-enabled - a PILOT button
+// with nothing to pilot is plainly asleep, not a mystery).
+const actionButtons = {};
+
 function buildActionColumns(t) {
   const columns = [
     ['actions-left', ACTIONS_LEFT],
@@ -564,6 +620,7 @@ function buildActionColumns(t) {
       });
       attachTip(button, t(tipKey));
       root.append(button);
+      actionButtons[key] = button;
       // The flying hand's vertical axis, for a screen with no arrow keys
       // (touch ruling 2026-08-23): two HELD buttons under TAKE CONTROLS,
       // wired like the keys they mirror - press noses over, release holds
@@ -591,6 +648,7 @@ function buildActionColumns(t) {
           held.addEventListener('pointercancel', stop);
           attachTip(held, t(tip2));
           root.append(held);
+          actionButtons[dir > 0 ? 'climb' : 'dive'] = held;
         }
       }
       // The weapon SELECTOR rides in the right column between FIRE and POD:
@@ -606,6 +664,38 @@ function buildActionColumns(t) {
   }
   attachTip(document.getElementById('help-button'), t('tip.help'));
   attachTip(document.getElementById('debug-button'), t('tip.debug'));
+}
+
+// What each button needs to be worth pressing. Computed every frame from the
+// view - cheap (a few array scans), and the alternative is a player pressing
+// PILOT with nothing to pilot and learning nothing from the silence.
+function updateActionButtons() {
+  if (state.view === undefined) return;
+  const view = state.view;
+  const ship = ownCarrierOf(view);
+  const alive = ship !== undefined;
+  const chosen = selectedUnit();
+  const stowed = (kind) => view.units.some(
+    (unit) => unit.team === view.team && unit.kind === kind && unit.state === 0,
+  );
+  const enabled = {
+    x: alive, e: alive, l: alive, k: alive, q: alive, z: alive,
+    c: true, m: true,
+    1: alive && stowed(KIND_MANTA),
+    2: alive && stowed(KIND_WALRUS),
+    n: afloatUnits().length > 0,
+    t: chosen !== undefined,
+    u: chosen !== undefined && chosen.kind !== 2, // the boat has a job
+    r: chosen !== undefined,
+    f: alive || (chosen !== undefined && state.piloting),
+    p: chosen !== undefined && chosen.kind === KIND_WALRUS,
+    b: chosen !== undefined && chosen.kind === KIND_WALRUS,
+    climb: state.piloting && chosen !== undefined && chosen.kind === KIND_MANTA,
+    dive: state.piloting && chosen !== undefined && chosen.kind === KIND_MANTA,
+  };
+  for (const key of Object.keys(actionButtons)) {
+    actionButtons[key].classList.toggle('off', enabled[key] === false);
+  }
 }
 
 // Rebuilt only when the holder or its loadout changes; the selection state
@@ -948,7 +1038,12 @@ function frame(nowMs) {
   const deltaSeconds = state.lastFrameMs === 0 ? 0 : (nowMs - state.lastFrameMs) / 1000;
   state.lastFrameMs = nowMs;
   tickFps(state.hud, nowMs);
+  // The marker follows the selection - hidden while piloting, when the
+  // camera itself is the answer to "which one is mine".
+  state.scene3d.selectedUnitId = state.piloting ? -1 : state.selectedUnitId;
   renderView(state.scene3d, state.view, deltaSeconds, state.podBuildTicks);
+  updateCameraTabs();
+  updateActionButtons();
   setHud(state.hud, 'tick', state.view.tick);
   setHud(state.hud, 'hash', state.stateHash === '' ? '-' : state.stateHash);
   updateCarrierHud(state.hud, ownCarrierOf(state.view), state.view.params);
@@ -983,6 +1078,16 @@ function zoomScope(direction) {
   setHud(state.hud, 'status', state.t('status.scope', { range: state.scopeRange }));
 }
 
+// How full the selected weapon's magazine is, against the ruleset's figure -
+// the view carries rounds, not capacities, so the client keeps the table.
+function magazinePermil(unit) {
+  const arm = (unit.arms ?? []).find((a) => a.w === unit.weapon);
+  if (arm === undefined) return 0;
+  const magazine = state.magazines[arm.w] ?? 0;
+  if (magazine <= 0) return arm.n > 0 ? 1000 : 0;
+  return Math.min(1000, Math.round((arm.n * 1000) / magazine));
+}
+
 // The instrument panel. What it is handed is the fog-filtered view and a
 // handful of already-translated strings: the drawing code does no wording, and
 // the wording code does no drawing.
@@ -994,6 +1099,46 @@ function drawPanel(deltaSeconds) {
     ? unit
     : own;
   const params = state.view.params;
+  // At the controls of a craft, the panel is the CRAFT's (playtest ruling
+  // 2026-08-24): flight or drive instruments, the scope centred on the hull
+  // you are flying, its condition and the way home - not the ship's helm.
+  if (state.piloting && unit !== undefined) {
+    window.__panelMode = 'flight';
+    const flying = unit.kind === KIND_MANTA;
+    const home = own === undefined
+      ? ''
+      : `${(Math.round(dist2D(unit.x, unit.y, own.x, own.y) / params.unitsPerMetre / 100) / 10)} km`;
+    drawFlightInstruments(state.panel, state.view, unit, {
+      helmTitle: state.t(flying ? 'panel.flight' : 'panel.drive'),
+      scopeTitle: state.t('panel.scope'),
+      scopeRange: state.scopeRange * params.unitsPerMetre,
+      scopeLabel: `${state.scopeRange >= 1000 ? `${state.scopeRange / 1000}k` : state.scopeRange} m`,
+      craftTitle: state.t(flying ? 'unit.manta' : 'unit.walrus').toUpperCase(),
+      throttle: state.t('hud.throttle'),
+      speed: state.t('hud.speed'),
+      speedFigure: `${knotsFrom(unit.speed, params.unitsPerMetre, params.tickHz)} ${state.t('hud.knots')}`,
+      fuel: state.t('hud.fuel'),
+      fuelFigure: unit.fuelCapacity <= 0
+        ? ''
+        : `${Math.round((unit.fuel * 100) / unit.fuelCapacity)}%`,
+      rudderActive: state.rudder,
+      hull: state.t('hud.hull'),
+      hullFigure: unit.maxHp > 0 ? `${Math.round((unit.hp * 100) / unit.maxHp)}%` : '',
+      secondLabel: state.t(flying ? 'panel.alt' : 'panel.ammo'),
+      secondPermil: flying
+        ? (unit.ceiling > 0 ? Math.round((unit.z * 1000) / unit.ceiling) : 0)
+        : magazinePermil(unit),
+      secondFigure: flying
+        ? `${Math.round(unit.z / params.unitsPerMetre)} m`
+        : String(roundsOf(unit)),
+      weapon: weaponName(state.t, unit),
+      tally: String(roundsOf(unit)),
+      homeLabel: state.t('panel.toCarrier'),
+      homeFigure: home,
+    }, deltaSeconds, state.instrumentColours);
+    return;
+  }
+  window.__panelMode = 'ship';
   drawInstruments(state.panel, state.view, own, {
     helmTitle: state.t('panel.helm'),
     scopeTitle: state.t('panel.scope'),
@@ -1097,6 +1242,8 @@ async function main() {
   document.getElementById('help-button').addEventListener('click', toggleHelp);
   document.getElementById('debug-button').addEventListener('click', toggleDebug);
   buildActionColumns(state.t);
+  buildCameraTabs(state.t);
+  updateCameraTabs();
   setHud(state.hud, 'status', state.t('status.loading'));
 
   const rules = await fetchRules();
@@ -1131,6 +1278,7 @@ async function main() {
 
   state.podBuildTicks = rules.rules.podBuildTicks;
   state.buildCosts = rules.economy.builds.map((row) => row.materials);
+  state.magazines = (rules.weapons?.list ?? []).map((weapon) => weapon.magazine ?? 0);
   // The two boards get a context rather than the client: a translator, the
   // current view, the seat's ship, prices, and a way to send a command.
   const panelContext = {

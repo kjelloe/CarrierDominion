@@ -84,7 +84,7 @@ wrapped its messages. Two real browsers found it immediately.
 
 Current probes: `ai_trace`, `combat_shot`, `damage_board`, `graphics_shots`, `gunsight`,
 `island_board`, `lobby`, `rejoin`, `replay_view`, `scope_zoom`, `splash_shot`, `start_menu`, `touch_controls`,
-`playtest_round1`, `playtest_round2`, `playtest_round3`, `second_war`, `strategic_probe`, `style_shots`, `turret_shot`,
+`playtest_round1`, `playtest_round2`, `playtest_round3`, `playtest_round4`, `second_war`, `strategic_probe`, `style_shots`, `turret_shot`,
 `war_over`, `war_trace`, `watch_run`. `graphics_shots` also asserts the
 phase-2 pixel contract machine-checkably (docs/07 §3): mirror water, a blue
 zenith measured looking UP - the chase camera only ever sees the Preetham

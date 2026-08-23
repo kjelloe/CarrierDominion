@@ -261,5 +261,14 @@
   "act.climb": "CLIMB",
   "act.dive": "DIVE",
   "tip.climb": "hold to climb - the flown Manta noses up while held",
-  "tip.dive": "hold to dive - the flown Manta noses down while held"
+  "tip.dive": "hold to dive - the flown Manta noses down while held",
+  "camera.birdseye": "BIRDSEYE",
+  "camera.helm": "HELM",
+  "camera.weapon": "WEAPON",
+  "tip.cameraTabs": "the three ways to look at the war - click one, or cycle with C",
+  "panel.flight": "FLIGHT",
+  "panel.drive": "DRIVE",
+  "panel.alt": "altitude",
+  "panel.ammo": "rounds",
+  "panel.toCarrier": "carrier"
 }
