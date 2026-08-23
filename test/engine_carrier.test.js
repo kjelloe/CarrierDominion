@@ -283,3 +283,70 @@ test('clearing the shoal stops the damage', () => {
   state = drive(state, 1000);
   assert.equal(state.carriers[0].hull, hull, 'still taking damage in open water');
 });
+
+// --- The astern gear and the struck colours (manual coverage review) ---
+
+test('the ship backs down at a quarter of her ahead speed, and burns for it', () => {
+  let state = createInitialState(SEED, rules);
+  const start = { x: state.carriers[0].x, y: state.carriers[0].y };
+  state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: -25 });
+  assert.equal(state.carriers[0].throttle, -25);
+  const fuelBefore = state.carriers[0].fuel;
+  state = drive(state, 600);
+  const ship = state.carriers[0];
+  assert.ok(ship.speed < 0, 'no sternway was made');
+  assert.ok(-ship.speed <= mulDiv(ship.maxSpeed, 25, 100) + 1, 'astern outran the gear');
+  assert.ok(dist2D(ship.x, ship.y, start.x, start.y) > 0, 'the ship never moved');
+  assert.ok(ship.fuel < fuelBefore, 'reversing burned nothing');
+  assert.doesNotThrow(() => canonicalize(state));
+});
+
+test('a throttle past the gear stops is refused, ahead and astern', () => {
+  let state = createInitialState(SEED, rules);
+  state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: -26 });
+  assert.equal(state.carriers[0].throttle, 0, 'the gear went past full astern');
+  state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: 101 });
+  assert.equal(state.carriers[0].throttle, 0);
+});
+
+test('a ship aground by the bow backs herself off the reef', () => {
+  let state = createInitialState(SEED, rules);
+  // Sail at the nearest island until grounded.
+  const island = state.islands.reduce((a, b) => (
+    dist2D(state.carriers[0].x, state.carriers[0].y, a.x, a.y)
+      < dist2D(state.carriers[0].x, state.carriers[0].y, b.x, b.y) ? a : b));
+  state = apply(state, {
+    type: 'set_heading',
+    carrierId: 0,
+    heading: ((Math.atan2(island.y - state.carriers[0].y, island.x - state.carriers[0].x)
+      / (Math.PI * 2)) * 65536 + 65536) % 65536 | 0,
+  });
+  state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: 100 });
+  let ticks = 0;
+  while (ticks < 60000 && state.carriers[0].grounded === 0) {
+    state = apply(state, TICK);
+    ticks += 1;
+  }
+  assert.equal(state.carriers[0].grounded, 1, 'the ship never found the reef');
+  // Full astern: the stern feels the water, not the bow, and she comes off.
+  state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: -25 });
+  let free = 0;
+  for (let i = 0; i < 4000 && free === 0; i++) {
+    state = apply(state, TICK);
+    if (state.carriers[0].grounded === 0 && state.carriers[0].speed < 0) free = 1;
+  }
+  assert.equal(free, 1, 'full astern could not back her off');
+});
+
+test('striking the colours scuttles the ship and ends a duel', () => {
+  let state = createInitialState(SEED, rules);
+  state = apply(state, { type: 'surrender', carrierId: 0 });
+  assert.equal(state.carriers[0].hull, 0);
+  assert.ok(state.events.some((e) => e.code === EVT_CARRIER_SUNK && e.b === 0));
+  state = apply(state, TICK);
+  assert.notEqual(state.phase, 0, 'the war outlived the only enemy');
+  assert.equal(state.winner, 1, 'the OTHER side should take the war');
+  // A second surrender is meaningless and refused.
+  const again = apply(state, { type: 'surrender', carrierId: 1 });
+  assert.equal(again.carriers[1].hull, again.carriers[1].maxHull);
+});

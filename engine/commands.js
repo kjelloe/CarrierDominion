@@ -32,9 +32,15 @@ const CMD_BUILD_ON_ISLAND = 'build_on_island';
 const CMD_SET_COURSE = 'set_course';
 const CMD_ORDER_UNIT_ESCORT = 'order_unit_escort';
 const CMD_SET_SUPPLY_BIAS = 'set_supply_bias';
+// Striking the colours (manual coverage review, item 10): the original's
+// SURRENDER option. The ship is scuttled by her own commander; victory
+// resolution does the rest by its ordinary rules.
+const CMD_SURRENDER = 'surrender';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
+// The carrier's astern gear: the bottom quarter of the scale, as 1988 had it.
+const THROTTLE_ASTERN = -25;
 const HEADING_MANUAL = -1;
 
 // Commands that name a hull do it through `carrierId`; commands that name an
@@ -71,7 +77,12 @@ function validateCommand(command) {
   if (type === CMD_SET_THROTTLE) {
     if (!isInt(command.carrierId)) return 'carrierId must be an integer';
     if (!isInt(command.throttle)) return 'throttle must be an integer';
-    if (command.throttle < THROTTLE_MIN || command.throttle > THROTTLE_MAX) return 'throttle out of range';
+    // The SHIP has a reverse gear (manual coverage review, item 4): the
+    // original's speed scale gave its bottom quarter to astern, and so does
+    // ours - -25 is a quarter of the scale, and a quarter of 178 knots is
+    // near enough the original's 22 astern. Units stay 0..100: a Manta has
+    // no reverse and a Walrus that needs one turns around.
+    if (command.throttle < THROTTLE_ASTERN || command.throttle > THROTTLE_MAX) return 'throttle out of range';
     return '';
   }
   if (type === CMD_SET_RUDDER) {
@@ -134,6 +145,10 @@ function validateCommand(command) {
     if (command.item < 0 || command.item > 2) return 'no such item category';
     if (!isInt(command.level)) return 'level must be an integer';
     if (command.level < 0 || command.level > 2) return 'level out of range';
+    return '';
+  }
+  if (type === CMD_SURRENDER) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
     return '';
   }
   if (type === CMD_ORDER_UNIT_ESCORT) {
@@ -215,6 +230,7 @@ function validateCommand(command) {
 }
 
 export {
+  THROTTLE_ASTERN,
   CMD_ADVANCE_TICK,
   CMD_SET_THROTTLE,
   CMD_SET_RUDDER,
@@ -241,6 +257,7 @@ export {
   CMD_SET_COURSE,
   CMD_ORDER_UNIT_ESCORT,
   CMD_SET_SUPPLY_BIAS,
+  CMD_SURRENDER,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

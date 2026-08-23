@@ -41,6 +41,7 @@ import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.j
 import { applyStyleToDocument, resolveStyle, styleFor } from './styles.js';
 import { startDiorama } from './render/diorama.js';
 import { dist2D } from '../shared/fixed.js';
+import { islandName } from '../shared/names.js';
 import { worldSizeMetres } from '../engine/worldgen.js';
 import {
   createHud,
@@ -58,6 +59,7 @@ import {
   describeScore,
   describeSupply,
   describeUnit,
+  degreesFrom,
 } from './hud.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -105,6 +107,9 @@ const state = {
   room: undefined,
   scopeRange: 8000,
   sound: createSound(),
+  signals: [],
+  signalsOpen: false,
+  surrenderArmedMs: 0,
   buildCosts: [0, 0, 0],
   lastFrameMs: 0,
   // Set when the room starts (or restarts) a war: the first snapshot of the
@@ -124,15 +129,17 @@ function selectedUnit() {
   return afloatUnits().find((unit) => unit.id === state.selectedUnitId);
 }
 
-function clampThrottle(value) {
-  return Math.max(0, Math.min(100, value));
+// The SHIP has an astern gear down to -25 (the bottom quarter of the scale,
+// as 1988 had it); a craft's throttle stays 0..100.
+function clampThrottle(value, floor) {
+  return Math.max(floor, Math.min(100, value));
 }
 
 // W/S and A/D drive whatever the player is currently at the controls of: the
 // piloted unit if there is one, otherwise the carrier's helm.
 function sendThrottle(next) {
-  const wanted = clampThrottle(next);
   if (state.piloting) {
+    const wanted = clampThrottle(next, 0);
     const unit = selectedUnit();
     if (unit === undefined) return;
     state.throttle = wanted;
@@ -142,6 +149,7 @@ function sendThrottle(next) {
     });
     return;
   }
+  const wanted = clampThrottle(next, -25);
   if (wanted === state.throttle || state.carrierId < 0) return;
   state.throttle = wanted;
   state.transport.send({ type: 'set_throttle', carrierId: state.carrierId, throttle: wanted });
@@ -526,6 +534,102 @@ function bindPanelInput() {
   canvas.addEventListener('pointercancel', release);
 }
 
+// The signals log (manual coverage review, item 9): the original's Messaging
+// Computer kept the last sixteen reports with their ages, because a toast is
+// history you missed and a log is history you can read. Events are already
+// fog-filtered by the view; this only puts words on the ones worth keeping.
+const SIGNALS_KEPT = 16;
+
+function kindWord(kind) {
+  if (kind === KIND_MANTA) return state.t('unit.manta');
+  if (kind === KIND_WALRUS) return state.t('unit.walrus');
+  return state.t('unit.lighter');
+}
+
+function islandWord(view, islandId) {
+  const island = view.islands.find((i) => i.id === islandId);
+  return island === undefined ? '?' : islandName(island);
+}
+
+function signalText(view, event) {
+  const t = state.t;
+  const code = event.code;
+  if (code === 5) return t('log.grounded');
+  if (code === 6) return t('log.fuelEmpty');
+  if (code === 7) return t('log.fuelRestored');
+  if (code === 8) return t('log.launched', { kind: kindWord(event.c) });
+  if (code === 9 || code === 10 || code === 11 || code === 12) {
+    const unit = view.units.find((u) => u.id === event.a);
+    const kind = kindWord(unit === undefined ? 0 : unit.kind);
+    if (code === 9) return t('log.recovered', { kind: kind });
+    if (code === 10) return t('log.unitLost', { kind: kind });
+    if (code === 11) return t('log.arrived', { kind: kind });
+    return t('log.blocked', { kind: kind });
+  }
+  if (code === 15) return t('log.podDeployed', { island: islandWord(view, event.a) });
+  if (code === 16) return t('log.podLost', { island: islandWord(view, event.a) });
+  if (code === 17) return t('log.captured', { island: islandWord(view, event.a), team: event.b });
+  if (code === 18) return t('log.warOver');
+  if (code === 19) return t('log.resupplied', { island: islandWord(view, event.c) });
+  if (code === 20) return t('log.carrierDamaged', { points: event.c });
+  if (code === 21) return t('log.carrierSunk', { team: event.b });
+  if (code === 22) return t('log.stockpileSet', { island: islandWord(view, event.a) });
+  if (code === 24) return t('log.supplyDelivered');
+  if (code === 25) return t(event.c === 1 ? 'log.supplyRunOn' : 'log.supplyRunOff');
+  if (code === 30) return t('log.roleSet', { island: islandWord(view, event.a) });
+  if (code === 31) return t('log.built', { island: islandWord(view, event.a) });
+  if (code === 32) return t('log.hullReplaced', { kind: kindWord(event.c) });
+  if (code === 34) return t('log.turretLost', { island: islandWord(view, event.c) });
+  if (code === 35) return t('log.virusDeployed', { island: islandWord(view, event.a) });
+  if (code === 36) return t('log.converted', { island: islandWord(view, event.a) });
+  if (code === 37) return t('log.flares');
+  if (code === 39) return t(event.b === 1 ? 'log.courseSet' : 'log.courseDone');
+  return '';
+}
+
+function collectSignals(view) {
+  for (const event of view.events) {
+    const text = signalText(view, event);
+    if (text === '') continue;
+    state.signals.push({ tick: view.tick, text: text });
+  }
+  if (state.signals.length > SIGNALS_KEPT) {
+    state.signals.splice(0, state.signals.length - SIGNALS_KEPT);
+  }
+}
+
+function toggleSignals() {
+  state.signalsOpen = !state.signalsOpen;
+  document.getElementById('log-panel').classList.toggle('open', state.signalsOpen);
+  document.getElementById('msg-button').classList.toggle('open', state.signalsOpen);
+}
+
+function renderSignals() {
+  if (!state.signalsOpen || state.view === undefined) return;
+  const body = document.getElementById('log-body');
+  const hz = state.view.params.tickHz > 0 ? state.view.params.tickHz : 20;
+  let text = '';
+  for (let i = state.signals.length - 1; i >= 0; i--) {
+    const entry = state.signals[i];
+    const seconds = Math.max(0, Math.round((state.view.tick - entry.tick) / hz));
+    text += `<div><span class="age">-${seconds}s</span>${entry.text}</div>`;
+  }
+  if (text !== body.__last) {
+    body.__last = text;
+    body.textContent = '';
+    for (let i = state.signals.length - 1; i >= 0; i--) {
+      const entry = state.signals[i];
+      const seconds = Math.max(0, Math.round((state.view.tick - entry.tick) / hz));
+      const line = document.createElement('div');
+      const age = document.createElement('span');
+      age.className = 'age';
+      age.textContent = `-${seconds}s`;
+      line.append(age, entry.text);
+      body.append(line);
+    }
+  }
+}
+
 // The legend and its button agree about whether it is open.
 function toggleHelp() {
   const hidden = document.getElementById('help').classList.toggle('hidden');
@@ -760,6 +864,38 @@ function bindInput(level) {
     else if (key === 'arrowdown') { held.down = true; sendClimb(-1); }
     else if (key === '1') launch(KIND_MANTA);
     else if (key === '2') launch(KIND_WALRUS);
+    // Direct hull select (the original's 1-4; ours are taken by the launch
+    // keys, so the row above them serves): 5-8 name the Nth hull that is out.
+    else if (key >= '5' && key <= '8') {
+      const out = afloatUnits();
+      const chosen = out[Number(key) - 5];
+      if (chosen !== undefined) {
+        state.selectedUnitId = chosen.id;
+        if (state.piloting) state.scene3d.followUnitId = chosen.id;
+      }
+    }
+    else if (key === 'i') toggleSignals();
+    else if (key === 'o') {
+      state.scene3d.rearView = state.scene3d.rearView !== true;
+      setHud(state.hud, 'status', state.t('status.rearView', {
+        state: state.t(state.scene3d.rearView ? 'hud.on' : 'hud.off'),
+      }));
+    }
+    // Striking the colours takes TWO Escapes inside three seconds: a war is
+    // not a thing to concede by resting a hand on the keyboard.
+    else if (key === 'escape') {
+      const now = window.performance.now();
+      if (now - state.surrenderArmedMs < 3000) {
+        state.surrenderArmedMs = 0;
+        if (state.carrierId >= 0) {
+          state.transport.send({ type: 'surrender', carrierId: state.carrierId });
+          setHud(state.hud, 'status', state.t('status.surrendered'));
+        }
+      } else {
+        state.surrenderArmedMs = now;
+        setHud(state.hud, 'status', state.t('status.surrenderArm'));
+      }
+    }
     else if (key === 'n') cycleSelection();
     else if (key === 'r') recallSelected();
     else if (key === 'u') orderEscort();
@@ -994,6 +1130,7 @@ function onSnapshot(message) {
   // Sound follows the VIEW's events, which are already fog-filtered: you hear
   // your own hulls and your own ship, and nothing over the horizon.
   playEvents(state.sound, message.view.events, window.performance.now());
+  collectSignals(message.view);
   // The last view, for probes. It is the same object the renderer is about to
   // draw, so a probe that asserts on it is asserting on what is on screen.
   window.__lastView = message.view;
@@ -1061,9 +1198,35 @@ function frame(nowMs) {
   renderDamagePanel(state.damage, deltaSeconds);
   renderIslandPanel(state.island);
   renderStoresPanel(state.stores);
+  renderSignals();
+  updateLocation();
   updateWaroverPanel(state.warover, state.view);
   updateWeaponGroup();
   updateSight();
+}
+
+// The location status readout, as the original's bottom-centre display:
+// position in kilometres from the chart's south-west corner, bearing in
+// degrees, and the island the subject stands off - named, because a name is
+// what "in range of" needs to mean anything.
+function updateLocation() {
+  const line = document.getElementById('location');
+  if (state.view === undefined) { line.textContent = ''; return; }
+  const subject = (state.piloting ? selectedUnit() : undefined) ?? ownCarrierOf(state.view);
+  if (subject === undefined) { line.textContent = ''; return; }
+  const perKm = state.view.params.unitsPerMetre * 1000;
+  const x = (Math.round((subject.x * 10) / perKm) / 10).toFixed(1);
+  const y = (Math.round((subject.y * 10) / perKm) / 10).toFixed(1);
+  let near = '';
+  for (const island of state.view.islands) {
+    if (dist2D(subject.x, subject.y, island.x, island.y)
+      < island.radius + 2500 * state.view.params.unitsPerMetre) {
+      near = ` · ${islandName(island)}`;
+      break;
+    }
+  }
+  const bearing = String(degreesFrom(subject.heading)).padStart(3, '0');
+  line.textContent = `X ${x} Y ${y} km · ${bearing}°${near}`;
 }
 
 // Scope ranges, in metres. The narrow end is a knife fight alongside the ship;
@@ -1215,7 +1378,7 @@ function renderHelp(t) {
   const help = document.getElementById('help');
   help.textContent = '';
   const lines = ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.weapons', 'help.targeting', 'help.island',
-    'help.damage', 'help.scope', 'help.time'];
+    'help.damage', 'help.scope', 'help.time', 'help.extras'];
   for (const key of lines) {
     const line = document.createElement('div');
     line.textContent = t(key);
@@ -1241,6 +1404,9 @@ async function main() {
   renderHelp(state.t);
   document.getElementById('help-button').addEventListener('click', toggleHelp);
   document.getElementById('debug-button').addEventListener('click', toggleDebug);
+  document.getElementById('msg-button').addEventListener('click', toggleSignals);
+  document.getElementById('log-title').textContent = state.t('log.title');
+  attachTip(document.getElementById('msg-button'), state.t('tip.log'));
   buildActionColumns(state.t);
   buildCameraTabs(state.t);
   updateCameraTabs();

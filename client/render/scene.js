@@ -172,6 +172,7 @@ function createScene(canvas, preset, sizeMetres, style) {
     turrets: {},
     strategic: false,
     gunsight: false,
+    rearView: false,
     followUnitId: -1,
     selectedUnitId: -1,
     marker: null,
@@ -383,7 +384,13 @@ function placeCamera(view3d, subject) {
     view3d.camera.lookAt(x, 0, z);
     return;
   }
-  const forward = forwardFromHeading(subject.heading);
+  // The REAR VIEW selector (manual coverage review, item 10): the picture
+  // out of the back, in chase and gunsight alike - the strategic pull-back
+  // has no back to look out of.
+  const facing = forwardFromHeading(subject.heading);
+  const forward = view3d.rearView === true
+    ? { x: -facing.x, z: -facing.z }
+    : facing;
   if (view3d.gunsight) {
     // Down the barrel: eye ON the mount, horizon level, crosshair centred.
     // What the weapon can reach is what fills the screen - aiming is looking.
@@ -498,6 +505,7 @@ function resetWorld(view3d, sizeMetres) {
   view3d.marker = null;
   view3d.strategic = false;
   view3d.gunsight = false;
+  view3d.rearView = false;
   return view3d;
 }
 

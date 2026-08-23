@@ -117,7 +117,9 @@ function renderIslandPanel(panel) {
   panel.stamp = stamp;
 
   const t = panel.ctx.t;
-  document.getElementById('island-title').textContent = t('island.title', { id: island.id });
+  document.getElementById('island-title').textContent = t('island.title', {
+    name: islandName(island), id: island.id,
+  });
   const body = document.getElementById('island-body');
   body.textContent = '';
   body.append(infoRow(

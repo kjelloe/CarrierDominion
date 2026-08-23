@@ -39,8 +39,11 @@ const HELM = {
 function helmHitAt(x, y) {
   if (x >= HELM.gaugeX - 4 && x <= HELM.gaugeX + HELM.gaugeW + 4
     && y >= HELM.throttleY - 10 && y <= HELM.throttleY + HELM.throttleH + 8) {
+    // The scale runs -25..100: the leftmost fifth is the astern gear (the
+    // original's bottom quarter of the speed indicator). A craft's helm
+    // clamps the astern zone away in the client - a Manta has no reverse.
     const fraction = Math.max(0, Math.min(1, (x - HELM.gaugeX) / HELM.gaugeW));
-    return { kind: 'throttle', throttle: Math.round(fraction * 10) * 10 };
+    return { kind: 'throttle', throttle: Math.round((fraction * 125 - 25) / 5) * 5 };
   }
   if (y >= HELM.rudderY && y <= HELM.rudderY + HELM.rudderH) {
     if (x >= HELM.gaugeX && x <= HELM.gaugeX + HELM.rudderW) {
@@ -100,6 +103,37 @@ function bezel(ctx, x, y, w, h, colours, title) {
   ctx.fillStyle = colours.dim;
   ctx.font = '10px ui-monospace, monospace';
   ctx.fillText(title, x + 10, y + 18);
+}
+
+// The ship's throttle scale, -25..100: a dim astern zone on the left fifth,
+// a zero notch, ahead filling right and astern filling LEFT from the notch -
+// so which way the engines push is readable before any number is.
+function drawThrottleScale(ctx, x, y, w, h, throttle, colours, label) {
+  const zeroX = x + Math.round(w * 0.2);
+  ctx.fillStyle = colours.grid;
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = colours.dead;
+  ctx.fillRect(x, y, zeroX - x, h);
+  if (throttle > 0) {
+    ctx.fillStyle = throttle > 50 ? colours.good : colours.warn;
+    ctx.fillRect(zeroX, y, Math.round(((w - (zeroX - x)) * throttle) / 100), h);
+  } else if (throttle < 0) {
+    ctx.fillStyle = colours.bad;
+    const back = Math.round(((zeroX - x) * -throttle) / 25);
+    ctx.fillRect(zeroX - back, y, back, h);
+  }
+  ctx.fillStyle = colours.ink;
+  ctx.fillRect(zeroX, y - 2, 1, h + 4);
+  ctx.strokeStyle = colours.bezel;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  ctx.fillStyle = colours.dim;
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.fillText(label, x, y - 4);
+  ctx.fillStyle = colours.ink;
+  ctx.textAlign = 'right';
+  ctx.fillText(`${throttle}%`, x + w, y - 4);
+  ctx.textAlign = 'left';
 }
 
 // A horizontal bar with its own label and figure. Reads as "how much is left"
@@ -228,10 +262,11 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   drawCompass(ctx, { x: pad, y: pad, w: helmW * 0.52, h: PANEL_HEIGHT - pad * 2 }, own.heading, colours);
   const gaugeX = HELM.gaugeX;
   const gaugeW = HELM.gaugeW;
-  bar(ctx, gaugeX, HELM.throttleY, gaugeW, HELM.throttleH,
-    own.throttle * 10, colours, readout.throttle, `${own.throttle}%`);
+  drawThrottleScale(ctx, gaugeX, HELM.throttleY, gaugeW, HELM.throttleH,
+    own.throttle, colours, readout.throttle);
+  const wayOn = own.speed < 0 ? -own.speed : own.speed;
   bar(ctx, gaugeX, pad + 88, gaugeW, 12,
-    permilOf(own.speed, own.maxSpeed > 0 ? own.maxSpeed : 1), colours, readout.speed, readout.knots);
+    permilOf(wayOn, own.maxSpeed > 0 ? own.maxSpeed : 1), colours, readout.speed, readout.knots);
   bar(ctx, gaugeX, pad + 128, gaugeW, 12,
     permilOf(own.fuel, own.fuelCapacity), colours, readout.fuel, readout.fuelFigure);
   drawRudderButtons(ctx, colours, own.rudder);

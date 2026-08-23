@@ -56,6 +56,25 @@ altitude (or the magazine), the selected weapon's tally, and the bearing
 home. The helm clicks drive the craft too; hand back the controls (`T`) and
 the panel is the ship's again.
 
+The throttle scale runs **-25..100**: the leftmost fifth is the ship's
+astern gear (the original's speed indicator gave its bottom quarter to
+reverse), with a zero notch, ahead filling right and astern filling left in
+red. A craft's helm clamps the astern zone away — a Manta has no reverse.
+
+Under the viewport sits the **location status line** (manual coverage
+review, item 10): position in km, bearing, and the NAMED island the subject
+stands off — island names are derived in `shared/names.js` from each
+island's own seed, never stored, so every client and the server agree
+without a byte of state. The names also title the island board and the
+quartermaster's rows, and give the **signals log** its places: `I` (or the
+MSG button) opens the last sixteen reports with their ages — the original's
+Messaging Computer, because a toast is history you missed and a log is
+history you can read. `O` flips the **rear view** in chase and gunsight;
+`5`–`8` select the Nth hull that is out, directly; and two `ESC` presses
+inside three seconds **strike the colours** — the original's SURRENDER,
+scuttling the ship through an ordinary command so victory resolves by its
+ordinary rules.
+
 Above the horizon sit the **camera tabs** (ruling 2026-08-24): HELM /
 WEAPON / BIRDSEYE, top centre, clickable, the lit one is where you are — the
 original's interface always said which console you were at. `C` still

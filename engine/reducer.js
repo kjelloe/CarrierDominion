@@ -29,6 +29,7 @@ import {
   CMD_SET_COURSE,
   CMD_ORDER_UNIT_ESCORT,
   CMD_SET_SUPPLY_BIAS,
+  CMD_SURRENDER,
   CMD_SET_REPAIR_PRIORITY,
   CMD_SET_STOCKPILE,
   CMD_SET_SUPPLY_RUN,
@@ -46,6 +47,7 @@ import {
   EVT_UNIT_LAUNCHED,
   EVT_UNIT_ORDERED,
   EVT_STOCKPILE_SET,
+  EVT_CARRIER_SUNK,
   EVT_SUPPLY_RUN,
   EVT_AI_SEAT,
   EVT_COURSE,
@@ -286,6 +288,21 @@ function findIsland(state, islandId) {
 
 // Firing is a command, not a tick effect (ruling #18). A Manta that nobody
 // flies is a Manta that never shoots.
+// Striking the colours: the commander scuttles the ship. Victory resolution
+// then does its ordinary work - in a duel the other side is last afloat, at
+// a bigger table the war goes on without this seat. Refused post-war (there
+// is nothing left to concede) and refused for a ship already gone.
+function applySurrender(next, command) {
+  if (next.phase !== PHASE_RUNNING) return reject(next);
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1 || carrier.hull <= 0) return reject(next);
+  carrier.hull = 0;
+  carrier.speed = 0;
+  carrier.throttle = 0;
+  pushEvent(next.events, EVT_CARRIER_SUNK, carrier.id, carrier.team, 0);
+  return next;
+}
+
 function applyFire(next, command) {
   // After the whistle no trigger answers - the automatic guns already hold
   // their fire post-war, and a manual pilot is not an exception to the
@@ -498,6 +515,7 @@ function apply(state, command) {
   if (type === CMD_FIRE_UNIT) return applyFire(next, command);
   if (type === CMD_FIRE_FLARES) return applyFlares(next, command);
   if (type === CMD_SET_AI) return applySetAi(next, command);
+  if (type === CMD_SURRENDER) return applySurrender(next, command);
   if (type === CMD_SELECT_WEAPON) return applySelectWeapon(next, command);
   if (type === CMD_SET_STOCKPILE) return applySetStockpile(next, command);
   if (type === CMD_SET_SUPPLY_RUN) return applySetSupplyRun(next, command);

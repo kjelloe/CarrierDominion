@@ -37,7 +37,7 @@ Controls:
 
 | Key | |
 |---|---|
-| `W` `S` | throttle up / down (the carrier, or the unit you are flying) |
+| `W` `S` | throttle up / down (the carrier, or the unit you are flying) - the SHIP goes astern below zero, to -25% |
 | `A` `D` | rudder (arrow keys work too) |
 | `↑` `↓` | climb / dive, when you are flying a Manta |
 | `X` | all stop |
@@ -56,6 +56,10 @@ Controls:
 | `Z` | the damage control board - click a section to set its repair priority |
 | `C` | camera: chase / **gunsight** (first person, on the mount) / strategic map |
 | `,` `.` | time compression down / up (`space` pauses; in LAN it takes a vote) |
+| `I` | the signals log: the last sixteen reports, with ages |
+| `O` | rear view, in chase and gunsight |
+| `5`-`8` | select the Nth hull that is out, directly |
+| `ESC` `ESC` | strike your colours - two presses inside three seconds scuttle the ship |
 | `G` | cycle the graphics tier |
 | `[` `]` | scope range, 1 km to 32 km |
 | `M` | sound on / off |

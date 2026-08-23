@@ -5,6 +5,41 @@ golden hash and why.
 
 ---
 
+## 2026-08-24 — The manual's small trio: astern, signals, and the flavour pack
+
+Items 4, 9 and 10 of the Amiga-manual coverage review, one slice.
+
+**Astern.** set_throttle accepts -25..100 for the SHIP (units keep 0..100
+- a Manta has no reverse). A quarter of the scale, as the original's speed
+indicator had it, and a quarter of our flank speed lands near the
+original's 22 knots astern. Making sternway the grounding feeler swings
+AFT - the stern feels the bottom coming up - which is also what lets a
+ship aground by the bow back herself off the reef instead of being pinned
+by her own bow test; there is a test that runs a ship onto a reef and
+backs her off. Fuel burns by throttle MAGNITUDE (the first draft burned
+less than idle in reverse). The panel scale shows the astern fifth with a
+zero notch; astern fills left, in red. Old logs never carry a negative
+throttle, so both pins held without a repin.
+
+**Signals.** The original's Messaging Computer: the last sixteen reports
+with ages behind I/MSG. Text is put on ~24 event codes client-side, in
+both languages, using the view's own fog-filtered event stream - the log
+can never know more than the seat does.
+
+**Flavour pack.** Island NAMES, derived in shared/names.js from each
+island's seed and id - never stored, so every client and the server agree
+without a byte of state (VARDO POINT, KELP HAVEN...). They title the
+island board, the quartermaster rows, the signals and the new location
+status line (position km / bearing / island in range, bottom centre, as
+the original had). Rear view on O flips chase and gunsight. 5-8 select
+the Nth hull that is out. And SURRENDER is a real command: double-ESC
+inside three seconds scuttles the ship - hull to zero through the
+ordinary path, so victory, events and the ending screen all follow by
+their ordinary rules.
+
+Probe flavour_pack.mjs walks all of it, ending on the struck colours.
+430 tests + smoke green.
+
 ## 2026-08-24 — Playtest round four: the interface says where you are
 
 Five rulings from an Action Game session, landed together. The thread

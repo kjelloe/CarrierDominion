@@ -67,8 +67,10 @@ function shoalLimit(carrier, clearance) {
 }
 
 function burnFuel(carrier) {
+  // Astern burns like ahead: the engines do not care which way they push.
+  const open = carrier.throttle < 0 ? -carrier.throttle : carrier.throttle;
   const perHundred = carrier.fuelBurnIdle
-    + mulDiv(carrier.fuelBurnFull - carrier.fuelBurnIdle, carrier.throttle, 100);
+    + mulDiv(carrier.fuelBurnFull - carrier.fuelBurnIdle, open, 100);
   const accum = carrier.fuelAccum + perHundred;
   const spent = floorDiv(accum, 100);
   carrier.fuelAccum = accum - spent * 100;
@@ -101,9 +103,13 @@ function stepCarrier(carrier, islands, sizeUnits, events) {
   carrier.heading = steer(carrier);
 
   const clearance = clearanceAt(islands, carrier.x, carrier.y, carrier.draught);
+  // A negative throttle is the astern gear (manual coverage review, item
+  // 4): a quarter of the scale, like the original's speed indicator. The
+  // shallow-water limit binds the MAGNITUDE either way.
   let targetSpeed = mulDiv(carrier.maxSpeed, carrier.throttle, 100);
   const limit = shoalLimit(carrier, clearance);
   if (targetSpeed > limit) targetSpeed = limit;
+  if (targetSpeed < -limit) targetSpeed = -limit;
   if (!hadFuel) targetSpeed = 0;
   carrier.speed = stepToward(carrier.speed, targetSpeed, carrier.accel);
 
@@ -111,10 +117,15 @@ function stepCarrier(carrier, islands, sizeUnits, events) {
   // at one unit per tick a hull would otherwise creep into a shoal and
   // re-report grounding on every tick. With a lookahead, a ship pinned against
   // a shore stays grounded (and reports once) until it is steered clear.
+  // Making sternway, it is the STERN that feels the bottom coming up - the
+  // lookahead swings aft, which is also what lets a grounded ship BACK OFF
+  // the reef instead of being pinned by her own bow test.
+  const wayAft = carrier.speed < 0 || (carrier.speed === 0 && carrier.throttle < 0);
+  const feeler = wayAft ? wrapAngle(carrier.heading + 32768) : carrier.heading;
   const nextX = clampI(carrier.x + mulCos(carrier.speed, carrier.heading), 0, sizeUnits);
   const nextY = clampI(carrier.y + mulSin(carrier.speed, carrier.heading), 0, sizeUnits);
-  const bowX = carrier.x + mulCos(carrier.lookahead, carrier.heading);
-  const bowY = carrier.y + mulSin(carrier.lookahead, carrier.heading);
+  const bowX = carrier.x + mulCos(carrier.lookahead, feeler);
+  const bowY = carrier.y + mulSin(carrier.lookahead, feeler);
   const blocked = grounds(islands, bowX, bowY, carrier.draught)
     || grounds(islands, nextX, nextY, carrier.draught);
 

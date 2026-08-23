@@ -246,6 +246,20 @@ From an Action Game session — all landed the same day:
   tally and bearing home. Supersedes round two's ship-always helm: the helm
   clicks drive what the panel shows.
 
+## The manual coverage batch (2026-08-24)
+
+From the Amiga-manual review (owner: "build 4, 9, 10, then 1, 2, 7; design
+3, 5, 6 for discussion"):
+
+- **4 — the astern gear**: the ship reverses to -25% (the bottom quarter of
+  the scale, as 1988 had it); making sternway the STERN feels the bottom,
+  which is also how a grounded ship backs off a reef. Units keep 0..100.
+- **9 — the signals log**: the last sixteen fog-filtered reports with ages,
+  behind `I`/MSG — the original's Messaging Computer.
+- **10 — the flavour pack**: derived island names (`shared/names.js`, never
+  stored), the location status line, rear view on `O`, direct hull select
+  on `5`–`8`, and SURRENDER as a real command behind a double `ESC`.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

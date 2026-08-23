@@ -13,6 +13,8 @@
 // The refit yard, in the same panel: the three upgrades, built at a factory
 // island you hold (ruling 2026-08-23). Later, a proper tech tree may replace
 // this - the ruling notes it.
+import { islandName } from '../../shared/names.js';
+
 const UPGRADES = [
   { what: 3, label: 'stores.upSpeed', flag: 'upSpeed' },
   { what: 4, label: 'stores.upPd', flag: 'upPd' },
@@ -160,7 +162,7 @@ function renderStoresPanel(panel) {
     if (entry === undefined) continue;
     const depot = view.resources.stockpileIsland === island.id;
     const role = island.role >= 0 ? t(ROLE_NAMES[island.role]) : t('stores.unplanned');
-    entry.name.textContent = `#${island.id} ${role}${depot ? ` ${t('stores.depot')}` : ''}`;
+    entry.name.textContent = `${islandName(island)} ${role}${depot ? ` ${t('stores.depot')}` : ''}`;
     entry.stock.textContent = `F${island.stockFuel} M${island.stockMaterials}`
       + ` O${island.stockOrdnance} C${island.stockChassis}`;
     entry.row.classList.toggle('depot', depot);
