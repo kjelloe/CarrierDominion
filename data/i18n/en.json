@@ -237,5 +237,14 @@
   "stores.factory": "FACTORY",
   "stores.defence": "DEFENCE",
   "stores.unplanned": "UNPLANNED",
-  "stores.depot": "◆ DEPOT"
+  "stores.depot": "◆ DEPOT",
+  "stores.upSpeed": "refit: engines (8 -> 14 kn)",
+  "stores.upPd": "refit: point defence (faster laser)",
+  "stores.upRadar": "refit: radar (8 -> 12 km)",
+  "stores.fitted": "FITTED",
+  "stores.building": "BUILDING...",
+  "stores.needsPlant": "needs a factory island",
+  "stores.cost3": "1600 materials",
+  "stores.cost4": "1000 materials",
+  "stores.cost5": "1200 materials"
 }

@@ -195,6 +195,9 @@
     #stores-panel.open { display: block; }
     #stores-title { letter-spacing: 2px; margin-bottom: 8px; }
     #stores-bias { margin-bottom: 10px; border-bottom: 1px solid var(--hud-dim); padding-bottom: 8px; }
+    #stores-refit { margin-bottom: 10px; border-bottom: 1px solid var(--hud-dim); padding-bottom: 8px; }
+    .stores-upgrade { cursor: pointer; }
+    .stores-upgrade:hover .stores-label { color: var(--hud-ink); }
     .stores-row { display: flex; gap: 8px; align-items: center; }
     .stores-label { flex: 1; color: var(--hud-dim); }
     .bias-cell {
@@ -288,6 +291,7 @@
   <div id="stores-panel">
     <div id="stores-title"></div>
     <div id="stores-bias"></div>
+    <div id="stores-refit"></div>
     <div id="stores-body"></div>
     <div id="stores-note"></div>
   </div>

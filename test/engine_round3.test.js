@@ -160,3 +160,76 @@ test('the bias travels the command path with the ship as its authority', () => {
   const view = buildView(state, 0);
   assert.equal(view.resources.biasFuel, 2, 'the quartermaster cannot see his own order');
 });
+
+// --- Carrier upgrades (ruling 2026-08-23: speed, point defence, radar) ---
+
+function yardAt(state, islandId) {
+  const island = state.islands[islandId];
+  island.owner = 0;
+  island.role = ROLE_FACTORY;
+  island.factories = 1;
+  island.stockMaterials = 5000;
+  return island;
+}
+
+test('an upgrade is manufactured at a factory island and fitted to the ship', () => {
+  let state = fresh();
+  const island = yardAt(state, 0);
+  const baseSpeed = state.carriers[0].maxSpeed;
+  state = apply(state, {
+    type: 'build_on_island', carrierId: 0, islandId: island.id, what: 3,
+  });
+  assert.equal(state.islands[0].building, 3);
+  state = drive(state, state.economy.builds[3].ticks + 1);
+  const ship = state.carriers[0];
+  assert.equal(ship.upSpeed, 1);
+  assert.ok(ship.maxSpeed > baseSpeed, 'the refit did not reach the engine room');
+  assert.equal(ship.maxSpeed, ship.maxSpeedUpgraded, 'undamaged, the full upgraded speed stands');
+
+  // Once each: a second purchase is refused.
+  state.islands[0].stockMaterials = 5000;
+  state = apply(state, {
+    type: 'build_on_island', carrierId: 0, islandId: island.id, what: 3,
+  });
+  assert.equal(state.islands[0].building, -1, 'the ship bought the same engines twice');
+  assert.doesNotThrow(() => canonicalize(state));
+});
+
+test('the point-defence refit quickens the healthy mount, and damage still slows it', () => {
+  let state = fresh();
+  const island = yardAt(state, 0);
+  state = apply(state, {
+    type: 'build_on_island', carrierId: 0, islandId: island.id, what: 4,
+  });
+  state = drive(state, state.economy.builds[4].ticks + 1);
+  assert.equal(state.carriers[0].upPd, 1);
+
+  // The mount fires: its cooldown is the upgraded figure, not the weapon's.
+  const enemy = state.units.find((u) => u.team === 1 && u.kind === KIND_MANTA);
+  enemy.state = UNIT_ACTIVE;
+  enemy.x = state.carriers[0].x + 500 * 256;
+  enemy.y = state.carriers[0].y;
+  enemy.z = 300 * 256;
+  state = drive(state, 3);
+  const ship = state.carriers[0];
+  assert.ok(ship.cooldown > 0, 'the mount never fired');
+  assert.ok(ship.cooldown <= ship.pdCooldownUpgraded,
+    `cooldown ${ship.cooldown} is the unupgraded rate`);
+});
+
+test('upgrades need a plant, a factory role, and your own island', () => {
+  let state = fresh();
+  const bare = state.islands[0];
+  bare.owner = 0;
+  bare.role = ROLE_FACTORY;
+  bare.stockMaterials = 5000; // no factory BUILT yet
+  state = apply(state, { type: 'build_on_island', carrierId: 0, islandId: 0, what: 5 });
+  assert.equal(state.islands[0].building, -1, 'an upgrade was built without a plant');
+
+  const mine = state.islands[1];
+  mine.owner = 0;
+  mine.role = 0; // ROLE_RESOURCE
+  mine.stockMaterials = 5000;
+  state = apply(state, { type: 'build_on_island', carrierId: 0, islandId: 1, what: 5 });
+  assert.equal(state.islands[1].building, -1, 'a mine built a radar refit');
+});

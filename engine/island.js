@@ -22,6 +22,7 @@ import { mulDiv } from '../shared/fixed.js';
 import { EVT_ISLAND_ROLE, EVT_ISLAND_BUILT, EVT_TURRET_BUILT, pushEvent } from './events.js';
 import { KIND_FACTORY, KIND_FORTRESS, KIND_RESOURCE } from './worldgen.js';
 import { clearTurretsOn, createTurret, loadoutForTurret, turretsOn } from './turret.js';
+import { applySectionEffects } from './damage.js';
 import { createArms } from './weapons.js';
 
 const ROLE_NONE = -1;
@@ -33,14 +34,33 @@ const BUILD_NONE = -1;
 const BUILD_FACTORY = 0;
 const BUILD_WAREHOUSE = 1;
 const BUILD_TURRET = 2;
+// Carrier upgrades (ruling 2026-08-23): MANUFACTURED, like everything else -
+// at a factory island you hold, with at least one plant built, once each.
+const BUILD_UPGRADE_SPEED = 3;
+const BUILD_UPGRADE_PD = 4;
+const BUILD_UPGRADE_RADAR = 5;
 
 // Which building each role is allowed to put up. A factory island cannot raise
 // turrets and a defence island cannot raise factories: that is the trade.
 function roleAllows(role, what) {
-  if (role === ROLE_FACTORY) return what === BUILD_FACTORY || what === BUILD_WAREHOUSE;
+  if (role === ROLE_FACTORY) return what === BUILD_FACTORY || what === BUILD_WAREHOUSE || what >= BUILD_UPGRADE_SPEED;
   if (role === ROLE_DEFENCE) return what === BUILD_TURRET;
   if (role === ROLE_RESOURCE) return what === BUILD_WAREHOUSE;
   return false;
+}
+
+function carrierOfTeam(state, team) {
+  for (let i = 0; i < state.carriers.length; i++) {
+    if (state.carriers[i].team === team) return state.carriers[i];
+  }
+  return -1;
+}
+
+// Which upgrade flag a build kind sets, read and written in one place.
+function upgradeOwned(carrier, what) {
+  if (what === BUILD_UPGRADE_SPEED) return carrier.upSpeed;
+  if (what === BUILD_UPGRADE_PD) return carrier.upPd;
+  return carrier.upRadar;
 }
 
 function builtCount(island, what) {
@@ -54,6 +74,7 @@ function addBuilt(island, what) {
   if (what === BUILD_FACTORY) island.factories = island.factories + 1;
   else if (what === BUILD_WAREHOUSE) island.warehouses = island.warehouses + 1;
   else if (what === BUILD_TURRET) island.turrets = island.turrets + 1;
+  // Upgrade kinds fit the SHIP, not the island: nothing to count here.
 }
 
 function anythingBuilt(island) {
@@ -124,7 +145,16 @@ function startBuild(state, island, what, economy) {
   if (!roleAllows(island.role, what)) return 0;
   const spec = economy.builds[what];
   if (spec === undefined) return 0;
-  if (builtCount(island, what) >= spec.max) return 0;
+  if (what >= BUILD_UPGRADE_SPEED) {
+    // An upgrade is manufactured: the island needs a working plant, and each
+    // upgrade is bought once per ship.
+    if (island.factories < 1) return 0;
+    const carrier = carrierOfTeam(state, island.owner);
+    if (carrier === -1 || carrier.hull <= 0) return 0;
+    if (upgradeOwned(carrier, what) === 1) return 0;
+  } else if (builtCount(island, what) >= spec.max) {
+    return 0;
+  }
   if (payForBuild(state, island, spec.cost) !== 1) return 0;
   island.building = what;
   island.buildTicks = spec.ticks;
@@ -149,6 +179,10 @@ function stepBuild(state) {
     pushEvent(state.events, EVT_ISLAND_BUILT, island.id, island.owner, island.building);
     // A finished turret is a gun on the ground, not a number on a report.
     if (island.building === BUILD_TURRET) raiseTurret(state, island);
+    // A finished upgrade is fitted to the SHIP: base values swap to the
+    // upgraded ones and the section-damage derivation re-runs, so a damaged
+    // engine room still degrades the upgraded speed the same way.
+    if (island.building >= BUILD_UPGRADE_SPEED) applyUpgrade(state, island);
     island.building = BUILD_NONE;
     island.buildTicks = 0;
   }
@@ -175,6 +209,21 @@ function raiseTurret(state, island) {
   return turret;
 }
 
+function applyUpgrade(state, island) {
+  const carrier = carrierOfTeam(state, island.owner);
+  if (carrier === -1) return; // the ship sank while its refit was building
+  if (island.building === BUILD_UPGRADE_SPEED) {
+    carrier.upSpeed = 1;
+    carrier.maxSpeedBase = carrier.maxSpeedUpgraded;
+  } else if (island.building === BUILD_UPGRADE_PD) {
+    carrier.upPd = 1;
+  } else if (island.building === BUILD_UPGRADE_RADAR) {
+    carrier.upRadar = 1;
+    carrier.radarBase = carrier.radarUpgraded;
+  }
+  applySectionEffects(carrier);
+}
+
 // Everything an island loses when it changes hands. The command centre stays -
 // that is the point of taking it rather than levelling it - but the work is
 // the previous owner's, and the new owner starts from the ground.
@@ -198,6 +247,10 @@ export {
   BUILD_FACTORY,
   BUILD_WAREHOUSE,
   BUILD_TURRET,
+  BUILD_UPGRADE_SPEED,
+  BUILD_UPGRADE_PD,
+  BUILD_UPGRADE_RADAR,
+  upgradeOwned,
   roleAllows,
   builtCount,
   anythingBuilt,

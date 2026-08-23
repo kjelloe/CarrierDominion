@@ -237,5 +237,14 @@
   "stores.factory": "FABRIKK",
   "stores.defence": "FORSVAR",
   "stores.unplanned": "UPLANLAGT",
-  "stores.depot": "◆ DEPOT"
+  "stores.depot": "◆ DEPOT",
+  "stores.upSpeed": "ombygging: maskineri (8 -> 14 knop)",
+  "stores.upPd": "ombygging: nærforsvar (raskere laser)",
+  "stores.upRadar": "ombygging: radar (8 -> 12 km)",
+  "stores.fitted": "MONTERT",
+  "stores.building": "BYGGES...",
+  "stores.needsPlant": "krever fabrikkøy",
+  "stores.cost3": "1600 materialer",
+  "stores.cost4": "1000 materialer",
+  "stores.cost5": "1200 materialer"
 }

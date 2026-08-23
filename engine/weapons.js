@@ -320,8 +320,10 @@ function fireAll(state) {
     const weapon = state.weapons[carrier.weapon];
     reloadCarrier(carrier, weapon);
     coolDown(state, carrier);
-    // A chewed-up mount fires slowly and a destroyed one not at all.
-    const cooldown = gunCooldown(carrier, weapon.cooldown);
+    // A chewed-up mount fires slowly and a destroyed one not at all. The
+    // point-defence upgrade quickens the healthy base rate.
+    const baseCooldown = carrier.upPd === 1 ? carrier.pdCooldownUpgraded : weapon.cooldown;
+    const cooldown = gunCooldown(carrier, baseCooldown);
     if (cooldown < 0) continue;
     // Pointer mode: the target the player clicked comes first, while it lives
     // and is in reach.

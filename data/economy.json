@@ -45,6 +45,24 @@
       "materials": 1200,
       "ticks": 3400,
       "max": 4
+    },
+    {
+      "key": "upgradeSpeed",
+      "materials": 1600,
+      "ticks": 6000,
+      "max": 1
+    },
+    {
+      "key": "upgradePd",
+      "materials": 1000,
+      "ticks": 4500,
+      "max": 1
+    },
+    {
+      "key": "upgradeRadar",
+      "materials": 1200,
+      "ticks": 5000,
+      "max": 1
     }
   ],
   "factoryChassisOut": 1,

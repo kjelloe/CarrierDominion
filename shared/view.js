@@ -66,6 +66,9 @@ function ownCarrierView(carrier) {
     flareCost: carrier.flareCost,
     courseX: carrier.courseX,
     courseY: carrier.courseY,
+    upSpeed: carrier.upSpeed,
+    upPd: carrier.upPd,
+    upRadar: carrier.upRadar,
     sections: sectionsView(carrier.sections),
     contact: 0,
   };
@@ -103,6 +106,9 @@ function contactView(carrier) {
     flareCost: -1,
     courseX: -1,
     courseY: -1,
+    upSpeed: 0,
+    upPd: 0,
+    upRadar: 0,
     // What is broken aboard an enemy ship is exactly what you would most like
     // to know, so a radar contact tells you nothing about it.
     sections: [],

@@ -10,6 +10,15 @@
 // Rows are built once per set of owned islands and updated in place - the
 // rebuilt-under-the-pointer bug is in the dev-log twice already.
 
+// The refit yard, in the same panel: the three upgrades, built at a factory
+// island you hold (ruling 2026-08-23). Later, a proper tech tree may replace
+// this - the ruling notes it.
+const UPGRADES = [
+  { what: 3, label: 'stores.upSpeed', flag: 'upSpeed' },
+  { what: 4, label: 'stores.upPd', flag: 'upPd' },
+  { what: 5, label: 'stores.upRadar', flag: 'upRadar' },
+];
+
 const CATEGORIES = [
   { item: 0, label: 'stores.fuel', biasKey: 'biasFuel' },
   { item: 1, label: 'stores.ordnance', biasKey: 'biasOrdnance' },
@@ -30,6 +39,34 @@ function createStoresPanel(context) {
   };
   document.getElementById('stores-title').textContent = context.t('stores.title');
   document.getElementById('stores-note').textContent = context.t('stores.note');
+
+  panel.upgrades = [];
+  const refit = document.getElementById('stores-refit');
+  for (const upgrade of UPGRADES) {
+    const row = document.createElement('div');
+    row.className = 'stores-row stores-upgrade';
+    const label = document.createElement('span');
+    label.className = 'stores-label';
+    label.textContent = context.t(upgrade.label);
+    const status = document.createElement('span');
+    row.append(label, status);
+    row.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      const view = context.view();
+      const carrierId = context.carrierId();
+      if (view === undefined || carrierId < 0) return;
+      const yard = view.islands.find(
+        (island) => island.owner === view.team && island.role === 1
+          && island.factories >= 1 && island.building === -1,
+      );
+      if (yard === undefined) return;
+      context.send({
+        type: 'build_on_island', carrierId: carrierId, islandId: yard.id, what: upgrade.what,
+      });
+    });
+    refit.append(row);
+    panel.upgrades.push({ what: upgrade.what, flag: upgrade.flag, row: row, status: status });
+  }
 
   for (const category of CATEGORIES) {
     const row = document.createElement('div');
@@ -72,6 +109,23 @@ function renderStoresPanel(panel) {
 
   for (const entry of panel.biasCells) {
     entry.cell.classList.toggle('on', view.resources[entry.biasKey] === entry.level);
+  }
+
+  const own = view.carriers.find((c) => c.team === view.team && c.contact === 0);
+  const yard = view.islands.find(
+    (island) => island.owner === view.team && island.role === 1 && island.factories >= 1,
+  );
+  const t2 = panel.context.t;
+  for (const entry of panel.upgrades) {
+    const owned = own !== undefined && own[entry.flag] === 1;
+    const building = view.islands.some(
+      (island) => island.owner === view.team && island.building === entry.what,
+    );
+    entry.row.classList.toggle('depot', owned);
+    entry.status.textContent = owned
+      ? t2('stores.fitted')
+      : (building ? t2('stores.building')
+        : (yard === undefined ? t2('stores.needsPlant') : t2(`stores.cost${entry.what}`)));
   }
 
   const mine = view.islands.filter((island) => island.owner === view.team);

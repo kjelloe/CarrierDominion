@@ -47,7 +47,9 @@
     "flareReloadTicks": 240,
     "flareRadiusMetres": 900,
     "podMaterials": 80,
-    "virusOrdnance": 120
+    "virusOrdnance": 120,
+    "radarUpgradedRangeMetres": 12000,
+    "pdUpgradedCooldownTicks": 10
   },
   "manta": {
     "hull": 60,

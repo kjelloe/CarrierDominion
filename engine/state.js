@@ -117,6 +117,12 @@ function copyCarrier(carrier) {
     virusOrdnance: carrier.virusOrdnance,
     courseX: carrier.courseX,
     courseY: carrier.courseY,
+    upSpeed: carrier.upSpeed,
+    upPd: carrier.upPd,
+    upRadar: carrier.upRadar,
+    maxSpeedUpgraded: carrier.maxSpeedUpgraded,
+    radarUpgraded: carrier.radarUpgraded,
+    pdCooldownUpgraded: carrier.pdCooldownUpgraded,
     maxSpeedBase: carrier.maxSpeedBase,
     turnRateBase: carrier.turnRateBase,
     radarBase: carrier.radarBase,
@@ -280,6 +286,14 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     // -1 is no course. The autopilot steers; the throttle stays yours.
     courseX: -1,
     courseY: -1,
+    // The three upgrades (ruling 2026-08-23): built at a factory island you
+    // hold, once each. A richer tech tree is noted for later.
+    upSpeed: 0,
+    upPd: 0,
+    upRadar: 0,
+    maxSpeedUpgraded: carrierRules.maxSpeedUpgradedUnitsPerTick,
+    radarUpgraded: carrierRules.radarUpgradedRangeMetres * unitsPerMetre,
+    pdCooldownUpgraded: carrierRules.pdUpgradedCooldownTicks,
     // Undamaged capability. maxSpeed, turnRate and radar above are DERIVED
     // from these and the section health, and are recomputed on every hit and
     // every repair, so the rest of the engine can keep reading them directly.
