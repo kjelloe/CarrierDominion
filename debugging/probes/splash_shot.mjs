@@ -68,6 +68,56 @@ async function visit(name, query) {
 const retro = await visit('retro', '');
 const modern = await visit('modern', '?style=modern');
 
+// The title card stands over the diorama; the solo menu's own header steps
+// aside so the name is not said twice.
+const card = await retro.page.evaluate(() => ({
+  shown: getComputedStyle(document.getElementById('title-card')).display !== 'none',
+  text: document.getElementById('title-card').textContent,
+  headerHidden: getComputedStyle(document.getElementById('start-title')).display === 'none',
+}));
+console.log(`title card: "${card.text}" shown ${card.shown}, small header hidden ${card.headerHidden}`);
+
+// Flipping the look row restyles the running diorama live: the retro page's
+// black sky must become the modern page-blue when the row lands on modern.
+const skyBefore = await retro.page.evaluate(() => window.__diorama.scene.background.getHex());
+const lookRow = retro.page.locator('.start-row', { hasText: 'look' });
+await lookRow.click(); // retro -> modern
+await retro.page.waitForTimeout(400);
+const skyAfter = await retro.page.evaluate(() => window.__diorama.scene.background.getHex());
+await lookRow.click(); // modern -> hybrid
+await lookRow.click(); // hybrid -> retro, so BEGIN below sails the 1988 look
+await retro.page.waitForTimeout(300);
+console.log(`live restyle: sky ${skyBefore.toString(16)} -> ${skyAfter.toString(16)}`);
+
+// The war room gets the shop window too: a lobbied server's first page must
+// find the diorama and the scrim standing behind the roster. The modern page
+// is done - close it first: three dioramas at once starve SwiftShader and
+// the wait times out for no real reason.
+await modern.page.close();
+const lobbyApp = createApp({ seed: 20260818, rules: loadRules(), lobby: true, bootId: 'splash-boot' });
+const lobbyAddress = await lobbyApp.listen(0, '127.0.0.1');
+const room = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+room.on('pageerror', (error) => {
+  console.log('[war-room] PAGEERROR', error.message);
+  failed = true;
+});
+await room.goto(`http://127.0.0.1:${lobbyAddress.port}/?mode=lan`, { waitUntil: 'load' });
+await room.waitForSelector('#start-panel.open', { timeout: 30000 });
+await room.waitForSelector('#diorama', { timeout: 30000 });
+await room.waitForTimeout(1200);
+const warRoom = await room.evaluate(() => ({
+  scrim: document.getElementById('start-panel').classList.contains('showcase'),
+  // The card YIELDS in the war room: the roster is tall and its own header
+  // names the table and carries the join code.
+  cardYields: getComputedStyle(document.getElementById('title-card')).display === 'none',
+  codeShown: getComputedStyle(document.getElementById('start-title')).display !== 'none',
+}));
+await room.screenshot({ path: join(SHOTS, 'splash-war-room.png') });
+console.log(`war room: scrim ${warRoom.scrim}, card yields ${warRoom.cardYields},`
+  + ` join code visible ${warRoom.codeShown}`);
+await room.close();
+await lobbyApp.close();
+
 // BEGIN on the retro page: the diorama must be gone, whole, before the war.
 await retro.page.locator('#start-begin').click();
 await retro.page.waitForFunction(
@@ -85,6 +135,8 @@ console.log(`after BEGIN: canvas gone ${after.canvasGone}, hook gone ${after.hoo
 const ok = !failed
   && retro.facts.meshes > 12 && retro.facts.variance > 50 && retro.facts.showcase
   && modern.facts.meshes > 12 && modern.facts.variance > 50
+  && card.shown && card.headerHidden && skyBefore !== skyAfter
+  && warRoom.scrim && warRoom.cardYields && warRoom.codeShown
   && after.canvasGone && after.hookGone;
 if (!ok) {
   console.log('FAIL: the diorama is not staging, or not leaving');
@@ -92,7 +144,6 @@ if (!ok) {
 }
 
 await retro.page.close();
-await modern.page.close();
 await browser.close();
 await app.close();
 console.log('the shop window photographed, both styles');

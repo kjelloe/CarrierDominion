@@ -116,4 +116,60 @@ function toggleMute(sound) {
   return sound.muted;
 }
 
-export { VOICES, createSound, wakeSound, tone, playEvents, playWarning, toggleMute };
+// The menu ambience (owner ruling 2026-08-23): distant surf and distant
+// guns under the diorama. Surf is looped noise through a lowpass with a slow
+// swell riding the gain; the guns are the same tone() thumps the war uses,
+// pitched low and far between. Synthesised like everything else - the menu
+// is not the place the repo becomes a media library.
+function startAmbience(sound) {
+  const ctx = sound.ctx;
+  if (ctx === undefined || sound.muted) return undefined;
+
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  const surf = ctx.createBufferSource();
+  surf.buffer = buffer;
+  surf.loop = true;
+  const wash = ctx.createBiquadFilter();
+  wash.type = 'lowpass';
+  wash.frequency.value = 420;
+  wash.Q.value = 0.6;
+  const surfGain = ctx.createGain();
+  surfGain.gain.value = 0.045;
+  const swell = ctx.createOscillator();
+  swell.type = 'sine';
+  swell.frequency.value = 0.11;
+  const swellDepth = ctx.createGain();
+  swellDepth.gain.value = 0.025;
+  swell.connect(swellDepth);
+  swellDepth.connect(surfGain.gain);
+  surf.connect(wash);
+  wash.connect(surfGain);
+  surfGain.connect(ctx.destination);
+  surf.start();
+  swell.start();
+
+  let timer = 0;
+  const salvo = () => {
+    tone(sound, { freq: 72, to: 36, ms: 900, type: 'sine', gain: 0.06 });
+    tone(sound, { freq: 190, to: 60, ms: 260, type: 'triangle', gain: 0.025 });
+    // Sometimes an answer from the other side of the island.
+    if (Math.random() < 0.4) {
+      tone(sound, { freq: 60, to: 32, ms: 800, type: 'sine', gain: 0.045 }, 0.6);
+    }
+    timer = setTimeout(salvo, 6000 + Math.random() * 9000);
+  };
+  timer = setTimeout(salvo, 2500);
+
+  return {
+    stop: () => {
+      clearTimeout(timer);
+      surf.stop();
+      swell.stop();
+      surfGain.disconnect();
+    },
+  };
+}
+
+export { VOICES, createSound, wakeSound, tone, playEvents, playWarning, toggleMute, startAmbience };

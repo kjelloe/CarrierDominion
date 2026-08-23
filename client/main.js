@@ -18,7 +18,7 @@ import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './dia
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
 import { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
 import { createInstruments, drawInstruments, helmHitAt } from './render/instruments.js';
-import { createSound, playEvents, playWarning, toggleMute, wakeSound } from './sound.js';
+import { createSound, playEvents, playWarning, startAmbience, toggleMute, wakeSound } from './sound.js';
 import { createDamagePanel, renderDamagePanel, toggleDamagePanel } from './panels/damage.js';
 import {
   createIslandPanel,
@@ -746,6 +746,52 @@ function bindInput(level) {
 // A shared clock moves when everybody agrees (owner ruling 2026-08-20). The
 // HUD says where the table stands so nobody is left wondering whether their
 // key press did anything.
+// The shop window's keeper: one diorama + one ambience at a time, restarted
+// whole on a style change, torn down whole when a war takes the screen. It
+// serves both doors - the solo start menu and the LAN war room, which share
+// the #start-panel root. A splash that throws is caught and skipped: it must
+// never cost anyone the menu.
+const showcase = { diorama: null, ambience: null, styleName: '' };
+
+function armAmbience() {
+  if (showcase.ambience !== null) return;
+  const begin = () => {
+    if (showcase.diorama === null || showcase.ambience !== null) return;
+    wakeSound(state.sound);
+    showcase.ambience = startAmbience(state.sound) ?? null;
+  };
+  // A browser will not make a sound before the user has done something, so
+  // the surf waits for the first gesture - which the menu always gets.
+  if (state.sound.ctx !== undefined) begin();
+  else {
+    window.addEventListener('pointerdown', begin, { once: true });
+    window.addEventListener('keydown', begin, { once: true });
+  }
+}
+
+function openShowcase(requestedStyle) {
+  const resolved = resolveStyle(requestedStyle);
+  if (showcase.diorama !== null && showcase.styleName === resolved) return;
+  closeShowcase();
+  try {
+    showcase.diorama = startDiorama(styleFor(resolved));
+    showcase.styleName = resolved;
+    document.getElementById('start-panel').classList.add('showcase');
+    document.body.classList.add('showcase');
+  } catch { /* menu on a plain background instead */ }
+  armAmbience();
+}
+
+function closeShowcase() {
+  if (showcase.diorama !== null) showcase.diorama.stop();
+  if (showcase.ambience !== null) showcase.ambience.stop();
+  showcase.diorama = null;
+  showcase.ambience = null;
+  showcase.styleName = '';
+  document.getElementById('start-panel').classList.remove('showcase', 'solo-menu');
+  document.body.classList.remove('showcase', 'war-room');
+}
+
 // The room, when there is one. A LAN server may hold the war in a lobby until
 // the host starts it; a solo game never has one.
 function onLobby(room) {
@@ -753,6 +799,14 @@ function onLobby(room) {
   renderLobbyPanel(state.lobbyPanel, room, state.team);
   // A reopened room covers the ending it follows: the result had its moment.
   document.getElementById('warover-panel').classList.remove('open');
+  // The war room gets the shop window too (owner ruling 2026-08-23): the
+  // lobby is the longest stare at a standing screen an evening has.
+  if (document.getElementById('start-panel').classList.contains('open')) {
+    openShowcase(state.styleName);
+    document.body.classList.add('war-room');
+  } else {
+    closeShowcase();
+  }
 }
 
 function onVote(message) {
@@ -778,6 +832,7 @@ function onWelcome(message) {
   if ((message.lobby ?? 0) === 0 && state.room !== undefined) {
     state.room = undefined;
     renderLobbyPanel(state.lobbyPanel, undefined, message.team);
+    closeShowcase();
     // The room just started a war - the first one, or the next one of the
     // evening. Whatever is on the map belongs to the LAST war: rebuild the
     // world from the new war's first snapshot, and hand back the controls.
@@ -998,6 +1053,7 @@ async function main() {
 
   const hudRoot = document.getElementById('hud');
   state.hud = createHud(hudRoot, state.t);
+  document.getElementById('title-card').textContent = state.t('start.title');
   renderHelp(state.t);
   document.getElementById('help-button').addEventListener('click', toggleHelp);
   document.getElementById('debug-button').addEventListener('click', toggleDebug);
@@ -1012,18 +1068,21 @@ async function main() {
   let startSpeed = START_SPEED;
   let styleName = params.get('style');
   if (!params.has('mode')) {
-    // The shop window: a staged island assault behind the menu, on its own
-    // canvas and renderer, torn down whole before the war claims the screen.
-    // A splash that fails must never cost anyone the menu, hence the catch.
-    let showcase = null;
-    try {
-      showcase = startDiorama(styleFor(resolveStyle(styleName)));
-      document.getElementById('start-panel').classList.add('showcase');
-    } catch { /* menu on a plain background instead */ }
+    // The shop window: a staged island assault behind the menu, torn down
+    // whole before the war claims the screen (see openShowcase).
+    openShowcase(styleName);
+    document.getElementById('start-panel').classList.add('solo-menu');
     const panel = createStartPanel(state.t, seedFromClock());
+    // The look row previews live - unless the URL already dictated a style,
+    // in which case the URL wins at BEGIN and the preview would be a lie.
+    if (styleName === null) {
+      panel.onStyle = (name) => {
+        applyStyleToDocument(styleFor(resolveStyle(name)), document.documentElement);
+        openShowcase(name);
+      };
+    }
     const chosen = await showStartPanel(panel);
-    if (showcase !== null) showcase.stop();
-    document.getElementById('start-panel').classList.remove('showcase');
+    closeShowcase();
     seed = chosen.seed;
     const extras = applyChoices(rules, chosen.choices);
     startSpeed = extras.speed;
@@ -1066,6 +1125,7 @@ async function main() {
   document.getElementById('gpu').textContent = describeGpu(diag);
 
   const style = styleFor(resolveStyle(styleName));
+  state.styleName = resolveStyle(styleName);
   applyStyleToDocument(style, document.documentElement);
   setHud(state.hud, 'graphics', `${preset.label} / ${style.label} (${resolved.source})`);
 

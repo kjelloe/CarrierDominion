@@ -108,13 +108,30 @@ before the rule was written down.
 
 ## The shop window
 
-Behind the start menu (a plain visit to `/`) plays a **diorama**: a staged
-island assault built from the game's own builders — the same carrier, Manta,
-Walrus, turret and shot meshes the war renders, over a real
-`engine/heightmap.js` island — so the splash can never drift from what the
-game looks like. `client/render/diorama.js`. The menu thins to a scrim over
-it; the camera orbits low and close; tracers loop between the battery and
-the ship.
+Behind the start menu (a plain visit to `/`) **and behind the LAN war room**
+(ruling 2026-08-23) plays a **diorama**: a staged island assault built from
+the game's own builders — the same carrier, Manta, Walrus, turret and shot
+meshes the war renders, over a real `engine/heightmap.js` island — so the
+splash can never drift from what the game looks like.
+`client/render/diorama.js`; both doors share the `#start-panel` root, so one
+keeper (`openShowcase`/`closeShowcase` in main.js) serves both. The menu
+thins to a scrim over it; the camera orbits low and close; tracers loop
+between the battery and the ship.
+
+Over it stands the **title card** — the game's name, letterspaced, above the
+scrim and never in the way of a click. The solo menu's own small header
+steps aside so the name is not said twice; in the war room the card yields
+instead, because the roster is tall and its header already names the table
+and carries the join code. Under it plays the **ambience** (ruling
+2026-08-23): distant surf — looped noise through a lowpass with a slow
+swell — and far-off guns, synthesised in `sound.js` like every other sound,
+started on the first gesture because browsers allow it no earlier, stopped
+with the diorama.
+
+The menu's **look row previews live**: flipping it restyles the page colours
+and restarts the diorama in the chosen style — unless the URL already
+dictated a style, in which case the URL wins at BEGIN and a preview would be
+a lie, so the hook is not wired.
 
 Three rules keep it harmless: it owns its **own canvas and renderer** (a
 canvas hands out its WebGL context once, and the war's `#view` needs its

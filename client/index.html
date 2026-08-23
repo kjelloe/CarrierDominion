@@ -229,6 +229,25 @@
       border: 1px solid var(--hud-dim);
       padding: 24px 32px;
     }
+    /* The title card: the game's name over the diorama, above the scrim,
+       never in the way of a click. The solo menu's own small header would
+       repeat it, so that one steps aside; the war room's header carries the
+       join code and stays. */
+    #title-card {
+      position: fixed; top: 5%; left: 0; right: 0; z-index: 11;
+      display: none; text-align: center; pointer-events: none;
+      color: var(--hud-ink); font: 42px/1.2 var(--hud-font);
+      letter-spacing: 20px; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9);
+    }
+    body.showcase #title-card { display: block; }
+    /* The war room's roster stands tall and its header already names the
+       table (and carries the join code) - there the card yields. */
+    body.war-room #title-card { display: none; }
+    #title-card::after {
+      content: ''; display: block; width: 340px; margin: 12px auto 0;
+      border-bottom: 1px solid var(--hud-dim);
+    }
+    #start-panel.showcase.solo-menu #start-title { display: none; }
     /* Nothing behind the menu: the instruments belong to a war that has not
        started yet, and reading them through it is worse than not seeing them. */
     body.menu #hud, body.menu #help { display: none; }
@@ -290,6 +309,7 @@
        hides behind the ? button until asked for. -->
   <div id="help" class="hidden"></div>
   <div id="help-button">?</div>
+  <div id="title-card"></div>
   <div id="sight"><span class="bar h"></span><span class="bar v"></span><span class="ring"></span></div>
   <div id="damage-panel">
     <div id="damage-title"></div>

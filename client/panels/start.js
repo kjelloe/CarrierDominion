@@ -102,6 +102,9 @@ function row(panel, option) {
     const next = values[(values.indexOf(panel.choices[option.key]) + 1) % values.length];
     panel.choices[option.key] = next;
     value.textContent = labelFor(panel.t, option, next);
+    // The look row restyles the page live (owner ruling 2026-08-23): the
+    // diorama and the menu's own colours are the preview of the choice.
+    if (option.key === 'style' && panel.onStyle !== undefined) panel.onStyle(next);
   });
   return line;
 }

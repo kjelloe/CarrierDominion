@@ -5,6 +5,29 @@ golden hash and why.
 
 ---
 
+## 2026-08-23 — The shop window, furnished: war room, title card, surf and guns
+
+Four rulings on the diorama, landed together. The LAN war room gets the
+shop window too - it shares the #start-panel root with the solo menu, so
+one keeper (openShowcase/closeShowcase) serves both doors and the second
+war's reopened room gets it back automatically. A title card stands over
+the scrim - letterspaced game name, pointer-events none; the solo menu's
+small header steps aside, and in the war room the CARD yields instead,
+because the roster is tall and its header already carries the join code
+(the first screenshot had them overprinting). The look row now previews
+live: flipping it restyles the page and restarts the diorama in the chosen
+style - not wired when the URL dictated a style, since the URL wins at
+BEGIN and the preview would lie. And the menu has a soundtrack: distant
+surf (looped noise, lowpass, a slow swell riding the gain) and far-off
+guns, synthesised in sound.js like everything else, started on the first
+gesture, stopped with the diorama.
+
+splash_shot now also asserts: card shown + small header hidden on the solo
+menu, live restyle actually changes the running scene's sky, war room gets
+scrim + diorama with the join code still visible, card yields there. One
+probe lesson: three dioramas animating at once starve SwiftShader into
+timeouts - close pages when done measuring them.
+
 ## 2026-08-23 — The shop window: a diorama behind the start menu
 
 A staged island assault plays behind the start menu now
