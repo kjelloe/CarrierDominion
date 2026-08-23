@@ -174,6 +174,11 @@ function showStartPanel(panel) {
 // the starting clock speed and the art style - which belong to the client.
 function applyChoices(rules, choices) {
   for (const option of OPTIONS) option.apply(rules, choices[option.key]);
+  // The same clamp shared/options.js applies on the lobby path: a table
+  // never larger than its archipelago.
+  if (rules.world.islandCount < rules.rules.teamCount) {
+    rules.world.islandCount = rules.rules.teamCount;
+  }
   return { speed: choices.speed, style: choices.style };
 }
 

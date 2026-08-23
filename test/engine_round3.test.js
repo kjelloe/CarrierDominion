@@ -12,6 +12,7 @@ import { canonicalize } from '../shared/statehash.js';
 import { buildView } from '../shared/view.js';
 import { dist2D } from '../shared/fixed.js';
 import { refine } from '../engine/economy.js';
+import { nextBuild } from '../engine/ai_estate.js';
 import { ROLE_FACTORY } from '../engine/island.js';
 import { EVT_COURSE } from '../engine/events.js';
 import { KIND_MANTA, ORDER_ESCORT, ORDER_RETURN, UNIT_ACTIVE } from '../engine/units.js';
@@ -215,6 +216,59 @@ test('the point-defence refit quickens the healthy mount, and damage still slows
   assert.ok(ship.cooldown > 0, 'the mount never fired');
   assert.ok(ship.cooldown <= ship.pdCooldownUpgraded,
     `cooldown ${ship.cooldown} is the unupgraded rate`);
+});
+
+test('once each means once ORDERED: a second yard refuses a refit already building', () => {
+  // Third review finding 2: the fitted-only check let yard B sell the same
+  // engines while yard A was still building them - two payments, one refit.
+  let state = fresh();
+  const yardA = yardAt(state, 0);
+  const yardB = yardAt(state, 1);
+  yardB.owner = 0;
+  state = apply(state, { type: 'build_on_island', carrierId: 0, islandId: yardA.id, what: 3 });
+  assert.equal(state.islands[0].building, 3);
+  const materialsB = state.islands[1].stockMaterials;
+  state = apply(state, { type: 'build_on_island', carrierId: 0, islandId: yardB.id, what: 3 });
+  assert.equal(state.islands[1].building, -1, 'the same engines were sold twice');
+  assert.equal(state.islands[1].stockMaterials, materialsB, 'and paid for twice');
+  // A DIFFERENT refit at the second yard is honest work.
+  state = apply(state, { type: 'build_on_island', carrierId: 0, islandId: yardB.id, what: 4 });
+  assert.equal(state.islands[1].building, 4);
+});
+
+test('the radar refit makes the undamaged ship see farther', () => {
+  let state = fresh();
+  const island = yardAt(state, 0);
+  const before = state.carriers[0].radar;
+  state = apply(state, { type: 'build_on_island', carrierId: 0, islandId: island.id, what: 5 });
+  state = drive(state, state.economy.builds[5].ticks + 1);
+  const ship = state.carriers[0];
+  assert.equal(ship.upRadar, 1);
+  assert.ok(ship.radar > before, 'the refit never reached the mast');
+  assert.equal(ship.radar, ship.radarUpgraded, 'undamaged, the full upgraded range stands');
+});
+
+test('the AI buys the refits a rich plant can afford, speed first', () => {
+  // Third review finding 5: solo play handed the human a permanent edge.
+  const state = fresh();
+  const island = state.islands[0];
+  island.owner = 0;
+  island.role = ROLE_FACTORY;
+  island.factories = state.economy.builds[0].max; // the plant is finished
+  island.stockMaterials = 50000;
+  assert.equal(nextBuild(state, island, state.economy), 3, 'a rich finished plant should refit');
+  state.carriers[0].upSpeed = 1;
+  assert.equal(nextBuild(state, island, state.economy), 4, 'speed owned, point defence next');
+  state.carriers[0].upPd = 1;
+  state.carriers[0].upRadar = 1;
+  const after = nextBuild(state, island, state.economy);
+  assert.notEqual(after, 3);
+  assert.notEqual(after, 4);
+  assert.notEqual(after, 5, 'a fully refitted ship is not sold a fourth refit');
+  // Poverty ends the shopping: below twice the price, the yard saves.
+  state.carriers[0].upSpeed = 0;
+  island.stockMaterials = state.economy.builds[3].cost;
+  assert.notEqual(nextBuild(state, island, state.economy), 3, 'a refit that starves the line');
 });
 
 test('upgrades need a plant, a factory role, and your own island', () => {

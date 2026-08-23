@@ -68,6 +68,20 @@ test('a sixteen-carrier war ticks, and each seat sees only its own', () => {
   assert.equal(state.carriers[12].throttle, 0);
 });
 
+test('a table is never larger than its archipelago', () => {
+  // Third review finding 7: 4 islands with 16 carriers passed the lobby and
+  // handed most seats a war with nothing in it. The clamp lives in the fold,
+  // so it is hashed and every path agrees.
+  const rules = loadRules();
+  const chosen = applyLobbyOptions(rules, {
+    seed: SEED, islands: 4, teams: 16, enemy: 0, ending: 0, speed: 1, game: 0, aiTeams: [],
+  });
+  assert.equal(chosen.world.islandCount, 16, 'the archipelago should rise to the table');
+  const state = createInitialState(SEED, chosen);
+  assert.equal(state.islands.length, 16);
+  assert.equal(state.carriers.length, 16);
+});
+
 test('the room seats the machine at every unmanned place', () => {
   const rules = loadRules();
   const chosen = applyLobbyOptions(rules, {

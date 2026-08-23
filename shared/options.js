@@ -9,6 +9,13 @@ function applyLobbyOptions(rules, options) {
   const teams = Number.isInteger(options.teams) && options.teams >= 2 && options.teams <= 16
     ? options.teams
     : rules.rules.teamCount;
+  // A table never larger than its archipelago (third review, 2026-08-23):
+  // four islands with sixteen carriers hands most seats a war with nothing
+  // in it. The clamp lives in the FOLD, so it is part of the rules hash and
+  // every path - lobby, resume, replay - agrees on the war it produces.
+  if (Number.isInteger(world.islandCount) && world.islandCount < teams) {
+    world.islandCount = teams;
+  }
   // The room knows who is human; it passes the machine seats explicitly.
   // Without that knowledge (solo, old saves), enemy=1 means "team 1 is AI".
   const machine = Array.isArray(options.aiTeams)

@@ -287,6 +287,10 @@ function findIsland(state, islandId) {
 // Firing is a command, not a tick effect (ruling #18). A Manta that nobody
 // flies is a Manta that never shoots.
 function applyFire(next, command) {
+  // After the whistle no trigger answers - the automatic guns already hold
+  // their fire post-war, and a manual pilot is not an exception to the
+  // ending (third review: the command path skipped the aftermath rule).
+  if (next.phase !== PHASE_RUNNING) return reject(next);
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
   if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
@@ -338,6 +342,9 @@ function applySetAi(next, command) {
 }
 
 function applyDeployPod(next, command) {
+  // Post-war spending refused (ruling 2026-08-23, third review): a pod bought after the war can never finish building,
+  // so taking the payment would burn stores on a decision that cannot land.
+  if (next.phase !== PHASE_RUNNING) return reject(next);
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
   const island = findIsland(next, command.islandId);
@@ -363,6 +370,9 @@ function applyIslandRole(next, command) {
 // materials, and refused when the role does not allow it, the slots are full,
 // or the stock is short.
 function applyIslandBuild(next, command) {
+  // Post-war spending refused (ruling 2026-08-23, third review): a site started after the war can never finish,
+  // so taking the payment would burn stores on a decision that cannot land.
+  if (next.phase !== PHASE_RUNNING) return reject(next);
   const carrier = findCarrier(next, command.carrierId);
   if (carrier === -1) return reject(next);
   const island = findIsland(next, command.islandId);
@@ -374,6 +384,9 @@ function applyIslandBuild(next, command) {
 // The virus bomb: the other way to take an island, and the one that takes it
 // with everything on it.
 function applyDeployVirus(next, command) {
+  // Post-war spending refused (ruling 2026-08-23, third review): a bomb bought after the war can never convert,
+  // so taking the payment would burn stores on a decision that cannot land.
+  if (next.phase !== PHASE_RUNNING) return reject(next);
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
   const island = findIsland(next, command.islandId);

@@ -41,6 +41,24 @@ test('watching a war does not change it', () => {
   assert.equal(hashState(watched), hashState(plain));
 });
 
+test('the stall window scales with the ocean, unless the caller said otherwise', () => {
+  // 60,000 ticks was tuned on the 8-island map; a 64-island crossing is
+  // legitimately longer than that, so the default window grows with
+  // sqrt(islandCount/8) - the same law that grows the sea.
+  const big = { ...rules, world: { ...rules.world, islandCount: 32 } };
+  const watch = createWatch();
+  watchTick(watch, createInitialState(SEED, big), 1);
+  assert.equal(watch.stuckAfter, 120000, 'sqrt(32/8) should double the window');
+
+  const base = createWatch();
+  watchTick(base, fresh(), 1);
+  assert.equal(base.stuckAfter, 60000, 'the 8-island window is the tuned one');
+
+  const told = createWatch({ stuckAfter: 500 });
+  watchTick(told, createInitialState(SEED, big), 1);
+  assert.equal(told.stuckAfter, 500, 'an explicit window is the caller\'s word');
+});
+
 test('a healthy war trips nothing', () => {
   let state = fresh();
   const watch = createWatch();

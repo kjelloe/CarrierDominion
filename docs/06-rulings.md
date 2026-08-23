@@ -212,6 +212,21 @@ On the diorama and what rode with it — all landed:
   overlay): the bridge is too many buttons for a phone held upright, the
   human turns the device to landscape. The menu stays usable in portrait.
 
+## Third-review rulings (2026-08-23, "fix all")
+
+The three findings that needed a decision, decided with the fix order:
+
+- **Post-war spending is refused.** After the whistle, `build_on_island`,
+  pod and virus deploys, and the manual trigger are rejected at the
+  reducer — a site started after the war can never finish, so taking the
+  payment would burn stores on a decision that cannot land. The world still
+  winds down; it does not take money at the door.
+- **The AI buys refits.** A finished plant with twice the price on the
+  ground lays one down, speed first, never at the chassis line's expense —
+  solo play no longer hands the human a permanent edge.
+- **A table is never larger than its archipelago.** The fold raises the
+  island count to the team count; hashed, so every path agrees.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

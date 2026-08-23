@@ -60,6 +60,49 @@ test('the carriers start closer, in open water, with supply running', () => {
   }
 });
 
+test('no carrier starts inside a rival battery reach, on any seed at the full table', () => {
+  // The third review's worst finding, kept dead: the first shape of the
+  // action start sank seed 31337's team 14 by tick 7,137 - it spawned
+  // 2,289 m from a rival missile battery it never chose to be near.
+  for (const seed of [20260818, 424242, 777, 31337, 99999]) {
+    const rules = actionRules();
+    rules.world = { ...rules.world, islandCount: 64 };
+    rules.rules = { ...rules.rules, teamCount: 16 };
+    const state = createInitialState(seed, rules);
+    let reach = 0;
+    for (const turret of state.turrets) {
+      for (const arm of turret.arms) {
+        if (state.weapons[arm.w].range > reach) reach = state.weapons[arm.w].range;
+      }
+    }
+    for (const carrier of state.carriers) {
+      assert.ok(worldHeightAt(state.islands, carrier.x, carrier.y) < -carrier.draught,
+        `seed ${seed}: carrier ${carrier.id} aground`);
+      for (const turret of state.turrets) {
+        if (turret.team === carrier.team) continue;
+        const gap = dist2D(carrier.x, carrier.y, turret.x, turret.y);
+        assert.ok(gap >= reach,
+          `seed ${seed}: carrier ${carrier.id} spawns ${gap} from a team-${turret.team} gun (reach ${reach})`);
+      }
+    }
+  }
+});
+
+test('the allocation is round-robin: a crowded table shorts rounds, not seats', () => {
+  // Sixteen teams on a sixteen-island sea: every seat gets exactly its
+  // stocked factory, nobody gets a second island, and nobody gets nothing.
+  const rules = actionRules();
+  rules.world = { ...rules.world, islandCount: 16 };
+  rules.rules = { ...rules.rules, teamCount: 16 };
+  const state = createInitialState(SEED, rules);
+  for (const team of state.teams) {
+    const held = state.islands.filter((island) => island.owner === team.id);
+    assert.equal(held.length, 1, `team ${team.id} holds ${held.length}`);
+    assert.equal(held[0].role, ROLE_FACTORY);
+    assert.equal(team.stockpileIsland, held[0].id);
+  }
+});
+
 test('the flag is a rule: same seed, different war, different hash - deterministically', () => {
   const a = createInitialState(SEED, actionRules());
   const b = createInitialState(SEED, actionRules());

@@ -152,6 +152,13 @@ function startBuild(state, island, what, economy) {
     const carrier = carrierOfTeam(state, island.owner);
     if (carrier === -1 || carrier.hull <= 0) return 0;
     if (upgradeOwned(carrier, what) === 1) return 0;
+    // Once each means once ORDERED, not once fitted: while yard A builds
+    // your speed refit, yard B must refuse the same order - the fitted
+    // check alone let an impatient double-click pay for two engines.
+    for (let i = 0; i < state.islands.length; i++) {
+      const other = state.islands[i];
+      if (other.owner === island.owner && other.building === what) return 0;
+    }
   } else if (builtCount(island, what) >= spec.max) {
     return 0;
   }
@@ -251,6 +258,7 @@ export {
   BUILD_UPGRADE_PD,
   BUILD_UPGRADE_RADAR,
   upgradeOwned,
+  carrierOfTeam,
   roleAllows,
   builtCount,
   anythingBuilt,

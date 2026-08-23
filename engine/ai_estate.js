@@ -18,7 +18,12 @@ import { EVT_STOCKPILE_SET, pushEvent } from './events.js';
 import {
   BUILD_FACTORY,
   BUILD_TURRET,
+  BUILD_UPGRADE_PD,
+  BUILD_UPGRADE_RADAR,
+  BUILD_UPGRADE_SPEED,
   BUILD_WAREHOUSE,
+  carrierOfTeam,
+  upgradeOwned,
   ROLE_DEFENCE,
   ROLE_FACTORY,
   ROLE_NONE,
@@ -86,10 +91,36 @@ function nextBuild(state, island, economy) {
     const room = built < economy.builds[BUILD_FACTORY].max;
     const fed = built < 2 || materialsPermil(state, island.owner) > FED_PERMIL;
     if (room && fed) return BUILD_FACTORY;
+    const refit = nextRefit(state, island, economy);
+    if (refit !== -1) return refit;
     return BUILD_WAREHOUSE;
   }
   if (island.role === ROLE_DEFENCE) return BUILD_TURRET;
   if (island.role === ROLE_RESOURCE) return BUILD_WAREHOUSE;
+  return -1;
+}
+
+// The AI buys the same refits the human does (ruling 2026-08-23, third
+// review - before this, solo play handed the human a permanent speed,
+// point-defence and radar edge). Speed first: it is the one that changes
+// where the SHIP can be, which is the AI's whole game. Only with the plant
+// standing and twice the price on the ground - a refit that starves the
+// chassis line is a refit that loses the war politely.
+function nextRefit(state, island, economy) {
+  if (island.factories < 1) return -1;
+  const carrier = carrierOfTeam(state, island.owner);
+  if (carrier === -1 || carrier.hull <= 0) return -1;
+  for (const what of [BUILD_UPGRADE_SPEED, BUILD_UPGRADE_PD, BUILD_UPGRADE_RADAR]) {
+    if (upgradeOwned(carrier, what) === 1) continue;
+    let underway = 0;
+    for (let i = 0; i < state.islands.length; i++) {
+      if (state.islands[i].owner === island.owner
+        && state.islands[i].building === what) underway = 1;
+    }
+    if (underway === 1) continue;
+    if (island.stockMaterials < economy.builds[what].cost * 2) return -1;
+    return what;
+  }
   return -1;
 }
 

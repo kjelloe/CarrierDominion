@@ -128,9 +128,18 @@ scarcity is identical; the menu work is not.
 Three carrier upgrades (ruling 2026-08-23): **speed**, **point defence**, and
 **radar range**. Each is manufactured like any other build — `build_on_island`
 kinds 3/4/5 at a factory island that has a plant, paid from that island's
-materials — and fitted to the ship when the yard finishes. Once each: the
+materials — and fitted to the ship when the yard finishes. Once each — and once each
+means once **ordered**, not once fitted: while one yard builds your speed
+refit, every other yard refuses the same order (third review — the
+fitted-only check let an impatient double-click pay for two engines). The
 UPGRADES rows in the quartermaster show FITTED / BUILDING / needs-plant /
-the cost, and a second purchase is refused at the reducer.
+the cost.
+
+The AI buys the same refits (ruling 2026-08-23): a finished plant with twice
+the price in materials on the ground lays one down — speed first, since
+where the ship can be is the AI's whole game — and never at the cost of the
+chassis line. Measured: seed 900913's AI-vs-AI draw became a decisive war
+once both commanders could refit.
 
 A refit raises the system's **base**, not its current value: damage still
 degrades an upgraded engine room or radar from the upgraded figure, exactly
@@ -297,9 +306,18 @@ runs at the end of `createInitialState` when the `actionStart` rule is 1:
 each team gets its nearest share of the archipelago — a stocked factory
 island nominated as the stockpile, a resource island, the rest defence
 islands with two guns up — supply runs start on, and each carrier is nudged
-up to 30% of the way toward the map centre, stopping wherever open water
-runs out. The rest of the archipelago stays neutral: there is still a race,
-it just starts at speed.
+up to 30% of the way toward the map centre. The rest of the archipelago
+stays neutral: there is still a race, it just starts at speed.
+
+Order matters (third review): **every team's estate is allocated first,
+round-robin** — one island per team per round, so a crowded table shorts
+late rounds rather than late seats — and only then do the carriers move.
+The nudge refuses to stop in water a rival action-start battery already
+reaches (longest turret weapon plus a 1,200 m margin), and a seat whose
+spawn ended up inside an envelope anyway backs straight away from the
+nearest gun until clear. The first shape of this start sank seed 31337's
+team 14 at tick 7,137 without a decision being made; the suite now asserts
+no carrier spawns in reach on any battery seed at the full table.
 
 It is a **rule**, not a script: the flag is in `data/rules.json`, folded by
 the lobby's GAME option, covered by the rules hash, and the prepared start is
@@ -315,6 +333,12 @@ runs to **64 — the 1988 original's own count** — a ~58 km sea at unchanged
 density. Generation is tested (five seeds, 64 islands, 16 carriers: every
 island placed, every carrier afloat, ~4,100 ticks/s headless); how such a
 war FEELS still awaits a live table.
+
+And **a table is never larger than its archipelago** (third review): fold
+four islands with sixteen carriers and the island count rises to the team
+count. The clamp lives in `shared/options.js` and the start menu alike, so
+it is part of the rules hash and every path — lobby, resume, replay —
+agrees on the war it produces.
 
 ## The AI
 

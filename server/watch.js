@@ -24,6 +24,7 @@
 //   slow tick        the reducer taking longer than the tick it is simulating,
 //                    which is the only way a LAN war falls behind
 
+import { isqrt, mulDiv } from '../shared/fixed.js';
 import { worldHeightAt } from '../engine/heightmap.js';
 import { stockCapOf } from '../engine/island.js';
 
@@ -46,6 +47,9 @@ function createWatch(options) {
     stuckAfter: options !== undefined && options.stuckAfter > 0
       ? options.stuckAfter
       : STUCK_TICKS,
+    // An explicit stuckAfter is the caller's word; only the default scales
+    // with the map (see watchTick's first-sight branch).
+    stuckConfigured: options !== undefined && options.stuckAfter > 0 ? 1 : 0,
   };
 }
 
@@ -171,7 +175,18 @@ function watchTick(watch, state, elapsedMs) {
   // Baseline on first sight: a RESUMED war arrives at tick 200,000 and a
   // watchdog that assumes it was present from tick zero calls the first quiet
   // moment a 200,000-tick stall. Silence only counts from when watching began.
-  if (watch.ticks === 0) watch.lastEventTick = state.tick;
+  if (watch.ticks === 0) {
+    watch.lastEventTick = state.tick;
+    // The stall window was tuned on the 8-island, 20 km map, where one
+    // crossing is ~20k ticks. The ocean scales with sqrt(islandCount/8)
+    // (engine/worldgen.js; 8 is data/world.json's baseIslandCount), so a
+    // legitimate quiet leg does too - a 64-island crossing would trip the
+    // unscaled alarm every time. isqrt of the Q16 ratio gives a Q8 scale.
+    if (watch.stuckConfigured === 0 && state.islands.length > 8) {
+      const scaleQ8 = isqrt(mulDiv(state.islands.length, 65536, 8));
+      watch.stuckAfter = mulDiv(watch.stuckAfter, scaleQ8, 256);
+    }
+  }
   watch.ticks = watch.ticks + 1;
   watch.totalMs = watch.totalMs + elapsedMs;
   if (elapsedMs > watch.slowestMs) watch.slowestMs = elapsedMs;

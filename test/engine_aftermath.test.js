@@ -68,6 +68,34 @@ test('a finished war decides nothing new', () => {
   assert.doesNotThrow(() => canonicalize(state));
 });
 
+test('after the whistle nobody takes your money, and no trigger answers', () => {
+  // Post-war spending refused (third review): a site started after the war
+  // can never finish, a pod or bomb bought after it can never land, and a
+  // manual pilot is not an exception to the guns falling silent.
+  let state = fresh();
+  const island = state.islands[0];
+  island.owner = 0;
+  island.role = 1; // ROLE_FACTORY
+  island.stockMaterials = 5000;
+  state.phase = PHASE_OVER;
+
+  state = apply(state, { type: 'build_on_island', carrierId: 0, islandId: 0, what: 0 });
+  assert.equal(state.islands[0].building, -1, 'a site started after the war');
+  assert.equal(state.islands[0].stockMaterials, 5000, 'the yard took the money anyway');
+
+  const pilot = state.units.find((u) => u.team === 0 && u.kind === KIND_MANTA);
+  pilot.state = UNIT_ACTIVE;
+  const enemy = state.units.find((u) => u.team === 1 && u.kind === KIND_MANTA);
+  enemy.state = UNIT_ACTIVE;
+  enemy.x = pilot.x + 200 * 256;
+  enemy.y = pilot.y;
+  enemy.z = pilot.z;
+  state = apply(state, { type: 'fire_unit', unitId: pilot.id });
+  assert.ok(!state.events.some((e) => e.code === EVT_SHOT_FIRED),
+    'a manual trigger fired after the war');
+  assert.doesNotThrow(() => canonicalize(state));
+});
+
 test('a round already in the air still flies, and still hits', () => {
   let state = fresh();
   const victim = state.units.find((u) => u.team === 1 && u.kind === KIND_WALRUS);

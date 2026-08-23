@@ -224,6 +224,10 @@ function startDiorama(style) {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resizeNow);
       renderer.dispose();
+      // Hand the GPU its context back NOW: every look-row flip builds a
+      // fresh canvas, browsers cap live WebGL contexts around sixteen, and
+      // a discarded context otherwise waits for the garbage collector.
+      renderer.forceContextLoss();
       canvas.remove();
       delete window.__diorama;
     },

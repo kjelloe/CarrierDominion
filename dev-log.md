@@ -5,6 +5,49 @@ golden hash and why.
 
 ---
 
+## 2026-08-23 — The third review's nine, closed the same day
+
+The owner ruled "fix all", so all nine landed as one slice. 426 tests,
+battery five for five, smoke green; no pins moved (the action start is
+not pinned, and nothing touched the base two-team war).
+
+1. **The Action start no longer spawn-kills.** Allocation for every team
+   runs FIRST, round-robin - one island per team per round, so a crowded
+   table shorts late rounds rather than late seats - and only then do
+   carriers move. The nudge refuses water a rival battery already reaches
+   (longest turret weapon + 1,200 m), and a spawn that ended up inside an
+   envelope anyway backs straight off the nearest gun. Seed 31337's
+   16-team table, which lost teams 14 and 15 by tick 10,307, now keeps
+   all sixteen afloat; the suite asserts spawn clearance on five seeds.
+2. **Once each means once ORDERED**: every other yard refuses a refit
+   already building anywhere on the team - the fitted-only check let a
+   double-click pay for two engines.
+3. **Post-war spending refused** (ruling): build, pod, virus and the
+   manual trigger reject after the whistle. The aftermath test now covers
+   the COMMAND path, not just the tick path - and it was mutation-checked:
+   neuter a guard and it fails.
+4. **The watchdog's stall window scales with the ocean** - sqrt(islands/8),
+   the law that grows the sea - unless the caller set it explicitly.
+5. **The AI buys refits** (ruling): finished plant, twice the price in
+   stock, speed first. Battery consequence worth recording: seed 900913,
+   a draw at 105,520 since the fuel economy tightened, is now team 0 by
+   sinking at 231,651 - two commanders who can re-engine fight it out.
+6. **The radar refit has a range test** - undamaged, the full upgraded
+   figure stands at the mast.
+7. **A table is never larger than its archipelago** (ruling): the fold
+   raises islands to teams, in shared/options.js and the start menu both,
+   inside the rules hash.
+8. **The diorama hands its WebGL context back** on stop
+   (forceContextLoss) - look-row flips no longer march toward the
+   browser's ~16-context cap at the garbage collector's pace.
+9. **The war-over body scrolls** - sixteen score lines no longer push
+   RETURN TO PORT off a short screen.
+
+One process scar for the record: the mutation check restored
+engine/reducer.js from git to undo the deliberate breakage - and wiped
+the not-yet-committed guards with it. Re-applied, re-tested. Neuter a
+copy, not the working tree.
+
 ## 2026-08-23 — The basic touch pass, and the bug the phone found on the desktop
 
 The bridge was mouse-first, which is nearly touch-first: buttons, helm

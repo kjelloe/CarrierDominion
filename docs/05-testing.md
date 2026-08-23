@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (418 tests and growing), node --test
+npm test      the unit and integration suite (426 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 ```
@@ -117,7 +117,11 @@ the same bug four hundred times should report it once.
 `STUCK_TICKS = 60_000` is fifty minutes of game time. It started at 20,000 and
 fired on every ordinary steaming leg, which is how a watchdog gets ignored: one
 island takes about 37,000 ticks to take and a map crossing takes 20,000, so a
-war can legitimately be quiet for a long while.
+war can legitimately be quiet for a long while. That number was tuned on the
+8-island map, so the default **scales with the ocean** — sqrt(islandCount/8),
+the same law that grows the sea — while an explicit `stuckAfter` stays the
+caller's word (third review: a 64-island crossing would have tripped the
+unscaled alarm every time).
 
 It has already earned itself: on its first full run it found `payForBuild`
 double-spending when the build site *was* the stockpile island, from tick

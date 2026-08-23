@@ -318,7 +318,9 @@
     #warover-panel.open { display: flex; }
     #warover-title { font-size: 26px; letter-spacing: 8px; margin-bottom: 6px; }
     #warover-reason { color: var(--hud-dim); margin-bottom: 18px; }
-    #warover-body { margin-bottom: 22px; }
+    /* Sixteen carriers is sixteen score lines: the body scrolls rather than
+       pushing RETURN TO PORT off a short screen. */
+    #warover-body { margin-bottom: 22px; max-height: 46vh; overflow-y: auto; }
     .warover-button {
       display: block; margin: 8px auto 0; padding: 6px 26px; cursor: pointer;
       border: 1px solid var(--hud-ink); letter-spacing: 4px; width: fit-content;
