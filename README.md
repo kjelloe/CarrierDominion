@@ -68,7 +68,7 @@ Controls:
 | `DBG` button | the diagnostic strip, hidden until asked for |
 | click sea | send the selected unit there - or, with nothing selected, lay a COURSE: the ship sails there itself |
 | click enemy | attack it with the selected unit, or hand it to the ship's laser |
-| click island | the island board: what it is for, and what to build on it |
+| click island | the island board: what it is for, and what to build on it - with a Manta selected and a runway there, it is an APPROACH: land, refuel, relaunch |
 
 ## Testing
 
