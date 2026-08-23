@@ -45,6 +45,7 @@ const EVT_FLARES = 37; // a = carrierId, b = team, c = seekers blinded
 const EVT_AI_SEAT = 38; // a = team, b = 1 the machine has it / 0 a human does
 const EVT_COURSE = 39; // a = carrierId, b = 1 set / 0 done or cleared
 const EVT_SUPPLY_BIAS = 40; // a = item category, b = owning team, c = level
+const EVT_TELEMETRY_LOST = 41; // a = unitId, b = team - the leash took it
 
 function makeEvent(code, a, b, c) {
   return { code: code, a: a, b: b, c: c };
@@ -96,6 +97,7 @@ export {
   EVT_AI_SEAT,
   EVT_COURSE,
   EVT_SUPPLY_BIAS,
+  EVT_TELEMETRY_LOST,
   makeEvent,
   pushEvent,
 };

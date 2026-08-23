@@ -155,7 +155,7 @@ function checkShots(watch, state) {
 
 // Anything at all that counts as the war moving. A war with none of these for
 // a long time is stuck, which is the shape every deadlock so far has had.
-const PROGRESS = [10, 17, 18, 21, 26, 31, 32, 34, 36];
+const PROGRESS = [10, 17, 18, 21, 26, 31, 32, 34, 36, 41];
 
 function checkProgress(watch, state) {
   for (const event of state.events) {

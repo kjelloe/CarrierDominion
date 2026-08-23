@@ -11,6 +11,7 @@
 
 import { teamHoldings } from '../engine/economy.js';
 import { covered, ghostsFor } from '../engine/contacts.js';
+import { telemetryState } from '../engine/telemetry.js';
 
 // What is in the magazines. A contact gets an empty list: how many missiles an
 // enemy has left is not something radar tells you.
@@ -116,8 +117,12 @@ function contactView(carrier) {
   };
 }
 
-function ownUnitView(unit) {
+function ownUnitView(state, unit) {
   return {
+    // The link state (0 sound, 1 fading, 2 gone), from the same function
+    // the engine's leash uses - the cockpit warning cannot disagree with
+    // the verdict.
+    telemetry: telemetryState(state, unit),
     id: unit.id,
     team: unit.team,
     kind: unit.kind,
@@ -308,7 +313,7 @@ function buildView(state, team) {
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
     if (unit.team === team) {
-      units.push(ownUnitView(unit));
+      units.push(ownUnitView(state, unit));
     } else if (unit.state === 1 || unit.state === 2) {
       // A stowed enemy unit is inside a hangar and cannot be seen at all.
       if (detectedBy(state, team, unit)) units.push(unitContactView(unit));
@@ -477,7 +482,7 @@ function refereeView(state) {
   const units = [];
   for (let i = 0; i < state.units.length; i++) {
     if (state.units[i].state === 1 || state.units[i].state === 2) {
-      units.push(ownUnitView(state.units[i]));
+      units.push(ownUnitView(state, state.units[i]));
     }
   }
   const shots = [];

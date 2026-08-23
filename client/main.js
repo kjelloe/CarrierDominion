@@ -110,6 +110,7 @@ const state = {
   signals: [],
   signalsOpen: false,
   surrenderArmedMs: 0,
+  lastTelemetry: 0,
   buildCosts: [0, 0, 0],
   lastFrameMs: 0,
   // Set when the room starts (or restarts) a war: the first snapshot of the
@@ -584,6 +585,10 @@ function signalText(view, event) {
   if (code === 36) return t('log.converted', { island: islandWord(view, event.a) });
   if (code === 37) return t('log.flares');
   if (code === 39) return t(event.b === 1 ? 'log.courseSet' : 'log.courseDone');
+  if (code === 41) {
+    const unit = view.units.find((u) => u.id === event.a);
+    return t('log.telemetryLost', { kind: kindWord(unit === undefined ? 0 : unit.kind) });
+  }
   return '';
 }
 
@@ -1187,6 +1192,14 @@ function frame(nowMs) {
   setHud(state.hud, 'hangar', describeHangar(state.t, state.view.units, state.view.team));
   setHud(state.hud, 'unit', describeUnit(state.t, selectedUnit(), state.view.params));
   drawPanel(deltaSeconds);
+  // The link warning (item 1): the moment the picture starts to fade, say
+  // so - the pilot is busy flying and the leash gives no second chance.
+  const flown = state.piloting ? selectedUnit() : undefined;
+  const link = flown === undefined ? 0 : (flown.telemetry ?? 0);
+  if (link !== state.lastTelemetry) {
+    state.lastTelemetry = link;
+    if (link === 1) setHud(state.hud, 'status', state.t('status.telemetryWeak'));
+  }
   const locked = playWarning(state.sound, state.view, nowMs);
   document.getElementById('sight').classList.toggle('warn', locked);
   setHud(state.hud, 'islands', describeIslands(state.t, state.view));

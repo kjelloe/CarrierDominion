@@ -98,6 +98,23 @@ lighter — parts arrive in a lighter. So a depot holding the parts **launches o
 itself** (fuelled from the depot's own stock) and it sails out to the ship. That
 is not an exception to the ruling; it is what a supply network is for.
 
+## The telemetry leash
+
+Mantas and Walruses are **drones**, flown over a link from the carrier
+(manual coverage review, item 1 — the original's deepest control principle).
+Past `telemetryFadeMetres` (20 km) the picture degrades and the cockpit says
+so; past `telemetryLossMetres` (26 km) the link is gone and the craft
+**self-destructs** rather than fall into enemy hands. It is what forces the
+carrier itself to sail into danger: the air group is a hand, not a longer
+arm. The lighter is exempt — the original's transfer drone was
+semi-submersible and autonomous, and so is ours — and a craft whose carrier
+has SUNK has no signal source at all. The AI obeys the same leash: it
+recalls a drone past the fade line and declines errands beyond it. On the
+8-island sea the map is smaller than the leash, so nothing changes there;
+the leash is what shapes the 32- and 64-island oceans. `telemetryLossMetres:
+0` switches it off. (The original's Long-Range Communication Pod — one
+aircraft freed of the leash — is a natural future refit; noted, not built.)
+
 ## The helm has an autopilot
 
 The original's map + PROG + A, collapsed to one click: with nothing selected,

@@ -201,6 +201,8 @@ function copyState(state) {
       virusBuildTicks: state.params.virusBuildTicks,
       aiCadenceTicks: state.params.aiCadenceTicks,
       aiStandoff: state.params.aiStandoff,
+      telemetryFade: state.params.telemetryFade,
+      telemetryLoss: state.params.telemetryLoss,
       victoryIslandPermil: state.params.victoryIslandPermil,
       pointCap: state.params.pointCap,
       timeCapTicks: state.params.timeCapTicks,
@@ -428,6 +430,10 @@ function createInitialState(seed, rules) {
       virusBuildTicks: base.virusBuildTicks,
       aiCadenceTicks: base.aiCadenceTicks,
       aiStandoff: base.aiStandoffMetres * unitsPerMetre,
+      // The telemetry leash (manual coverage review, item 1): a remote
+      // drone's picture fades past FADE and the link dies at LOSS.
+      telemetryFade: base.telemetryFadeMetres * unitsPerMetre,
+      telemetryLoss: base.telemetryLossMetres * unitsPerMetre,
       victoryIslandPermil: base.victoryIslandPermil,
       pointCap: base.pointCap,
       timeCapTicks: base.timeCapTicks,

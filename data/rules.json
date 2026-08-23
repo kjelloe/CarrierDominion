@@ -27,5 +27,7 @@
   "turretHull": 260,
   "virusRangeMetres": 60,
   "virusBuildTicks": 2400,
-  "actionStart": 0
+  "actionStart": 0,
+  "telemetryFadeMetres": 20000,
+  "telemetryLossMetres": 26000
 }

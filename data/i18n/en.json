@@ -307,5 +307,7 @@
   "hud.on": "on",
   "hud.off": "off",
   "help.extras": "5-8 select a hull directly - O rear view - I signals log - ESC ESC surrender",
-  "unit.lighter": "Lighter"
+  "unit.lighter": "Lighter",
+  "status.telemetryWeak": "telemetry fading - the carrier is losing your picture, turn back",
+  "log.telemetryLost": "{kind} lost - out of telemetry range"
 }

@@ -62,6 +62,7 @@ import { checkVictory } from './victory.js';
 import { stepEconomy, teamById } from './economy.js';
 import { stepSupply } from './supply.js';
 import { stepRepair } from './repair.js';
+import { stepTelemetry } from './telemetry.js';
 import { stepScore } from './score.js';
 import { setRole, startBuild, stepBuild } from './island.js';
 import { setPriority } from './damage.js';
@@ -458,6 +459,9 @@ function advanceTick(next) {
   }
   stepCarriers(next);
   stepUnits(next);
+  // The leash bites where the tick's movement put everyone: a craft that
+  // crossed the loss line this tick is gone before it can shoot from there.
+  stepTelemetry(next);
   stepFlares(next);
   stepWeapons(next, next.params);
   // Memory follows the shooting: everything has moved and this tick's dead

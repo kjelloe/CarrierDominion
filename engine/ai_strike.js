@@ -17,6 +17,7 @@ import { fireUnit, roundsOf, selectWeapon } from './weapons.js';
 import {
   KIND_MANTA,
   ORDER_MOVE,
+  KIND_LIGHTER,
   UNIT_ACTIVE,
   UNIT_RETURNING,
   fuelPermil,
@@ -212,7 +213,37 @@ function patrolMark(state, team, carrier) {
 // One strike decision for one team. Returns the enemy carrier id under attack,
 // or -1 when there is nothing to attack - which the brain stores so the client
 // and the tests can see what it is doing.
+// The leash, obeyed (manual review, item 1): a drone past FADE is a drone
+// about to be lost, so the machine brings it home before the link does the
+// deciding. Runs first, every cadence, whatever else the brain wants.
+function leashUnits(state, brain) {
+  if (state.params.telemetryLoss <= 0) return;
+  let carrier = -1;
+  for (let i = 0; i < state.carriers.length; i++) {
+    if (state.carriers[i].team === brain.team) carrier = state.carriers[i];
+  }
+  if (carrier === -1 || carrier.hull <= 0) return;
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.team !== brain.team || unit.kind === KIND_LIGHTER) continue;
+    if (unit.state !== UNIT_ACTIVE) continue;
+    if (dist2D(unit.x, unit.y, carrier.x, carrier.y) > state.params.telemetryFade) {
+      orderReturn(unit);
+    }
+  }
+}
+
+// A mark the ship cannot cover is a mark that costs the scout: the machine
+// declines errands beyond the leash rather than paying for them.
+function withinLeash(state, carrier, x, y) {
+  if (state.params.telemetryLoss <= 0) return true;
+  if (carrier === -1) return false;
+  return dist2D(carrier.x, carrier.y, x, y)
+    <= mulDiv(state.params.telemetryFade, 900, 1000);
+}
+
 function manageStrike(state, brain) {
+  leashUnits(state, brain);
   const target = findStrikeTarget(state, brain.team);
   const flying = airborneMantas(state, brain.team);
 
@@ -226,7 +257,7 @@ function manageStrike(state, brain) {
     // worth one scout (owner ruling 2026-08-21: the chart remembers, and an
     // AI that reads the same chart should act on it).
     const ghost = carrierGhost(state, brain.team);
-    if (ghost !== -1) {
+    if (ghost !== -1 && withinLeash(state, carrier, ghost.x, ghost.y)) {
       huntGhost(state, brain, ghost, flying, carrier);
       return -1;
     }
@@ -240,7 +271,7 @@ function manageStrike(state, brain) {
       && carrier.fuelCapacity > 0
       && mulDiv(carrier.fuel, 1000, carrier.fuelCapacity) > PATROL_SHIP_FUEL_PERMIL) {
       const mark = patrolMark(state, brain.team, carrier);
-      if (mark !== -1) {
+      if (mark !== -1 && withinLeash(state, carrier, mark.x, mark.y)) {
         huntGhost(state, brain, mark, flying, carrier);
         return -1;
       }

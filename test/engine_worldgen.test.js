@@ -19,12 +19,14 @@ const rules = loadRules();
 // islandCountMax 32 -> 64 in data/world.json - a documentation knob nothing
 // reads, moving only the rules hash. Re-pinned 2026-08-24 for the hangar
 // repair fields (unitRepairHp/unitRepairMaterials joining state.economy) -
-// zero event drift, bookkeeping only. The MAP itself has not changed since
+// zero event drift, bookkeeping only - and again the same day for the
+// telemetry leash rules (telemetryFade/LossMetres), also drift-free. The
+// MAP itself has not changed since
 // the first pin: islands, nodes and start positions are byte-identical
 // throughout (the ring-walk fix in the same slice touches only tables of
 // more than four teams, which no pin covers).
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = '84a164b338b7db4f';
+const GOLDEN_WORLD_HASH = '86fc4d7ade01293e';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

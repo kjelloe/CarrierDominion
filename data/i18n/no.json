@@ -307,5 +307,7 @@
   "hud.on": "på",
   "hud.off": "av",
   "help.extras": "5-8 velger fartøy direkte - O aktervisning - I signallogg - ESC ESC overgivelse",
-  "unit.lighter": "Lekter"
+  "unit.lighter": "Lekter",
+  "status.telemetryWeak": "telemetrien svekkes - skipet mister bildet ditt, snu",
+  "log.telemetryLost": "{kind} tapt - utenfor telemetrirekkevidde"
 }
