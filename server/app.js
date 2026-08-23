@@ -108,10 +108,18 @@ function createApp(options) {
         speed: isSpeed(options.speed) ? options.speed : 1,
       })
       : 0,
+    // Observers on or off (ruling 2026-08-23): a room decides at its own
+    // table; a lobbyless server takes the boot option, on by default.
+    observersDefault: options.observers === 0 ? 0 : 1,
   };
 
   function inLobby() {
     return app.lobby !== 0 && app.lobby.status === 'lobby';
+  }
+
+  function observersAllowed() {
+    if (app.lobby !== 0) return app.lobby.options.observers === 1;
+    return app.observersDefault === 1;
   }
 
   // Write the war to disk: seed + command log + the options it sailed under.
@@ -273,8 +281,15 @@ function createApp(options) {
     // Somebody coming back gets their own seat, with their own name on it, and
     // takes the war back off the machine if it had been handed over.
     const returning = reclaim(app.holder, tokenFrom(req));
+    const claimed = returning === -1 ? claimTeam() : returning.team;
+    // No seat and no observers allowed: the door is closed, and it says so.
+    if (returning === -1 && claimed === -1 && !observersAllowed()) {
+      send(socket, { type: 'rejected', reason: 'the table does not take observers' });
+      socket.close();
+      return;
+    }
     const seat = returning === -1
-      ? { socket: socket, team: claimTeam(), vote: NO_VOTE, token: app.holder.tokenFn() }
+      ? { socket: socket, team: claimed, vote: NO_VOTE, token: app.holder.tokenFn() }
       : {
         socket: socket,
         team: returning.team,

@@ -427,4 +427,103 @@ function buildView(state, team) {
   };
 }
 
-export { buildView };
+// The referee's view (ruling 2026-08-23): observers, when the table allows
+// them at all, see the WHOLE war - every hull with its owner's own detail,
+// every stockpile, the live scoreboard. It is not a team view with the fog
+// off; it is its own thing, team -1, built here so the server cannot
+// half-build it. The table's consent is the fog: the observers switch in the
+// war room is what stands between a join code and a free intelligence feed.
+function refereeIslandView(island) {
+  return {
+    id: island.id,
+    kind: island.kind,
+    owner: island.owner,
+    x: island.x,
+    y: island.y,
+    radius: island.radius,
+    peak: island.peak,
+    seed: island.seed,
+    noiseCell: island.noiseCell,
+    noiseOctaves: island.noiseOctaves,
+    noisePermil: island.noisePermil,
+    warpCell: island.warpCell,
+    warpPermil: island.warpPermil,
+    nodeX: island.nodeX,
+    nodeY: island.nodeY,
+    podTeam: island.podTeam,
+    podTicks: island.podTicks,
+    virusTeam: island.virusTeam,
+    virusTicks: island.virusTicks,
+    role: island.role,
+    factories: island.factories,
+    warehouses: island.warehouses,
+    turrets: island.turrets,
+    building: island.building,
+    buildTicks: island.buildTicks,
+    stockFuel: island.stockFuel,
+    stockMaterials: island.stockMaterials,
+    stockOrdnance: island.stockOrdnance,
+    stockChassis: island.stockChassis,
+  };
+}
+
+function refereeView(state) {
+  const carriers = [];
+  for (let i = 0; i < state.carriers.length; i++) {
+    carriers.push(ownCarrierView(state.carriers[i]));
+  }
+  const units = [];
+  for (let i = 0; i < state.units.length; i++) {
+    if (state.units[i].state === 1 || state.units[i].state === 2) {
+      units.push(ownUnitView(state.units[i]));
+    }
+  }
+  const shots = [];
+  for (let i = 0; i < state.shots.length; i++) shots.push(shotView(state, state.shots[i], -1));
+  const turrets = [];
+  for (let i = 0; i < state.turrets.length; i++) {
+    turrets.push(turretView(state.turrets[i], state.turrets[i].team));
+  }
+  const islands = [];
+  for (let i = 0; i < state.islands.length; i++) {
+    islands.push(refereeIslandView(state.islands[i]));
+  }
+  const scores = [];
+  for (let i = 0; i < state.teams.length; i++) {
+    scores.push({ id: state.teams[i].id, score: state.teams[i].score });
+  }
+  const events = [];
+  for (let i = 0; i < state.events.length; i++) {
+    const event = state.events[i];
+    events.push({ code: event.code, a: event.a, b: event.b, c: event.c });
+  }
+  return {
+    tick: state.tick,
+    team: -1,
+    phase: state.phase,
+    winner: state.winner,
+    winReason: state.winReason,
+    seed: state.seed,
+    params: {
+      unitsPerMetre: state.params.unitsPerMetre,
+      sizeUnits: state.params.sizeUnits,
+      tickHz: state.params.tickHz,
+      pointCap: state.params.pointCap,
+      timeCapTicks: state.params.timeCapTicks,
+    },
+    resources: {
+      id: -1, fuel: 0, materials: 0, ordnance: 0, chassis: 0,
+      stockpileIsland: -1, score: 0, biasFuel: 1, biasOrdnance: 1, biasChassis: 1,
+    },
+    carriers: carriers,
+    units: units,
+    shots: shots,
+    turrets: turrets,
+    contacts: [],
+    islands: islands,
+    scores: scores,
+    events: events,
+  };
+}
+
+export { buildView, refereeView };

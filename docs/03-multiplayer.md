@@ -114,17 +114,17 @@ cast by somebody who has since left is not consent.
 The speed ladder is `shared/speeds.js` — the same rungs everywhere so a client
 cannot propose a rate the server has no name for.
 
-## Spectators
+## Observers
 
-One human per team; anyone after that gets **the chart view** — the fog filter
-run for a seat that owns nothing. Islands, ownership, works and capture
-progress (all chart-level common knowledge), the war's phase and its ending;
-no hulls, no shots, and nobody's stores. Handing spectators team 0's view, as
-an earlier build did, was a free intelligence channel for one side. A richer
-observer mode (following a hull, the referee's full picture) is future work,
-but whatever it shows will be built on this view, not on a team's. With no
-ship to chase, the spectator's camera defaults to the strategic pull-back over
-the middle of the map.
+One human per team; whether anyone else may watch is **the table's choice**
+(ruling 2026-08-23): an *observers* switch in the war room, on by default,
+`observers: 0` on a lobbyless server. Door closed, a seatless connection is
+turned away with a reason. Door open, observers get **the referee's view** —
+every hull with its owner's own detail, every stockpile, the live scoreboard.
+That is a free intelligence channel for *everyone at once*, which is exactly
+why it needs the table's consent: an earlier build handed spectators team 0's
+view, which was a free channel for one side and consented to by nobody. With
+no ship to chase, the observer's camera defaults to the strategic pull-back.
 
 ## Saving and resuming
 

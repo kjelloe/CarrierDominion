@@ -9,7 +9,7 @@
 // nulls, no non-ASCII).
 
 import { hashState as canonicalHash } from '../shared/statehash.js';
-import { buildView } from '../shared/view.js';
+import { buildView, refereeView } from '../shared/view.js';
 
 function hashState(state) {
   return canonicalHash(state);
@@ -35,11 +35,12 @@ function createSnapshot(state) {
     stateHash: hashState(state),
     // State is never exposed here: only fog-filtered views are transport payloads.
     views: views,
-    // The chart view for anyone without a seat: islands, ownership, works and
-    // capture progress - the common knowledge - and no hulls, shots or stores
-    // of anybody's. A spectator handed team 0's view was a free intelligence
-    // channel for one side.
-    spectator: buildView(state, -1),
+    // The referee's view for anyone without a seat, WHEN the table allows
+    // observers at all (the server enforces the switch; ruling 2026-08-23).
+    // Handing spectators team 0's view was a free intelligence channel for
+    // one side; the referee view is a free channel for EVERYONE, which is
+    // what makes it something the table must consent to.
+    spectator: refereeView(state),
   };
 }
 

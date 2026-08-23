@@ -474,3 +474,47 @@ test('the table gets its room back when the war ends, and fights again', async (
     await app.close();
   }
 });
+
+test('the observers switch: door closed means the third connection is turned away', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, observers: 0 });
+  const address = await app.listen(0, '127.0.0.1');
+  const first = connect(`ws://127.0.0.1:${address.port}`);
+  const second = connect(`ws://127.0.0.1:${address.port}`);
+  try {
+    await first.open();
+    await second.open();
+    await first.next((m) => m.type === 'welcome');
+    await second.next((m) => m.type === 'welcome');
+
+    const third = connect(`ws://127.0.0.1:${address.port}`);
+    await third.open();
+    const refused = await third.next((m) => m.type === 'rejected');
+    assert.match(refused.reason, /observers/);
+    await new Promise((resolve) => third.socket.once('close', resolve));
+  } finally {
+    first.close();
+    second.close();
+    await app.close();
+  }
+});
+
+test('with observers welcome, the third connection gets the referee view', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const first = connect(wsUrl);
+    const second = connect(wsUrl);
+    await first.open();
+    await second.open();
+    await first.next((m) => m.type === 'welcome');
+    await second.next((m) => m.type === 'welcome');
+    const third = connect(wsUrl);
+    await third.open();
+    const welcome = await third.next((m) => m.type === 'welcome');
+    assert.equal(welcome.spectator, true);
+    const snapshot = await third.next((m) => m.type === 'snapshot');
+    assert.equal(snapshot.view.team, -1);
+    assert.equal(snapshot.view.carriers.length, 2, 'the referee should see both hulls');
+    first.close();
+    second.close();
+    third.close();
+  });
+});

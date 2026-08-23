@@ -253,5 +253,8 @@
   "start.game": "the war",
   "start.gameStrategy": "strategy - from zero",
   "start.gameAction": "ACTION - minutes from contact",
-  "start.teams": "carriers at war"
+  "start.teams": "carriers at war",
+  "start.observers": "observers",
+  "start.observersOn": "welcome - referee view",
+  "start.observersOff": "door closed"
 }

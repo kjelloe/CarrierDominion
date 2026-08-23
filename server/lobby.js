@@ -30,6 +30,8 @@ const OPTION_VALUES = {
   speed: [1, 2, 4, 8, 16],
   // 0 the Strategy Game (from zero), 1 the Action Game (minutes from contact).
   game: [0, 1],
+  // Observers welcome (1, the referee view) or the door closed (0).
+  observers: [1, 0],
 };
 
 function fnv32(text) {
@@ -71,6 +73,7 @@ function createLobby(bootId, defaults) {
       ending: 0,
       speed: defaults.speed,
       game: 0,
+      observers: 1,
     },
   };
 }
@@ -188,6 +191,7 @@ function lobbyView(lobby, seats) {
       ending: lobby.options.ending,
       speed: lobby.options.speed,
       game: lobby.options.game,
+      observers: lobby.options.observers,
     },
     seats: roster,
     ready: allReady(seats) ? 1 : 0,

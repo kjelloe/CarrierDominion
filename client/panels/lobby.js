@@ -31,6 +31,12 @@ const OPTION_ROWS = [
     text: ['start.gameStrategy', 'start.gameAction'],
   },
   { key: 'speed', label: 'start.speed', values: [1, 2, 4, 8, 16] },
+  {
+    key: 'observers',
+    label: 'start.observers',
+    values: [1, 0],
+    text: ['start.observersOn', 'start.observersOff'],
+  },
 ];
 
 function createLobbyPanel(ctx) {

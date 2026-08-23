@@ -253,5 +253,8 @@
   "start.game": "krigen",
   "start.gameStrategy": "strategi - fra null",
   "start.gameAction": "AKSJON - minutter fra kontakt",
-  "start.teams": "hangarskip i krig"
+  "start.teams": "hangarskip i krig",
+  "start.observers": "observatører",
+  "start.observersOn": "velkomne - dommerblikk",
+  "start.observersOff": "stengt dør"
 }
