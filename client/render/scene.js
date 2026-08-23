@@ -6,14 +6,17 @@
 // that view.
 
 import * as THREE from 'three';
+import { Sky } from '../vendor/Sky.js';
 import { forwardFromHeading, headingToYaw, toMetres } from './coords.js';
 import {
   NEUTRAL_NODE_COLOUR,
+  SUN_DIRECTION,
   buildCarrier,
   buildCommandNode,
   buildIslandMesh,
   buildLighter,
   buildManta,
+  buildMirrorOcean,
   buildOcean,
   buildOceanGrid,
   buildShot,
@@ -36,12 +39,63 @@ const CHASE_BACK_METRES = 780;
 const CHASE_UP_METRES = 400;
 const STRATEGIC_UP_METRES = 7000;
 
-function createRenderer(canvas, preset) {
+// The phase-2 pair of gates (docs/07 §3): the tier pays for the physical sky
+// and the mirror water, the style asks for them. Retro never asks; nothing
+// below High ever pays.
+function wantsPhysicalSky(preset, style) {
+  return preset.physicalEffects === true && style.physicalSky === true;
+}
+
+function wantsMirrorWater(preset, style) {
+  return preset.physicalEffects === true && style.mirrorWater === true;
+}
+
+// ACES exposure for the Preetham sky's OUTPUT, and the counterintuitive
+// lesson that cost the reference scene its debugging day: exposure must
+// DECREASE as the sun rises, or the day sky washes out to white - ~0.5 at
+// the horizon, ~0.3 at high sun, with rayleigh left alone at 2.0. Our sun is
+// fixed at ~49° elevation, so the curve collapses to one number near its
+// high end. If the sun ever moves, the curve comes back with it.
+const ACES_EXPOSURE_FIXED_SUN = 0.32;
+
+function createRenderer(canvas, preset, style) {
   const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: preset.antialias });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.pixelRatioCap));
   renderer.shadowMap.enabled = preset.shadows;
   if (preset.shadows) renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  if (wantsPhysicalSky(preset, style)) {
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = ACES_EXPOSURE_FIXED_SUN;
+  }
   return renderer;
+}
+
+// The Preetham skydome, and the sky AS the light: the dome is rendered once
+// through PMREM into scene.environment, so every material sees the same
+// atmosphere it stands under. With a fixed sun that render happens exactly
+// once per scene build (docs/07 lesson 4 says "at most once per frame behind
+// a dirty flag"; a sun that cannot move needs no flag at all).
+function addPhysicalSky(view3d) {
+  const sky = new Sky();
+  sky.scale.setScalar(450000);
+  const uniforms = sky.material.uniforms;
+  uniforms.turbidity.value = 2;
+  // Exposure is the blueness lever, not rayleigh - raising rayleigh makes
+  // the sky BRIGHTER, not bluer (docs/07 lesson 3).
+  uniforms.rayleigh.value = 2.0;
+  uniforms.mieCoefficient.value = 0.005;
+  uniforms.mieDirectionalG.value = 0.8;
+  uniforms.sunPosition.value.copy(SUN_DIRECTION);
+
+  const pmrem = new THREE.PMREMGenerator(view3d.renderer);
+  const skyScene = new THREE.Scene();
+  skyScene.add(sky);
+  if (view3d.envTarget !== null) view3d.envTarget.dispose();
+  view3d.envTarget = pmrem.fromScene(skyScene);
+  pmrem.dispose();
+  view3d.scene.environment = view3d.envTarget.texture;
+  // add() reparents the dome out of the throwaway PMREM scene.
+  view3d.scene.add(sky);
 }
 
 function createLights(scene, preset, sizeMetres, style) {
@@ -92,14 +146,17 @@ function createScene(canvas, preset, sizeMetres, style) {
     preset.drawDistanceMetres,
   );
 
-  const renderer = createRenderer(canvas, preset);
+  const renderer = createRenderer(canvas, preset, style);
   createLights(scene, preset, sizeMetres, style);
 
-  const ocean = buildOcean(sizeMetres, preset, style);
+  // The fog exists by here, which buildMirrorOcean depends on (lesson 2).
+  const ocean = wantsMirrorWater(preset, style)
+    ? buildMirrorOcean(sizeMetres, style, scene.fog)
+    : buildOcean(sizeMetres, preset, style);
   scene.add(ocean);
   if (style.oceanGrid) scene.add(buildOceanGrid(sizeMetres));
 
-  return {
+  const view3d = {
     scene: scene,
     camera: camera,
     renderer: renderer,
@@ -116,9 +173,12 @@ function createScene(canvas, preset, sizeMetres, style) {
     gunsight: false,
     followUnitId: -1,
     elapsed: 0,
+    envTarget: null,
     raycaster: new THREE.Raycaster(),
     seaPlane: new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
   };
+  if (wantsPhysicalSky(preset, style)) addPhysicalSky(view3d);
+  return view3d;
 }
 
 function syncIslands(view3d, view) {
@@ -362,8 +422,11 @@ function renderView(view3d, view, deltaSeconds, podBuildTicks) {
   syncTurrets(view3d, view);
   syncShots(view3d, view);
   placeCamera(view3d, chaseSubject(view3d, view));
-  if (view3d.ocean.material.uniforms !== undefined) {
-    view3d.ocean.material.uniforms.uTime.value = view3d.elapsed;
+  const uniforms = view3d.ocean.material.uniforms;
+  if (uniforms !== undefined) {
+    // Our own water calls it uTime; the vendored mirror water calls it time.
+    if (uniforms.uTime !== undefined) uniforms.uTime.value = view3d.elapsed;
+    if (uniforms.time !== undefined) uniforms.time.value = view3d.elapsed;
   }
   view3d.renderer.render(view3d.scene, view3d.camera);
 }
@@ -380,11 +443,14 @@ function resetWorld(view3d, sizeMetres) {
   const fogDensity = view3d.preset.fogDensity * view3d.style.fogDensityScale;
   if (fogDensity > 0) scene.fog = new THREE.FogExp2(view3d.style.sky, fogDensity);
   createLights(scene, view3d.preset, sizeMetres, view3d.style);
-  const ocean = buildOcean(sizeMetres, view3d.preset, view3d.style);
+  const ocean = wantsMirrorWater(view3d.preset, view3d.style)
+    ? buildMirrorOcean(sizeMetres, view3d.style, scene.fog)
+    : buildOcean(sizeMetres, view3d.preset, view3d.style);
   scene.add(ocean);
   if (view3d.style.oceanGrid) scene.add(buildOceanGrid(sizeMetres));
   view3d.scene = scene;
   view3d.ocean = ocean;
+  if (wantsPhysicalSky(view3d.preset, view3d.style)) addPhysicalSky(view3d);
   view3d.islands = {};
   view3d.nodes = {};
   view3d.carriers = {};

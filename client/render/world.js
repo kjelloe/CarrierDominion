@@ -5,10 +5,20 @@
 // prettier heightmap: if the mesh shows a beach, the collision agrees.
 
 import * as THREE from 'three';
+import { Water } from '../vendor/Water.js';
 import { islandHeightAt } from '../../engine/heightmap.js';
+import { createWaterNormals } from './waternormals.js';
 import { toMetres } from './coords.js';
 
 const SEA_FLOOR_METRES = -60;
+
+// The scene's one sun, as a direction TO it. It matches createLights in
+// scene.js: the light stands at (0.9, 0.6, -0.15) of the map with its target
+// at the centre (0.5, 0, -0.5), so the direction is (0.4, 0.6, 0.35). The
+// ocean glint, the mirror water and the Preetham sky all take it from here -
+// three suns that drifted apart would be the kind of wrongness the eye
+// notices without being able to name.
+const SUN_DIRECTION = new THREE.Vector3(0.4, 0.6, 0.35).normalize();
 
 // Quantising the height before colouring it is what gives the retro styles
 // their banded, map-like land: the same terrain, painted in four steps instead
@@ -179,16 +189,13 @@ function buildOcean(sizeMetres, preset, style) {
   const geometry = new THREE.PlaneGeometry(sizeMetres * 1.5, sizeMetres * 1.5, segments, segments);
   let material;
   if (preset.oceanShader && style.oceanShader) {
-    // The sun direction matches createLights: the light stands at
-    // (0.9, 0.6, -0.15) of the map with its target at the centre
-    // (0.5, 0, -0.5), so the direction TO the sun is (0.4, 0.6, 0.35).
     material = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
         uShallow: { value: new THREE.Color(0.20, 0.45, 0.55) },
         uDeep: { value: new THREE.Color(style.oceanColour) },
         uSky: { value: new THREE.Color(style.sky) },
-        uSunDir: { value: new THREE.Vector3(0.4, 0.6, 0.35).normalize() },
+        uSunDir: { value: SUN_DIRECTION.clone() },
       },
       vertexShader: OCEAN_VERTEX,
       fragmentShader: preset.oceanDetail ? OCEAN_FRAGMENT_DETAIL : OCEAN_FRAGMENT,
@@ -201,6 +208,33 @@ function buildOcean(sizeMetres, preset, style) {
   mesh.position.set(sizeMetres / 2, 0, -sizeMetres / 2);
   mesh.name = 'ocean';
   return mesh;
+}
+
+// The phase-2 sea (docs/07 §3): three.js's r162 mirror Water, vendored. Its
+// onBeforeRender renders the WHOLE scene again from a reflected camera into
+// a 512² target - real reflections, at the price of a second scene pass,
+// which is why only the High preset ever asks for it. The reflection camera
+// inherits the main camera's far plane (Water.js copies it), so the mirror
+// obeys the same draw-distance discipline as the eye.
+function buildMirrorOcean(sizeMetres, style, fog) {
+  const geometry = new THREE.PlaneGeometry(sizeMetres * 1.5, sizeMetres * 1.5);
+  const water = new Water(geometry, {
+    textureWidth: 512,
+    textureHeight: 512,
+    waterNormals: createWaterNormals(),
+    sunDirection: SUN_DIRECTION.clone(),
+    sunColor: 0xffffff,
+    waterColor: style.oceanColour,
+    distortionScale: 3.7,
+    // Captured at CONSTRUCTION (docs/07 lesson 2): this must state whether
+    // the scene has fog, and the scene must already have it. The callers
+    // build the fog first and hand it in, so the two cannot disagree.
+    fog: fog !== null && fog !== undefined,
+  });
+  water.rotation.x = -Math.PI / 2;
+  water.position.set(sizeMetres / 2, 0, -sizeMetres / 2);
+  water.name = 'ocean';
+  return water;
 }
 
 // The 1988 sea was a grid running to a hard horizon. It is also the cheapest
@@ -609,8 +643,10 @@ function updateCommandNode(group, ownerColour, podColour, progress) {
 }
 
 export {
+  SUN_DIRECTION,
   buildIslandMesh,
   buildOcean,
+  buildMirrorOcean,
   buildOceanGrid,
   buildCarrier,
   buildManta,

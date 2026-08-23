@@ -41,13 +41,60 @@ async function shoot(name, query) {
   );
   await page.keyboard.press(' '); // freeze, so the four shots compare
   await page.waitForTimeout(900);
-  const facts = await page.evaluate(() => ({
-    graphics: document.getElementById('hud-graphics')?.textContent,
-    oceanShader: window.__scene3d.ocean.material.type,
-  }));
+  const facts = await page.evaluate(() => {
+    const v = window.__scene3d;
+    const gl = v.renderer.getContext();
+    const width = gl.drawingBufferWidth;
+    const height = gl.drawingBufferHeight;
+    const pixels = new Uint8Array(width * height * 4);
+    // Render, then read back in the SAME task: without preserveDrawingBuffer
+    // the buffer is only valid until the browser composites it.
+    const grab = () => {
+      v.renderer.render(v.scene, v.camera);
+      gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    };
+    // readPixels rows run bottom-up: the near water is the bottom quarter of
+    // the screen, which is the FIRST quarter of the buffer.
+    const meanOver = (fromRow, toRow, f) => {
+      let sum = 0;
+      let count = 0;
+      for (let y = fromRow; y < toRow; y++) {
+        for (let x = 0; x < width; x += 4) {
+          sum += f((y * width + x) * 4);
+          count++;
+        }
+      }
+      return sum / Math.max(1, count);
+    };
+    grab();
+    const luma = (i) => 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+    const waterMean = meanOver(0, Math.floor(height * 0.25), luma);
+    const waterVariance = meanOver(0, Math.floor(height * 0.25),
+      (i) => (luma(i) - waterMean) * (luma(i) - waterMean));
+    // The chase camera never sees the zenith - its frame top is the horizon
+    // band, which a Preetham sky keeps hazy-white by design. To measure the
+    // blueness the spec means, look straight up, grab, and let the game's
+    // own render loop restore the view before the screenshot.
+    const keepPosition = v.camera.position.clone();
+    const keepQuaternion = v.camera.quaternion.clone();
+    v.camera.lookAt(keepPosition.x, keepPosition.y + 1000, keepPosition.z + 0.001);
+    grab();
+    const zenithBlueness = meanOver(Math.floor(height * 0.4), Math.floor(height * 0.6),
+      (i) => pixels[i + 2] - pixels[i]);
+    v.camera.position.copy(keepPosition);
+    v.camera.quaternion.copy(keepQuaternion);
+    return {
+      graphics: document.getElementById('hud-graphics')?.textContent,
+      oceanShader: window.__scene3d.ocean.material.type,
+      oceanName: window.__scene3d.ocean.material.name,
+      zenithBlueness: Math.round(zenithBlueness),
+      waterVariance: Math.round(waterVariance),
+    };
+  });
   await page.screenshot({ path: join(SHOTS, `graphics-${name}.png`) });
   await page.close();
-  console.log(`${name}: ${facts.graphics} (${facts.oceanShader})`);
+  console.log(`${name}: ${facts.graphics} (${facts.oceanShader}/${facts.oceanName})`
+    + ` zenith B-R ${facts.zenithBlueness}, water variance ${facts.waterVariance}`);
   return facts;
 }
 
@@ -67,6 +114,26 @@ const ok = shots[0].oceanShader === 'MeshBasicMaterial'
   && shots[3].oceanShader === 'MeshBasicMaterial';
 if (!ok) {
   console.log('FAIL: a tier changed the art, or a style changed the cost class');
+  process.exitCode = 1;
+}
+
+// Phase 2's machine-checkable clauses (docs/07 §3, the reference scene's own
+// verification, stolen as specced). Modern at High runs the Preetham sky and
+// the mirror water: the zenith must be measurably BLUE (a washed-out white
+// sky means the ACES exposure or rayleigh went wrong), the sea must be a
+// MirrorShader, and the near water must have texture - a flat sea means a
+// broken pipeline (no normals, no reflection, or a dead time uniform).
+// Retro's checks are the same contract mirrored: no MirrorShader anywhere
+// near 1988, and its zenith stays night-black however high the tier.
+const modernHigh = shots[2];
+const retroHigh = shots[3];
+const phase2Ok = modernHigh.oceanName === 'MirrorShader'
+  && modernHigh.zenithBlueness >= 20
+  && modernHigh.waterVariance >= 2
+  && retroHigh.oceanName !== 'MirrorShader'
+  && retroHigh.zenithBlueness < 20;
+if (!phase2Ok) {
+  console.log('FAIL: the phase-2 sky or water is not doing what the spec says');
   process.exitCode = 1;
 }
 

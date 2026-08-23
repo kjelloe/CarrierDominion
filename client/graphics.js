@@ -13,12 +13,19 @@
 // `oceanDetail` is the High-only water fragment path: an analytic-normal
 // ripple field, fresnel toward the style's sky, and a sun glint. The vertex
 // swell is identical to Medium on purpose, so Medium's pixels do not drift.
+//
+// `physicalEffects` is the phase-2 gate (docs/07 §3): the Preetham sky and
+// the mirror water. The mirror renders the whole scene a second time per
+// frame, which is exactly why the flag sits on the TIER - a style asks for
+// the look (style.physicalSky / style.mirrorWater), the tier decides whether
+// the hardware can pay for it, and only High says yes.
 const PRESETS = {
   low: {
     label: 'Low',
     terrainGrid: 40,
     oceanShader: false,
     oceanDetail: false,
+    physicalEffects: false,
     oceanSegments: 1,
     shadows: false,
     shadowMapSize: 0,
@@ -32,6 +39,7 @@ const PRESETS = {
     terrainGrid: 72,
     oceanShader: true,
     oceanDetail: false,
+    physicalEffects: false,
     oceanSegments: 64,
     shadows: true,
     shadowMapSize: 1024,
@@ -45,6 +53,7 @@ const PRESETS = {
     terrainGrid: 144,
     oceanShader: true,
     oceanDetail: true,
+    physicalEffects: true,
     oceanSegments: 256,
     shadows: true,
     shadowMapSize: 4096,

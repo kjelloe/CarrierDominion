@@ -25,6 +25,10 @@ const STYLES = {
     oceanShader: false,
     oceanColour: 0x0a2a4a,
     oceanGrid: true,
+    // Retro is exempt from the physical sky and mirror water by ruling: a
+    // Preetham atmosphere over a 1988 grid sea would be neither look.
+    physicalSky: false,
+    mirrorWater: false,
     flatShading: true,
     paletteSteps: 4,
     sunIntensity: 0.55,
@@ -61,6 +65,11 @@ const STYLES = {
     oceanShader: true,
     oceanColour: 0x123048,
     oceanGrid: false,
+    // The full High-tier treatment (docs/07 phase 2): a Preetham sky driving
+    // the light, and the r162 mirror water under it. High tier only - the
+    // preset's physicalEffects flag gates the cost, this flag gates the art.
+    physicalSky: true,
+    mirrorWater: true,
     flatShading: false,
     paletteSteps: 0,
     sunIntensity: 1.35,
@@ -97,6 +106,10 @@ const STYLES = {
     oceanShader: true,
     oceanColour: 0x0e2c44,
     oceanGrid: false,
+    // The remaster is "modern sky and sea, faceted land" by its own charter,
+    // so it takes the phase-2 water and sky along with modern.
+    physicalSky: true,
+    mirrorWater: true,
     flatShading: true,
     paletteSteps: 6,
     sunIntensity: 1.15,

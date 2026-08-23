@@ -60,7 +60,7 @@ test('every preset is complete and ordered by cost', () => {
   for (const name of presetNames()) {
     const preset = presetFor(name);
     for (const key of [
-      'label', 'terrainGrid', 'oceanSegments', 'oceanDetail', 'shadows',
+      'label', 'terrainGrid', 'oceanSegments', 'oceanDetail', 'physicalEffects', 'shadows',
       'shadowMapSize', 'pixelRatioCap', 'antialias', 'fogDensity', 'drawDistanceMetres',
     ]) {
       assert.notEqual(preset[key], undefined, `${name} preset is missing ${key}`);
@@ -73,6 +73,11 @@ test('every preset is complete and ordered by cost', () => {
   assert.equal(presetFor('low').oceanDetail, false);
   assert.equal(presetFor('medium').oceanDetail, false);
   assert.equal(presetFor('high').oceanDetail, true);
+  // Phase 2 (the Preetham sky and the mirror water) is High-only: the mirror
+  // renders the whole scene twice per frame, a cost only High can carry.
+  assert.equal(presetFor('low').physicalEffects, false);
+  assert.equal(presetFor('medium').physicalEffects, false);
+  assert.equal(presetFor('high').physicalEffects, true);
 });
 
 test('engine units and scene metres convert both ways', () => {

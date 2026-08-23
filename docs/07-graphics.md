@@ -49,13 +49,26 @@ down the scene's fixed sun direction. Medium's pixels must not change; that
 is checked by eye against `debugging/shots/graphics-*.png` (the
 `graphics_shots` probe).
 
-## 3. Phase 2 — the full High water and sky (specced, not yet built)
+## 3. Phase 2 — the full High water and sky (landed 2026-08-23)
 
-Target: the look of the reference scene in
+Built to the look of the reference scene in
 `../llm-test-bench/examples/suntest/qwen38/` (SPEC.md there is the debugging
 diary; these are its lessons translated to OUR constraints).
 
-**Our constraints first, because they change the plan:**
+**As built:** `Sky.js` and `Water.js` (r162, verbatim + provenance header)
+live in `client/vendor/`; the water normals are generated
+(`client/render/waternormals.js` — 26 integer-frequency sines, max slope
+0.55, fixed seed); `style.physicalSky` / `style.mirrorWater` are set by
+modern AND hybrid (the remaster's charter is "modern sky and sea"), never
+retro; the tier gate is `preset.physicalEffects`, High only. The sky renders
+through PMREM into `scene.environment` exactly once per scene build (the sun
+is fixed), ACES runs at a fixed exposure 0.32 (the ~49° sun's point on the
+lesson-3 curve), and all three suns — ocean glint, mirror water, sky — share
+one exported `SUN_DIRECTION`. The `graphics_shots` probe asserts the pixel
+checks machine-checkably; one measurement lesson of our own joined the list
+below as #7.
+
+**Our constraints, which changed the plan:**
 
 - **No CDN at runtime.** Three.js is vendored (r162); the `Sky` and `Water`
   addons must be vendored beside it (`client/vendor/`), not import-mapped
@@ -97,13 +110,17 @@ debugging time):
    pixel-level assertions); their specific checks worth stealing: zenith
    blueness (mean B−R over a top patch) and water variance (a flat sea means
    a broken pipeline).
+7. *(Ours, found landing this.)* **The chase camera never sees the zenith.**
+   Its frame top is the horizon band, which a Preetham sky keeps hazy-white
+   by design — measured there, a perfectly blue sky reads B−R ≈ 5 and fails.
+   The probe points the camera straight up for the zenith grab, then lets
+   the game's render loop restore the view before the screenshot.
 
-**Phase 2 work list**, in order: vendor `Sky.js` + `Water.js` (r162) →
-procedural tileable normal map module → `style.physicalSky`/`mirrorWater`
-flags on modern → High+modern scene path (Sky + PMREM-once + ACES + mirror
-water) → probe with pixel checks (zenith B−R ≥ +20, water variance in range)
-→ battery of screenshots for the owner's eye. Models pass (higher-detail
-hulls at High) rides after, as its own slice.
+**Landed checks** (`debugging/probes/graphics_shots.mjs`): modern+High has a
+`MirrorShader` sea, zenith B−R ≥ +20 looking up, water variance ≥ 2; retro
+at High has NO MirrorShader and a night zenith (B−R < 20). Plus the phase-1
+clause: no tier may change a style's ocean material class. Models pass
+(higher-detail hulls at High) still rides after, as its own slice.
 
 ## 4. Low (deferred) — the real mobile pass
 
