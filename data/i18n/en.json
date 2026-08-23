@@ -201,5 +201,22 @@
   "act.fire": "FIRE",
   "act.weapon": "WEAPON",
   "act.pod": "POD",
-  "act.virus": "VIRUS"
+  "act.virus": "VIRUS",
+  "tip.stop": "All stop: throttle to zero on whatever you are steering.",
+  "tip.flares": "Fire decoy flares: breaks the lock of every heat-seeker near the ship. Costs ordnance; the launchers reload.",
+  "tip.supply": "Toggle the supply run: the lighter cycles between your stockpile island and the ship, hauling fuel, ordnance, materials and parts.",
+  "tip.depot": "Make the nearest island you own the stockpile: the cargo network ships everything there, and the lighter loads from it.",
+  "tip.damage": "The damage control board: click a section to set its repair priority. The yard repairs in that order, spending materials.",
+  "tip.camera": "Cycle the camera: chase, gunsight (first person from the mount), strategic map.",
+  "tip.sound": "Sound on or off.",
+  "tip.manta": "Launch a Manta from the hangar. It defends itself; give it a target by clicking an enemy.",
+  "tip.walrus": "Launch a Walrus. Send it ashore by clicking a point; it carries the pod and the virus bomb.",
+  "tip.next": "Select the next unit that is out.",
+  "tip.controls": "Take the controls of the selected unit (press again to hand back). Arrows climb and dive a Manta.",
+  "tip.recall": "Recall the selected unit to the carrier for fuel, rounds and payloads.",
+  "tip.fire": "Fire the selected weapon: down the nose when flying, at what is in range when not.",
+  "tip.pod": "Deploy the ACCB pod at a command node within 60 m: takes the island bare. Costs 80 materials to replace.",
+  "tip.virus": "Deploy the virus bomb at an enemy command node: takes the island INTACT, works and guns included. Costs 120 ordnance.",
+  "tip.help": "The key list.",
+  "tip.debug": "The diagnostic strip: tick, hash, fps, stores."
 }

@@ -98,6 +98,36 @@ const airborne = await page.evaluate(
 );
 check(airborne >= 1, 'the MANTA button launched nothing');
 
+// 3b. Round three: tooltips appear after a deliberate hover, and the weapon
+// selector is a radio row - click NAPALM, NAPALM lights, the others go dark.
+await page.hover('#actions-right .act >> nth=0');
+await page.waitForTimeout(900);
+check(await page.evaluate(
+  () => document.getElementById('tip').classList.contains('on'),
+), 'hovering a button raised no tooltip');
+await page.mouse.move(640, 300);
+await page.waitForTimeout(300);
+check(await page.evaluate(
+  () => !document.getElementById('tip').classList.contains('on'),
+), 'the tooltip outstayed the pointer');
+
+await page.keyboard.press('n'); // make sure the airborne Manta is selected
+await page.waitForTimeout(300);
+const weaponButtons = await page.evaluate(
+  () => [...document.querySelectorAll('#weapon-group .wep')].map((n) => n.textContent),
+);
+check(weaponButtons.length === 4,
+  `a Manta shows ${weaponButtons.length} weapon buttons, not 4`);
+await page.locator('#weapon-group .wep >> nth=2').dispatchEvent('pointerdown'); // napalm
+await page.waitForTimeout(500);
+const lit = await page.evaluate(
+  () => [...document.querySelectorAll('#weapon-group .wep')].map(
+    (n) => n.classList.contains('on'),
+  ),
+);
+check(JSON.stringify(lit) === JSON.stringify([false, false, true, false]),
+  `selecting napalm lit ${JSON.stringify(lit)}`);
+
 // 4. The models, photographed. The deck view first, then from the wing.
 await page.keyboard.press('2'); // a Walrus in the water beside the ship
 await page.waitForTimeout(1200);

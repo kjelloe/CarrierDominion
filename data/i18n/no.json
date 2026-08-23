@@ -201,5 +201,22 @@
   "act.fire": "SKYT",
   "act.weapon": "VÅPEN",
   "act.pod": "KAPSEL",
-  "act.virus": "VIRUS"
+  "act.virus": "VIRUS",
+  "tip.stop": "Full stopp: pådraget til null på det du styrer.",
+  "tip.flares": "Skyt fakler: bryter låsen til alle varmesøkere nær skipet. Koster ammunisjon; utskyterne lades om.",
+  "tip.supply": "Slå forsyningsturen av/på: lekteren går mellom depotøya og skipet med drivstoff, ammunisjon, materialer og deler.",
+  "tip.depot": "Gjør nærmeste øy du eier til depot: lastenettet sender alt dit, og lekteren laster derfra.",
+  "tip.damage": "Skadekontrollpanelet: klikk en seksjon for å sette reparasjonsprioritet. Verftet reparerer i den rekkefølgen og bruker materialer.",
+  "tip.camera": "Bytt kamera: jakt, sikte (førsteperson fra våpenet), strategisk kart.",
+  "tip.sound": "Lyd av eller på.",
+  "tip.manta": "Send opp en Manta fra hangaren. Den forsvarer seg selv; gi den et mål ved å klikke en fiende.",
+  "tip.walrus": "Sett ut en Walrus. Send den i land ved å klikke et punkt; den bærer kapselen og virusbomben.",
+  "tip.next": "Velg neste enhet som er ute.",
+  "tip.controls": "Ta kontrollen over valgt enhet (trykk igjen for å gi den tilbake). Piltaster stiger og dykker en Manta.",
+  "tip.recall": "Kall valgt enhet tilbake til skipet for drivstoff, ammunisjon og last.",
+  "tip.fire": "Skyt valgt våpen: rett fram når du flyr, mot det som er i rekkevidde ellers.",
+  "tip.pod": "Sett ut ACCB-kapselen ved en kommandonode innen 60 m: tar øya naken. Koster 80 materialer å erstatte.",
+  "tip.virus": "Sett ut virusbomben ved fiendens kommandonode: tar øya INTAKT, med verk og kanoner. Koster 120 ammunisjon.",
+  "tip.help": "Tastelisten.",
+  "tip.debug": "Diagnosestripen: tick, hash, fps, lagre."
 }

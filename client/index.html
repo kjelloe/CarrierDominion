@@ -69,6 +69,34 @@
     }
     .act .l { display: block; font-size: 9px; letter-spacing: 1px; }
     body.menu .actions, body.menu #debug-button { display: none; }
+    /* Hover tooltips for every button (playtest ruling 2026-08-23): what the
+       button DOES, after a deliberate pause - labels name, tooltips explain. */
+    #tip {
+      position: fixed; z-index: 20; max-width: 240px;
+      padding: 5px 9px; border: 1px solid var(--hud-dim); border-radius: 4px;
+      background: var(--hud-panel); color: var(--hud-ink);
+      font: 11px/1.4 var(--hud-font); pointer-events: none; user-select: none;
+      opacity: 0; transition: opacity 0.15s;
+    }
+    #tip.on { opacity: 1; }
+    /* The weapon selector: one button per weapon the selected hull carries,
+       radio-style - the chosen one lit, the others dark. */
+    #weapon-group {
+      display: flex; flex-direction: column; gap: 3px;
+      border: 1px solid var(--hud-dim); border-radius: 4px; padding: 3px;
+      background: var(--hud-panel);
+    }
+    .wep {
+      padding: 3px 4px; text-align: center; cursor: pointer;
+      border: 1px solid transparent; border-radius: 3px;
+      color: var(--hud-dim); font: 10px/1.3 var(--hud-font); letter-spacing: 1px;
+    }
+    .wep:hover { color: var(--hud-ink); }
+    .wep.on {
+      color: var(--hud-panel); background: var(--hud-ink);
+      border-color: var(--hud-ink);
+    }
+    .wep .n { display: block; font-size: 9px; letter-spacing: 0; }
     /* The 1988 panel: bezelled instruments across the bottom. */
     #panel {
       position: fixed; left: 0; right: 0; bottom: 0; height: 196px;
@@ -217,6 +245,7 @@
   <div id="hud" class="hidden"></div>
   <div id="debug-button">DBG</div>
   <div id="toast"></div>
+  <div id="tip"></div>
   <div id="actions-left" class="actions"></div>
   <div id="actions-right" class="actions"></div>
   <!-- The legend is rendered from the language catalogue by main.js, and

@@ -54,6 +54,10 @@ left (STOP, FLARES, SUPPLY, DEPOT, DAMAGE, CAMERA, SOUND), air and ground ops
 on the right (MANTA, WALRUS, NEXT, PILOT, RECALL, FIRE, WEAPON, POD, VIRUS).
 Each button carries the key it mirrors and DISPATCHES that key, so the two
 input paths cannot drift — whatever `F` does, the button labelled F does.
+Every button grows a **tooltip** after a deliberate 600 ms hover: the label
+names it, the tooltip explains it. Between FIRE and POD sits the **weapon
+selector** — one button per weapon the selected hull carries, radio-style,
+with the live round count on each; `V` still cycles for the keyboard hand.
 
 The diagnostic strip hides behind a **DBG** button upper-left, like the key
 list behind `?` — the instruments are for playing, the strip is for

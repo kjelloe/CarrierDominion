@@ -472,18 +472,55 @@ function toggleDebug() {
   document.getElementById('debug-button').classList.toggle('open', !hidden);
 }
 
+// Hover tooltips (playtest ruling 2026-08-23): the label NAMES the button,
+// the tooltip EXPLAINS it, after a deliberate pause - an accidental sweep of
+// the pointer across a column should not raise a wall of prose.
+const TIP_DELAY_MS = 600;
+
+function attachTip(element, text) {
+  let timer;
+  const tip = () => document.getElementById('tip');
+  element.addEventListener('pointerenter', () => {
+    timer = setTimeout(() => {
+      const node = tip();
+      node.textContent = text;
+      node.classList.add('on');
+      const rect = element.getBoundingClientRect();
+      // Beside the button, flipped to whichever side has room.
+      const spaceRight = window.innerWidth - rect.right;
+      node.style.top = `${Math.round(rect.top)}px`;
+      if (spaceRight > 260) {
+        node.style.left = `${Math.round(rect.right + 8)}px`;
+        node.style.right = 'auto';
+      } else {
+        node.style.right = `${Math.round(window.innerWidth - rect.left + 8)}px`;
+        node.style.left = 'auto';
+      }
+    }, TIP_DELAY_MS);
+  });
+  const hide = () => {
+    clearTimeout(timer);
+    tip().classList.remove('on');
+  };
+  element.addEventListener('pointerleave', hide);
+  element.addEventListener('pointerdown', hide);
+}
+
 // The 1988 icon columns: ship and logistics on the left, air and ground ops
 // on the right, one button per key in the legend. A button DISPATCHES its
 // key, so the two input paths cannot drift - whatever H does, the button
 // labelled H does, forever.
 const ACTIONS_LEFT = [
-  ['x', 'act.stop'], ['e', 'act.flares'], ['l', 'act.supply'], ['k', 'act.depot'],
-  ['z', 'act.damage'], ['c', 'act.camera'], ['m', 'act.sound'],
+  ['x', 'act.stop', 'tip.stop'], ['e', 'act.flares', 'tip.flares'],
+  ['l', 'act.supply', 'tip.supply'], ['k', 'act.depot', 'tip.depot'],
+  ['z', 'act.damage', 'tip.damage'], ['c', 'act.camera', 'tip.camera'],
+  ['m', 'act.sound', 'tip.sound'],
 ];
 const ACTIONS_RIGHT = [
-  ['1', 'act.manta'], ['2', 'act.walrus'], ['n', 'act.next'], ['t', 'act.controls'],
-  ['r', 'act.recall'], ['f', 'act.fire'], ['v', 'act.weapon'], ['p', 'act.pod'],
-  ['b', 'act.virus'],
+  ['1', 'act.manta', 'tip.manta'], ['2', 'act.walrus', 'tip.walrus'],
+  ['n', 'act.next', 'tip.next'], ['t', 'act.controls', 'tip.controls'],
+  ['r', 'act.recall', 'tip.recall'], ['f', 'act.fire', 'tip.fire'],
+  ['p', 'act.pod', 'tip.pod'], ['b', 'act.virus', 'tip.virus'],
 ];
 
 function buildActionColumns(t) {
@@ -493,7 +530,7 @@ function buildActionColumns(t) {
   ];
   for (const [id, actions] of columns) {
     const root = document.getElementById(id);
-    for (const [key, label] of actions) {
+    for (const [key, label, tipKey] of actions) {
       const button = document.createElement('div');
       button.className = 'act';
       const keycap = document.createElement('span');
@@ -507,8 +544,63 @@ function buildActionColumns(t) {
         event.preventDefault();
         window.dispatchEvent(new KeyboardEvent('keydown', { key: key }));
       });
+      attachTip(button, t(tipKey));
       root.append(button);
+      // The weapon SELECTOR rides in the right column between FIRE and POD:
+      // one button per weapon the selected hull carries, radio-style
+      // (playtest ruling 2026-08-23 - a cycle key hides what a row of
+      // buttons shows). V still cycles for the keyboard hand.
+      if (key === 'f' && id === 'actions-right') {
+        const group = document.createElement('div');
+        group.id = 'weapon-group';
+        root.append(group);
+      }
     }
+  }
+  attachTip(document.getElementById('help-button'), t('tip.help'));
+  attachTip(document.getElementById('debug-button'), t('tip.debug'));
+}
+
+// Rebuilt only when the holder or its loadout changes; the selection state
+// and the round counts update in place every frame (the built-once rule).
+const weaponGroup = { signature: '', buttons: [] };
+
+function updateWeaponGroup() {
+  const root = document.getElementById('weapon-group');
+  if (root === null || state.view === undefined) return;
+  const holder = selectedUnit() ?? ownCarrierOf(state.view);
+  const arms = holder === undefined ? [] : holder.arms;
+  const isUnit = holder !== undefined && holder.kind !== undefined;
+  const signature = holder === undefined
+    ? ''
+    : `${isUnit ? holder.id : 'ship'}:${arms.map((a) => a.w).join(',')}`;
+
+  if (signature !== weaponGroup.signature) {
+    weaponGroup.signature = signature;
+    weaponGroup.buttons = [];
+    root.textContent = '';
+    for (const arm of arms) {
+      const button = document.createElement('div');
+      button.className = 'wep';
+      const name = document.createElement('span');
+      name.textContent = weaponName(state.t, { weapon: arm.w }).toUpperCase();
+      const count = document.createElement('span');
+      count.className = 'n';
+      button.append(name, count);
+      button.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        const chosen = selectedUnit();
+        if (chosen === undefined) return; // the carrier has one weapon
+        state.transport.send({ type: 'select_weapon', unitId: chosen.id, weapon: arm.w });
+      });
+      root.append(button);
+      weaponGroup.buttons.push({ w: arm.w, root: button, count: count });
+    }
+  }
+  for (const entry of weaponGroup.buttons) {
+    const arm = arms.find((a) => a.w === entry.w);
+    entry.root.classList.toggle('on', holder !== undefined && holder.weapon === entry.w);
+    entry.count.textContent = arm === undefined ? '' : String(arm.n);
   }
 }
 
@@ -751,6 +843,7 @@ function frame(nowMs) {
   renderDamagePanel(state.damage, deltaSeconds);
   renderIslandPanel(state.island);
   updateWaroverPanel(state.warover, state.view);
+  updateWeaponGroup();
   updateSight();
 }
 

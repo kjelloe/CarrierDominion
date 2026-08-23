@@ -143,6 +143,12 @@ The owner's first hands-on session ruled three things:
   fins for the Manta, glacis/turret/wheels for the Walrus, a proper barge for
   the lighter.
 
+## Playtest round three (2026-08-23)
+
+- **Every on-screen button explains itself**: a tooltip after ~600 ms hover.
+- **Weapons are a selector, not a cycle**: one button per weapon the selected
+  hull carries, the chosen one lit, round counts visible. `V` still cycles.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

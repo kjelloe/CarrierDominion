@@ -5,6 +5,37 @@ golden hash and why.
 
 ---
 
+## 2026-08-23 — Playtest round three: buttons that explain themselves
+
+Two UI rulings from the owner's third session, both landed; the third ask -
+compare the build against the 1988 screenshots for missed systems - produced
+a gap list that went back as clarification questions (dev-questions has it).
+397 tests + smoke green; client-only.
+
+**Tooltips.** Every action button, plus ? and DBG, raises a tooltip after a
+deliberate 600 ms hover: the label NAMES the button, the tooltip EXPLAINS it
+- including the costs (a pod is 80 materials, a bomb is 120 ordnance),
+because the button is where that knowledge is needed. The delay is the
+point: sweeping the pointer across a column must not raise a wall of prose.
+
+**The weapon selector.** V's cycle hid what a row of buttons shows: the
+right column now carries one button per weapon the SELECTED hull holds,
+radio-style - the chosen one lit, the others dark, live round counts on
+each. Rebuilt only when the holder or its loadout changes; selection and
+counts update in place (the built-once rule). Clicking sends select_weapon
+with the exact id - the command always took an id; only the client ever
+cycled. V still cycles for the keyboard hand.
+
+**The gap review** (sourcedata screenshots vs the build): repair priorities,
+stockpile designation and the resupply run all EXIST and were discoverability
+problems - the tooltips now say so. The real gaps are the Quartermaster
+screen (per-item priorities and quantities), split fuel pools with manual
+transfer, carrier course autopilot (map + PROG + A), Patrol/Escort orders,
+and a message feed. Those are owner decisions, asked as questions rather
+than built on spec.
+
+---
+
 ## 2026-08-22 — Playtest round two: the mouse gets the ship
 
 Three more rulings from the owner's hands, and the middle one sent me back to
