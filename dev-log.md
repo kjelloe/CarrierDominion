@@ -5,6 +5,31 @@ golden hash and why.
 
 ---
 
+## 2026-08-23 — The shop window: a diorama behind the start menu
+
+A staged island assault plays behind the start menu now
+(`client/render/diorama.js`): a real heightmap island with a gun and a
+missile battery on its shoulders, a Walrus working the beach, two Mantas
+banking around the peak, the carrier standing off with its bow toward the
+fight, and tracers looping both ways. Built entirely from the game's own
+world.js builders so the splash cannot drift from what the game renders,
+styled by the page's style (retro by default), on its OWN canvas and
+renderer — a canvas hands out its WebGL context once, and the war's #view
+needs its own — and torn down whole before the war starts. A splash that
+throws is caught and skipped: it must never cost anyone the menu.
+
+The menu itself thins to a scrim with its own inner panel
+(`#start-panel.showcase`). First composition was a mistake worth recording:
+camera at 3.3 km and 850 m up rendered a washed-out pancake with an
+invisible cast — a chart, not a diorama. Close and low (1.75 km, 420 m,
+thinner fog, bolder island) is what makes the same scene read as a fight.
+
+Probe `splash_shot.mjs`: pixel variance and mesh count on retro AND modern,
+scrim present, and after BEGIN the canvas and the `__diorama` hook are both
+gone. One unrelated flaky failure observed on a full-suite run (passed on
+rerun, second sighting overall — server test timing); worth an eye if it
+recurs.
+
 ## 2026-08-23 — The scale-up batch: eight slices off one message
 
 Seven rulings arrived in one message (docs/06 "The scale-up batch"); two

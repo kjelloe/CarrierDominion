@@ -47,6 +47,15 @@ dev-log honest. This is the procedure.
    before it exist fail validation on replay, which turns every old autosave
    into a refused resume. Absent means "the old behaviour" (see `climb` on
    `set_unit_helm`).
+9. **Cosmetic client work is exempt from determinism** (floats and wall
+   clocks are fine above the line) but bound by two contracts of its own:
+   the style×tier contract in docs/07 (a tier never changes the art, a style
+   never changes the cost class, retro stays 1988), and one-context-per-
+   canvas — never put a second renderer on a canvas the war uses (the
+   diorama owns its own canvas for exactly this reason). Its tests are
+   probes with PIXEL assertions, not just "no console errors" — and measure
+   what the camera actually sees: the zenith check reads horizon-white until
+   the probe looks up (docs/07 lesson 7).
 
 ## Order of work
 

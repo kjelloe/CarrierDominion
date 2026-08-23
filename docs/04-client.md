@@ -106,6 +106,25 @@ replaced elements under the pointer, so a click landed on a node that had
 already been discarded and nothing happened — twice, in two different panels,
 before the rule was written down.
 
+## The shop window
+
+Behind the start menu (a plain visit to `/`) plays a **diorama**: a staged
+island assault built from the game's own builders — the same carrier, Manta,
+Walrus, turret and shot meshes the war renders, over a real
+`engine/heightmap.js` island — so the splash can never drift from what the
+game looks like. `client/render/diorama.js`. The menu thins to a scrim over
+it; the camera orbits low and close; tracers loop between the battery and
+the ship.
+
+Three rules keep it harmless: it owns its **own canvas and renderer** (a
+canvas hands out its WebGL context once, and the war's `#view` needs its
+own), it is torn down whole — canvas, renderer, RAF, hook — before the war's
+renderer starts, and a splash that throws is caught and simply skipped: it
+must never cost anyone the menu. It follows the page's style (`?style=`,
+default retro) and a fixed modest cost below the war's own tiers, so the
+menu never stutters on an integrated GPU. Probe: `splash_shot` (pixel
+variance, the cast count, and that nothing survives BEGIN).
+
 ## Models
 
 Low-poly on purpose — the retro ruling — but recognisable at a glance

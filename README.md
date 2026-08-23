@@ -27,7 +27,7 @@ SAVE=0 ./run.sh       # without the 30-second autosave (data/autosave.json)
 | `/?mode=solo` | the engine runs **in the browser tab** - no server simulation |
 | `/?mode=lan` | the authoritative Node server simulates, the tab renders |
 | `/?mode=replay` | watch the autosaved war again: same reducer, same log, no hands on the wheel |
-| `/` (no query) | the start menu: choose the war, then sail |
+| `/` (no query) | the start menu, over a live diorama of an island assault: choose the war, then sail |
 | `/?graphics=low\|medium\|high` | override the auto-detected graphics tier |
 | `/?style=retro\|modern\|hybrid` | art direction (default `retro`) - cosmetic only, same war, same hash |
 | `/healthz` | tick, state hash, seats, status, join code, rss - for monitoring |

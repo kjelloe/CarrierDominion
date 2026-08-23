@@ -219,6 +219,16 @@
       font: 14px/1.9 var(--hud-font); user-select: none;
     }
     #start-panel.open { display: flex; }
+    /* The diorama canvas sits between the (idle) war canvas and the menu;
+       with it running, the menu thins to a scrim and its inner box carries
+       its own panel so the options stay readable over the action. */
+    #diorama { position: fixed; inset: 0; z-index: 5; display: block; }
+    #start-panel.showcase { background: rgba(3, 6, 10, 0.28); }
+    #start-panel.showcase #start-inner {
+      background: rgba(4, 8, 12, 0.84);
+      border: 1px solid var(--hud-dim);
+      padding: 24px 32px;
+    }
     /* Nothing behind the menu: the instruments belong to a war that has not
        started yet, and reading them through it is worse than not seeing them. */
     body.menu #hud, body.menu #help { display: none; }

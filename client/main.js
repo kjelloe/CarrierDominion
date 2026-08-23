@@ -39,6 +39,7 @@ import { nextWeapon } from '../engine/weapons.js';
 import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
 import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.js';
 import { applyStyleToDocument, resolveStyle, styleFor } from './styles.js';
+import { startDiorama } from './render/diorama.js';
 import { worldSizeMetres } from '../engine/worldgen.js';
 import {
   createHud,
@@ -1011,8 +1012,18 @@ async function main() {
   let startSpeed = START_SPEED;
   let styleName = params.get('style');
   if (!params.has('mode')) {
+    // The shop window: a staged island assault behind the menu, on its own
+    // canvas and renderer, torn down whole before the war claims the screen.
+    // A splash that fails must never cost anyone the menu, hence the catch.
+    let showcase = null;
+    try {
+      showcase = startDiorama(styleFor(resolveStyle(styleName)));
+      document.getElementById('start-panel').classList.add('showcase');
+    } catch { /* menu on a plain background instead */ }
     const panel = createStartPanel(state.t, seedFromClock());
     const chosen = await showStartPanel(panel);
+    if (showcase !== null) showcase.stop();
+    document.getElementById('start-panel').classList.remove('showcase');
     seed = chosen.seed;
     const extras = applyChoices(rules, chosen.choices);
     startSpeed = extras.speed;
