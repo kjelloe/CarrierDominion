@@ -5,6 +5,44 @@ golden hash and why.
 
 ---
 
+## 2026-08-23 — The scale-up batch: eight slices off one message
+
+Seven rulings arrived in one message (docs/06 "The scale-up batch"); two
+clarifications were asked and answered (16 players = 16 carriers free-for-
+all; Action Game = the developed war); eight slices landed, each committed
+green. 417 tests, battery five for five, one repin with zero event drift.
+
+1. **CI** — `.github/workflows/gate.yml`: tests, Playwright + smoke, the
+   battery, on every push to `dev_night`/`dev`/`main`.
+2. **Carrier refits** — speed / point defence / radar range as
+   `build_on_island` kinds 3/4/5: a factory island manufactures them, the
+   ship is fitted on completion, once each. Damage degrades from the
+   upgraded base. Quartermaster gained UPGRADES rows.
+3. **Replay viewer** — `?mode=replay` walks the autosave through the same
+   reducer; a transport, not a format. Probe: `replay_view`.
+4. **Action Game** — `engine/action_start.js` builds the developed war at
+   tick zero INSIDE createInitialState: per team a stocked factory
+   (= stockpile), a resource island, defence islands with guns up, supply
+   runs on, the carrier nudged up to 30% toward the centre with an
+   open-water check at every step. `actionStart` is a rule in rules.json,
+   so base and folded rulesets hash identically — the one repin.
+5. **16 carriers, free for all** — lobby `teams` option (2/3/4/8/16); above
+   four teams the start is a ring inset from the edges, corners stay pinned
+   for the classic table; sixteen distinguishable hull colours.
+6. **Observers by consent** — `refereeView` in shared/view.js (every hull
+   with owner detail, every stockpile, the live scoreboard) is the
+   spectator payload; the war room's `observers` switch closes the door,
+   and a seatless connection is then turned away with a reason.
+7. **Ports plan** — docs/08: the Luau twin is a transcription priced by
+   discipline already paid (the two golden pins are the acceptance test);
+   the true mobile tier's blocker is touch controls, an interface ruling.
+8. **Graphics phase 2** — Sky.js/Water.js vendored from r162, GENERATED
+   tileable water normals (26 integer-frequency sines), physicalSky/
+   mirrorWater on modern+hybrid gated by the High-only physicalEffects,
+   PMREM once (fixed sun), ACES at 0.32. The probe now asserts the pixel
+   contract — and taught us lesson #7: the chase camera never sees the
+   zenith, so blueness is measured looking up.
+
 ## 2026-08-23 — The gap review becomes systems: course, escort, quartermaster
 
 The owner ruled on all four gaps the 1988 review surfaced, and three became

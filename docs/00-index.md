@@ -1,6 +1,6 @@
 # Carrier Dominion — documentation
 
-What is actually built, as of 2026-08-22. These describe the code that exists;
+What is actually built, as of 2026-08-23. These describe the code that exists;
 they are not a plan. For the plan and the rulings behind it see
 [`../plan-version1.md`](../plan-version1.md); for what changed and why, in
 order, see [`../dev-log.md`](../dev-log.md).

@@ -22,6 +22,13 @@ wrapped as game commands and the server answered *"the war has not started"*.
 The socket tests could not catch it — they write raw JSON — and two real
 browsers found it in a minute.
 
+The **replay viewer** (ruling 2026-08-23) is a third face of the local
+transport, not a format: `?mode=replay` fetches `/data/autosave.json`, folds
+the saved lobby options into the same ruleset, and walks the command log
+through the same reducer at war speed, building the view each tick. When the
+log runs out it closes with *"replay finished"*. Commands typed at a replay
+are ignored — history does not take the wheel.
+
 ## The server is the only thing with a clock
 
 `server/clock.js` is the one place in the codebase that reads wall time. It
@@ -69,7 +76,10 @@ expensive damage state in the game — though the chart keeps its ghosts.
   "host left and nobody is in charge" state to repair.
 - **Ready**: every player must be ready before START is offered; the host presses
   it.
-- **Options**: map size, island count, AI opponents, the point cap, the time cap.
+- **Options**: map size, island count, the table size (**2–16 carriers, free
+  for all** — one team each; empty seats become AI), AI opponents, the game
+  type (**Strategy** from zero, or the **Action Game**'s developed war), the
+  point cap, the time cap, and whether the table takes observers.
   `applyLobby(rules, options)` folds the choices into a ruleset, which is then
   hashed into `state.rulesHash` — so the settings a war was played under are part
   of its identity and a replay cannot silently use different ones.

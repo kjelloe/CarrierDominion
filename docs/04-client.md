@@ -90,7 +90,11 @@ repair priority between High, Medium and Low.
 
 `client/panels/` holds the screens that are lists rather than instruments:
 `damage.js`, `island.js`, `lobby.js` (the war room), `start.js` (the game-start
-menu — map, islands, opponents, caps, style, language), and `warover.js` — the
+menu — map, islands, opponents, caps, style, language), `stores.js` (the
+quartermaster: island stocks, the depot, the production bias, and the
+UPGRADES refit rows — click one to lay the ship's speed, point-defence or
+radar refit down at the first factory island that can build it, with
+FITTED / BUILDING / needs-plant / cost as its states), and `warover.js` — the
 full-screen result when the war ends: who won, how, the scoreboard the fog hid,
 the islands, the war's own running time, and the choices: on LAN, **BACK TO THE
 WAR ROOM** (the table fights again on the same join code), then RETURN TO PORT

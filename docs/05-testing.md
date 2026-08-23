@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (403 tests and growing), node --test
+npm test      the unit and integration suite (417 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 ```
@@ -16,6 +16,11 @@ npm run gate  both, in that order
 Nothing lands unless the gate is green. The one thing to know about the order:
 `npm test` can pass on a client that does not start, which is why the smoke gate
 exists and why it is part of `gate` rather than optional.
+
+The same gate runs in CI (`.github/workflows/gate.yml`, ruling 2026-08-23):
+tests, then Playwright + smoke, then the five-seed battery, on every push to
+`dev_night`, `dev` and `main`. CI is a second opinion, not a substitute — the
+gate still runs locally before every commit.
 
 ## The pinned fixture
 
@@ -78,9 +83,12 @@ passed, because socket tests write raw JSON and the bug was in how the *client*
 wrapped its messages. Two real browsers found it immediately.
 
 Current probes: `ai_trace`, `combat_shot`, `damage_board`, `graphics_shots`, `gunsight`,
-`island_board`, `lobby`, `rejoin`, `scope_zoom`, `start_menu`,
+`island_board`, `lobby`, `rejoin`, `replay_view`, `scope_zoom`, `start_menu`,
 `playtest_round1`, `playtest_round2`, `playtest_round3`, `second_war`, `strategic_probe`, `style_shots`, `turret_shot`,
-`war_over`, `war_trace`, `watch_run`. `war_over` photographs states a live war takes hours to reach -
+`war_over`, `war_trace`, `watch_run`. `graphics_shots` also asserts the
+phase-2 pixel contract machine-checkably (docs/07 §3): mirror water, a blue
+zenith measured looking UP - the chase camera only ever sees the Preetham
+horizon band - and non-flat near water. `war_over` photographs states a live war takes hours to reach -
 the ending screen, a scope full of ghosts - by pausing the solo war and
 swapping in a doctored view through the `__debugView` hook.
 

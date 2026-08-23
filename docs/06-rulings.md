@@ -162,6 +162,36 @@ From the 1988 gap review, ruled the same day:
 - **Fuel stays one pool** — the 1988 carrier/aircraft/AAV split and its
   transfer screen are a deliberate deviation, documented in docs/02.
 
+## The scale-up batch (2026-08-23)
+
+Seven rulings in one message, all landed the same day unless marked:
+
+- **Carrier upgrades, at the factory**: speed, point defence, and radar range
+  — manufactured like any other build (`build_on_island` kinds 3/4/5, a
+  factory island with a plant, your materials), fitted to the ship when the
+  yard finishes, once each. **A fuller tech tree is a later consideration —
+  noted, not designed.** Damage still degrades an upgraded system from its
+  upgraded figure.
+- **Replay viewer**: yes. `?mode=replay` walks the autosave through the same
+  reducer at war speed — a replay is a seed plus the command log, so the
+  viewer is a transport, not a format.
+- **Graphics phase 2**: go ahead (landed — docs/07 §3).
+- **CI**: added — `.github/workflows/gate.yml` runs tests, smoke and the
+  battery on every push to `dev_night`/`dev`/`main`.
+- **Action Game**: build it, for quick starts. Clarified: the **developed
+  war** — each team starts with a stocked factory (the stockpile), a resource
+  island, defence islands with guns up, supply runs on, carriers nudged
+  toward the middle as far as open water allows. The rest stays neutral.
+- **Up to 16 players in the lobby.** Clarified: **16 carriers, free for
+  all** — one team each. Above four teams the start is a ring, not corners;
+  the bigger maps this deserves are to be **generated and tested later**.
+- **Observers**: richer mode (the referee's view), behind an on/off game
+  config — the table's consent, on by default.
+- **Deployment** (owner's): after playtesting produces a human-coherent play
+  feel; then the friend who loved the original tests.
+- **Luau/Roblox twin + mobile Low**: plan and document only (docs/08), for
+  a planning pass after the human-first version.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

@@ -123,6 +123,20 @@ Deliberate deviation from 1988, by ruling: fuel stays ONE good with automatic
 issue — no carrier/aircraft/AAV pools, no manual transfer screen. The
 scarcity is identical; the menu work is not.
 
+## The refit yard
+
+Three carrier upgrades (ruling 2026-08-23): **speed**, **point defence**, and
+**radar range**. Each is manufactured like any other build — `build_on_island`
+kinds 3/4/5 at a factory island that has a plant, paid from that island's
+materials — and fitted to the ship when the yard finishes. Once each: the
+UPGRADES rows in the quartermaster show FITTED / BUILDING / needs-plant /
+the cost, and a second purchase is refused at the reducer.
+
+A refit raises the system's **base**, not its current value: damage still
+degrades an upgraded engine room or radar from the upgraded figure, exactly
+as it degraded the original. The fuller tech tree is a noted later
+consideration, not a design.
+
 ## Weapons
 
 The 1988 sets, as data in `data/weapons.json`. Three behaviours, all data rather
@@ -273,6 +287,29 @@ would make waiting a tactic.
 After the whistle nothing new is decided: no gun chooses, no pod completes, no
 point scores. The final score is final. Rounds already in the air still fly —
 and still hit — because they were decided when they left the rail.
+
+## The Action Game
+
+The original shipped two starts and so do we (ruling 2026-08-23): the
+**Strategy Game** — everything from zero, the default — and the **Action
+Game**, the developed war, minutes from contact. `engine/action_start.js`
+runs at the end of `createInitialState` when the `actionStart` rule is 1:
+each team gets its nearest share of the archipelago — a stocked factory
+island nominated as the stockpile, a resource island, the rest defence
+islands with two guns up — supply runs start on, and each carrier is nudged
+up to 30% of the way toward the map centre, stopping wherever open water
+runs out. The rest of the archipelago stays neutral: there is still a race,
+it just starts at speed.
+
+It is a **rule**, not a script: the flag is in `data/rules.json`, folded by
+the lobby's GAME option, covered by the rules hash, and the prepared start is
+deterministic from the seed — so an Action war saves, resumes and replays
+like any other.
+
+Table size is a lobby option too: **2 to 16 carriers, free for all** (one
+team each, ruling 2026-08-23). Up to four teams start in the corners, pinned
+by the golden hashes; a bigger table sits around a ring inset from the
+edges. The bigger maps 16 deserve are to be generated and tested later.
 
 ## The AI
 

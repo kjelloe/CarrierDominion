@@ -26,6 +26,7 @@ SAVE=0 ./run.sh       # without the 30-second autosave (data/autosave.json)
 |---|---|
 | `/?mode=solo` | the engine runs **in the browser tab** - no server simulation |
 | `/?mode=lan` | the authoritative Node server simulates, the tab renders |
+| `/?mode=replay` | watch the autosaved war again: same reducer, same log, no hands on the wheel |
 | `/` (no query) | the start menu: choose the war, then sail |
 | `/?graphics=low\|medium\|high` | override the auto-detected graphics tier |
 | `/?style=retro\|modern\|hybrid` | art direction (default `retro`) - cosmetic only, same war, same hash |
@@ -173,6 +174,14 @@ chase the right entity, overheat cannot be cheated away, event fog routes
 correctly, provisioning closed the last "conjured goods" holes, shots and
 flight respect terrain, the post-war world decides nothing new, the cargo
 network conserves goods, and spectators see a chart instead of one side's war.
+
+The 2026-08-23 batch scaled the table up: carrier refits (speed, point
+defence, radar range - built at a factory like anything else), a replay
+viewer, the Action Game start (the developed war, minutes from contact),
+lobbies of up to 16 carriers free-for-all, observers as the referee - behind
+the table's own on/off switch - the High tier's Preetham sky and mirror
+water, CI on every push, and a written plan (docs/08) for the Luau/Roblox
+twin and the true mobile tier.
 
 Since then: **the chart remembers** — an enemy that leaves your radar leaves a
 ghost on the scope, kept until you scan the spot and find it gone, and the AI
