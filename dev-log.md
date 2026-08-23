@@ -5,6 +5,36 @@ golden hash and why.
 
 ---
 
+## 2026-08-23 — The basic touch pass, and the bug the phone found on the desktop
+
+The bridge was mouse-first, which is nearly touch-first: buttons, helm
+scale, held rudder arrows, weapon selector and panels all speak pointer
+events. The basic pass (ruling 2026-08-23) added what fingers need:
+touch-action locked so the browser cannot scroll or pinch the war (the
+icon columns keep pan-y and scroll on short screens), bigger targets on
+coarse pointers, held CLIMB/DIVE buttons under TAKE CONTROLS for the hand
+with no arrow keys, pointercancel treated as release everywhere. Portrait
+during a war gets the HARD rotate card, as ruled - the menu and the war
+room stay usable upright.
+
+The emulated Pixel 7 (probe touch_controls, both orientations) earned its
+keep three times over:
+
+1. The right column overran a 412 px landscape screen and the launch
+   button sat below it - the columns scroll now.
+2. Scrolling then did nothing, because a CENTERED flex column that
+   overflows overflows both ways and the top is unreachable - the columns
+   centre with auto margins now, which collapse to zero when scrolling.
+3. Tapping the MANTA button ALSO laid a course to the water behind it:
+   the window-level sea-click handler took every tap as a click on the
+   sea. The desktop had quietly had that bug all along - every button
+   click was also a sea click. Clicks now reach the sea only from the
+   view canvas itself.
+
+Still owed to a real device, per the ruling: feel, the 196 px instrument
+strip at phone width (the SHIP panel labels already overprint their
+values), hoverless tooltips, camera drag, pinch scope. docs/08 §B updated.
+
 ## 2026-08-23 — The full ocean: 64 islands for the 16-carrier table
 
 The islands option now runs 4/8/16/32/48/64 in both the start menu and the

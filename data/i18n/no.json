@@ -256,5 +256,10 @@
   "start.teams": "hangarskip i krig",
   "start.observers": "observatører",
   "start.observersOn": "velkomne - dommerblikk",
-  "start.observersOff": "stengt dør"
+  "start.observersOff": "stengt dør",
+  "touch.rotate": "snu enheten på tvers - broen trenger bredden",
+  "act.climb": "STIG",
+  "act.dive": "DYKK",
+  "tip.climb": "hold for å stige - Mantaen du flyr løfter nesen mens du holder",
+  "tip.dive": "hold for å dykke - Mantaen du flyr senker nesen mens du holder"
 }

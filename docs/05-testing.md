@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (417 tests and growing), node --test
+npm test      the unit and integration suite (418 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 ```
@@ -83,7 +83,7 @@ passed, because socket tests write raw JSON and the bug was in how the *client*
 wrapped its messages. Two real browsers found it immediately.
 
 Current probes: `ai_trace`, `combat_shot`, `damage_board`, `graphics_shots`, `gunsight`,
-`island_board`, `lobby`, `rejoin`, `replay_view`, `scope_zoom`, `splash_shot`, `start_menu`,
+`island_board`, `lobby`, `rejoin`, `replay_view`, `scope_zoom`, `splash_shot`, `start_menu`, `touch_controls`,
 `playtest_round1`, `playtest_round2`, `playtest_round3`, `second_war`, `strategic_probe`, `style_shots`, `turret_shot`,
 `war_over`, `war_trace`, `watch_run`. `graphics_shots` also asserts the
 phase-2 pixel contract machine-checkably (docs/07 §3): mirror water, a blue

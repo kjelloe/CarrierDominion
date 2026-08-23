@@ -153,6 +153,34 @@ flank; the lighter is a barge — raked bow, gunwales, an open hold with
 crates, a wheelhouse with windows and a stub crane. Every hull still points
 down +x so one heading-to-yaw rule serves them all.
 
+## Touch (basic pass — ruling 2026-08-23)
+
+The mouse-first bridge is mostly touch-first already: every column button,
+the helm's throttle scale and held rudder arrows, the weapon selector and
+the panels answer pointer events, which fingers send too. The basic pass
+added what fingers need on top: `touch-action` locked so the browser never
+scrolls or pinches the bridge (the columns keep `pan-y` — they scroll on
+short screens); bigger targets on coarse pointers; **held CLIMB/DIVE
+buttons** under TAKE CONTROLS, because a phone has no arrow keys; and
+`pointercancel` treated as release everywhere something is held.
+
+**Portrait is refused during a war** (hard overlay, owner ruling): the
+instrument strip plus two icon columns cannot share 400 px of width — the
+rotate card stands until the device turns. The menu and the war room stay
+usable in portrait.
+
+Two findings the phone gave back, worth keeping: a centered flex column
+that overflows scrolls in NEITHER direction (the columns centre with auto
+margins now), and the window-level sea-click handler took every BUTTON tap
+as a click on the water behind it — a desktop bug all along, caught by the
+first emulated phone; clicks now only reach the sea from the view canvas.
+
+**Still owed to a real device** (docs/08 §B): the feel of the targets, the
+instrument strip's fixed 196 px (the SHIP panel's labels overprint their
+values at phone width), tooltips (hover does not exist under a finger), and
+camera drag / pinch scope range. Probe: `touch_controls` (emulated Pixel 7,
+both orientations).
+
 ## Sound
 
 `client/sound.js` synthesises everything with oscillators and envelopes. No

@@ -52,9 +52,17 @@
        the key it mirrors printed on the button - the UI teaches the keyboard. */
     .actions {
       position: fixed; top: 56px; bottom: 216px; z-index: 7;
-      display: flex; flex-direction: column; gap: 6px; justify-content: center;
+      display: flex; flex-direction: column; gap: 6px;
       user-select: none;
     }
+    /* Centered by auto margins, NOT justify-content: center - a centered
+       flex column that overflows its box overflows in BOTH directions and
+       scroll cannot reach the top (a landscape phone found this: the launch
+       button sat 226 px above the screen). Auto margins centre when the
+       column fits and collapse to zero when it scrolls. */
+    .actions::before, .actions::after { content: ''; }
+    .actions::before { margin-top: auto; }
+    .actions::after { margin-bottom: auto; }
     #actions-left { left: 10px; }
     #actions-right { right: 10px; }
     .act {
@@ -69,6 +77,31 @@
     }
     .act .l { display: block; font-size: 9px; letter-spacing: 1px; }
     body.menu .actions, body.menu #debug-button { display: none; }
+    /* Touch (ruling 2026-08-23, basic pass - real devices still to judge):
+       the browser must not scroll or pinch the bridge, a coarse pointer
+       gets bigger targets, and a phone held upright gets the rotate card -
+       the instrument strip plus two icon columns cannot share 400 px of
+       width. The MENU stays usable in portrait; only the war demands the
+       width (body.menu lifts the gate). */
+    #view, #panel { touch-action: none; }
+    /* pan-y, not none: a landscape phone is 412 px tall and the right
+       column overran it the moment the probe looked (the launch button sat
+       below the screen) - the columns scroll under a finger instead. */
+    .actions { touch-action: pan-y; overflow-y: auto; }
+    @media (pointer: coarse) {
+      .act { padding: 10px 12px; }
+      .act .k { font-size: 16px; }
+      .act .l { font-size: 11px; }
+    }
+    #rotate-gate {
+      position: fixed; inset: 0; z-index: 30; display: none;
+      align-items: center; justify-content: center; text-align: center;
+      background: #05070b; color: var(--hud-ink);
+      font: 16px/1.8 var(--hud-font); letter-spacing: 2px; padding: 40px;
+    }
+    @media (orientation: portrait) and (pointer: coarse) and (max-width: 820px) {
+      body:not(.menu) #rotate-gate { display: flex; }
+    }
     /* Hover tooltips for every button (playtest ruling 2026-08-23): what the
        button DOES, after a deliberate pause - labels name, tooltips explain. */
     #tip {
@@ -305,6 +338,7 @@
   <div id="tip"></div>
   <div id="actions-left" class="actions"></div>
   <div id="actions-right" class="actions"></div>
+  <div id="rotate-gate"></div>
   <!-- The legend is rendered from the language catalogue by main.js, and
        hides behind the ? button until asked for. -->
   <div id="help" class="hidden"></div>

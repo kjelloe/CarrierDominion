@@ -72,13 +72,17 @@ the items below.
 
 ### The work list
 
-1. **Touch controls** — the blocker, and an interface ruling of its own:
-   - the icon columns and clickable helm already cover most actions (they
-     were built mouse-first, which is touch-first);
-   - missing: throttle/rudder without keys (the helm scale and arrows work,
-     but need bigger hit targets), pitch for a flown Manta (on-screen
-     up/down beside the sight), camera drag, pinch for scope range;
-   - the panel's 196 px strip needs a scale factor on small screens.
+1. **Touch controls** — the basic pass LANDED 2026-08-23 (docs/04 "Touch"):
+   pointer-event bridge confirmed under an emulated finger, touch-action
+   locked, coarse-pointer targets, held CLIMB/DIVE buttons, and the hard
+   landscape gate (owner ruling: portrait is refused during a war).
+   - still missing: camera drag, pinch for scope range, tooltips that work
+     without hover;
+   - the panel's 196 px strip needs a scale factor on small screens — the
+     SHIP panel's labels already overprint their values at Pixel-7 width
+     (seen in `debugging/shots/touch-landscape-war.png`);
+   - and the ruling that stands over all of it: **real devices must judge**
+     — the emulated phone proves plumbing, not feel.
 2. **Renderer budget**: `powerPreference: 'low-power'`; resolution scaling
    below DPR 1 on small screens; merge the island meshes into one draw;
    cap the ocean grid's line count by distance; halve the draw distance.

@@ -470,6 +470,9 @@ function bindPanelInput() {
   };
   canvas.addEventListener('pointerup', release);
   canvas.addEventListener('pointerleave', release);
+  // A finger lifted off the glass can end as a CANCEL rather than an up -
+  // without this a touch rudder stays hard over after the finger is gone.
+  canvas.addEventListener('pointercancel', release);
 }
 
 // The legend and its button agree about whether it is open.
@@ -561,6 +564,35 @@ function buildActionColumns(t) {
       });
       attachTip(button, t(tipKey));
       root.append(button);
+      // The flying hand's vertical axis, for a screen with no arrow keys
+      // (touch ruling 2026-08-23): two HELD buttons under TAKE CONTROLS,
+      // wired like the keys they mirror - press noses over, release holds
+      // the altitude. Harmless with no Manta flown: sendClimb refuses.
+      if (key === 't' && id === 'actions-right') {
+        for (const [label2, tip2, dir] of [
+          ['act.climb', 'tip.climb', 1], ['act.dive', 'tip.dive', -1],
+        ]) {
+          const held = document.createElement('div');
+          held.className = 'act hold';
+          const cap = document.createElement('span');
+          cap.className = 'k';
+          cap.textContent = dir > 0 ? '▲' : '▼';
+          const text2 = document.createElement('span');
+          text2.className = 'l';
+          text2.textContent = t(label2);
+          held.append(cap, text2);
+          const stop = () => sendClimb(0);
+          held.addEventListener('pointerdown', (event) => {
+            event.preventDefault();
+            sendClimb(dir);
+          });
+          held.addEventListener('pointerup', stop);
+          held.addEventListener('pointerleave', stop);
+          held.addEventListener('pointercancel', stop);
+          attachTip(held, t(tip2));
+          root.append(held);
+        }
+      }
       // The weapon SELECTOR rides in the right column between FIRE and POD:
       // one button per weapon the selected hull carries, radio-style
       // (playtest ruling 2026-08-23 - a cycle key hides what a row of
@@ -687,6 +719,12 @@ function bindInput(level) {
   // resolved to a point on the water first; whether anything hostile is
   // standing near that point decides which of the two it was.
   window.addEventListener('pointerdown', (event) => {
+    // Only a click on the WORLD is a click on the sea. Buttons, panels and
+    // boards all live above the view canvas, and without this guard a tap
+    // on the MANTA button ALSO laid a course to whatever water happened to
+    // stand behind it - the touch probe caught it on the first phone, and
+    // the desktop had quietly had it all along.
+    if (event.target !== document.getElementById('view')) return;
     if (state.piloting || state.damage.open) return;
     const ndcX = (event.clientX / window.innerWidth) * 2 - 1;
     const ndcY = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -1054,6 +1092,7 @@ async function main() {
   const hudRoot = document.getElementById('hud');
   state.hud = createHud(hudRoot, state.t);
   document.getElementById('title-card').textContent = state.t('start.title');
+  document.getElementById('rotate-gate').textContent = state.t('touch.rotate');
   renderHelp(state.t);
   document.getElementById('help-button').addEventListener('click', toggleHelp);
   document.getElementById('debug-button').addEventListener('click', toggleDebug);
