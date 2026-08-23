@@ -8,7 +8,8 @@
 // Islands are the only terrain record in state. Their surface is a pure
 // function of these integers (engine/heightmap.js), never a stored grid.
 
-import { floorDiv, isqrt, mulDiv } from '../shared/fixed.js';
+import { floorDiv, isqrt, mulDiv, wrapAngle } from '../shared/fixed.js';
+import { mulCos, mulSin } from '../shared/trig.js';
 import { deriveSeed, rollBetween, rollRange } from '../shared/prng.js';
 import { pickCommandNode, skirtRadius } from './heightmap.js';
 
@@ -142,11 +143,25 @@ function startPositions(islands, world, unitsPerMetre, teamCount) {
     { x: sizeUnits - offset, y: offset },
     { x: offset, y: sizeUnits - offset },
   ];
+  // Up to four teams take the corners, exactly as before - two-team wars are
+  // pinned by golden hashes and must not move. A bigger table (ruling
+  // 2026-08-23: up to 16 carriers, free for all) sits around a ring inset
+  // from the edges, first seat at the south-west so the flavour survives.
+  const half = floorDiv(sizeUnits, 2);
+  const ringRadius = half - offset;
   const out = [];
   for (let t = 0; t < teamCount; t++) {
-    const corner = corners[t % corners.length];
-    let x = corner.x;
-    let y = corner.y;
+    let x;
+    let y;
+    if (teamCount <= 4) {
+      const corner = corners[t % corners.length];
+      x = corner.x;
+      y = corner.y;
+    } else {
+      const bam = wrapAngle(40960 + mulDiv(t, 65536, teamCount));
+      x = half + mulCos(ringRadius, bam);
+      y = half + mulSin(ringRadius, bam);
+    }
     for (let step = 0; step < 64; step++) {
       let blocked = -1;
       for (let i = 0; i < islands.length; i++) {

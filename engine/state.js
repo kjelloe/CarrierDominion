@@ -8,6 +8,7 @@
 // No value in state may be null, undefined, or fractional. Absence is -1.
 
 import { mulDiv } from '../shared/fixed.js';
+import { atan2B } from '../shared/trig.js';
 import { hashState } from '../shared/statehash.js';
 import { seedRng } from '../shared/prng.js';
 import { HEADING_MANUAL } from './commands.js';
@@ -357,8 +358,17 @@ function createInitialState(seed, rules) {
       unitsPerMetre,
     ));
   }
-  // Team 1 starts in the far corner and looks back across the map.
-  for (let i = 1; i < carriers.length; i++) carriers[i].heading = 40960;
+  // Team 1 starts in the far corner and looks back across the map. A bigger
+  // table (>2 teams) sits around a ring, and everyone faces the middle - the
+  // two-team headings stay exactly as pinned.
+  if (base.teamCount <= 2) {
+    for (let i = 1; i < carriers.length; i++) carriers[i].heading = 40960;
+  } else {
+    const centre = mulDiv(worldSizeMetres(world) * unitsPerMetre, 1, 2);
+    for (let i = 0; i < carriers.length; i++) {
+      carriers[i].heading = atan2B(centre - carriers[i].y, centre - carriers[i].x);
+    }
+  }
 
   // Every airframe and vehicle exists from tick zero, STOWED in its hangar.
   // Launching is then a state change, not a spawn: ids are stable across a

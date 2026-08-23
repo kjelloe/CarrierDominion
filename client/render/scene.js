@@ -23,7 +23,15 @@ import {
 } from './world.js';
 import { islandHeightAt } from '../../engine/heightmap.js';
 
-const TEAM_COLOURS = [0x4f7fa8, 0xa85b4f];
+// Sixteen distinguishable hulls (ruling 2026-08-23: up to 16 carriers, free
+// for all). The first two are the classic pair; the rest are spaced around
+// the wheel with the sea-blues avoided, because a hull the colour of the
+// ocean is a hull nobody finds.
+const TEAM_COLOURS = [
+  0x4f7fa8, 0xa85b4f, 0x5fa85f, 0xa8974f, 0x8a5fa8, 0x4fa89b,
+  0xa84f7e, 0x7ea84f, 0xc2703e, 0x3e86c2, 0xc2b83e, 0x6f6fc2,
+  0x3ec24f, 0xc23e3e, 0x8f8f8f, 0xd9a0d0,
+];
 const CHASE_BACK_METRES = 780;
 const CHASE_UP_METRES = 400;
 const STRATEGIC_UP_METRES = 7000;

@@ -21,11 +21,25 @@ const OPTIONS = [
     apply: (rules, value) => { rules.world.islandCount = value; },
   },
   {
+    key: 'teams',
+    label: 'start.teams',
+    values: [2, 3, 4, 8, 16],
+    apply: (rules, value) => { rules.rules.teamCount = value; },
+  },
+  {
     key: 'enemy',
     label: 'start.enemy',
     values: [1, 0],
     text: ['start.enemyOn', 'start.enemyOff'],
-    apply: (rules, value) => { rules.rules.aiTeams = value === 1 ? [1] : []; },
+    apply: (rules, value) => {
+      // Solo: every team but yours is the machine when the enemy is on. The
+      // teams row is listed above this one, so teamCount is already applied.
+      const machine = [];
+      if (value === 1) {
+        for (let t = 1; t < rules.rules.teamCount; t++) machine.push(t);
+      }
+      rules.rules.aiTeams = machine;
+    },
   },
   {
     key: 'ending',

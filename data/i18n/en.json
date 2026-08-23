@@ -252,5 +252,6 @@
   "status.replayDone": "end of record - the war stood here when it was saved",
   "start.game": "the war",
   "start.gameStrategy": "strategy - from zero",
-  "start.gameAction": "ACTION - minutes from contact"
+  "start.gameAction": "ACTION - minutes from contact",
+  "start.teams": "carriers at war"
 }

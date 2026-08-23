@@ -154,7 +154,13 @@ function createApp(options) {
   function claimTeam() {
     const taken = [];
     for (const seat of app.seats) taken.push(seat.team);
-    for (let t = 0; t < rules.rules.teamCount; t++) {
+    // The table's size is the ROOM's choice while the room is open, and the
+    // running war's afterwards - never the base ruleset's, which only knows
+    // about two.
+    const tableSize = inLobby()
+      ? (app.lobby.options.teams ?? rules.rules.teamCount)
+      : app.game.state.teams.length;
+    for (let t = 0; t < tableSize; t++) {
       if (!taken.includes(t) && !isHeld(app.holder, t)) return t;
     }
     return -1;
@@ -400,7 +406,18 @@ function createApp(options) {
     // Each war gets a fresh watchdog: findings from the last war are the last
     // war's report, not this one's.
     if (app.watch !== 0) app.watch = createWatch({ stuckAfter: options.stuckAfter });
-    const chosen = applyLobby(rules, app.lobby.options);
+    // The room knows who is human: with the enemy switch on, every seat
+    // without a person gets the machine. That list is part of the saved
+    // options, so a resumed or replayed war seats the same brains.
+    const humans = [];
+    for (const seat of app.seats) if (seat.team !== -1) humans.push(seat.team);
+    const machine = [];
+    if (app.lobby.options.enemy === 1) {
+      for (let t = 0; t < app.lobby.options.teams; t++) {
+        if (!humans.includes(t)) machine.push(t);
+      }
+    }
+    const chosen = applyLobby(rules, { ...app.lobby.options, aiTeams: machine });
     app.seed = app.lobby.options.seed;
     app.game = createGame(app.seed, chosen);
     // The choices ride with every save: resume rebuilds the ruleset from
@@ -409,9 +426,11 @@ function createApp(options) {
       seed: app.lobby.options.seed,
       islands: app.lobby.options.islands,
       enemy: app.lobby.options.enemy,
+      teams: app.lobby.options.teams,
       ending: app.lobby.options.ending,
       speed: app.lobby.options.speed,
       game: app.lobby.options.game,
+      aiTeams: machine,
     };
     app.lobby.status = 'running';
     setClockSpeed(app.clock, app.lobby.options.speed);

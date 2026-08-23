@@ -13,12 +13,13 @@ const rules = loadRules();
 // changed - re-pin only with a note in dev-log.md saying why.
 // Re-pinned 2026-08-20 for the provisioning slice, for the minor-items slice,
 // twice on 2026-08-21 (contact memory; lastContactTick), on 2026-08-22 for
-// the pilot's vertical axis, and twice on 2026-08-23 (course + quartermaster
-// bias; then the three carrier upgrades). The MAP itself has not changed
+// the pilot's vertical axis, and three times on 2026-08-23 (course +
+// quartermaster bias; the three carrier upgrades; actionStart joining
+// data/rules.json as a first-class rule). The MAP itself has not changed
 // since the first pin: islands, nodes and start positions are byte-identical
 // throughout.
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = '2071d78197f17e3a';
+const GOLDEN_WORLD_HASH = 'b210c6c235152734';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

@@ -11,6 +11,7 @@
 
 const OPTION_ROWS = [
   { key: 'islands', label: 'start.islands', values: [4, 8, 16, 32] },
+  { key: 'teams', label: 'start.teams', values: [2, 3, 4, 8, 16] },
   {
     key: 'enemy',
     label: 'start.enemy',

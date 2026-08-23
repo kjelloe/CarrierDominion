@@ -252,5 +252,6 @@
   "status.replayDone": "slutten av opptaket - krigen sto her da den ble lagret",
   "start.game": "krigen",
   "start.gameStrategy": "strategi - fra null",
-  "start.gameAction": "AKSJON - minutter fra kontakt"
+  "start.gameAction": "AKSJON - minutter fra kontakt",
+  "start.teams": "hangarskip i krig"
 }

@@ -24,6 +24,7 @@ const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 const OPTION_VALUES = {
   islands: [4, 8, 16, 32],
+  teams: [2, 3, 4, 8, 16],
   enemy: [1, 0],
   ending: [0, 1, 2],
   speed: [1, 2, 4, 8, 16],
@@ -65,6 +66,7 @@ function createLobby(bootId, defaults) {
     options: {
       seed: defaults.seed,
       islands: defaults.islands,
+      teams: 2,
       enemy: defaults.enemy,
       ending: 0,
       speed: defaults.speed,
@@ -181,6 +183,7 @@ function lobbyView(lobby, seats) {
     options: {
       seed: lobby.options.seed,
       islands: lobby.options.islands,
+      teams: lobby.options.teams,
       enemy: lobby.options.enemy,
       ending: lobby.options.ending,
       speed: lobby.options.speed,
