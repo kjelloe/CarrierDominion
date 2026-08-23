@@ -1,0 +1,26 @@
+# The gate, on every push: the same three commands a slice must pass locally
+# (docs/05). If this is red, dev_night went red between sessions.
+name: gate
+on:
+  push:
+    branches: [dev_night, dev, main]
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: unit and integration suite
+        run: npm test
+      - name: browser smoke gate
+        run: |
+          npx playwright install --with-deps chromium
+          npm run smoke
+      - name: five-seed battery
+        run: npm run battery
