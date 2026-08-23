@@ -192,6 +192,26 @@ Seven rulings in one message, all landed the same day unless marked:
 - **Luau/Roblox twin + mobile Low**: plan and document only (docs/08), for
   a planning pass after the human-first version.
 
+## The showcase batch (2026-08-23, same day)
+
+On the diorama and what rode with it — all landed:
+
+- **The war room gets the diorama too**; the look row **previews live**
+  (page colours and backdrop restyle on the spot, unless the URL dictated a
+  style — the URL wins at BEGIN); a **proper title card** stands over the
+  scrim (it yields in the war room, whose header carries the join code);
+  and the menu plays **distant surf and gunfire**, synthesised like every
+  other sound.
+- **The models pass, at High, in all styles** — sharper 1988 is still 1988:
+  working clutter on every hull, flat shading and silhouettes intact.
+- **Maps to 64 islands** (the original's own count) for the 16-carrier
+  table — clarified at 64 over 48/96. Generation is tested; the live feel
+  of a 64-island war is still the table's to judge.
+- **Basic touch controls**, with the explicit rider that **real devices
+  must test what works** — and **portrait during a war is refused** (hard
+  overlay): the bridge is too many buttons for a phone held upright, the
+  human turns the device to landscape. The menu stays usable in portrait.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on
