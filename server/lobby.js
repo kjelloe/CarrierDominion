@@ -23,7 +23,7 @@
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 const OPTION_VALUES = {
-  islands: [4, 8, 16, 32],
+  islands: [4, 8, 16, 32, 48, 64],
   teams: [2, 3, 4, 8, 16],
   enemy: [1, 0],
   ending: [0, 1, 2],

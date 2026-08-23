@@ -42,6 +42,23 @@ test('sixteen carriers spawn apart, afloat, facing the middle', () => {
   assert.doesNotThrow(() => canonicalize(state));
 });
 
+test('the full table gets the full ocean: 64 islands, 16 carriers, five seeds', () => {
+  // 64 is the original's own island count (ruling 2026-08-23). The map this
+  // size is ~58 km of sea at unchanged density; the dart-thrower must place
+  // every island and the ring walk must leave every carrier afloat - seed
+  // 424242 is in the list because its ring had one aground before the walk
+  // learned to step toward the centre it actually has.
+  for (const seed of [20260818, 424242, 777, 31337, 99999]) {
+    const state = createInitialState(seed, tableOf(16, 64));
+    assert.equal(state.islands.length, 64, `seed ${seed} lost islands to the dart cap`);
+    for (const carrier of state.carriers) {
+      assert.ok(worldHeightAt(state.islands, carrier.x, carrier.y) < -carrier.draught,
+        `seed ${seed}: carrier ${carrier.id} spawned aground`);
+    }
+    assert.doesNotThrow(() => canonicalize(state));
+  }
+});
+
 test('a sixteen-carrier war ticks, and each seat sees only its own', () => {
   let state = createInitialState(SEED, tableOf(16));
   for (let i = 0; i < 50; i++) state = apply(state, { type: 'advance_tick' });

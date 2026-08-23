@@ -17,7 +17,10 @@ const OPTIONS = [
   {
     key: 'islands',
     label: 'start.islands',
-    values: [4, 8, 16, 32],
+    // 64 is the 1988 original's own count, and what a 16-carrier table
+    // deserves (ruling 2026-08-23). The ocean scales with the square root,
+    // so density holds: 64 islands is a ~58 km sea.
+    values: [4, 8, 16, 32, 48, 64],
     apply: (rules, value) => { rules.world.islandCount = value; },
   },
   {

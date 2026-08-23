@@ -3,7 +3,7 @@
   "sizeMetres": 20480,
   "edgeMarginMetres": 1800,
   "islandCount": 8,
-  "islandCountMax": 32,
+  "islandCountMax": 64,
   "minSpacingMetres": 1200,
   "placementAttempts": 4000,
   "islandRadiusMinMetres": 700,

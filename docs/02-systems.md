@@ -309,7 +309,12 @@ like any other.
 Table size is a lobby option too: **2 to 16 carriers, free for all** (one
 team each, ruling 2026-08-23). Up to four teams start in the corners, pinned
 by the golden hashes; a bigger table sits around a ring inset from the
-edges. The bigger maps 16 deserve are to be generated and tested later.
+edges — and a blocked ring seat steps directly OFF the island in its way,
+clamped to the chart. The maps scaled up with it: the islands option now
+runs to **64 — the 1988 original's own count** — a ~58 km sea at unchanged
+density. Generation is tested (five seeds, 64 islands, 16 carriers: every
+island placed, every carrier afloat, ~4,100 ticks/s headless); how such a
+war FEELS still awaits a live table.
 
 ## The AI
 

@@ -8,7 +8,7 @@
 // Islands are the only terrain record in state. Their surface is a pure
 // function of these integers (engine/heightmap.js), never a stored grid.
 
-import { floorDiv, isqrt, mulDiv, wrapAngle } from '../shared/fixed.js';
+import { dist2D, floorDiv, isqrt, mulDiv, wrapAngle } from '../shared/fixed.js';
 import { mulCos, mulSin } from '../shared/trig.js';
 import { deriveSeed, rollBetween, rollRange } from '../shared/prng.js';
 import { pickCommandNode, skirtRadius } from './heightmap.js';
@@ -177,9 +177,32 @@ function startPositions(islands, world, unitsPerMetre, teamCount) {
         if (dx * dx + dy * dy < clearance * clearance) { blocked = i; break; }
       }
       if (blocked < 0) break;
-      const towardCentre = x < floorDiv(sizeUnits, 2) ? 1 : -1;
-      x = x + towardCentre * 200 * unitsPerMetre;
-      y = y + towardCentre * 200 * unitsPerMetre;
+      if (teamCount <= 4) {
+        // The corner walk, exactly as always: pinned by the golden hashes.
+        const towardCentre = x < half ? 1 : -1;
+        x = x + towardCentre * 200 * unitsPerMetre;
+        y = y + towardCentre * 200 * unitsPerMetre;
+      } else {
+        // A ring seat steps directly OFF the island that blocks it. Toward-
+        // the-centre was tried first and walked seat 15 straight through an
+        // island that sat on its centre line; away-from-the-obstacle leaves
+        // the clearance circle in a bounded number of steps by construction.
+        const island = islands[blocked];
+        const off = dist2D(x, y, island.x, island.y);
+        if (off <= 0) {
+          x = x + 200 * unitsPerMetre;
+        } else {
+          x = x + mulDiv(x - island.x, 200 * unitsPerMetre, off);
+          y = y + mulDiv(y - island.y, 200 * unitsPerMetre, off);
+        }
+        // Stay on the chart: a spawn pushed off the map is a watchdog
+        // finding waiting to happen. Clamping turns an edge case into a
+        // slide along the margin, which the next step resolves.
+        if (x < offset) x = offset;
+        if (x > sizeUnits - offset) x = sizeUnits - offset;
+        if (y < offset) y = offset;
+        if (y > sizeUnits - offset) y = sizeUnits - offset;
+      }
     }
     out.push({ x: x, y: y });
   }

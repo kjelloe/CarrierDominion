@@ -5,6 +5,39 @@ golden hash and why.
 
 ---
 
+## 2026-08-23 — The full ocean: 64 islands for the 16-carrier table
+
+The islands option now runs 4/8/16/32/48/64 in both the start menu and the
+war room - 64 being the 1988 original's own count, a ~58 km sea at
+unchanged density (the sqrt scaling from ruling #2 needed no change). The
+dart-thrower placed 64 first try on every seed; the RING WALK did not:
+seed 424242 spawned one of sixteen carriers aground. First fix (walk
+toward the centre) made it worse - seed 20260818's seat 15 walked straight
+through an island sitting on its centre line. The fix that holds: a
+blocked ring seat steps directly OFF the island that blocks it, which
+leaves the clearance circle in a bounded number of steps by construction,
+clamped to the chart so no spawn leaves the map. The corner walk for four
+or fewer teams is untouched - it is pinned.
+
+Five seeds x 64 islands x 16 carriers in the suite: all placed, all
+afloat. Headless, a 16-AI war on the full ocean runs ~4,100 ticks/s -
+200x real time. Both pins re-pinned with zero event drift: islandCountMax
+32 -> 64 in data/world.json is a documentation knob nothing reads, but it
+lives in the hashed ruleset. The map itself is byte-identical.
+
+## 2026-08-23 — The models pass: the working clutter, at High
+
+modelDetail lands on the tier (High only) and reaches every builder:
+carrier catwalks, lifeboats, point-defence mounts, stern crane, search
+dish, deck lights; Manta intakes, underwing rails with rounds, nose probe;
+Walrus mudguards, whip, hatch, spade; the lighter's second crate tier,
+bollards, stack, fenders; sandbag rings round the turrets and a tracking
+dish on the battery. Every style, retro included - sharper 1988 is still
+1988, the same contract the 144-vertex terrain keeps. graphics_shots
+counts the carrier's parts: 9 at Medium, 28 at High, retro High equal to
+modern High. The diorama shows the detailed hulls at any tier - a splash
+exists to be looked at.
+
 ## 2026-08-23 — The shop window, furnished: war room, title card, surf and guns
 
 Four rulings on the diorama, landed together. The LAN war room gets the
