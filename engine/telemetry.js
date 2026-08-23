@@ -29,6 +29,9 @@ function carrierById(state, id) {
 function telemetryState(state, unit) {
   if (state.params.telemetryLoss <= 0) return 0;
   if (unit.kind === KIND_LIGHTER) return 0;
+  // In the hangar or down on a runway the island's Command Centre holds the
+  // aircraft (manual item 2) - no link to lose.
+  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return 0;
   const carrier = carrierById(state, unit.carrierId);
   if (carrier === -1 || carrier.hull <= 0) return 2;
   const range = dist2D(unit.x, unit.y, carrier.x, carrier.y);

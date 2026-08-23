@@ -17,6 +17,7 @@ const UNIT_STOWED = 0; // in the hangar, not on the map
 const UNIT_ACTIVE = 1; // out and under way
 const UNIT_RETURNING = 2; // heading home under its own orders
 const UNIT_LOST = 3; // destroyed or out of fuel away from the carrier
+const UNIT_LANDED = 4; // a Manta down on an island runway (manual item 2)
 
 // What it is trying to do.
 const ORDER_HOLD = 0;
@@ -30,6 +31,8 @@ const ORDER_ATTACK = 5;
 // Follow the ship and fight what comes (the original's Escort): a standing
 // combat air patrol that chases its own moving airfield.
 const ORDER_ESCORT = 6;
+// Land on a friendly island runway, refuel from its stock, await relaunch.
+const ORDER_LAND = 7;
 
 function createManta(id, team, carrierId, rules, unitsPerMetre) {
   const stats = rules.units.manta;
@@ -38,6 +41,7 @@ function createManta(id, team, carrierId, rules, unitsPerMetre) {
     team: team,
     kind: KIND_MANTA,
     carrierId: carrierId,
+    landedIsland: -1,
     state: UNIT_STOWED,
     order: ORDER_HOLD,
     x: 0,
@@ -101,6 +105,7 @@ function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
     team: team,
     kind: KIND_WALRUS,
     carrierId: carrierId,
+    landedIsland: -1,
     state: UNIT_STOWED,
     order: ORDER_HOLD,
     x: 0,
@@ -168,6 +173,7 @@ function createLighter(id, team, carrierId, rules, unitsPerMetre) {
     team: team,
     kind: KIND_LIGHTER,
     carrierId: carrierId,
+    landedIsland: -1,
     state: UNIT_STOWED,
     order: ORDER_HOLD,
     x: 0,
@@ -237,6 +243,7 @@ function copyUnit(unit) {
     team: unit.team,
     kind: unit.kind,
     carrierId: unit.carrierId,
+    landedIsland: unit.landedIsland,
     state: unit.state,
     order: unit.order,
     x: unit.x,
@@ -322,7 +329,10 @@ function stowedCount(state, carrierId, kind) {
 // needs it too.
 function unitEngageable(unit) {
   if (unit.hp <= 0) return false;
-  return unit.state === UNIT_ACTIVE || unit.state === UNIT_RETURNING;
+  // A Manta parked on a runway is a target like any other - a runway is a
+  // place to refuel, not a sanctuary.
+  return unit.state === UNIT_ACTIVE || unit.state === UNIT_RETURNING
+    || unit.state === UNIT_LANDED;
 }
 
 function arrivedAtTarget(unit) {
@@ -374,6 +384,8 @@ function fuelPermil(unit) {
 export {
   damagePermil,
   leakFuel,
+  UNIT_LANDED,
+  ORDER_LAND,
   KIND_MANTA,
   KIND_WALRUS,
   KIND_LIGHTER,

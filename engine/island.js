@@ -39,13 +39,20 @@ const BUILD_TURRET = 2;
 const BUILD_UPGRADE_SPEED = 3;
 const BUILD_UPGRADE_PD = 4;
 const BUILD_UPGRADE_RADAR = 5;
+// The island runway (manual coverage review, item 2): a strip a Manta can
+// land on, refuel from the island's own stock, and relaunch from.
+const BUILD_RUNWAY = 6;
 
 // Which building each role is allowed to put up. A factory island cannot raise
 // turrets and a defence island cannot raise factories: that is the trade.
 function roleAllows(role, what) {
-  if (role === ROLE_FACTORY) return what === BUILD_FACTORY || what === BUILD_WAREHOUSE || what >= BUILD_UPGRADE_SPEED;
-  if (role === ROLE_DEFENCE) return what === BUILD_TURRET;
-  if (role === ROLE_RESOURCE) return what === BUILD_WAREHOUSE;
+  // Refits (3..5) are factory work; runways belong to Resource islands (the
+  // original's Command Centres built them there) and to Defence islands
+  // (the manual's "islands which are large enough").
+  const refit = what >= BUILD_UPGRADE_SPEED && what <= BUILD_UPGRADE_RADAR;
+  if (role === ROLE_FACTORY) return what === BUILD_FACTORY || what === BUILD_WAREHOUSE || refit;
+  if (role === ROLE_DEFENCE) return what === BUILD_TURRET || what === BUILD_RUNWAY;
+  if (role === ROLE_RESOURCE) return what === BUILD_WAREHOUSE || what === BUILD_RUNWAY;
   return false;
 }
 
@@ -67,6 +74,7 @@ function builtCount(island, what) {
   if (what === BUILD_FACTORY) return island.factories;
   if (what === BUILD_WAREHOUSE) return island.warehouses;
   if (what === BUILD_TURRET) return island.turrets;
+  if (what === BUILD_RUNWAY) return island.runway;
   return 0;
 }
 
@@ -74,11 +82,12 @@ function addBuilt(island, what) {
   if (what === BUILD_FACTORY) island.factories = island.factories + 1;
   else if (what === BUILD_WAREHOUSE) island.warehouses = island.warehouses + 1;
   else if (what === BUILD_TURRET) island.turrets = island.turrets + 1;
+  else if (what === BUILD_RUNWAY) island.runway = 1;
   // Upgrade kinds fit the SHIP, not the island: nothing to count here.
 }
 
 function anythingBuilt(island) {
-  return island.factories + island.warehouses + island.turrets > 0
+  return island.factories + island.warehouses + island.turrets + island.runway > 0
     || island.building !== BUILD_NONE;
 }
 
@@ -145,7 +154,7 @@ function startBuild(state, island, what, economy) {
   if (!roleAllows(island.role, what)) return 0;
   const spec = economy.builds[what];
   if (spec === undefined) return 0;
-  if (what >= BUILD_UPGRADE_SPEED) {
+  if (what >= BUILD_UPGRADE_SPEED && what <= BUILD_UPGRADE_RADAR) {
     // An upgrade is manufactured: the island needs a working plant, and each
     // upgrade is bought once per ship.
     if (island.factories < 1) return 0;
@@ -189,7 +198,8 @@ function stepBuild(state) {
     // A finished upgrade is fitted to the SHIP: base values swap to the
     // upgraded ones and the section-damage derivation re-runs, so a damaged
     // engine room still degrades the upgraded speed the same way.
-    if (island.building >= BUILD_UPGRADE_SPEED) applyUpgrade(state, island);
+    if (island.building >= BUILD_UPGRADE_SPEED
+      && island.building <= BUILD_UPGRADE_RADAR) applyUpgrade(state, island);
     island.building = BUILD_NONE;
     island.buildTicks = 0;
   }
@@ -240,6 +250,7 @@ function clearWorks(state, island) {
   island.factories = 0;
   island.warehouses = 0;
   island.turrets = 0;
+  island.runway = 0;
   island.building = BUILD_NONE;
   island.buildTicks = 0;
   return island;
@@ -257,6 +268,7 @@ export {
   BUILD_UPGRADE_SPEED,
   BUILD_UPGRADE_PD,
   BUILD_UPGRADE_RADAR,
+  BUILD_RUNWAY,
   upgradeOwned,
   carrierOfTeam,
   roleAllows,

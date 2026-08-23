@@ -756,6 +756,34 @@ function buildSelectionMarker() {
   return group;
 }
 
+// The island runway (manual item 2): a strip long enough to read from the
+// air, oriented by the island's own seed so every client agrees without a
+// byte of state.
+function buildRunway(island) {
+  const group = new THREE.Group();
+  const strip = new THREE.Mesh(
+    new THREE.BoxGeometry(500, 1.6, 46),
+    new THREE.MeshLambertMaterial({ color: 0x2f3338 }),
+  );
+  group.add(strip);
+  const centreline = new THREE.Mesh(
+    new THREE.BoxGeometry(440, 1.8, 3),
+    new THREE.MeshLambertMaterial({ color: 0xcfd6de }),
+  );
+  centreline.position.y = 0.2;
+  group.add(centreline);
+  for (const end of [-1, 1]) {
+    const threshold = new THREE.Mesh(
+      new THREE.BoxGeometry(16, 1.8, 40),
+      new THREE.MeshLambertMaterial({ color: 0xcfd6de }),
+    );
+    threshold.position.set(end * 230, 0.2, 0);
+    group.add(threshold);
+  }
+  group.rotation.y = ((island.seed % 65536) / 65536) * Math.PI * 2;
+  return group;
+}
+
 const NEUTRAL_NODE_COLOUR = 0xb9b3a4;
 
 // The command node: a mast on a plinth, tall enough to spot from the air,
@@ -816,6 +844,7 @@ export {
   buildShot,
   buildTurret,
   buildSelectionMarker,
+  buildRunway,
   buildCommandNode,
   updateCommandNode,
   NEUTRAL_NODE_COLOUR,

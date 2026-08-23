@@ -119,6 +119,7 @@ function createIslands(seed, world, unitsPerMetre) {
       factories: 0,
       warehouses: 0,
       turrets: 0,
+      runway: 0,
       building: -1,
       buildTicks: 0,
     };

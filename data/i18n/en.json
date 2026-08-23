@@ -309,5 +309,11 @@
   "help.extras": "5-8 select a hull directly - O rear view - I signals log - ESC ESC surrender",
   "unit.lighter": "Lighter",
   "status.telemetryWeak": "telemetry fading - the carrier is losing your picture, turn back",
-  "log.telemetryLost": "{kind} lost - out of telemetry range"
+  "log.telemetryLost": "{kind} lost - out of telemetry range",
+  "build.runway": "runway",
+  "build.upSpeed": "speed refit",
+  "build.upPd": "point-defence refit",
+  "build.upRadar": "radar refit",
+  "status.landing": "cleared to land at {island}",
+  "log.landed": "{kind} down at {island} - refuelling"
 }

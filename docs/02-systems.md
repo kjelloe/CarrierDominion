@@ -115,6 +115,22 @@ the leash is what shapes the 32- and 64-island oceans. `telemetryLossMetres:
 0` switches it off. (The original's Long-Range Communication Pod — one
 aircraft freed of the leash — is a natural future refit; noted, not built.)
 
+## Island runways
+
+Resource and Defence islands can build a **runway** (`build_on_island` kind
+6 — the original's Command Centres built them on exactly those islands).
+With a Manta selected, a click on a friendly runway island is an
+**approach**, not a board: the aircraft slows to minimum flying speed
+inside 2 km — without the slowdown its turning circle exceeds the capture
+ring and it orbits the airfield until the tank is dry, which was measured —
+and the strip catches it inside 500 m of the node. Down, it refuels from
+the island's **own fuel stock** (goods have a location; this fuel never
+touched the carrier's bunker), and any new order is a relaunch. While
+parked the island's Command Centre holds it: **no telemetry to lose**,
+which is what makes island-hopping the answer to the leash — exactly the
+original's range game. A parked Manta is a target like any other, and an
+airfield captured with aircraft on it captures the aircraft.
+
 ## The helm has an autopilot
 
 The original's map + PROG + A, collapsed to one click: with nothing selected,

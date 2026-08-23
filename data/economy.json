@@ -63,6 +63,13 @@
       "materials": 1200,
       "ticks": 5000,
       "max": 1
+    },
+    {
+      "key": "runway",
+      "materials": 900,
+      "ticks": 4000,
+      "max": 1,
+      "comment": "The island runway (manual item 2): land, refuel, relaunch - island-hopping is the range game."
     }
   ],
   "factoryChassisOut": 1,

@@ -5,6 +5,43 @@ golden hash and why.
 
 ---
 
+## 2026-08-24 — The manual's three feel-changers: repair, the leash, runways
+
+Items 7, 1 and 2 of the coverage review, in rising order of reach.
+
+**7 - the hangar mends, damage slows, a cripple leaks.** Stowed hulls
+repair on the beat, paying yard materials point for point; unit damage
+scales speed AND agility in direct proportion (floored at a quarter so a
+cripple crawls home; the anti-stall floor keeps a broken Manta flying);
+below 12% the tank leaks - the whole capacity in two minutes on top of
+the burn. The original kept these three together and so do we.
+
+**1 - the telemetry leash.** Mantas and Walruses are DRONES: past 20 km
+the picture fades (the cockpit warns), past 26 km the link dies and the
+craft self-destructs. The lighter is autonomous and exempt; a sunk
+carrier is a dead signal source. The link state rides the view FROM THE
+SAME FUNCTION the engine's verdict uses. The AI obeys the leash - a
+fade-line sweep every cadence, and no errands beyond nine tenths of it
+(one loss in 30k ticks on the 64-island 16-team table). The 8-island sea
+is smaller than the leash, so the battery did not move a tick.
+
+**2 - island runways.** Resource and Defence islands build a strip; a
+Manta approaches (slowing to minimum inside 2 km - at cruise its turning
+circle exceeds the capture ring and it ORBITS the airfield to a dry tank,
+measured at a 425 m orbit), lands inside 500 m of the node, refuels from
+the island's own stock, and relaunches on any new order. Parked, the
+island's Command Centre holds it - no telemetry to lose, which makes
+island-hopping the answer to the leash, exactly the original's range
+game. A parked Manta is a target; a captured airfield captures what sits
+on it. One trap for the record: FLIGHT_LANDING first got value 4, which
+is DRIVE_BLOCKED - fleet.js compares flight and drive outcomes in one
+chain, and every landing read as "blocked". Outcome enums that meet in
+one switch must not share values.
+
+Three repins across the run (economy fields, telemetry rules, runway
+works), all with zero event drift. 441 tests, battery five for five,
+smoke green.
+
 ## 2026-08-24 — The manual's small trio: astern, signals, and the flavour pack
 
 Items 4, 9 and 10 of the Amiga-manual coverage review, one slice.

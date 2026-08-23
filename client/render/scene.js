@@ -19,6 +19,7 @@ import {
   buildMirrorOcean,
   buildOcean,
   buildOceanGrid,
+  buildRunway,
   buildSelectionMarker,
   buildShot,
   buildTurret,
@@ -166,6 +167,7 @@ function createScene(canvas, preset, sizeMetres, style) {
     style: style,
     islands: {},
     nodes: {},
+    runways: {},
     carriers: {},
     units: {},
     shots: {},
@@ -209,6 +211,22 @@ function syncNodes(view3d, view, podBuildTicks) {
       );
       view3d.nodes[island.id] = group;
       view3d.scene.add(group);
+    }
+    // The strip appears when the island builds one - its own layer, since
+    // the island mesh itself is built once and never touched again.
+    if (island.runway === 1 && view3d.runways[island.id] === undefined) {
+      const strip = buildRunway(island);
+      strip.position.set(
+        toMetres(island.nodeX),
+        toMetres(islandHeightAt(island, island.nodeX, island.nodeY)) + 1.2,
+        -toMetres(island.nodeY),
+      );
+      view3d.runways[island.id] = strip;
+      view3d.scene.add(strip);
+    }
+    if (island.runway !== 1 && view3d.runways[island.id] !== undefined) {
+      view3d.scene.remove(view3d.runways[island.id]);
+      delete view3d.runways[island.id];
     }
     const ownerColour = island.owner < 0
       ? NEUTRAL_NODE_COLOUR
@@ -496,6 +514,7 @@ function resetWorld(view3d, sizeMetres) {
   if (wantsPhysicalSky(view3d.preset, view3d.style)) addPhysicalSky(view3d);
   view3d.islands = {};
   view3d.nodes = {};
+  view3d.runways = {};
   view3d.carriers = {};
   view3d.units = {};
   view3d.shots = {};

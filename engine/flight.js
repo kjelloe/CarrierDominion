@@ -9,11 +9,12 @@
 // A Manta always carries some way on: below minSpeed it would be hovering,
 // which this airframe only does on the deck.
 
-import { clampI, mulDiv, stepToward, turnToward, wrapAngle } from '../shared/fixed.js';
+import { clampI, dist2D, mulDiv, stepToward, turnToward, wrapAngle } from '../shared/fixed.js';
 import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { worldHeightAt } from './heightmap.js';
 import {
   ORDER_HOLD,
+  ORDER_LAND,
   ORDER_MOVE,
   ORDER_RETURN,
   UNIT_LOST,
@@ -37,6 +38,17 @@ const TERRAIN_PROBE_UNITS = 1400 * 256;
 const FLIGHT_NOTHING = 0;
 const FLIGHT_OUT_OF_FUEL = 1;
 const FLIGHT_ARRIVED = 2;
+// 5, not 4: fleet.js compares FLIGHT and DRIVE outcomes in one chain, and
+// DRIVE_BLOCKED is already 4 - a landing that reads as "blocked" parks the
+// approach in a holding pattern forever (found the measured way).
+const FLIGHT_LANDING = 5;
+// The approach (manual item 2: "decrease in speed as you near the runway"):
+// inside APPROACH the Manta slows to minimum flying speed - its turning
+// circle shrinks with it - and the strip catches it inside CAPTURE. Without
+// the slowdown a fast Manta's turn radius exceeds the capture ring and it
+// orbits the airfield until the tank is dry (measured: a 425 m orbit).
+const LAND_APPROACH_UNITS = 512000; // 2,000 m
+const LAND_CAPTURE_UNITS = 128000; // 500 m
 const FLIGHT_HOME = 3;
 
 function desiredHeading(unit) {
@@ -67,6 +79,10 @@ function targetSpeedFor(unit) {
   // never below flying speed - the anti-stall hardware has never yet failed.
   const top = mulDiv(unit.maxSpeed, damagePermil(unit), 1000);
   const ceiling = top < unit.minSpeed ? unit.minSpeed : top;
+  if (unit.order === ORDER_LAND
+    && dist2D(unit.x, unit.y, unit.targetX, unit.targetY) <= LAND_APPROACH_UNITS) {
+    return unit.minSpeed;
+  }
   if (unit.control === -1) return unit.order === ORDER_HOLD ? unit.minSpeed : ceiling;
   return clampI(mulDiv(ceiling, unit.throttle, 100), unit.minSpeed, ceiling);
 }
@@ -115,6 +131,10 @@ function stepManta(unit, islands, sizeUnits) {
     unit.order = ORDER_HOLD;
     return FLIGHT_ARRIVED;
   }
+  if (unit.order === ORDER_LAND
+    && dist2D(unit.x, unit.y, unit.targetX, unit.targetY) <= LAND_CAPTURE_UNITS) {
+    return FLIGHT_LANDING;
+  }
   if (unit.state === UNIT_RETURNING && unit.order === ORDER_RETURN && arrivedAtTarget(unit)) {
     return FLIGHT_HOME;
   }
@@ -126,6 +146,7 @@ export {
   FLIGHT_OUT_OF_FUEL,
   FLIGHT_ARRIVED,
   FLIGHT_HOME,
+  FLIGHT_LANDING,
   TERRAIN_CLEARANCE_UNITS,
   PILOT_FLOOR_UNITS,
   stepManta,

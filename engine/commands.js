@@ -36,6 +36,8 @@ const CMD_SET_SUPPLY_BIAS = 'set_supply_bias';
 // SURRENDER option. The ship is scuttled by her own commander; victory
 // resolution does the rest by its ordinary rules.
 const CMD_SURRENDER = 'surrender';
+// Land a Manta on a friendly island runway (manual coverage review, item 2).
+const CMD_ORDER_UNIT_LAND = 'order_unit_land';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -58,6 +60,7 @@ const UNIT_COMMANDS = [
   CMD_SELECT_WEAPON,
   CMD_ORDER_UNIT_ATTACK,
   CMD_ORDER_UNIT_ESCORT,
+  CMD_ORDER_UNIT_LAND,
 ];
 
 function isInt(value) {
@@ -127,7 +130,7 @@ function validateCommand(command) {
     if (!isInt(command.carrierId)) return 'carrierId must be an integer';
     if (!isInt(command.islandId)) return 'islandId must be an integer';
     if (!isInt(command.what)) return 'what must be an integer';
-    if (command.what < 0 || command.what > 5) return 'no such building';
+    if (command.what < 0 || command.what > 6) return 'no such building';
     return '';
   }
   if (type === CMD_SET_COURSE) {
@@ -153,6 +156,11 @@ function validateCommand(command) {
   }
   if (type === CMD_ORDER_UNIT_ESCORT) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
+    return '';
+  }
+  if (type === CMD_ORDER_UNIT_LAND) {
+    if (!isInt(command.unitId)) return 'unitId must be an integer';
+    if (!isInt(command.islandId)) return 'islandId must be an integer';
     return '';
   }
   if (type === CMD_SET_AI) {
@@ -258,6 +266,7 @@ export {
   CMD_ORDER_UNIT_ESCORT,
   CMD_SET_SUPPLY_BIAS,
   CMD_SURRENDER,
+  CMD_ORDER_UNIT_LAND,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

@@ -64,6 +64,7 @@ function copyIsland(island) {
     factories: island.factories,
     warehouses: island.warehouses,
     turrets: island.turrets,
+    runway: island.runway,
     building: island.building,
     buildTicks: island.buildTicks,
   };

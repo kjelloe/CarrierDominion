@@ -589,6 +589,13 @@ function signalText(view, event) {
     const unit = view.units.find((u) => u.id === event.a);
     return t('log.telemetryLost', { kind: kindWord(unit === undefined ? 0 : unit.kind) });
   }
+  if (code === 42) {
+    const unit = view.units.find((u) => u.id === event.a);
+    return t('log.landed', {
+      kind: kindWord(unit === undefined ? 0 : unit.kind),
+      island: islandWord(view, event.c),
+    });
+  }
   return '';
 }
 
@@ -965,8 +972,17 @@ function bindInput(level) {
     const enemy = enemyNear(target.x, target.y);
     const unit = selectedUnit();
     if (enemy === undefined) {
-      // An island you hold opens its board; anything else closes it.
       const island = islandAt(state.view, target.x, target.y);
+      // A Manta selected and a friendly runway under the click: that is an
+      // approach, not a board (manual item 2). The board is still there -
+      // click with nothing selected.
+      if (island !== undefined && unit !== undefined && unit.kind === KIND_MANTA
+        && island.owner === state.view.team && island.runway === 1) {
+        state.transport.send({ type: 'order_unit_land', unitId: unit.id, islandId: island.id });
+        setHud(state.hud, 'status', state.t('status.landing', { island: islandName(island) }));
+        return;
+      }
+      // An island you hold opens its board; anything else closes it.
       openIslandPanel(state.island, island);
       if (island !== undefined) return;
     }

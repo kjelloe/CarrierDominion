@@ -8,10 +8,13 @@
 // and a way to send a command.
 
 const ROLE_KEYS = ['island.roleResource', 'island.roleFactory', 'island.roleDefence'];
-const BUILD_KEYS = ['build.factory', 'build.warehouse', 'build.turret'];
+const BUILD_KEYS = ['build.factory', 'build.warehouse', 'build.turret',
+  'build.upSpeed', 'build.upPd', 'build.upRadar', 'build.runway'];
 // Which buildings each role allows, mirroring engine/island.js. The engine is
 // the authority - this only decides what to offer.
-const ROLE_BUILDS = [[1], [0, 1], [2]];
+// Roles are 0 resource, 1 factory, 2 defence; runways (6) belong to the
+// mine and the fortress, as the original built them.
+const ROLE_BUILDS = [[1, 6], [0, 1], [2, 6]];
 
 function createIslandPanel(ctx) {
   return { islandId: -1, stamp: '', ctx: ctx };

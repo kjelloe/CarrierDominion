@@ -28,6 +28,7 @@ import {
   CMD_BUILD_ON_ISLAND,
   CMD_SET_COURSE,
   CMD_ORDER_UNIT_ESCORT,
+  CMD_ORDER_UNIT_LAND,
   CMD_SET_SUPPLY_BIAS,
   CMD_SURRENDER,
   CMD_SET_REPAIR_PRIORITY,
@@ -73,10 +74,13 @@ import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import {
   KIND_LIGHTER,
+  KIND_MANTA,
   ORDER_ATTACK,
   ORDER_ESCORT,
+  ORDER_LAND,
   ORDER_MOVE,
   UNIT_ACTIVE,
+  UNIT_LANDED,
   UNIT_RETURNING,
   findUnit,
 } from './units.js';
@@ -150,10 +154,43 @@ function applyCourse(next, command) {
 
 // Escort: follow the ship, fight what comes. The one order with no target -
 // the target is home.
+// A parked Manta answers a new order by taking off first: any legitimate
+// unit order lifts it from the runway back to ACTIVE (manual item 2 - click
+// LAUNCH and the Command Centre sends it up).
+function liftOff(unit) {
+  if (unit.state !== UNIT_LANDED) return;
+  unit.state = UNIT_ACTIVE;
+  unit.landedIsland = -1;
+  unit.throttle = 100;
+}
+
+function applyUnitLand(next, command) {
+  const unit = findUnit(next, command.unitId);
+  if (unit === -1 || unit.kind !== KIND_MANTA) return reject(next);
+  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
+    && unit.state !== UNIT_LANDED) return reject(next);
+  const island = command.islandId >= 0 && command.islandId < next.islands.length
+    ? next.islands[command.islandId]
+    : -1;
+  if (island === -1 || island.owner !== unit.team || island.runway !== 1) return reject(next);
+  liftOff(unit);
+  unit.state = UNIT_ACTIVE;
+  unit.order = ORDER_LAND;
+  unit.landedIsland = island.id;
+  unit.targetX = island.nodeX;
+  unit.targetY = island.nodeY;
+  unit.control = -1;
+  unit.throttle = 100;
+  pushEvent(next.events, EVT_UNIT_ORDERED, unit.id, unit.order, 0);
+  return next;
+}
+
 function applyUnitEscort(next, command) {
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
-  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
+  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
+    && unit.state !== UNIT_LANDED) return reject(next);
+  liftOff(unit);
   if (unit.kind === KIND_LIGHTER) return reject(next); // the boat has a job
   unit.state = UNIT_ACTIVE;
   unit.order = ORDER_ESCORT;
@@ -191,7 +228,9 @@ function applyLaunch(next, command) {
 function applyRecall(next, command) {
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
-  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
+  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
+    && unit.state !== UNIT_LANDED) return reject(next);
+  liftOff(unit);
   orderReturn(unit);
   pushEvent(next.events, EVT_UNIT_ORDERED, unit.id, unit.order, 0);
   return next;
@@ -200,7 +239,9 @@ function applyRecall(next, command) {
 function applyUnitMove(next, command) {
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
-  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
+  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
+    && unit.state !== UNIT_LANDED) return reject(next);
+  liftOff(unit);
   if (command.x > next.params.sizeUnits || command.y > next.params.sizeUnits) return reject(next);
   unit.state = UNIT_ACTIVE;
   unit.order = ORDER_MOVE;
@@ -217,7 +258,9 @@ function applyUnitMove(next, command) {
 function applyUnitAttack(next, command) {
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
-  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
+  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
+    && unit.state !== UNIT_LANDED) return reject(next);
+  liftOff(unit);
   const target = designated(next, command.targetKind, command.targetId);
   if (target === -1) return reject(next);
   unit.state = UNIT_ACTIVE;
@@ -249,7 +292,9 @@ function applyCarrierAim(next, command) {
 function applyTakeControl(next, command) {
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
-  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
+  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
+    && unit.state !== UNIT_LANDED) return reject(next);
+  liftOff(unit);
   // One seat per team for now; the seat id IS the team until crews exist.
   unit.control = unit.team;
   unit.state = UNIT_ACTIVE;
@@ -505,6 +550,7 @@ function apply(state, command) {
   if (type === CMD_SET_HEADING) return applyHeading(next, command);
   if (type === CMD_SET_COURSE) return applyCourse(next, command);
   if (type === CMD_ORDER_UNIT_ESCORT) return applyUnitEscort(next, command);
+  if (type === CMD_ORDER_UNIT_LAND) return applyUnitLand(next, command);
   if (type === CMD_SET_SUPPLY_BIAS) return applySupplyBias(next, command);
   if (type === CMD_LAUNCH_UNIT) return applyLaunch(next, command);
   if (type === CMD_RECALL_UNIT) return applyRecall(next, command);

@@ -309,5 +309,11 @@
   "help.extras": "5-8 velger fartøy direkte - O aktervisning - I signallogg - ESC ESC overgivelse",
   "unit.lighter": "Lekter",
   "status.telemetryWeak": "telemetrien svekkes - skipet mister bildet ditt, snu",
-  "log.telemetryLost": "{kind} tapt - utenfor telemetrirekkevidde"
+  "log.telemetryLost": "{kind} tapt - utenfor telemetrirekkevidde",
+  "build.runway": "rullebane",
+  "build.upSpeed": "fartsoppgradering",
+  "build.upPd": "nærforsvarsoppgradering",
+  "build.upRadar": "radaroppgradering",
+  "status.landing": "klarert for landing på {island}",
+  "log.landed": "{kind} nede på {island} - fyller drivstoff"
 }

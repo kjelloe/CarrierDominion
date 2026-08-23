@@ -225,6 +225,8 @@ function islandView(island, team) {
     factories: island.factories,
     warehouses: island.warehouses,
     turrets: island.turrets,
+    // A runway is visible from the sea, like the rest of the works.
+    runway: island.runway,
     building: island.building,
     buildTicks: mine ? island.buildTicks : -1,
     stockFuel: mine ? island.stockFuel : -1,
@@ -465,6 +467,8 @@ function refereeIslandView(island) {
     factories: island.factories,
     warehouses: island.warehouses,
     turrets: island.turrets,
+    // A runway is visible from the sea, like the rest of the works.
+    runway: island.runway,
     building: island.building,
     buildTicks: island.buildTicks,
     stockFuel: island.stockFuel,
