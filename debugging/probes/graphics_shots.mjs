@@ -83,18 +83,23 @@ async function shoot(name, query) {
       (i) => pixels[i + 2] - pixels[i]);
     v.camera.position.copy(keepPosition);
     v.camera.quaternion.copy(keepQuaternion);
+    // The models pass, counted: the own carrier's part count at High must
+    // exceed Medium's - the dressing is real geometry, not a setting.
+    const carriers = Object.values(window.__scene3d.carriers);
     return {
       graphics: document.getElementById('hud-graphics')?.textContent,
       oceanShader: window.__scene3d.ocean.material.type,
       oceanName: window.__scene3d.ocean.material.name,
       zenithBlueness: Math.round(zenithBlueness),
       waterVariance: Math.round(waterVariance),
+      carrierParts: carriers.length === 0 ? 0 : carriers[0].children.length,
     };
   });
   await page.screenshot({ path: join(SHOTS, `graphics-${name}.png`) });
   await page.close();
   console.log(`${name}: ${facts.graphics} (${facts.oceanShader}/${facts.oceanName})`
-    + ` zenith B-R ${facts.zenithBlueness}, water variance ${facts.waterVariance}`);
+    + ` zenith B-R ${facts.zenithBlueness}, water variance ${facts.waterVariance},`
+    + ` carrier parts ${facts.carrierParts}`);
   return facts;
 }
 
@@ -134,6 +139,15 @@ const phase2Ok = modernHigh.oceanName === 'MirrorShader'
   && retroHigh.zenithBlueness < 20;
 if (!phase2Ok) {
   console.log('FAIL: the phase-2 sky or water is not doing what the spec says');
+  process.exitCode = 1;
+}
+
+// The models pass: High carries more carrier geometry than Medium, in the
+// modern style AND in retro - sharper 1988 is still 1988, but sharper.
+const modelsOk = modernHigh.carrierParts > shots[1].carrierParts
+  && retroHigh.carrierParts === modernHigh.carrierParts;
+if (!modelsOk) {
+  console.log('FAIL: the High-tier model dressing is missing somewhere');
   process.exitCode = 1;
 }
 

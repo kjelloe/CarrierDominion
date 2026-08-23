@@ -116,24 +116,30 @@ function startDiorama(style) {
   sun.target = aim;
   scene.add(sun);
 
-  const stagePreset = { terrainGrid: 96, shadows: false, oceanSegments: 64, oceanShader: true, oceanDetail: false };
+  // The shop window shows the detailed hulls whatever the machine would run
+  // the war at: the dressing is a few dozen flat primitives, and a splash
+  // exists to be looked at.
+  const stagePreset = {
+    terrainGrid: 96, shadows: false, modelDetail: true,
+    oceanSegments: 64, oceanShader: true, oceanDetail: false,
+  };
   scene.add(buildIslandMesh(ISLE, stagePreset, style));
   scene.add(buildOcean(SEA_METRES, stagePreset, style));
   if (style.oceanGrid) scene.add(buildOceanGrid(SEA_METRES));
 
   // The cast. Defences on the island's shoulders, the Walrus on the beach it
   // is storming, the carrier standing off with its bow toward the fight.
-  const gun = buildTurret(DEFENDER, false);
+  const gun = buildTurret(DEFENDER, false, true);
   const gunSpot = placeOnSlope(0.4, 25, 80);
   gun.position.set(gunSpot.x, gunSpot.y, gunSpot.z);
   scene.add(gun);
-  const battery = buildTurret(DEFENDER, true);
+  const battery = buildTurret(DEFENDER, true, true);
   const batterySpot = placeOnSlope(2.1, 25, 80);
   battery.position.set(batterySpot.x, batterySpot.y, batterySpot.z);
   scene.add(battery);
 
   const beach = placeOnSlope(-1.1, 1, 4);
-  const walrus = buildWalrus(ATTACKER);
+  const walrus = buildWalrus(ATTACKER, true);
   walrus.position.set(beach.x, beach.y + 2, beach.z);
   faceAlong(walrus, CENTRE.x - beach.x, CENTRE.z - beach.z);
   scene.add(walrus);
@@ -145,8 +151,8 @@ function startDiorama(style) {
   scene.add(carrier);
 
   const mantas = [
-    { mesh: buildManta(ATTACKER), radius: 1250, altitude: 300, speed: 0.16, phase: 0 },
-    { mesh: buildManta(ATTACKER), radius: 950, altitude: 430, speed: -0.12, phase: 2.4 },
+    { mesh: buildManta(ATTACKER, true), radius: 1250, altitude: 300, speed: 0.16, phase: 0 },
+    { mesh: buildManta(ATTACKER, true), radius: 950, altitude: 430, speed: -0.12, phase: 2.4 },
   ];
   for (const manta of mantas) scene.add(manta.mesh);
 

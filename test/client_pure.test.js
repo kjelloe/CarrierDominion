@@ -60,8 +60,8 @@ test('every preset is complete and ordered by cost', () => {
   for (const name of presetNames()) {
     const preset = presetFor(name);
     for (const key of [
-      'label', 'terrainGrid', 'oceanSegments', 'oceanDetail', 'physicalEffects', 'shadows',
-      'shadowMapSize', 'pixelRatioCap', 'antialias', 'fogDensity', 'drawDistanceMetres',
+      'label', 'terrainGrid', 'oceanSegments', 'oceanDetail', 'physicalEffects', 'modelDetail',
+      'shadows', 'shadowMapSize', 'pixelRatioCap', 'antialias', 'fogDensity', 'drawDistanceMetres',
     ]) {
       assert.notEqual(preset[key], undefined, `${name} preset is missing ${key}`);
     }
@@ -78,6 +78,11 @@ test('every preset is complete and ordered by cost', () => {
   assert.equal(presetFor('low').physicalEffects, false);
   assert.equal(presetFor('medium').physicalEffects, false);
   assert.equal(presetFor('high').physicalEffects, true);
+  // The models pass rides the same gate: detail hulls at High, in every
+  // style - sharper 1988 is still 1988 (ruling 2026-08-23).
+  assert.equal(presetFor('low').modelDetail, false);
+  assert.equal(presetFor('medium').modelDetail, false);
+  assert.equal(presetFor('high').modelDetail, true);
 });
 
 test('engine units and scene metres convert both ways', () => {

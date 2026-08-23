@@ -40,6 +40,17 @@ What a 4070 can be given without new dependencies:
 | pixel ratio cap | 1 | 1.5 | 2 |
 | antialias | off | on | on |
 | draw distance | 12 km | 20 km | 30 km |
+| model detail (`modelDetail`, landed 2026-08-23) | off | off | on |
+
+The **models pass**: at High every hull carries its working clutter —
+carrier catwalks, lifeboats, point-defence mounts, stern crane, radar dish
+and deck lights; Manta intakes, underwing rails with rounds, nose probe;
+Walrus mudguards, whip antenna, hatch, spade; lighter's second crate tier,
+bollards, stack, fenders; turret sandbag rings and the battery's tracking
+dish. In **every style**, retro included — sharper 1988 is still 1988: same
+silhouettes, same materials, flat shading intact. The `graphics_shots` probe
+counts the carrier's parts at Medium vs High and asserts retro High equals
+modern High.
 
 The `oceanDetail` water is our own shader, not an addon: the vertex
 displacement (the swell) is **identical to Medium** — only the fragment gains

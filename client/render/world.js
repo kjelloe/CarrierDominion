@@ -361,6 +361,58 @@ function buildCarrier(teamColour, preset, style) {
   bow.position.set(195, 10, 0);
   group.add(bow);
 
+  // The High-tier dressing (docs/07 models pass): the working clutter that
+  // makes a slab read as a WORKING ship - catwalks, boats, mounts, a crane,
+  // a dish. Same silhouette, same materials, just more of the truth.
+  if (preset.modelDetail) {
+    const trimMat = new THREE.MeshLambertMaterial({ color: 0x39424e });
+    const lightMat = new THREE.MeshLambertMaterial({ color: 0x8fa4b8 });
+    for (const side of [-1, 1]) {
+      // Catwalks below the deck edge, bow to stern.
+      const catwalk = new THREE.Mesh(new THREE.BoxGeometry(280, 2, 6), trimMat);
+      catwalk.position.set(-10, 17, side * 45);
+      group.add(catwalk);
+      // Lifeboat blocks in pairs along the flank.
+      for (let b = 0; b < 3; b++) {
+        const boat = new THREE.Mesh(new THREE.BoxGeometry(16, 4, 6), lightMat);
+        boat.position.set(-90 + b * 70, 20, side * 40);
+        group.add(boat);
+      }
+    }
+    // Point-defence mounts fore and aft of the island: the guns the damage
+    // board keeps talking about, finally visible on the roof.
+    for (const at of [[120, 26, -20], [-140, 26, -20]]) {
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(7, 9, 4, 8), trimMat);
+      ring.position.set(at[0], at[1], at[2]);
+      group.add(ring);
+      const barrelGeometry = new THREE.CylinderGeometry(1, 1, 18, 5);
+      barrelGeometry.rotateZ(-Math.PI / 2.6);
+      const barrel = new THREE.Mesh(barrelGeometry, lightMat);
+      barrel.position.set(at[0] + 6, at[1] + 6, at[2]);
+      group.add(barrel);
+    }
+    // The stern crane that swings stores aboard, and the search radar dish
+    // on its own lattice above the bridge.
+    const craneGeometry = new THREE.CylinderGeometry(1.6, 2.2, 42, 6);
+    craneGeometry.rotateZ(0.7);
+    const crane = new THREE.Mesh(craneGeometry, trimMat);
+    crane.position.set(-150, 40, 14);
+    group.add(crane);
+    const dish = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 2, 10), lightMat);
+    dish.rotation.x = 0.9;
+    dish.position.set(-30, 78, 26);
+    group.add(dish);
+    // Deck edge lights: tiny unlit studs the eye reads as scale at dusk.
+    for (let d = 0; d < 5; d++) {
+      const stud = new THREE.Mesh(
+        new THREE.BoxGeometry(2, 1, 2),
+        new THREE.MeshBasicMaterial({ color: 0xffe08a }),
+      );
+      stud.position.set(-120 + d * 60, 24, -40);
+      group.add(stud);
+    }
+  }
+
   if (preset.shadows) {
     for (const child of group.children) {
       child.castShadow = true;
@@ -376,7 +428,7 @@ function buildCarrier(teamColour, preset, style) {
 // too poor to name). Delta wing, a fuselage proud of it, a canopy, twin fins,
 // a nozzle - still low-poly flat primitives, just enough of them that the
 // shape answers "what is that" at a glance.
-function buildManta(teamColour) {
+function buildManta(teamColour, detail) {
   const group = new THREE.Group();
   const teamMat = new THREE.MeshLambertMaterial({ color: teamColour });
   const trimMat = new THREE.MeshLambertMaterial({ color: 0x8fa4b8 });
@@ -423,12 +475,38 @@ function buildManta(teamColour) {
   );
   nozzle.position.set(-10, 2.2, 0);
   group.add(nozzle);
+
+  // High-tier dressing: intakes at the wing roots, rails under the wings
+  // with rounds on them, a nose probe - the clutter of a working airframe.
+  if (detail === true) {
+    const darkMat = new THREE.MeshLambertMaterial({ color: 0x2c3238 });
+    for (const side of [-1, 1]) {
+      const intake = new THREE.Mesh(new THREE.BoxGeometry(6, 2.4, 2.4), darkMat);
+      intake.position.set(1, 0.8, side * 4.4);
+      group.add(intake);
+      const railGeometry = new THREE.CylinderGeometry(0.5, 0.5, 7, 5);
+      railGeometry.rotateZ(-Math.PI / 2);
+      const rail = new THREE.Mesh(railGeometry, darkMat);
+      rail.position.set(-2, -0.9, side * 8.5);
+      group.add(rail);
+      const roundGeometry = new THREE.CylinderGeometry(0.7, 0.7, 6, 5);
+      roundGeometry.rotateZ(-Math.PI / 2);
+      const round = new THREE.Mesh(roundGeometry, trimMat);
+      round.position.set(-1, -1.8, side * 8.5);
+      group.add(round);
+    }
+    const probeGeometry = new THREE.CylinderGeometry(0.3, 0.3, 5, 4);
+    probeGeometry.rotateZ(-Math.PI / 2);
+    const probe = new THREE.Mesh(probeGeometry, trimMat);
+    probe.position.set(23, 2.2, 0);
+    group.add(probe);
+  }
   return group;
 }
 
 // A Walrus: a squat hull with a turret block, deliberately unlike the Manta at
 // a distance - most of the time you are reading these as silhouettes.
-function buildWalrus(teamColour) {
+function buildWalrus(teamColour, detail) {
   const group = new THREE.Group();
   const teamMat = new THREE.MeshLambertMaterial({ color: teamColour });
   const darkMat = new THREE.MeshLambertMaterial({ color: 0x3c444c });
@@ -468,12 +546,32 @@ function buildWalrus(teamColour) {
   const stowage = new THREE.Mesh(new THREE.BoxGeometry(4, 2, 7), darkMat);
   stowage.position.set(-6.5, 6.6, 0);
   group.add(stowage);
+
+  // High-tier dressing: mudguards over the drums, a whip antenna, a hatch
+  // ring, and a spade at the stern - the amphibian dressed for work.
+  if (detail === true) {
+    const trimMat = new THREE.MeshLambertMaterial({ color: 0x707c88 });
+    for (const side of [-1, 1]) {
+      const guard = new THREE.Mesh(new THREE.BoxGeometry(16, 0.8, 2), trimMat);
+      guard.position.set(-2, 4.9, side * 5.1);
+      group.add(guard);
+    }
+    const whip = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 8, 4), darkMat);
+    whip.position.set(-6, 11, 3);
+    group.add(whip);
+    const hatch = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.6, 8), darkMat);
+    hatch.position.set(-3.5, 9.3, 0);
+    group.add(hatch);
+    const spade = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 8), trimMat);
+    spade.position.set(-8.4, 3, 0);
+    group.add(spade);
+  }
   return group;
 }
 
 // A lighter: a blunt barge with a deckhouse aft. Read at a distance it should
 // never be mistaken for a Walrus - one of these is a target worth chasing.
-function buildLighter(teamColour) {
+function buildLighter(teamColour, detail) {
   const group = new THREE.Group();
   const teamMat = new THREE.MeshLambertMaterial({ color: teamColour });
 
@@ -530,6 +628,31 @@ function buildLighter(teamColour) {
   crane.position.set(-4.5, 10, 3.5);
   crane.rotation.z = 0.6;
   group.add(crane);
+
+  // High-tier dressing: a second crate tier, bollards at the corners, a
+  // stack pipe on the wheelhouse, and a fender line along each flank.
+  if (detail === true) {
+    const darkMat = new THREE.MeshLambertMaterial({ color: 0x3c444c });
+    const crateMat = new THREE.MeshLambertMaterial({ color: 0x8a7f5c });
+    const upper = new THREE.Mesh(new THREE.BoxGeometry(4, 2.4, 4), crateMat);
+    upper.position.set(2.5, 10.6, -1);
+    group.add(upper);
+    for (const fore of [-1, 1]) {
+      for (const side of [-1, 1]) {
+        const bollard = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.8, 6), darkMat);
+        bollard.position.set(fore * 11, 7.2, side * 4.2);
+        group.add(bollard);
+      }
+    }
+    const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 4, 6), darkMat);
+    stack.position.set(-11.5, 13.5, -2);
+    group.add(stack);
+    for (const side of [-1, 1]) {
+      const fender = new THREE.Mesh(new THREE.BoxGeometry(20, 0.9, 0.9), darkMat);
+      fender.position.set(0, 4.2, side * 5.8);
+      group.add(fender);
+    }
+  }
   return group;
 }
 
@@ -558,7 +681,7 @@ function buildShot(teamColour) {
 // Drawn well over life size, and deliberately: a real emplacement is about
 // twenty metres across, which is two pixels at the range its own missiles
 // reach. A gun you cannot see is a gun you cannot plan around.
-function buildTurret(teamColour, missile) {
+function buildTurret(teamColour, missile, detail) {
   const group = new THREE.Group();
   const base = new THREE.Mesh(
     new THREE.CylinderGeometry(22, 30, 16, 6),
@@ -591,6 +714,25 @@ function buildTurret(teamColour, missile) {
     barrel.geometry.rotateZ(-Math.PI / 2);
     barrel.position.set(22, 30, 0);
     group.add(barrel);
+  }
+
+  // High-tier dressing: a sandbag ring around the base, and for the missile
+  // battery its own tracking dish - an EMPLACEMENT rather than a marker.
+  if (detail === true) {
+    const bagMat = new THREE.MeshLambertMaterial({ color: 0x6b6353 });
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(36, 4, 5, 12), bagMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 4;
+    group.add(ring);
+    if (missile) {
+      const dish = new THREE.Mesh(
+        new THREE.CylinderGeometry(6, 6, 1.6, 10),
+        new THREE.MeshLambertMaterial({ color: 0xc9d4de }),
+      );
+      dish.rotation.x = 0.8;
+      dish.position.set(-14, 48, 10);
+      group.add(dish);
+    }
   }
   return group;
 }

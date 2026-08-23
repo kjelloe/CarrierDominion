@@ -26,6 +26,7 @@ const PRESETS = {
     oceanShader: false,
     oceanDetail: false,
     physicalEffects: false,
+    modelDetail: false,
     oceanSegments: 1,
     shadows: false,
     shadowMapSize: 0,
@@ -40,6 +41,7 @@ const PRESETS = {
     oceanShader: true,
     oceanDetail: false,
     physicalEffects: false,
+    modelDetail: false,
     oceanSegments: 64,
     shadows: true,
     shadowMapSize: 1024,
@@ -54,6 +56,10 @@ const PRESETS = {
     oceanShader: true,
     oceanDetail: true,
     physicalEffects: true,
+    // The models pass (ruling 2026-08-23): more geometry on every hull, in
+    // EVERY style - High-tier retro is sharper 1988, the same contract the
+    // 144-vertex terrain already keeps. Detail, never different art.
+    modelDetail: true,
     oceanSegments: 256,
     shadows: true,
     shadowMapSize: 4096,

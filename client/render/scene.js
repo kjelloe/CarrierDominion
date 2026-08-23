@@ -266,9 +266,10 @@ function syncUnits(view3d, view) {
     let group = view3d.units[unit.id];
     if (group === undefined) {
       const colour = TEAM_COLOURS[unit.team % TEAM_COLOURS.length];
-      if (unit.kind === 0) group = buildManta(colour);
-      else if (unit.kind === 2) group = buildLighter(colour);
-      else group = buildWalrus(colour);
+      const detail = view3d.preset.modelDetail === true;
+      if (unit.kind === 0) group = buildManta(colour, detail);
+      else if (unit.kind === 2) group = buildLighter(colour, detail);
+      else group = buildWalrus(colour, detail);
       if (unit.contact === 1) dimForContact(group);
       view3d.units[unit.id] = group;
       view3d.scene.add(group);
@@ -292,7 +293,11 @@ function syncTurrets(view3d, view) {
   for (const turret of view.turrets) {
     seen[turret.id] = true;
     if (view3d.turrets[turret.id] !== undefined) continue;
-    const group = buildTurret(TEAM_COLOURS[turret.team % TEAM_COLOURS.length], turret.kind === 1);
+    const group = buildTurret(
+      TEAM_COLOURS[turret.team % TEAM_COLOURS.length],
+      turret.kind === 1,
+      view3d.preset.modelDetail === true,
+    );
     group.position.set(toMetres(turret.x), toMetres(turret.z), -toMetres(turret.y));
     view3d.turrets[turret.id] = group;
     view3d.scene.add(group);
