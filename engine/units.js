@@ -27,6 +27,9 @@ const ORDER_DELIVER = 4; // lighter: bring it back to the carrier
 // Sent at something, the way the original's autopilot Attack order worked: you
 // designate, the autopilot closes and engages.
 const ORDER_ATTACK = 5;
+// Follow the ship and fight what comes (the original's Escort): a standing
+// combat air patrol that chases its own moving airfield.
+const ORDER_ESCORT = 6;
 
 function createManta(id, team, carrierId, rules, unitsPerMetre) {
   const stats = rules.units.manta;
@@ -362,6 +365,7 @@ export {
   ORDER_LOAD,
   ORDER_DELIVER,
   ORDER_ATTACK,
+  ORDER_ESCORT,
   createManta,
   createWalrus,
   createLighter,

@@ -45,9 +45,14 @@ function income(role) {
 test('nobody starts with stores: what you have is what your islands hold', () => {
   const state = fresh();
   for (const team of state.teams) {
-    // A team record holds no goods - only which island it ships to, and its
-    // score for the optional point/time end conditions.
-    assert.deepEqual(Object.keys(team).sort(), ['id', 'score', 'stockpileIsland']);
+    // A team record holds no goods - only which island it ships to, its
+    // score, and the quartermaster's production bias (all MEDIUM at the
+    // start, which is exactly the unbias behaviour).
+    assert.deepEqual(
+      Object.keys(team).sort(),
+      ['biasChassis', 'biasFuel', 'biasOrdnance', 'id', 'score', 'stockpileIsland'],
+    );
+    assert.deepEqual([team.biasFuel, team.biasOrdnance, team.biasChassis], [1, 1, 1]);
     assert.equal(team.stockpileIsland, -1);
     assert.equal(team.score, 0);
     assert.deepEqual(

@@ -136,7 +136,10 @@ test('the spectator view is the chart: common knowledge, and nobody secrets', ()
   assert.equal(view.islands[0].stockMaterials, -1, 'a spectator was shown a stockpile');
   assert.deepEqual(
     view.resources,
-    { id: -1, fuel: 0, materials: 0, ordnance: 0, chassis: 0, stockpileIsland: -1, score: 0 },
+    {
+      id: -1, fuel: 0, materials: 0, ordnance: 0, chassis: 0,
+      stockpileIsland: -1, score: 0, biasFuel: 1, biasOrdnance: 1, biasChassis: 1,
+    },
   );
   assert.equal(JSON.stringify(view).includes('4321'), false);
 });

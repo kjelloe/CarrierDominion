@@ -64,6 +64,8 @@ function ownCarrierView(carrier) {
     flareCooldown: carrier.flareCooldown,
     flareReload: carrier.flareReload,
     flareCost: carrier.flareCost,
+    courseX: carrier.courseX,
+    courseY: carrier.courseY,
     sections: sectionsView(carrier.sections),
     contact: 0,
   };
@@ -99,6 +101,8 @@ function contactView(carrier) {
     flareCooldown: -1,
     flareReload: -1,
     flareCost: -1,
+    courseX: -1,
+    courseY: -1,
     // What is broken aboard an enemy ship is exactly what you would most like
     // to know, so a radar contact tells you nothing about it.
     sections: [],
@@ -328,10 +332,16 @@ function buildView(state, team) {
 
   let stockpileIsland = -1;
   let score = 0;
+  let biasFuel = 1;
+  let biasOrdnance = 1;
+  let biasChassis = 1;
   for (let i = 0; i < state.teams.length; i++) {
     if (state.teams[i].id !== team) continue;
     stockpileIsland = state.teams[i].stockpileIsland;
     score = state.teams[i].score;
+    biasFuel = state.teams[i].biasFuel;
+    biasOrdnance = state.teams[i].biasOrdnance;
+    biasChassis = state.teams[i].biasChassis;
   }
   // Spectators hold nothing; summing "islands owned by -1" would total the
   // unowned ones.
@@ -393,6 +403,9 @@ function buildView(state, team) {
       chassis: holdings.chassis,
       stockpileIsland: stockpileIsland,
       score: score,
+      biasFuel: biasFuel,
+      biasOrdnance: biasOrdnance,
+      biasChassis: biasChassis,
     },
     carriers: carriers,
     units: units,

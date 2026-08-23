@@ -50,6 +50,8 @@ Controls:
 | `E` | decoy flares: break the lock on every seeker near the ship |
 | `V` | next weapon: laser / cluster / napalm / missile, or cannon / mines |
 | `L` `K` | supply run on or off / make the nearest island your depot |
+| `Q` | the quartermaster: island stocks, the depot, and the factory production bias |
+| `U` | escort: the selected unit takes station on the carrier and fights what comes |
 | `Z` | the damage control board - click a section to set its repair priority |
 | `C` | camera: chase / **gunsight** (first person, on the mount) / strategic map |
 | `,` `.` | time compression down / up (`space` pauses; in LAN it takes a vote) |
@@ -59,7 +61,7 @@ Controls:
 | `H` or `?` | this key list (hidden until asked for) |
 | mouse | every action above is also a button: icon columns flank the screen, the throttle bar is a click-to-set speed scale, the rudder arrows hold |
 | `DBG` button | the diagnostic strip, hidden until asked for |
-| click sea | send the selected unit there |
+| click sea | send the selected unit there - or, with nothing selected, lay a COURSE: the ship sails there itself |
 | click enemy | attack it with the selected unit, or hand it to the ship's laser |
 | click island | the island board: what it is for, and what to build on it |
 

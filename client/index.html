@@ -182,6 +182,31 @@
     .island-act:hover { text-decoration: underline; }
     .island-act.off { color: var(--hud-dim); cursor: default; text-decoration: none; }
     #island-note { color: var(--hud-dim); margin-top: 8px; }
+    /* The quartermaster (Q): where the goods are, and what the plants make
+       next. Left side, clear of the icon column. */
+    #stores-panel {
+      position: fixed; top: 56px; left: 80px;
+      width: 380px; max-height: calc(100vh - 280px); overflow: auto;
+      padding: 12px 14px; border-radius: 6px;
+      background: var(--hud-panel); color: var(--hud-ink);
+      font: 12px/1.6 var(--hud-font);
+      display: none; user-select: none;
+    }
+    #stores-panel.open { display: block; }
+    #stores-title { letter-spacing: 2px; margin-bottom: 8px; }
+    #stores-bias { margin-bottom: 10px; border-bottom: 1px solid var(--hud-dim); padding-bottom: 8px; }
+    .stores-row { display: flex; gap: 8px; align-items: center; }
+    .stores-label { flex: 1; color: var(--hud-dim); }
+    .bias-cell {
+      padding: 1px 8px; border: 1px solid var(--hud-dim); border-radius: 3px;
+      cursor: pointer; color: var(--hud-dim);
+    }
+    .bias-cell:hover { color: var(--hud-ink); border-color: var(--hud-ink); }
+    .bias-cell.on { background: var(--hud-ink); color: var(--hud-panel); border-color: var(--hud-ink); }
+    .stores-island { cursor: pointer; }
+    .stores-island:hover .stores-label { color: var(--hud-ink); }
+    .stores-island.depot .stores-label { color: var(--hud-ink); }
+    #stores-note { color: var(--hud-dim); margin-top: 8px; font-size: 11px; }
     /* The start menu: what war you are about to fight. Shown only when the URL
        does not already say - a link with ?mode= is somebody who has chosen. */
     #start-panel {
@@ -259,6 +284,12 @@
     <div id="damage-list"></div>
     <div id="damage-stores"></div>
     <div id="damage-legend"></div>
+  </div>
+  <div id="stores-panel">
+    <div id="stores-title"></div>
+    <div id="stores-bias"></div>
+    <div id="stores-body"></div>
+    <div id="stores-note"></div>
   </div>
   <div id="island-panel">
     <div id="island-title"></div>

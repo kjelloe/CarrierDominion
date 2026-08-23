@@ -149,6 +149,19 @@ The owner's first hands-on session ruled three things:
 - **Weapons are a selector, not a cycle**: one button per weapon the selected
   hull carries, the chosen one lit, round counts visible. `V` still cycles.
 
+From the 1988 gap review, ruled the same day:
+
+- **Quartermaster, light**: the stockpile inventory and a Low/Med/High
+  production bias per factory output category (`Q`). All-Medium is exactly
+  the old plant; all-Low idles it without eating materials.
+- **Course autopilot as click-to-sail**: nothing selected + a click on open
+  water = the ship sails there. Any hand on the helm, or a grounding,
+  disengages it. (The original's map + PROG + A.)
+- **Escort only** from the missing order pair — Patrol is near-covered by
+  Move plus self-defence.
+- **Fuel stays one pool** — the 1988 carrier/aircraft/AAV split and its
+  transfer screen are a deliberate deviation, documented in docs/02.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

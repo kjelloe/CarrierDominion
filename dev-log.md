@@ -5,6 +5,49 @@ golden hash and why.
 
 ---
 
+## 2026-08-23 — The gap review becomes systems: course, escort, quartermaster
+
+The owner ruled on all four gaps the 1988 review surfaced, and three became
+code the same day (the fourth - split fuel pools - was ruled a deliberate
+deviation and documented instead). 403 tests + smoke green, battery five for
+five; both pins re-pinned once (carriers grew courseX/courseY, teams grew the
+quartermaster bias; zero event drift).
+
+### The course autopilot (map + PROG + A, in one click)
+
+Nothing selected + a click on open water = the ship sails there. The
+autopilot steers for the mark every tick; the THROTTLE stays the player's -
+the original set speed separately, and so do we. Three ways to lose the
+wheel, all deliberate: any hand on the rudder or heading (the helm is one
+authority), arrival (which also takes the way off), and grounding - the
+autopilot has no answer to a shoal, so it disengages and says so rather than
+holding the wheel against the rocks. The mark rides the scope as a hollow
+diamond with a dashed bearing line.
+
+### Escort
+
+The one missing order that changes play: the unit takes station on its own
+MOVING carrier - target refreshed every tick, like Return but forever - and
+fireAll already makes any autopilot hull fight what comes, so the whole
+combat half cost nothing. It breaks off for the deck by itself below a third
+of a tank, and the boat refuses the order: it has a job.
+
+### The quartermaster (light, as ruled)
+
+Q opens it: every island you hold with stock and role, the depot marked and
+movable by clicking a row (the designation the original did from its map),
+and the production bias - Low/Med/High per factory output. The arithmetic
+rule that made it safe to ship: outputs are reweighted normalised so
+all-MEDIUM is bit-identical to the old plant (the battery agreeing five for
+five is the proof), LOW starves an output entirely, and all-LOW idles the
+plant without eating materials - an order to make nothing is an order to
+stop, not to waste.
+
+Everything travels the command path with the ship as authority, so replays
+and saves carry the quartermaster's decisions like any other order.
+
+---
+
 ## 2026-08-23 — Playtest round three: buttons that explain themselves
 
 Two UI rulings from the owner's third session, both landed; the third ask -

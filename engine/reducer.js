@@ -26,6 +26,9 @@ import {
   CMD_SET_CARRIER_AIM,
   CMD_SET_ISLAND_ROLE,
   CMD_BUILD_ON_ISLAND,
+  CMD_SET_COURSE,
+  CMD_ORDER_UNIT_ESCORT,
+  CMD_SET_SUPPLY_BIAS,
   CMD_SET_REPAIR_PRIORITY,
   CMD_SET_STOCKPILE,
   CMD_SET_SUPPLY_RUN,
@@ -45,6 +48,8 @@ import {
   EVT_STOCKPILE_SET,
   EVT_SUPPLY_RUN,
   EVT_AI_SEAT,
+  EVT_COURSE,
+  EVT_SUPPLY_BIAS,
   pushEvent,
 } from './events.js';
 import { stepCarriers } from './carrier.js';
@@ -64,7 +69,9 @@ import { stepUnits } from './fleet.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import {
+  KIND_LIGHTER,
   ORDER_ATTACK,
+  ORDER_ESCORT,
   ORDER_MOVE,
   UNIT_ACTIVE,
   UNIT_RETURNING,
@@ -96,8 +103,11 @@ function applyRudder(next, command) {
   const carrier = findCarrier(next, command.carrierId);
   if (carrier === -1) return reject(next);
   carrier.rudder = command.rudder;
-  // Touching the wheel drops any heading hold; the helm is one authority.
+  // Touching the wheel drops any heading hold or course; the helm is one
+  // authority.
   carrier.headingHold = HEADING_MANUAL;
+  carrier.courseX = -1;
+  carrier.courseY = -1;
   pushEvent(next.events, EVT_RUDDER_SET, carrier.id, carrier.rudder, 0);
   return next;
 }
@@ -107,7 +117,61 @@ function applyHeading(next, command) {
   if (carrier === -1) return reject(next);
   carrier.headingHold = command.heading;
   carrier.rudder = 0;
+  // The helm is one authority: a hand on the heading drops any course.
+  carrier.courseX = -1;
+  carrier.courseY = -1;
   pushEvent(next.events, EVT_HEADING_SET, carrier.id, carrier.headingHold, 0);
+  return next;
+}
+
+// The programmed course (the original's map + PROG + A): the autopilot takes
+// the wheel, the throttle stays yours. (-1, -1) clears it, and so does any
+// hand on the rudder or the heading - the helm is one authority.
+function applyCourse(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  if (command.x === -1 && command.y === -1) {
+    carrier.courseX = -1;
+    carrier.courseY = -1;
+    pushEvent(next.events, EVT_COURSE, carrier.id, 0, 0);
+    return next;
+  }
+  if (command.x > next.params.sizeUnits || command.y > next.params.sizeUnits) return reject(next);
+  carrier.courseX = command.x;
+  carrier.courseY = command.y;
+  carrier.rudder = 0;
+  carrier.headingHold = HEADING_MANUAL;
+  pushEvent(next.events, EVT_COURSE, carrier.id, 1, 0);
+  return next;
+}
+
+// Escort: follow the ship, fight what comes. The one order with no target -
+// the target is home.
+function applyUnitEscort(next, command) {
+  const unit = findUnit(next, command.unitId);
+  if (unit === -1) return reject(next);
+  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
+  if (unit.kind === KIND_LIGHTER) return reject(next); // the boat has a job
+  unit.state = UNIT_ACTIVE;
+  unit.order = ORDER_ESCORT;
+  unit.control = -1;
+  unit.orderTargetKind = -1;
+  unit.orderTargetId = -1;
+  pushEvent(next.events, EVT_UNIT_ORDERED, unit.id, unit.order, 0);
+  return next;
+}
+
+// The quartermaster's bias: which of the factory's three outputs the war
+// effort leans on. LOW starves an output entirely; all-LOW idles the plant.
+function applySupplyBias(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  const team = teamById(next, carrier.team);
+  if (team === -1) return reject(next);
+  if (command.item === 0) team.biasFuel = command.level;
+  else if (command.item === 1) team.biasOrdnance = command.level;
+  else team.biasChassis = command.level;
+  pushEvent(next.events, EVT_SUPPLY_BIAS, command.item, team.id, command.level);
   return next;
 }
 
@@ -405,6 +469,9 @@ function apply(state, command) {
   if (type === CMD_SET_THROTTLE) return applyThrottle(next, command);
   if (type === CMD_SET_RUDDER) return applyRudder(next, command);
   if (type === CMD_SET_HEADING) return applyHeading(next, command);
+  if (type === CMD_SET_COURSE) return applyCourse(next, command);
+  if (type === CMD_ORDER_UNIT_ESCORT) return applyUnitEscort(next, command);
+  if (type === CMD_SET_SUPPLY_BIAS) return applySupplyBias(next, command);
   if (type === CMD_LAUNCH_UNIT) return applyLaunch(next, command);
   if (type === CMD_RECALL_UNIT) return applyRecall(next, command);
   if (type === CMD_ORDER_UNIT_MOVE) return applyUnitMove(next, command);

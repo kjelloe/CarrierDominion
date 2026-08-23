@@ -27,6 +27,11 @@ const CMD_FIRE_FLARES = 'fire_flares';
 const CMD_SET_AI = 'set_ai';
 const CMD_SET_ISLAND_ROLE = 'set_island_role';
 const CMD_BUILD_ON_ISLAND = 'build_on_island';
+// Round-three rulings (2026-08-23): the original's course autopilot, the
+// Escort order, and the quartermaster's production bias.
+const CMD_SET_COURSE = 'set_course';
+const CMD_ORDER_UNIT_ESCORT = 'order_unit_escort';
+const CMD_SET_SUPPLY_BIAS = 'set_supply_bias';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -46,6 +51,7 @@ const UNIT_COMMANDS = [
   CMD_FIRE_UNIT,
   CMD_SELECT_WEAPON,
   CMD_ORDER_UNIT_ATTACK,
+  CMD_ORDER_UNIT_ESCORT,
 ];
 
 function isInt(value) {
@@ -111,6 +117,27 @@ function validateCommand(command) {
     if (!isInt(command.islandId)) return 'islandId must be an integer';
     if (!isInt(command.what)) return 'what must be an integer';
     if (command.what < 0 || command.what > 2) return 'no such building';
+    return '';
+  }
+  if (type === CMD_SET_COURSE) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.x) || !isInt(command.y)) return 'destination must be integer coordinates';
+    // (-1, -1) clears the course; anything else must be on the map.
+    if ((command.x < 0 || command.y < 0) && !(command.x === -1 && command.y === -1)) {
+      return 'destination off the map';
+    }
+    return '';
+  }
+  if (type === CMD_SET_SUPPLY_BIAS) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.item)) return 'item must be an integer';
+    if (command.item < 0 || command.item > 2) return 'no such item category';
+    if (!isInt(command.level)) return 'level must be an integer';
+    if (command.level < 0 || command.level > 2) return 'level out of range';
+    return '';
+  }
+  if (type === CMD_ORDER_UNIT_ESCORT) {
+    if (!isInt(command.unitId)) return 'unitId must be an integer';
     return '';
   }
   if (type === CMD_SET_AI) {
@@ -211,6 +238,9 @@ export {
   CMD_SET_AI,
   CMD_SET_ISLAND_ROLE,
   CMD_BUILD_ON_ISLAND,
+  CMD_SET_COURSE,
+  CMD_ORDER_UNIT_ESCORT,
+  CMD_SET_SUPPLY_BIAS,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

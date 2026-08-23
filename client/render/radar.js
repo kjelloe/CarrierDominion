@@ -99,6 +99,29 @@ function drawGhosts(ctx, view, own, cx, cy, radius, scale, colours) {
   ctx.restore();
 }
 
+// The programmed course, when there is one: a hollow diamond at the mark and
+// a faint line out to it - the scope is where a navigator looks for it.
+function drawCourse(ctx, own, cx, cy, radius, scale, colours) {
+  if (own.courseX === undefined || own.courseX < 0) return;
+  const spot = project(cx, cy, own.x, own.y, own.courseX, own.courseY, scale);
+  if (!inScope(cx, cy, spot.x, spot.y, radius - 4)) return;
+  ctx.strokeStyle = colours.own;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 4]);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(spot.x, spot.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(spot.x, spot.y - 5);
+  ctx.lineTo(spot.x + 5, spot.y);
+  ctx.lineTo(spot.x, spot.y + 5);
+  ctx.lineTo(spot.x - 5, spot.y);
+  ctx.closePath();
+  ctx.stroke();
+}
+
 function drawContacts(ctx, view, own, cx, cy, radius, scale, colours) {
   for (const turret of view.turrets) {
     const spot = project(cx, cy, own.x, own.y, turret.x, turret.y, scale);
@@ -157,6 +180,7 @@ function drawRadar(ctx, view, own, box, seconds, colours, range) {
   drawSweep(ctx, cx, cy, radius, seconds, colours);
   drawIslands(ctx, view, own, cx, cy, radius, scale, colours);
   drawGhosts(ctx, view, own, cx, cy, radius, scale, colours);
+  drawCourse(ctx, own, cx, cy, radius, scale, colours);
   drawContacts(ctx, view, own, cx, cy, radius, scale, colours);
   ctx.restore();
 

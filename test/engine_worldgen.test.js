@@ -11,15 +11,14 @@ const rules = loadRules();
 
 // Golden worldgen hash. Moving it means the map for every existing seed
 // changed - re-pin only with a note in dev-log.md saying why.
-// Re-pinned 2026-08-20 for the provisioning slice (podMaterials,
-// virusOrdnance, startMaterials; no free virus bomb), again for the
-// minor-items slice (virusVictim; grounding to 9 per 100 ticks), twice on
-// 2026-08-21 (contact memory; the brain's lastContactTick), and on 2026-08-22
-// for the pilot's vertical axis (units grew `climb` and `ceiling`). The MAP
+// Re-pinned 2026-08-20 for the provisioning slice, for the minor-items slice,
+// twice on 2026-08-21 (contact memory; lastContactTick), on 2026-08-22 for
+// the pilot's vertical axis, and on 2026-08-23 for the round-three rulings
+// (carriers grew courseX/courseY, teams grew the quartermaster bias). The MAP
 // itself has not changed since the first pin: islands, nodes and start
 // positions are byte-identical throughout.
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = '6485af4204154b2a';
+const GOLDEN_WORLD_HASH = '5d3fc172dd5b7880';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

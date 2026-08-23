@@ -43,6 +43,8 @@ const EVT_VIRUS_DEPLOYED = 35; // a = islandId, b = the team bombing it, c = uni
 const EVT_ISLAND_CONVERTED = 36; // a = islandId, b = the team it changed to
 const EVT_FLARES = 37; // a = carrierId, b = team, c = seekers blinded
 const EVT_AI_SEAT = 38; // a = team, b = 1 the machine has it / 0 a human does
+const EVT_COURSE = 39; // a = carrierId, b = 1 set / 0 done or cleared
+const EVT_SUPPLY_BIAS = 40; // a = item category, b = owning team, c = level
 
 function makeEvent(code, a, b, c) {
   return { code: code, a: a, b: b, c: c };
@@ -92,6 +94,8 @@ export {
   EVT_ISLAND_CONVERTED,
   EVT_FLARES,
   EVT_AI_SEAT,
+  EVT_COURSE,
+  EVT_SUPPLY_BIAS,
   makeEvent,
   pushEvent,
 };

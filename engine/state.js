@@ -115,6 +115,8 @@ function copyCarrier(carrier) {
     flareCooldown: carrier.flareCooldown,
     podMaterials: carrier.podMaterials,
     virusOrdnance: carrier.virusOrdnance,
+    courseX: carrier.courseX,
+    courseY: carrier.courseY,
     maxSpeedBase: carrier.maxSpeedBase,
     turnRateBase: carrier.turnRateBase,
     radarBase: carrier.radarBase,
@@ -144,6 +146,11 @@ function copyTeam(team) {
     // everything is shipped to.
     stockpileIsland: team.stockpileIsland,
     score: team.score,
+    // The quartermaster's production bias (ruling 2026-08-23): LOW 0,
+    // MEDIUM 1, HIGH 2 per output category, reweighting every factory run.
+    biasFuel: team.biasFuel,
+    biasOrdnance: team.biasOrdnance,
+    biasChassis: team.biasChassis,
   };
 }
 
@@ -269,6 +276,10 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     // costs ordnance. Ruling #3 - neither is conjured.
     podMaterials: carrierRules.podMaterials,
     virusOrdnance: carrierRules.virusOrdnance,
+    // The programmed course (ruling 2026-08-23, the original's PROG + A):
+    // -1 is no course. The autopilot steers; the throttle stays yours.
+    courseX: -1,
+    courseY: -1,
     // Undamaged capability. maxSpeed, turnRate and radar above are DERIVED
     // from these and the section health, and are recomputed on every hit and
     // every repair, so the rest of the engine can keep reading them directly.
@@ -314,7 +325,7 @@ function createInitialState(seed, rules) {
 
   const teams = [];
   for (let t = 0; t < base.teamCount; t++) {
-    teams.push({ id: t, stockpileIsland: -1, score: 0 });
+    teams.push({ id: t, stockpileIsland: -1, score: 0, biasFuel: 1, biasOrdnance: 1, biasChassis: 1 });
   }
 
   const weapons = createWeapons(rules.weapons, unitsPerMetre);

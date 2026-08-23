@@ -9,13 +9,14 @@
 // itself it HALTS, and held there it takes hull damage until it is steered
 // clear. Backing off works by reversing the helm, never by teleporting.
 
-import { clampI, floorDiv, mulDiv, stepToward, turnToward, wrapAngle } from '../shared/fixed.js';
-import { mulCos, mulSin } from '../shared/trig.js';
+import { clampI, dist2D, floorDiv, mulDiv, stepToward, turnToward, wrapAngle } from '../shared/fixed.js';
+import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { HEADING_MANUAL } from './commands.js';
 import {
   EVT_CARRIER_DAMAGED,
   EVT_CARRIER_GROUNDED,
   EVT_CARRIER_SUNK,
+  EVT_COURSE,
   EVT_FUEL_EMPTY,
   EVT_FUEL_RESTORED,
   pushEvent,
@@ -34,7 +35,20 @@ function clearanceAt(islands, x, y, draught) {
   return -worldHeightAt(islands, x, y) - draught;
 }
 
+// Close enough to call the course sailed: half a kilometre, which is inside
+// the recovery circle and well clear of any island's shallows.
+const COURSE_ARRIVE_UNITS = 500 * 256;
+
 function steer(carrier) {
+  // A programmed course steers for the mark every tick, because the mark
+  // does not move but the ship's idea of "toward it" does.
+  if (carrier.courseX >= 0) {
+    return turnToward(
+      carrier.heading,
+      atan2B(carrier.courseY - carrier.y, carrier.courseX - carrier.x),
+      carrier.turnRate,
+    );
+  }
   if (carrier.headingHold !== HEADING_MANUAL) {
     return turnToward(carrier.heading, carrier.headingHold, carrier.turnRate);
   }
@@ -109,6 +123,14 @@ function stepCarrier(carrier, islands, sizeUnits, events) {
       carrier.grounded = 1;
       carrier.groundAccum = 0;
       pushEvent(events, EVT_CARRIER_GROUNDED, carrier.id, carrier.team, 0);
+      // The autopilot has no answer to a shoal - backing off is seamanship,
+      // and seamanship is the player's. It disengages and says so rather
+      // than holding the wheel against the rocks.
+      if (carrier.courseX >= 0) {
+        carrier.courseX = -1;
+        carrier.courseY = -1;
+        pushEvent(events, EVT_COURSE, carrier.id, 0, 0);
+      }
     }
     carrier.speed = 0;
     grindHull(carrier, events);
@@ -117,6 +139,16 @@ function stepCarrier(carrier, islands, sizeUnits, events) {
     carrier.groundAccum = 0;
     carrier.x = nextX;
     carrier.y = nextY;
+  }
+
+  // Course sailed: the autopilot lets go and reports, and the way comes off
+  // at the player's own throttle unless they act.
+  if (carrier.courseX >= 0
+    && dist2D(carrier.x, carrier.y, carrier.courseX, carrier.courseY) <= COURSE_ARRIVE_UNITS) {
+    carrier.courseX = -1;
+    carrier.courseY = -1;
+    carrier.throttle = 0;
+    pushEvent(events, EVT_COURSE, carrier.id, 0, 0);
   }
 
   burnFuel(carrier);

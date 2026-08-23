@@ -33,6 +33,7 @@ import {
   showStartPanel,
 } from './panels/start.js';
 import { createLobbyPanel, renderLobbyPanel } from './panels/lobby.js';
+import { createStoresPanel, renderStoresPanel, toggleStoresPanel as flipStoresPanel } from './panels/stores.js';
 import { createWaroverPanel, updateWaroverPanel } from './panels/warover.js';
 import { nextWeapon } from '../engine/weapons.js';
 import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
@@ -184,6 +185,15 @@ function cycleSelection() {
 function launch(kind) {
   if (state.carrierId < 0) return;
   state.transport.send({ type: 'launch_unit', carrierId: state.carrierId, kind: kind });
+}
+
+// Escort: the selected unit takes station on the ship and fights what comes.
+function orderEscort() {
+  const unit = selectedUnit();
+  if (unit === undefined) return;
+  stopPiloting();
+  state.transport.send({ type: 'order_unit_escort', unitId: unit.id });
+  setHud(state.hud, 'status', state.t('status.escorting', { id: unit.id }));
 }
 
 function recallSelected() {
@@ -513,12 +523,14 @@ function attachTip(element, text) {
 const ACTIONS_LEFT = [
   ['x', 'act.stop', 'tip.stop'], ['e', 'act.flares', 'tip.flares'],
   ['l', 'act.supply', 'tip.supply'], ['k', 'act.depot', 'tip.depot'],
+  ['q', 'act.stores', 'tip.stores'],
   ['z', 'act.damage', 'tip.damage'], ['c', 'act.camera', 'tip.camera'],
   ['m', 'act.sound', 'tip.sound'],
 ];
 const ACTIONS_RIGHT = [
   ['1', 'act.manta', 'tip.manta'], ['2', 'act.walrus', 'tip.walrus'],
   ['n', 'act.next', 'tip.next'], ['t', 'act.controls', 'tip.controls'],
+  ['u', 'act.escort', 'tip.escort'],
   ['r', 'act.recall', 'tip.recall'], ['f', 'act.fire', 'tip.fire'],
   ['p', 'act.pod', 'tip.pod'], ['b', 'act.virus', 'tip.virus'],
 ];
@@ -625,6 +637,8 @@ function bindInput(level) {
     else if (key === '2') launch(KIND_WALRUS);
     else if (key === 'n') cycleSelection();
     else if (key === 'r') recallSelected();
+    else if (key === 'u') orderEscort();
+    else if (key === 'q') flipStoresPanel(state.stores);
     else if (key === 't') togglePiloting();
     else if (key === 'p') deployPod();
     else if (key === 'b') deployVirus();
@@ -707,9 +721,19 @@ function bindInput(level) {
       return;
     }
 
-    if (unit === undefined) return;
     const size = state.view.params.sizeUnits;
     if (target.x < 0 || target.y < 0 || target.x > size || target.y > size) return;
+    if (unit === undefined) {
+      // Nothing selected: the click is a course for the SHIP - the original's
+      // map + PROG + A, collapsed to one click. The autopilot steers, the
+      // throttle stays yours, and any hand on the helm cancels it.
+      if (state.carrierId === -1) return;
+      state.transport.send({
+        type: 'set_course', carrierId: state.carrierId, x: target.x, y: target.y,
+      });
+      setHud(state.hud, 'status', state.t('status.course'));
+      return;
+    }
     state.transport.send({
       type: 'order_unit_move', unitId: unit.id, x: target.x, y: target.y,
     });
@@ -842,6 +866,7 @@ function frame(nowMs) {
   setHud(state.hud, 'supply', describeSupply(state.t, state.view));
   renderDamagePanel(state.damage, deltaSeconds);
   renderIslandPanel(state.island);
+  renderStoresPanel(state.stores);
   updateWaroverPanel(state.warover, state.view);
   updateWeaponGroup();
   updateSight();
@@ -1004,6 +1029,7 @@ async function main() {
   };
   state.damage = createDamagePanel(panelContext);
   state.island = createIslandPanel(panelContext);
+  state.stores = createStoresPanel(panelContext);
   state.warover = createWaroverPanel(
     panelContext.t,
     MODE === 'lan'

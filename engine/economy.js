@@ -67,24 +67,44 @@ function produce(state) {
 // Throughput is per FACTORY BUILT, so the island's three factory slots are
 // three times the plant, not a label. A factory island with nothing built on it
 // yet is a building site.
+// The quartermaster's hand on the plant (ruling 2026-08-23): each factory
+// run's three outputs are reweighted by the owning team's bias - LOW 0,
+// MEDIUM 1, HIGH 2 - normalised so all-MEDIUM is exactly the old behaviour.
+// All-LOW idles the plant WITHOUT eating materials: an order to make nothing
+// is an order to stop, not an order to waste.
+function biasedOut(base, weight, weightSum) {
+  if (weightSum <= 0) return 0;
+  return mulDiv(base, weight * 3, weightSum);
+}
+
 function refine(state) {
   for (let i = 0; i < state.islands.length; i++) {
     const island = state.islands[i];
     if (island.owner < 0 || island.role !== ROLE_FACTORY || island.factories <= 0) continue;
+    const team = teamById(state, island.owner);
+    const wFuel = team === -1 ? 1 : team.biasFuel;
+    const wOrdnance = team === -1 ? 1 : team.biasOrdnance;
+    const wChassis = team === -1 ? 1 : team.biasChassis;
+    const weightSum = wFuel + wOrdnance + wChassis;
+    if (weightSum <= 0) continue;
     const cap = stockCapOf(island, state.economy);
     const bonus = terrainPermil(island, state.economy);
     for (let run = 0; run < island.factories; run++) {
       if (island.stockMaterials < state.economy.factoryIn) break;
       island.stockMaterials = island.stockMaterials - state.economy.factoryIn;
       island.stockFuel = capped(
-        island.stockFuel + mulDiv(state.economy.factoryFuel, bonus, 1000),
+        island.stockFuel + biasedOut(mulDiv(state.economy.factoryFuel, bonus, 1000), wFuel, weightSum),
         cap,
       );
       island.stockOrdnance = capped(
-        island.stockOrdnance + mulDiv(state.economy.factoryOrdnance, bonus, 1000),
+        island.stockOrdnance
+          + biasedOut(mulDiv(state.economy.factoryOrdnance, bonus, 1000), wOrdnance, weightSum),
         cap,
       );
-      island.stockChassis = capped(island.stockChassis + state.economy.factoryChassis, cap);
+      island.stockChassis = capped(
+        island.stockChassis + biasedOut(state.economy.factoryChassis, wChassis, weightSum),
+        cap,
+      );
     }
   }
 }

@@ -98,6 +98,31 @@ lighter — parts arrive in a lighter. So a depot holding the parts **launches o
 itself** (fuelled from the depot's own stock) and it sails out to the ship. That
 is not an exception to the ruling; it is what a supply network is for.
 
+## The helm has an autopilot
+
+The original's map + PROG + A, collapsed to one click: with nothing selected,
+a click on open water lays a **course** for the ship. The autopilot steers for
+the mark every tick; the **throttle stays yours**. Any hand on the rudder or
+the heading drops the course — the helm is one authority — and so does
+running aground: the autopilot has no answer to a shoal, so it disengages and
+says so rather than holding the wheel against the rocks. Arrival takes the
+way off and hands back the wheel. The mark rides on the scope as a hollow
+diamond.
+
+## The quartermaster
+
+The light version of the original's Stores mode (ruling 2026-08-23). `Q`
+opens it: every island you hold with its stock and role, which one is the
+depot (click a row to move it), and the **production bias** — Low / Medium /
+High per factory output category. Each factory run's three outputs are
+reweighted by the bias, normalised so all-Medium is exactly the unbias plant;
+Low starves an output entirely, and all-Low idles the plant **without eating
+materials** — an order to make nothing is an order to stop, not to waste.
+
+Deliberate deviation from 1988, by ruling: fuel stays ONE good with automatic
+issue — no carrier/aircraft/AAV pools, no manual transfer screen. The
+scarcity is identical; the menu work is not.
+
 ## Weapons
 
 The 1988 sets, as data in `data/weapons.json`. Three behaviours, all data rather
@@ -142,6 +167,11 @@ The line is the cockpit, not the airframe:
 - an **unattended** one defends itself and presses the attack it was sent on;
 - a ship's laser and a Walrus cannon never wait — nobody asks a close-in mount
   for permission.
+
+Autopilot orders are the original's set, minus Patrol (covered by Move plus
+self-defence): **Move**, **Attack**, **Return**, and now **Escort** — the
+unit takes station on its own moving carrier and fights what comes, breaking
+off for the deck by itself below a third of a tank.
 
 Targeting has three levels, all of which the 1988 original had:
 

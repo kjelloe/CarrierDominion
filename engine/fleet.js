@@ -20,15 +20,17 @@ import {
   EVT_UNIT_RECOVERED,
   pushEvent,
 } from './events.js';
-import { recoverUnit, withinRecoveryRange } from './hangar.js';
+import { orderReturn, recoverUnit, withinRecoveryRange } from './hangar.js';
 import { hangarOpen } from './damage.js';
 import {
   KIND_MANTA,
   ORDER_ATTACK,
+  ORDER_ESCORT,
   ORDER_HOLD,
   UNIT_ACTIVE,
   UNIT_RETURNING,
   findCarrierById,
+  fuelPermil,
 } from './units.js';
 import { designated } from './targeting.js';
 
@@ -42,6 +44,17 @@ function stepUnits(state) {
     if (unit.state === UNIT_RETURNING && carrier !== -1) {
       unit.targetX = carrier.x;
       unit.targetY = carrier.y;
+    }
+    // Escort chases its own airfield: target the ship every tick, fight
+    // whatever comes into reach (fireAll already does that for any autopilot
+    // hull), and break off for the deck before the tank becomes the enemy.
+    if (unit.order === ORDER_ESCORT) {
+      if (carrier === -1 || fuelPermil(unit) <= 300) {
+        orderReturn(unit);
+      } else {
+        unit.targetX = carrier.x;
+        unit.targetY = carrier.y;
+      }
     }
     // An attack order chases: the thing it was sent at is moving, so aiming
     // once at the order would send it where the target used to be. When the

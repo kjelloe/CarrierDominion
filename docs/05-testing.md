@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (397 tests and growing), node --test
+npm test      the unit and integration suite (403 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 ```
@@ -79,7 +79,7 @@ wrapped its messages. Two real browsers found it immediately.
 
 Current probes: `ai_trace`, `combat_shot`, `damage_board`, `graphics_shots`, `gunsight`,
 `island_board`, `lobby`, `rejoin`, `scope_zoom`, `start_menu`,
-`playtest_round1`, `playtest_round2`, `second_war`, `strategic_probe`, `style_shots`, `turret_shot`,
+`playtest_round1`, `playtest_round2`, `playtest_round3`, `second_war`, `strategic_probe`, `style_shots`, `turret_shot`,
 `war_over`, `war_trace`, `watch_run`. `war_over` photographs states a live war takes hours to reach -
 the ending screen, a scope full of ghosts - by pausing the solo war and
 swapping in a doctored view through the `__debugView` hook.

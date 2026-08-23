@@ -147,6 +147,9 @@ to make noise before then.
 | `Z` | damage board |
 | `[` `]` | scope range |
 | `M` `K` `L` | sound / nominate depot / supply run |
+| `Q` | the quartermaster: island stocks, the depot, production bias |
+| `U` | escort: the selected unit takes station on the carrier |
+| click sea, nothing selected | lay a course - the ship sails there itself |
 | `C` | camera: chase / gunsight / map |
 | `,` `.` `Space` | propose slower / faster / pause |
 | `G` | graphics level |
