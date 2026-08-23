@@ -246,5 +246,8 @@
   "stores.needsPlant": "needs a factory island",
   "stores.cost3": "1600 materials",
   "stores.cost4": "1000 materials",
-  "stores.cost5": "1200 materials"
+  "stores.cost5": "1200 materials",
+  "seat.replay": "REPLAY - watching team {team}",
+  "status.noReplay": "no saved war to replay - data/autosave.json is empty",
+  "status.replayDone": "end of record - the war stood here when it was saved"
 }

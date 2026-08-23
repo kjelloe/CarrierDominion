@@ -188,17 +188,13 @@ function lobbyView(lobby, seats) {
   };
 }
 
-// Fold the room's choices into a ruleset. The same shape the solo start menu
-// produces, and for the same reason: a war is seed plus rules, and nothing else.
+// Fold the room's choices into a ruleset. Moved to shared/options.js so the
+// resume path and the client's replay viewer fold identically; this name
+// stays for the server's callers.
+import { applyLobbyOptions } from '../shared/options.js';
+
 function applyLobby(rules, options) {
-  const world = { ...rules.world, islandCount: options.islands };
-  const base = {
-    ...rules.rules,
-    aiTeams: options.enemy === 1 ? [1] : [],
-    pointCap: options.ending === 1 ? 4000 : 0,
-    timeCapTicks: options.ending === 2 ? 24000 : 0,
-  };
-  return { ...rules, world: world, rules: base };
+  return applyLobbyOptions(rules, options);
 }
 
 export {

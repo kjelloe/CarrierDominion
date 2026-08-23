@@ -246,5 +246,8 @@
   "stores.needsPlant": "krever fabrikkøy",
   "stores.cost3": "1600 materialer",
   "stores.cost4": "1000 materialer",
-  "stores.cost5": "1200 materialer"
+  "stores.cost5": "1200 materialer",
+  "seat.replay": "REPRISE - ser lag {team}",
+  "status.noReplay": "ingen lagret krig å spille av - data/autosave.json er tom",
+  "status.replayDone": "slutten av opptaket - krigen sto her da den ble lagret"
 }

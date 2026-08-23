@@ -13,7 +13,7 @@
 //   ?style=retro|modern|hybrid  art direction (see client/styles.js)
 
 import { fetchRules } from './rules.js';
-import { createLocalTransport, createWsTransport } from './transport.js';
+import { createLocalTransport, createReplayTransport, createWsTransport } from './transport.js';
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
 import { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
@@ -59,7 +59,9 @@ import {
 } from './hud.js';
 
 const params = new URLSearchParams(window.location.search);
-const MODE = params.get('mode') === 'lan' ? 'lan' : 'solo';
+const MODE = params.get('mode') === 'lan'
+  ? 'lan'
+  : (params.get('mode') === 'replay' ? 'replay' : 'solo');
 const SEAT = Number(params.get('team') ?? 0);
 // `?speed=0` is a legitimate request to start paused, and Number(null) is 0 -
 // so an ABSENT parameter has to be distinguished from a zero one, or every
@@ -790,9 +792,11 @@ function onWelcome(message) {
   state.speedLocked = (message.speedLocked ?? 0) === 1;
   setHud(state.hud, 'speedx', describeSpeed(state.speed)
     + (state.speedLocked ? ` (${state.t('hud.locked')})` : ''));
-  setHud(state.hud, 'seat', message.spectator
-    ? state.t('seat.spectator')
-    : state.t('seat.team', { team: message.team }));
+  setHud(state.hud, 'seat', (message.replay ?? 0) === 1
+    ? state.t('seat.replay', { team: message.team })
+    : (message.spectator
+      ? state.t('seat.spectator')
+      : state.t('seat.team', { team: message.team })));
   setHud(state.hud, 'seed', message.seed);
   setHud(state.hud, 'status', state.t('status.connected'));
 }
@@ -837,6 +841,7 @@ const CLOSE_KEYS = {
   disconnected: 'status.disconnected',
   'connection error': 'status.error',
   closed: 'status.closed',
+  'replay finished': 'status.replayDone',
 };
 
 function onClosed(reason) {
@@ -1079,7 +1084,19 @@ async function main() {
   resize(state.scene3d);
   window.addEventListener('resize', () => resize(state.scene3d));
 
-  if (MODE === 'lan') {
+  if (MODE === 'replay') {
+    // The autosaved war, played back through the same reducer. 404 means no
+    // war has been saved yet, and the honest answer is to say so and stop.
+    const response = await fetch('/data/autosave.json');
+    if (!response.ok) {
+      setHud(state.hud, 'status', state.t('status.noReplay'));
+      document.getElementById('debug-button').click();
+      return;
+    }
+    const save = await response.json();
+    setHud(state.hud, 'seat', state.t('seat.replay', { team: SEAT }));
+    state.transport = createReplayTransport(save, rules, SEAT);
+  } else if (MODE === 'lan') {
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
     state.transport = createWsTransport(`${scheme}://${window.location.host}`);
   } else {

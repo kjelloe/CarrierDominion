@@ -13,8 +13,12 @@
 // same simulation with a shorter wire.
 
 import { createGame, enqueueCommand, stepGame } from '../engine/game.js';
+import { createInitialState } from '../engine/state.js';
+import { apply } from '../engine/reducer.js';
 import { checkAuthority } from '../engine/authority.js';
+import { buildView } from '../shared/view.js';
 import { isSpeed } from '../shared/speeds.js';
+import { applyLobbyOptions } from '../shared/options.js';
 
 function createLocalTransport(seed, rules, team, speed) {
   const state = { game: 0, timer: 0, handlers: 0, team: team, speed: isSpeed(speed) ? speed : 1 };
@@ -65,6 +69,72 @@ function createLocalTransport(seed, rules, team, speed) {
       if (state.timer !== 0) clearInterval(state.timer);
       state.timer = 0;
       if (state.handlers !== 0) state.handlers.onClosed('closed');
+    },
+  };
+}
+
+// The replay driver: a war IS its seed plus its command log (docs/01), so a
+// save file plays back through the same reducer, tick for tick, command for
+// command. Input is ignored - you are watching a war, not fighting one - and
+// the clock stops at the tick the record ends. No state hash per tick: the
+// hash exists to catch divergence between two machines, and a replay has one.
+function createReplayTransport(save, rules, team) {
+  const chosen = save.options !== 0 && save.options !== undefined
+    ? applyLobbyOptions(rules, save.options)
+    : rules;
+  const state = {
+    war: 0, cursor: 0, timer: 0, handlers: 0,
+    team: team, speed: isSpeed(1) ? 1 : 1, done: false,
+  };
+
+  function stepOnce() {
+    while (state.cursor < save.commandLog.length
+      && save.commandLog[state.cursor].tick === state.war.tick) {
+      state.war = apply(state.war, save.commandLog[state.cursor]);
+      state.cursor += 1;
+    }
+    state.war = apply(state.war, { type: 'advance_tick' });
+  }
+
+  return {
+    kind: 'replay',
+    connect(handlers) {
+      state.handlers = handlers;
+      state.war = createInitialState(save.seed, chosen);
+      handlers.onWelcome({
+        team: state.team,
+        seed: save.seed,
+        tickHz: chosen.rules.tickHz,
+        rulesHash: state.war.rulesHash,
+        spectator: false,
+        speed: state.speed,
+        speedLocked: 0,
+        replay: 1,
+      });
+      state.timer = setInterval(() => {
+        if (state.done) return;
+        for (let i = 0; i < state.speed && state.war.tick < save.tick; i++) stepOnce();
+        handlers.onSnapshot({
+          tick: state.war.tick,
+          stateHash: '',
+          view: buildView(state.war, state.team),
+        });
+        if (state.war.tick >= save.tick && !state.done) {
+          state.done = true;
+          handlers.onClosed('replay finished');
+        }
+      }, chosen.rules.msPerTick);
+    },
+    setSpeed(multiplier) {
+      if (!isSpeed(multiplier) || multiplier === 0) return;
+      state.speed = multiplier;
+      state.handlers.onSpeed(multiplier);
+    },
+    send() { /* a replay takes no orders */ },
+    sendMessage() { /* nor any messages */ },
+    close() {
+      if (state.timer !== 0) clearInterval(state.timer);
+      state.timer = 0;
     },
   };
 }
@@ -167,4 +237,4 @@ function createWsTransport(url) {
   return transport;
 }
 
-export { createLocalTransport, createWsTransport, MAX_RETRIES, RETRY_BASE_MS, RETRY_CAP_MS };
+export { createLocalTransport, createReplayTransport, createWsTransport, MAX_RETRIES, RETRY_BASE_MS, RETRY_CAP_MS };
