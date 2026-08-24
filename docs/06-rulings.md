@@ -276,6 +276,32 @@ Built the same day, from the same directive ("build 4, 9, 10, then 1, 2,
 - **3, 5, 6 — designed, not built**: docs/09-proposals.md carries the
   specs and the open questions, awaiting discussion.
 
+## The proposals ruled (2026-08-25)
+
+The docs/09 discussion and the remaining source-review items, decided:
+
+- **Base island AND link topology (3a + 3b)**: each Strategy-game team
+  starts on one developed home island; islands link by distance and goods
+  flow along the link graph to the depot — a cut-off island stockpiles and
+  stops building. Root at the depot (no Base-freeze rule for now).
+- **Hammerhead + Viewing Drone, player-only first**: the DRONE camera tab
+  while one is up; the AI learns it later if it earns its keep.
+- **Passive defence drones, one-button version**: four decoys as a group,
+  fixed formation, standing seduction, 25% top-speed cost while deployed.
+- **Bat Caves AND neutral silos**: defence islands scramble interceptors,
+  and every neutral island keeps a token missile silo — taking even a free
+  island costs something.
+- **The comm-pod as a fourth refit**: one Manta freed from the telemetry
+  leash, built at a factory like the other refits, once.
+- **The sea grid goes amber** — the instrument ink over the blue sea, as
+  the Spectrum screenshots show.
+- **Loadout presets** for launch (scout / bomber / interceptor ammo bias):
+  the faithful-light middle of the fitting screen. Full fitting stays out.
+- **Build order**: 3a home island → Hammerhead → defence drones → island
+  teeth (Bat Caves + silos) → topology (3b) last, with presets, comm pod
+  and the amber grid folded in along the way — the economy/AI rework lands
+  with the most test coverage behind it.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on
