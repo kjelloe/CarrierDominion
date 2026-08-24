@@ -225,8 +225,10 @@ function islandView(island, team) {
     factories: island.factories,
     warehouses: island.warehouses,
     turrets: island.turrets,
-    // A runway is visible from the sea, like the rest of the works.
+    // A runway is visible from the sea, like the rest of the works - and so
+    // is the state of a command centre's shields: smoke is public.
     runway: island.runway,
+    nodeHp: island.nodeHp,
     building: island.building,
     buildTicks: mine ? island.buildTicks : -1,
     stockFuel: mine ? island.stockFuel : -1,
@@ -382,7 +384,8 @@ function buildView(state, team) {
   for (let i = 0; i < state.events.length; i++) {
     const event = state.events[i];
     let mine = event.code === 1 || event.code === 16 || event.code === 17
-      || event.code === 18 || event.code === 21 || event.code === 36;
+      || event.code === 18 || event.code === 21 || event.code === 36
+      || event.code === 43; // a command centre's death is chart-level news
     if (event.code === 29 || event.code === 38) {
       mine = mine || event.a === team;
     } else if (event.code >= 8) {
@@ -467,8 +470,10 @@ function refereeIslandView(island) {
     factories: island.factories,
     warehouses: island.warehouses,
     turrets: island.turrets,
-    // A runway is visible from the sea, like the rest of the works.
+    // A runway is visible from the sea, like the rest of the works - and so
+    // is the state of a command centre's shields: smoke is public.
     runway: island.runway,
+    nodeHp: island.nodeHp,
     building: island.building,
     buildTicks: island.buildTicks,
     stockFuel: island.stockFuel,

@@ -11,7 +11,7 @@
 import { dist2D, floorDiv, isqrt, mulDiv, wrapAngle } from '../shared/fixed.js';
 import { mulCos, mulSin } from '../shared/trig.js';
 import { deriveSeed, rollBetween, rollRange } from '../shared/prng.js';
-import { pickCommandNode, skirtRadius } from './heightmap.js';
+import { islandHeightAt, pickCommandNode, skirtRadius } from './heightmap.js';
 
 // Island count and ocean size have to move together. At the base spacing eight
 // islands fill about a quarter of the base box; thirty-two in the same box
@@ -120,6 +120,11 @@ function createIslands(seed, world, unitsPerMetre) {
       warehouses: 0,
       turrets: 0,
       runway: 0,
+      // The command centre: its shields while somebody owns the island (0
+      // when neutral - a marker mast is not a building), and the node's
+      // terrain height, computed once so the shot sweep never samples noise.
+      nodeHp: 0,
+      nodeZ: 0,
       building: -1,
       buildTicks: 0,
     };
@@ -128,6 +133,7 @@ function createIslands(seed, world, unitsPerMetre) {
     const node = pickCommandNode(island);
     island.nodeX = node.x;
     island.nodeY = node.y;
+    island.nodeZ = islandHeightAt(island, node.x, node.y);
     islands.push(island);
   }
   return { islands: islands, rngState: rngState, attempts: attempts };

@@ -602,6 +602,7 @@ function signalText(view, event) {
     const unit = view.units.find((u) => u.id === event.a);
     return t('log.telemetryLost', { kind: kindWord(unit === undefined ? 0 : unit.kind) });
   }
+  if (code === 43) return t('log.nodeDestroyed', { island: islandWord(view, event.a) });
   if (code === 42) {
     const unit = view.units.find((u) => u.id === event.a);
     return t('log.landed', {

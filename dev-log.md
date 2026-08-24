@@ -5,6 +5,34 @@ golden hash and why.
 
 ---
 
+## 2026-08-24 — The third capture path: shoot the command centre out
+
+Second source review, item 1 - the one genuine MECHANIC the CRASH review
+showed we lacked. An owned island's command centre now stands at the
+node with 400 shield points (data: commandCentreHp); enemy fire that
+reaches the node - direct rounds in the flight sweep, splash from the
+detonate path - chews it down, and at zero the island goes to NOBODY:
+clearWorks takes the factories, warehouses, turrets and runway with it
+(CRASH: "the missile launchers blow up"), the owner is -1, and the bare
+rock takes an ACCB like any other. A neutral island has only a marker
+mast - nothing to hit. Ownership paths (pod, virus, action start) raise
+the shields; destruction is chart-level news (event 43, common
+knowledge like a capture).
+
+Delivery needs no new targeting: the boresight IS the delivery system -
+a piloted gun run down the nose, or splash weapons. The test flies one,
+and found the terrain teaching gunnery: this node's ground RISES to the
+west, so a 300 m approach flies its bolts into the hillside - the
+passing shot's endpoint ground check is downstream of the node check,
+which is why a CLOSE run works and a long one digs trenches. The node's
+terrain height is computed once at worldgen (island.nodeZ) so the sweep
+never samples noise per shot.
+
+Both pins re-pinned (nodeHp/nodeZ + the rules key), zero event drift;
+battery endpoints byte-identical - AI wars do not strafe centres (yet).
+444 tests, smoke green. Bat Caves and neutral silos stay with the
+docs/09 discussion, as flagged.
+
 ## 2026-08-24 — The chart and the chips: the second source review's UI slice
 
 The CRASH 63 + Spectrum screenshot review (dev-questions §30) showed four

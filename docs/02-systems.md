@@ -33,6 +33,16 @@ abandoned on **any** change of owner — recapture, a rival's pod, anyone — th
 bomb remembers whose command centre it went in against, and a different owner
 is a different command centre.
 
+**The third way** (second source review, item 1): destroy the command
+centre. An owned island's centre stands at the node with
+`commandCentreHp` (400) of Neutron Shielding; enemy fire that reaches the
+node — a strafing run down the boresight, a cluster or napalm blast —
+chews it down, and when it falls **the island is nobody's**: works and
+guns go with it (CRASH: "the missile launchers blow up") and the bare
+rock takes an ACCB like any other. Bombardment is an alternative to a
+landing, not just its escort. A neutral island has only a marker mast:
+nothing to shoot. The centre's death is chart-level news, like a capture.
+
 ## What an island is for
 
 The command centre makes it yours. What it is FOR is then the owner's decision,

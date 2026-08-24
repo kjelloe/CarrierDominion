@@ -29,5 +29,6 @@
   "virusBuildTicks": 2400,
   "actionStart": 0,
   "telemetryFadeMetres": 20000,
-  "telemetryLossMetres": 26000
+  "telemetryLossMetres": 26000,
+  "commandCentreHp": 400
 }

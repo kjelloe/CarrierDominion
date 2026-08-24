@@ -35,6 +35,7 @@ const VOICES = {
   37: { freq: 1400, to: 300, ms: 260, type: 'sawtooth', gain: 0.07 }, // flares away
   41: { freq: 220, to: 60, ms: 420, type: 'sawtooth', gain: 0.09 }, // telemetry lost
   42: { freq: 520, to: 300, ms: 140, type: 'square', gain: 0.05 }, // down on a runway
+  43: { freq: 320, to: 60, ms: 700, type: 'sawtooth', gain: 0.11 }, // command centre destroyed
 };
 
 // The lock warning: two tones, over and over, at a pace that is hard to ignore

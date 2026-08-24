@@ -23,8 +23,10 @@ import {
   EVT_UNIT_HIT,
   EVT_UNIT_LOST,
   pushEvent,
+  EVT_NODE_DESTROYED,
 } from './events.js';
 import { UNIT_LOST, unitEngageable } from './units.js';
+import { clearWorks } from './island.js';
 import { armourMultiplierPermil, damageSection, sectionAt } from './damage.js';
 import { worldHeightAt } from './heightmap.js';
 import { SCORE_CARRIER, SCORE_KILL, addScore } from './score.js';
@@ -33,6 +35,9 @@ import { SCORE_CARRIER, SCORE_KILL, addScore } from './score.js';
 const TARGET_UNIT = 0;
 const TARGET_CARRIER = 1;
 const TARGET_TURRET = 2;
+// Not a designatable target kind - a command centre is HIT, by fire laid
+// onto it, never homed on. It only exists in findHit/detonate.
+const TARGET_NODE = 3;
 
 function copyShot(shot) {
   return {
@@ -243,7 +248,35 @@ function findHit(state, shot, nx, ny, nz, params) {
     bestDistance = distance;
     best = { kind: TARGET_TURRET, index: i };
   }
+  // The command centre (second source review, item 1): an OWNED island's
+  // centre stands at the node and can be shot - the original's third
+  // capture path. A neutral island has only a marker mast: nothing to hit.
+  for (let i = 0; i < state.islands.length; i++) {
+    const island = state.islands[i];
+    if (island.owner === -1 || island.owner === shot.team || island.nodeHp <= 0) continue;
+    const distance = segmentDistSq(
+      shot.x, shot.y, shot.z, nx, ny, nz, island.nodeX, island.nodeY, island.nodeZ,
+    );
+    if (distance > turretReach * turretReach || distance >= bestDistance) continue;
+    bestDistance = distance;
+    best = { kind: TARGET_NODE, index: i };
+  }
   return best;
+}
+
+// Blast the shields down and the island is NOBODY'S: the centre's death
+// takes the works and the guns with it (CRASH: "the missile launchers blow
+// up"), and whoever wants the bare rock next brings an ACCB. This is what
+// makes a bombardment an alternative to a landing, not just its escort.
+function hitNode(state, island, damage, byTeam) {
+  island.nodeHp = island.nodeHp - damage;
+  if (island.nodeHp > 0) return;
+  island.nodeHp = 0;
+  const oldOwner = island.owner;
+  clearWorks(state, island);
+  island.owner = -1;
+  pushEvent(state.events, EVT_NODE_DESTROYED, island.id, oldOwner, 0);
+  addScore(state, byTeam, state.params.pointsPerKill, SCORE_KILL);
 }
 
 // A turret takes damage like anything else; the sweep in turret.js clears the
@@ -278,6 +311,13 @@ function detonate(state, shot, x, y, z, params) {
     if (turret.team === shot.team || turret.hp <= 0) continue;
     if (distSq3D(x, y, z, turret.x, turret.y, turret.z) > turretReach * turretReach) continue;
     hitTurret(state, turret, shot.damage, shot.team);
+  }
+  for (let i = 0; i < state.islands.length; i++) {
+    const island = state.islands[i];
+    if (island.owner === -1 || island.owner === shot.team || island.nodeHp <= 0) continue;
+    if (distSq3D(x, y, z, island.nodeX, island.nodeY, island.nodeZ)
+      > turretReach * turretReach) continue;
+    hitNode(state, island, shot.damage, shot.team);
   }
 }
 
@@ -316,6 +356,8 @@ function stepShots(state, params) {
         hitCarrier(state, state.carriers[hit.index], shot.damage, nx, ny, nz, shot.team);
       } else if (hit.kind === TARGET_TURRET) {
         hitTurret(state, state.turrets[hit.index], shot.damage, shot.team);
+      } else if (hit.kind === TARGET_NODE) {
+        hitNode(state, state.islands[hit.index], shot.damage, shot.team);
       } else {
         hitUnit(state, state.units[hit.index], shot.damage, shot.team);
       }

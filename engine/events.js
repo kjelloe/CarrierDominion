@@ -47,6 +47,7 @@ const EVT_COURSE = 39; // a = carrierId, b = 1 set / 0 done or cleared
 const EVT_SUPPLY_BIAS = 40; // a = item category, b = owning team, c = level
 const EVT_TELEMETRY_LOST = 41; // a = unitId, b = team - the leash took it
 const EVT_UNIT_LANDED = 42; // a = unitId, b = team, c = islandId - down on a runway
+const EVT_NODE_DESTROYED = 43; // a = islandId, b = the owner it was blasted from
 
 function makeEvent(code, a, b, c) {
   return { code: code, a: a, b: b, c: c };
@@ -100,6 +101,7 @@ export {
   EVT_SUPPLY_BIAS,
   EVT_TELEMETRY_LOST,
   EVT_UNIT_LANDED,
+  EVT_NODE_DESTROYED,
   makeEvent,
   pushEvent,
 };

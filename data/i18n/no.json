@@ -323,5 +323,6 @@
   "tip.pause": "pause - i LAN-krig stemmer bordet",
   "tip.auto": "autopiloten har rattet - klikk for å slette kursen",
   "tip.unitChip": "velg dette fartøyet - PILOT, HENT INN og ordrer gjelder det valgte",
-  "hud.pause": "PAUSE"
+  "hud.pause": "PAUSE",
+  "log.nodeDestroyed": "kommandosenteret på {island} ble ødelagt - øya er ingens"
 }

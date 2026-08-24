@@ -61,6 +61,7 @@ function stepCapture(state, podBuildTicks) {
     island.podTicks = island.podTicks + 1;
     if (island.podTicks < podBuildTicks) continue;
     island.owner = island.podTeam;
+    island.nodeHp = state.params.commandCentreHp;
     island.podTeam = -1;
     island.podTicks = 0;
     // A new command centre means a new plan. The command centre itself is what

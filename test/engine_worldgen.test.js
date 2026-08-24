@@ -22,13 +22,14 @@ const rules = loadRules();
 // zero event drift, bookkeeping only - and again the same day for the
 // telemetry leash rules (telemetryFade/LossMetres), also drift-free, and a
 // third time for the runway works (island.runway, unit.landedIsland, the
-// builds row) - drift-free again. The
+// builds row), and a fourth for the command centre (island.nodeHp/nodeZ,
+// commandCentreHp) - drift-free every time. The
 // MAP itself has not changed since
 // the first pin: islands, nodes and start positions are byte-identical
 // throughout (the ring-walk fix in the same slice touches only tables of
 // more than four teams, which no pin covers).
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = '92954f22420c235c';
+const GOLDEN_WORLD_HASH = '5c464276c03256f8';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

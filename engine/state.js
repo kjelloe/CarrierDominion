@@ -65,6 +65,8 @@ function copyIsland(island) {
     warehouses: island.warehouses,
     turrets: island.turrets,
     runway: island.runway,
+    nodeHp: island.nodeHp,
+    nodeZ: island.nodeZ,
     building: island.building,
     buildTicks: island.buildTicks,
   };
@@ -204,6 +206,7 @@ function copyState(state) {
       aiStandoff: state.params.aiStandoff,
       telemetryFade: state.params.telemetryFade,
       telemetryLoss: state.params.telemetryLoss,
+      commandCentreHp: state.params.commandCentreHp,
       victoryIslandPermil: state.params.victoryIslandPermil,
       pointCap: state.params.pointCap,
       timeCapTicks: state.params.timeCapTicks,
@@ -435,6 +438,9 @@ function createInitialState(seed, rules) {
       // drone's picture fades past FADE and the link dies at LOSS.
       telemetryFade: base.telemetryFadeMetres * unitsPerMetre,
       telemetryLoss: base.telemetryLossMetres * unitsPerMetre,
+      // The command centre's Neutron Shields (second source review, item
+      // 1): what "vast quantities of firepower" has to chew through.
+      commandCentreHp: base.commandCentreHp,
       victoryIslandPermil: base.victoryIslandPermil,
       pointCap: base.pointCap,
       timeCapTicks: base.timeCapTicks,

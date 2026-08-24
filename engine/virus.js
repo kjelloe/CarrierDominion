@@ -54,6 +54,7 @@ function deployVirus(state, unit, island) {
 function convert(state, island) {
   const team = island.virusTeam;
   island.owner = team;
+  island.nodeHp = state.params.commandCentreHp;
   island.virusTeam = -1;
   island.virusTicks = 0;
   island.virusVictim = -1;

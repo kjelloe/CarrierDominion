@@ -96,6 +96,7 @@ function stockIsland(island, fuel, materials, ordnance, chassis) {
 
 function developIsland(state, team, island, round) {
   island.owner = team.id;
+  island.nodeHp = state.params.commandCentreHp;
   if (round === 0) {
     // The plant, stocked and nominated: the supply chain breathes from
     // tick one.
