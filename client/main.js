@@ -16,7 +16,7 @@ import { fetchRules } from './rules.js';
 import { createLocalTransport, createReplayTransport, createWsTransport } from './transport.js';
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
-import { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea } from './render/scene.js';
+import { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea, TEAM_COLOURS } from './render/scene.js';
 import { createInstruments, drawFlightInstruments, drawInstruments, helmHitAt } from './render/instruments.js';
 import { createSound, playEvents, playWarning, startAmbience, toggleMute, wakeSound } from './sound.js';
 import { createDamagePanel, renderDamagePanel, toggleDamagePanel } from './panels/damage.js';
@@ -34,6 +34,7 @@ import {
 } from './panels/start.js';
 import { createLobbyPanel, renderLobbyPanel } from './panels/lobby.js';
 import { createStoresPanel, renderStoresPanel, toggleStoresPanel as flipStoresPanel } from './panels/stores.js';
+import { createChartPanel, renderChart, toggleChart, fitChart } from './panels/chart.js';
 import { createWaroverPanel, updateWaroverPanel } from './panels/warover.js';
 import { nextWeapon } from '../engine/weapons.js';
 import { describeSpeed, isSpeed, stepSpeed } from '../shared/speeds.js';
@@ -444,10 +445,15 @@ const CAMERA_MODES = [
   { name: 'helm', label: 'camera.helm' },
   { name: 'weapon', label: 'camera.weapon' },
   { name: 'birdseye', label: 'camera.birdseye' },
+  // The original's map screen (second source review): a real chart, not a
+  // camera - but it lives on the same tab row because it answers the same
+  // question, "what am I looking at".
+  { name: 'chart', label: 'camera.chart' },
 ];
 const cameraTabs = {};
 
 function cameraMode() {
+  if (state.chart !== undefined && state.chart.open) return 'chart';
   if (state.scene3d === undefined) return 'helm';
   if (state.scene3d.gunsight) return 'weapon';
   if (state.scene3d.strategic) return 'birdseye';
@@ -457,8 +463,13 @@ function cameraMode() {
 function setCameraMode(name) {
   const scene = state.scene3d;
   if (scene === undefined) return;
-  scene.gunsight = name === 'weapon';
-  scene.strategic = name === 'birdseye';
+  if (name === 'chart') {
+    if (state.chart !== undefined && !state.chart.open) toggleChart(state.chart, state.view);
+  } else {
+    if (state.chart !== undefined && state.chart.open) toggleChart(state.chart, state.view);
+    scene.gunsight = name === 'weapon';
+    scene.strategic = name === 'birdseye';
+  }
   updateCameraTabs();
 }
 
@@ -494,6 +505,8 @@ function updateCameraTabs() {
 // map. C walks them in that order.
 function cycleCamera() {
   const scene = state.scene3d;
+  // C walks the three WAYS OF SEEING; the chart steps aside first.
+  if (state.chart !== undefined && state.chart.open) toggleChart(state.chart, state.view);
   if (!scene.gunsight && !scene.strategic) scene.gunsight = true;
   else if (scene.gunsight) { scene.gunsight = false; scene.strategic = true; }
   else scene.strategic = false;
@@ -968,63 +981,70 @@ function bindInput(level) {
     const ndcY = -(event.clientY / window.innerHeight) * 2 + 1;
     const target = pickSea(state.scene3d, ndcX, ndcY);
     if (target === -1) return;
+    handleWorldPoint(target);
+  });
+}
 
-    const enemy = enemyNear(target.x, target.y);
-    const unit = selectedUnit();
-    if (enemy === undefined) {
-      const island = islandAt(state.view, target.x, target.y);
-      // A Manta selected and a friendly runway under the click: that is an
-      // approach, not a board (manual item 2). The board is still there -
-      // click with nothing selected.
-      if (island !== undefined && unit !== undefined && unit.kind === KIND_MANTA
-        && island.owner === state.view.team && island.runway === 1) {
-        state.transport.send({ type: 'order_unit_land', unitId: unit.id, islandId: island.id });
-        setHud(state.hud, 'status', state.t('status.landing', { island: islandName(island) }));
-        return;
-      }
-      // An island you hold opens its board; anything else closes it.
-      openIslandPanel(state.island, island);
-      if (island !== undefined) return;
-    }
-    if (enemy !== undefined) {
-      // With a unit selected the click is an attack order; with none, it is the
-      // ship's laser going to pointer mode on that contact.
-      if (unit !== undefined) {
-        state.transport.send({
-          type: 'order_unit_attack',
-          unitId: unit.id,
-          targetKind: enemy.kind,
-          targetId: enemy.id,
-        });
-        setHud(state.hud, 'status', state.t('status.attacking', { id: enemy.id }));
-      } else if (state.carrierId !== -1) {
-        state.transport.send({
-          type: 'set_carrier_aim',
-          carrierId: state.carrierId,
-          targetKind: enemy.kind,
-          targetId: enemy.id,
-        });
-        setHud(state.hud, 'status', state.t('status.pointing', { id: enemy.id }));
-      }
+// A point on the WORLD, however it was pointed at - a click through the 3D
+// viewport or a click on the chart resolve to the same engine-unit point and
+// mean the same things: an enemy is a target, a friendly runway is an
+// approach, an island is its board, open water is a course or a move.
+function handleWorldPoint(target) {
+  const enemy = enemyNear(target.x, target.y);
+  const unit = selectedUnit();
+  if (enemy === undefined) {
+    const island = islandAt(state.view, target.x, target.y);
+    // A Manta selected and a friendly runway under the click: that is an
+    // approach, not a board (manual item 2). The board is still there -
+    // click with nothing selected.
+    if (island !== undefined && unit !== undefined && unit.kind === KIND_MANTA
+      && island.owner === state.view.team && island.runway === 1) {
+      state.transport.send({ type: 'order_unit_land', unitId: unit.id, islandId: island.id });
+      setHud(state.hud, 'status', state.t('status.landing', { island: islandName(island) }));
       return;
     }
-
-    const size = state.view.params.sizeUnits;
-    if (target.x < 0 || target.y < 0 || target.x > size || target.y > size) return;
-    if (unit === undefined) {
-      // Nothing selected: the click is a course for the SHIP - the original's
-      // map + PROG + A, collapsed to one click. The autopilot steers, the
-      // throttle stays yours, and any hand on the helm cancels it.
-      if (state.carrierId === -1) return;
+    // An island you hold opens its board; anything else closes it.
+    openIslandPanel(state.island, island);
+    if (island !== undefined) return;
+  }
+  if (enemy !== undefined) {
+    // With a unit selected the click is an attack order; with none, it is the
+    // ship's laser going to pointer mode on that contact.
+    if (unit !== undefined) {
       state.transport.send({
-        type: 'set_course', carrierId: state.carrierId, x: target.x, y: target.y,
+        type: 'order_unit_attack',
+        unitId: unit.id,
+        targetKind: enemy.kind,
+        targetId: enemy.id,
       });
-      setHud(state.hud, 'status', state.t('status.course'));
-      return;
+      setHud(state.hud, 'status', state.t('status.attacking', { id: enemy.id }));
+    } else if (state.carrierId !== -1) {
+      state.transport.send({
+        type: 'set_carrier_aim',
+        carrierId: state.carrierId,
+        targetKind: enemy.kind,
+        targetId: enemy.id,
+      });
+      setHud(state.hud, 'status', state.t('status.pointing', { id: enemy.id }));
     }
+    return;
+  }
+
+  const size = state.view.params.sizeUnits;
+  if (target.x < 0 || target.y < 0 || target.x > size || target.y > size) return;
+  if (unit === undefined) {
+    // Nothing selected: the click is a course for the SHIP - the original's
+    // map + PROG + A, collapsed to one click. The autopilot steers, the
+    // throttle stays yours, and any hand on the helm cancels it.
+    if (state.carrierId === -1) return;
     state.transport.send({
-      type: 'order_unit_move', unitId: unit.id, x: target.x, y: target.y,
+      type: 'set_course', carrierId: state.carrierId, x: target.x, y: target.y,
     });
+    setHud(state.hud, 'status', state.t('status.course'));
+    return;
+  }
+  state.transport.send({
+    type: 'order_unit_move', unitId: unit.id, x: target.x, y: target.y,
   });
 }
 
@@ -1229,9 +1249,57 @@ function frame(nowMs) {
   renderStoresPanel(state.stores);
   renderSignals();
   updateLocation();
+  updateAlwaysOn();
+  renderChart(state.chart, state.view, ownTeamColour());
   updateWaroverPanel(state.warover, state.view);
   updateWeaponGroup();
   updateSight();
+}
+
+function ownTeamColour() {
+  if (state.view === undefined) return '#ffe08a';
+  const hex = TEAM_COLOURS[state.view.team >= 0 ? state.view.team % TEAM_COLOURS.length : 0];
+  return `#${hex.toString(16).padStart(6, '0')}`;
+}
+
+// The 1988 constants (second source review): the score is ALWAYS on screen,
+// the pause state is a lit button, the autopilot state is a lit A, and the
+// hulls that are out stand as chips - what exists, which one is named.
+const unitChips = { signature: '', chips: [] };
+
+function updateAlwaysOn() {
+  if (state.view === undefined) return;
+  document.getElementById('score-strip').textContent = describeScore(state.t, state.view);
+  document.getElementById('pause-button').classList.toggle('on', state.speed === 0);
+  const own = ownCarrierOf(state.view);
+  document.getElementById('auto-chip').classList.toggle('on',
+    own !== undefined && own.courseX >= 0);
+
+  const out = afloatUnits();
+  const signature = out.map((unit) => `${unit.id}:${unit.kind}:${unit.state}`).join(',');
+  if (signature !== unitChips.signature) {
+    unitChips.signature = signature;
+    unitChips.chips = [];
+    const root = document.getElementById('unit-chips');
+    root.textContent = '';
+    for (const unit of out) {
+      const chip = document.createElement('div');
+      chip.className = 'unit-chip';
+      const letter = unit.kind === KIND_MANTA ? 'M' : (unit.kind === KIND_WALRUS ? 'W' : 'L');
+      chip.textContent = `${letter}${unit.id}${unit.state === 4 ? '\u2193' : ''}`;
+      chip.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        state.selectedUnitId = unit.id;
+        if (state.piloting) state.scene3d.followUnitId = unit.id;
+      });
+      attachTip(chip, state.t('tip.unitChip'));
+      root.append(chip);
+      unitChips.chips.push({ id: unit.id, chip: chip });
+    }
+  }
+  for (const entry of unitChips.chips) {
+    entry.chip.classList.toggle('on', entry.id === state.selectedUnitId);
+  }
 }
 
 // The location status readout, as the original's bottom-centre display:
@@ -1499,6 +1567,37 @@ async function main() {
     t: panelContext.t,
     send: (message) => state.transport.sendMessage(message),
   });
+  state.chart = createChartPanel({
+    onPoint: (point) => handleWorldPoint(point),
+    colours: () => state.instrumentColours,
+  });
+  const netBtn = document.getElementById('chart-network');
+  netBtn.textContent = state.t('chart.network');
+  netBtn.addEventListener('click', () => {
+    state.chart.network = !state.chart.network;
+    netBtn.classList.toggle('on', state.chart.network);
+  });
+  const clearBtn = document.getElementById('chart-clear');
+  clearBtn.textContent = state.t('chart.clear');
+  clearBtn.addEventListener('click', () => {
+    if (state.carrierId < 0) return;
+    state.transport.send({ type: 'set_course', carrierId: state.carrierId, x: -1, y: -1 });
+  });
+  const fitBtn = document.getElementById('chart-fit');
+  fitBtn.textContent = state.t('chart.fit');
+  fitBtn.addEventListener('click', () => {
+    if (state.view !== undefined) fitChart(state.chart, state.view);
+  });
+  const pauseButton = document.getElementById('pause-button');
+  pauseButton.textContent = state.t('hud.pause');
+  pauseButton.addEventListener('click', togglePause);
+  attachTip(pauseButton, state.t('tip.pause'));
+  const autoChip = document.getElementById('auto-chip');
+  autoChip.addEventListener('click', () => {
+    if (!autoChip.classList.contains('on') || state.carrierId < 0) return;
+    state.transport.send({ type: 'set_course', carrierId: state.carrierId, x: -1, y: -1 });
+  });
+  attachTip(autoChip, state.t('tip.auto'));
   const diag = getGraphicsDiagnostics();
   const override = params.get('graphics') ?? readOverride(window.localStorage);
   const resolved = resolveGraphics(suggestGraphicsLevel(diag), override);

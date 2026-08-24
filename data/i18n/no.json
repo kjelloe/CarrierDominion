@@ -315,5 +315,13 @@
   "build.upPd": "nærforsvarsoppgradering",
   "build.upRadar": "radaroppgradering",
   "status.landing": "klarert for landing på {island}",
-  "log.landed": "{kind} nede på {island} - fyller drivstoff"
+  "log.landed": "{kind} nede på {island} - fyller drivstoff",
+  "camera.chart": "KART",
+  "chart.network": "NETTVERK",
+  "chart.clear": "SLETT KURS",
+  "chart.fit": "TILPASS",
+  "tip.pause": "pause - i LAN-krig stemmer bordet",
+  "tip.auto": "autopiloten har rattet - klikk for å slette kursen",
+  "tip.unitChip": "velg dette fartøyet - PILOT, HENT INN og ordrer gjelder det valgte",
+  "hud.pause": "PAUSE"
 }

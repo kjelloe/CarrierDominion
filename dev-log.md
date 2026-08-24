@@ -5,6 +5,35 @@ golden hash and why.
 
 ---
 
+## 2026-08-24 — The chart and the chips: the second source review's UI slice
+
+The CRASH 63 + Spectrum screenshot review (dev-questions §30) showed four
+UI constants every 1988 screen kept and we lacked. All landed as one
+slice, view-layer only, no pins.
+
+- **The CHART**, on the tab row after BIRDSEYE: a real map screen at last
+  - named islands (the names shared/names.js already derives), owner
+  colours, role letters, runway/depot marks, own hulls solid, contacts
+  hollow, ghosts crossed, the course diamond. Drag pans, wheel zooms, FIT
+  reframes, NETWORK overlays the shipping star to the depot. Clicks route
+  through the SAME handleWorldPoint as the 3D viewport - extracted for
+  the purpose - so water is PROG, an island is its board, a runway is an
+  approach, and the two input paths cannot drift.
+- **SCORE always on screen** - it was in every original screenshot and
+  the point cap is an end condition; ours had been hiding in the DBG
+  strip. describeScore, bottom right, every frame.
+- **PAUSE as a lit button**, and the **A chip** for the autopilot -
+  lit while a course stands, click to clear it.
+- **Unit chips** bottom left (the cockpit shot's Manta icons 1-3): a chip
+  per hull that is out, kind letter + id, a down-arrow when parked on a
+  runway, lit when named, click to name - the same selection NEXT and
+  5-8 drive.
+
+probe chart_and_chips.mjs walks it all: score text, pause lighting, chart
+open -> click water -> course + A lit -> CLEAR -> out, network toggle,
+HELM tab closing the chart, a launched Manta's chip selecting with the
+marker up. Smoke green; 441 tests unchanged (view layer).
+
 ## 2026-08-24 — The manual's three feel-changers: repair, the leash, runways
 
 Items 7, 1 and 2 of the coverage review, in rising order of reach.

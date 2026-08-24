@@ -76,9 +76,27 @@ scuttling the ship through an ordinary command so victory resolves by its
 ordinary rules.
 
 Above the horizon sit the **camera tabs** (ruling 2026-08-24): HELM /
-WEAPON / BIRDSEYE, top centre, clickable, the lit one is where you are — the
-original's interface always said which console you were at. `C` still
-cycles. In WEAPON view the weapon selector moves to the bottom centre at
+WEAPON / BIRDSEYE / **CHART**, top centre, clickable, the lit one is where
+you are — the original's interface always said which console you were at.
+`C` still cycles the three ways of seeing; the chart steps aside first.
+
+**The CHART** (second source review — the original's map screen): named
+islands with owner colours, role letters, runway and depot marks; your
+hulls solid, contacts hollow, ghosts crossed out; the course diamond; drag
+pans, the wheel zooms, FIT reframes. A click means what it means on the
+world — open water is PROG (the course lays and the **A chip** lights; the
+chip or CLEAR COURSE puts it out), an island is its board, a friendly
+runway with a Manta named is an approach. The NETWORK button overlays every
+owned island's shipping line to the depot — our star network, drawn
+honestly. Everything comes from the fog-filtered view: the chart can never
+know more than the seat does.
+
+Three more 1988 constants from the same review: the **SCORE is always on
+screen** (bottom right, above the panel — it was in every original
+screenshot, and the point cap is an end condition), **PAUSE is a lit
+button** beside the `?`, and the hulls that are out stand as **unit chips**
+bottom left — M0, W1, a down-arrow when parked on a runway — one click to
+name a hull, the same naming NEXT and `5`–`8` do. In WEAPON view the weapon selector moves to the bottom centre at
 full size: the selector is the console there, which is also where the
 carrier's laser stops being a secret — LASER and its rounds stand under the
 crosshair, `F` fires it.

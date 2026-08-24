@@ -315,5 +315,13 @@
   "build.upPd": "point-defence refit",
   "build.upRadar": "radar refit",
   "status.landing": "cleared to land at {island}",
-  "log.landed": "{kind} down at {island} - refuelling"
+  "log.landed": "{kind} down at {island} - refuelling",
+  "camera.chart": "CHART",
+  "chart.network": "NETWORK",
+  "chart.clear": "CLEAR COURSE",
+  "chart.fit": "FIT",
+  "tip.pause": "pause - in a LAN war the table votes",
+  "tip.auto": "the autopilot has the wheel - click to clear the course",
+  "tip.unitChip": "name this hull - PILOT, RECALL and orders act on the named one",
+  "hud.pause": "PAUSE"
 }

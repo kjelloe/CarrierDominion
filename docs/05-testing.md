@@ -82,7 +82,7 @@ The lobby bug is the clearest case for having them at all — every socket test
 passed, because socket tests write raw JSON and the bug was in how the *client*
 wrapped its messages. Two real browsers found it immediately.
 
-Current probes: `ai_trace`, `combat_shot`, `damage_board`, `flavour_pack`, `graphics_shots`, `gunsight`,
+Current probes: `ai_trace`, `chart_and_chips`, `combat_shot`, `damage_board`, `flavour_pack`, `graphics_shots`, `gunsight`,
 `island_board`, `lobby`, `rejoin`, `replay_view`, `scope_zoom`, `splash_shot`, `start_menu`, `touch_controls`,
 `playtest_round1`, `playtest_round2`, `playtest_round3`, `playtest_round4`, `second_war`, `strategic_probe`, `style_shots`, `turret_shot`,
 `war_over`, `war_trace`, `watch_run`. `graphics_shots` also asserts the
