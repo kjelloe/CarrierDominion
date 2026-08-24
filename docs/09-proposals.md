@@ -105,6 +105,12 @@ defences and shipping.
    Proposed: yes, PD and lasers can take it — it is a unit.
 3. Magazine economics: how scarce? Proposed: 4 missiles + 2 drones aboard
    at start, factory-buildable after.
+4. *(From the second source review, dev-questions §30.)* Period accounts
+   describe the ENEMY carrier firing Hammerheads at the player — the
+   missile-lock warning, decoys and evasive helm were the defensive game.
+   If the Hammerhead is ruled in, does the AI get it too? (Our flares and
+   PD already model the defence; an AI Hammerhead would give them a
+   second customer.)
 
 ---
 
