@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loadRules } from '../server/rules.js';
+import { bareRules } from './helpers/rules.mjs';
 import { createInitialState, copyState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
@@ -9,7 +10,7 @@ import { hashState } from '../engine/snapshot.js';
 import { EVT_COMMAND_REJECTED, EVT_THROTTLE_SET } from '../engine/events.js';
 import { CMD_ADVANCE_TICK } from '../engine/commands.js';
 
-const rules = loadRules();
+const rules = bareRules();
 const TICK = { type: CMD_ADVANCE_TICK };
 
 function freshState() {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadRules, withoutAi } from './helpers/rules.mjs';
+import { loadRules, withoutAi, bareRules } from './helpers/rules.mjs';
 import { createInitialState, copyState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
@@ -11,7 +11,7 @@ import { KIND_FACTORY, KIND_RADAR, KIND_RESOURCE } from '../engine/worldgen.js';
 import { ROLE_DEFENCE, ROLE_FACTORY, ROLE_NONE, ROLE_RESOURCE } from '../engine/island.js';
 import { EVT_STOCKPILE_SET } from '../engine/events.js';
 
-const rules = withoutAi(loadRules());
+const rules = bareRules();
 const econ = loadRules().economy;
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;

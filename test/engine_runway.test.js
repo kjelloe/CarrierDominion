@@ -6,13 +6,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadRules, withoutAi } from './helpers/rules.mjs';
+import { loadRules, withoutAi, bareRules } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
 import { KIND_MANTA, ORDER_MOVE, UNIT_ACTIVE, UNIT_LANDED, UNIT_LOST } from '../engine/units.js';
 
-const rules = withoutAi(loadRules());
+const rules = bareRules();
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
 const BUILD_RUNWAY = 6;

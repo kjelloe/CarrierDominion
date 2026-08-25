@@ -15,3 +15,14 @@ function bothAi(rules) {
 }
 
 export { loadRules, withoutAi, bothAi };
+
+// A war with no machine seats AND no home islands: the blank ocean many
+// engine tests build their scenarios on. The home island (ruled 2026-08-25)
+// is the DEFAULT game; tests that hand-craft island ownership start bare.
+function bareRules() {
+  const rules = withoutAi(loadRules());
+  rules.rules = { ...rules.rules, homeIslandStart: 0 };
+  return rules;
+}
+
+export { bareRules };

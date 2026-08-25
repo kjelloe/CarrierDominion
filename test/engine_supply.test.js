@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadRules, withoutAi } from './helpers/rules.mjs';
+import { loadRules, withoutAi, bareRules } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
@@ -15,7 +15,7 @@ import { KIND_LIGHTER, ORDER_DELIVER, ORDER_LOAD, UNIT_STOWED } from '../engine/
 import { EVT_SUPPLY_DELIVERED, EVT_SUPPLY_LOADED, EVT_SUPPLY_RUN } from '../engine/events.js';
 import { KIND_RESOURCE } from '../engine/worldgen.js';
 
-const rules = withoutAi(loadRules());
+const rules = bareRules();
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
 

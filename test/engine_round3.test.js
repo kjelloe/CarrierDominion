@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadRules, withoutAi } from './helpers/rules.mjs';
+import { loadRules, withoutAi, bareRules } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
@@ -17,7 +17,7 @@ import { ROLE_FACTORY } from '../engine/island.js';
 import { EVT_COURSE } from '../engine/events.js';
 import { KIND_MANTA, ORDER_ESCORT, ORDER_RETURN, UNIT_ACTIVE } from '../engine/units.js';
 
-const rules = withoutAi(loadRules());
+const rules = bareRules();
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
 

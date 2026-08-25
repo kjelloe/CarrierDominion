@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadRules, withoutAi } from './helpers/rules.mjs';
+import { loadRules, withoutAi, bareRules } from './helpers/rules.mjs';
 import { dist2D } from '../shared/fixed.js';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
@@ -14,7 +14,7 @@ import { buildView } from '../shared/view.js';
 import { CONTACT_CARRIER, CONTACT_UNIT, covered, remembered, stepContacts } from '../engine/contacts.js';
 import { KIND_MANTA, KIND_WALRUS, UNIT_ACTIVE, UNIT_LOST } from '../engine/units.js';
 
-const rules = withoutAi(loadRules());
+const rules = bareRules();
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
 
@@ -208,7 +208,9 @@ test('a hunt that finds the carrier becomes a strike', () => {
 
 test('patrols wait for a real silence, then sweep the enemy holdings', () => {
   const aiRules = loadRules();
-  aiRules.rules = { ...aiRules.rules, aiTeams: [0] };
+  // No leash and no home islands: this test is about patrol PATIENCE, and
+  // its crafted map puts the mark wherever seed geometry fell.
+  aiRules.rules = { ...aiRules.rules, aiTeams: [0], telemetryLossMetres: 0, homeIslandStart: 0 };
   let state = createInitialState(SEED, aiRules);
   state.islands[2].owner = 1; // the enemy holds something worth looking at
 

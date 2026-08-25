@@ -99,8 +99,11 @@ async function checkMode(browser, baseUrl, mode) {
     () => {
       const hangar = document.getElementById('hud-hangar');
       const unit = document.getElementById('hud-unit');
+      // The hangar count proves the round trip. The SELECTED unit may be
+      // the supply lighter now - the home island starts the supply run, so
+      // a boat is often afloat (and auto-named) before the first launch.
       return hangar !== null && /3 Manta/.test(hangar.textContent)
-        && unit !== null && /Manta/.test(unit.textContent);
+        && unit !== null && /Manta|Walrus|Lighter|Lekter/.test(unit.textContent);
     },
     undefined,
     { timeout: 10000 },

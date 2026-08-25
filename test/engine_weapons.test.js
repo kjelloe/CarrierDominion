@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loadRules } from '../server/rules.js';
+import { bareRules } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize, hashState } from '../shared/statehash.js';
@@ -23,7 +24,7 @@ import { PHASE_OVER, WIN_DRAW, checkVictory } from '../engine/victory.js';
 import { stepAiTeam } from '../engine/ai_carrier.js';
 import { atan2B } from '../shared/trig.js';
 
-const rules = loadRules();
+const rules = bareRules();
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
 

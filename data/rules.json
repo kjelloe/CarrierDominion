@@ -30,5 +30,6 @@
   "actionStart": 0,
   "telemetryFadeMetres": 20000,
   "telemetryLossMetres": 26000,
-  "commandCentreHp": 400
+  "commandCentreHp": 400,
+  "homeIslandStart": 1
 }

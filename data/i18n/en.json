@@ -324,5 +324,6 @@
   "tip.auto": "the autopilot has the wheel - click to clear the course",
   "tip.unitChip": "name this hull - PILOT, RECALL and orders act on the named one",
   "hud.pause": "PAUSE",
-  "log.nodeDestroyed": "the command centre on {island} was destroyed - the island is nobody's"
+  "log.nodeDestroyed": "the command centre on {island} was destroyed - the island is nobody's",
+  "unit.landed": "on the strip"
 }

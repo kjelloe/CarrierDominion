@@ -96,8 +96,8 @@ function updateCarrierHud(hud, carrier, params) {
   setHud(hud, 'fuel', `${percent}% / hull ${hull}%`);
 }
 
-const KIND_KEYS = ['unit.manta', 'unit.walrus'];
-const STATE_KEYS = ['unit.stowed', 'unit.holding', 'unit.returning', 'unit.lost'];
+const KIND_KEYS = ['unit.manta', 'unit.walrus', 'unit.lighter'];
+const STATE_KEYS = ['unit.stowed', 'unit.holding', 'unit.returning', 'unit.lost', 'unit.landed'];
 const ORDER_KEYS = ['unit.holding', 'unit.moving', 'unit.returning'];
 
 function describeHangar(t, units, team) {

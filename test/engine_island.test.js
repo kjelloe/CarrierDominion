@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadRules, withoutAi } from './helpers/rules.mjs';
+import { loadRules, withoutAi, bareRules } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
@@ -25,7 +25,7 @@ import { replaceHull } from '../engine/repair.js';
 import { KIND_MANTA, UNIT_LOST, UNIT_STOWED } from '../engine/units.js';
 import { EVT_ISLAND_BUILT, EVT_ISLAND_ROLE } from '../engine/events.js';
 
-const rules = withoutAi(loadRules());
+const rules = bareRules();
 const econ = loadRules().economy;
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;

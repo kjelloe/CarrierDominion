@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loadRules } from '../server/rules.js';
+import { bareRules } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { buildView } from '../shared/view.js';
@@ -15,7 +16,7 @@ import {
   EVT_POD_LOST,
 } from '../engine/events.js';
 
-const rules = loadRules();
+const rules = bareRules();
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
 

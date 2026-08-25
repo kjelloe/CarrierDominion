@@ -29,7 +29,7 @@ import { copyContacts } from './contacts.js';
 import { copySections, createSections } from './damage.js';
 import { copyTurrets } from './turret.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
-import { prepareActionStart } from './action_start.js';
+import { prepareActionStart, prepareHomeIslands } from './action_start.js';
 
 const PHASE_RUNNING = 0;
 const PHASE_OVER = 1;
@@ -474,6 +474,7 @@ function createInitialState(seed, rules) {
   // Inside createInitialState on purpose - the flag is a RULE, hashed with
   // the rest, so a replay of an action war is an action war.
   if (base.actionStart === 1) prepareActionStart(state);
+  else if (base.homeIslandStart === 1) prepareHomeIslands(state);
   return state;
 }
 

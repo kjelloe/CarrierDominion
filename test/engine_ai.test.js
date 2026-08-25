@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadRules, withoutAi, bothAi } from './helpers/rules.mjs';
+import { loadRules, withoutAi, bothAi, bareRules } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
@@ -12,7 +12,9 @@ import { islandsHeldBy, PHASE_OVER, WIN_ISLANDS } from '../engine/victory.js';
 import { EVT_WAR_OVER } from '../engine/events.js';
 import { UNIT_STOWED } from '../engine/units.js';
 
-const rules = loadRules();
+// Home islands off (the tests build their own map maths) but the DEFAULT
+// aiTeams intact - this file is about the machine.
+const rules = { ...loadRules(), rules: { ...loadRules().rules, homeIslandStart: 0 } };
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
 

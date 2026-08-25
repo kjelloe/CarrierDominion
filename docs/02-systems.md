@@ -14,6 +14,22 @@ Every number here is in `data/*.json`. None of them is in engine code.
 The carrier is deliberately slow (owner ruling): time compression is the answer
 to the waiting, not a faster ship.
 
+## The home island
+
+The Strategy game starts each team on **one developed base** (proposal 3a,
+ruled 2026-08-25 — the original's Base island): its nearest island comes
+owned, role Factory with one plant, a runway, two turrets, a modest stock,
+the depot nomination, and the supply run already running — the two lighters
+sailing at tick 1 are the first thing a new war does. The opening race is
+for the **second** island, not the first pod. The Action Game keeps its own
+round-robin estates; `homeIslandStart: 0` gives the old bare ocean (the
+engine tests build on it via `bareRules()`).
+
+Measured consequence (five-seed battery): AI-vs-AI wars now resolve between
+ticks 35,006 and 116,271 (was 33k–231k) — economies that start alive fight
+sooner and settle faster; early lulls grow (both sides build before
+contact) but stay under the watchdog's scaled window.
+
 ## Taking an island
 
 Two ways, and they answer different questions.

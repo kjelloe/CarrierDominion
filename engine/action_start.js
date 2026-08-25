@@ -122,6 +122,35 @@ function carrierOf(state, teamId) {
   return -1;
 }
 
+// The home island (proposal 3a, ruled 2026-08-25): the original's Base.
+// In the STRATEGY game each team starts on one developed island - a plant,
+// a runway, two guns, a modest stock, the depot nomination, supply running.
+// The opening race is for the SECOND island, not the first pod. The Action
+// Game skips this: its round-0 estate IS the home.
+function developHomeIsland(state, team, carrier) {
+  const island = nearestUnowned(state, carrier.x, carrier.y);
+  if (island === -1) return;
+  island.owner = team.id;
+  island.nodeHp = state.params.commandCentreHp;
+  island.role = ROLE_FACTORY;
+  island.factories = 1;
+  island.runway = 1;
+  stockIsland(island, 8000, 1500, 800, 12);
+  for (let g = 0; g < 2; g++) raiseTurret(state, island);
+  island.turrets = 2;
+  team.stockpileIsland = island.id;
+  carrier.supplyRun = 1;
+}
+
+function prepareHomeIslands(state) {
+  for (let t = 0; t < state.teams.length; t++) {
+    const carrier = carrierOf(state, state.teams[t].id);
+    if (carrier === -1) continue;
+    developHomeIsland(state, state.teams[t], carrier);
+  }
+  return state;
+}
+
 function prepareActionStart(state) {
   const centreX = mulDiv(state.params.sizeUnits, 1, 2);
   const centreY = centreX;
@@ -200,4 +229,4 @@ function prepareActionStart(state) {
   return state;
 }
 
-export { CLOSER_PERMIL, prepareActionStart };
+export { CLOSER_PERMIL, prepareActionStart, prepareHomeIslands };

@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loadRules } from '../server/rules.js';
+import { bareRules } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
@@ -29,7 +30,8 @@ import { hitUnit } from '../engine/shots.js';
 import { KIND_MANTA, UNIT_ACTIVE } from '../engine/units.js';
 import { EVT_SCORED } from '../engine/events.js';
 
-const base = loadRules();
+// Home islands off: these tests do their own island arithmetic.
+const base = { ...loadRules(), rules: { ...loadRules().rules, homeIslandStart: 0 } };
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
 
