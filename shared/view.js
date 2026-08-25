@@ -237,7 +237,9 @@ function islandView(island, team) {
     // A runway is visible from the sea, like the rest of the works - and so
     // is the state of a command centre's shields: smoke is public.
     runway: island.runway,
-    networkHops: island.networkHops,
+    // Own islands only: hops 0 would otherwise name the enemy's depot,
+    // which nothing else in the fog gives away.
+    networkHops: mine ? island.networkHops : -1,
     nodeHp: island.nodeHp,
     building: island.building,
     buildTicks: mine ? island.buildTicks : -1,
@@ -484,6 +486,7 @@ function refereeIslandView(island) {
     // A runway is visible from the sea, like the rest of the works - and so
     // is the state of a command centre's shields: smoke is public.
     runway: island.runway,
+    // The referee sees every chain whole - that is what a referee is.
     networkHops: island.networkHops,
     nodeHp: island.nodeHp,
     building: island.building,

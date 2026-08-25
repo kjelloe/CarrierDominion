@@ -120,7 +120,10 @@ function stepBatcaves(state) {
     }
 
     const intruder = intruderNear(state, island, p.icPatrol);
-    const live = wing.filter((unit) => unit.state !== UNIT_LOST && unit.team === island.owner);
+    const live = [];
+    for (let w = 0; w < wing.length; w++) {
+      if (wing[w].state !== UNIT_LOST && wing[w].team === island.owner) live.push(wing[w]);
+    }
 
     // Rebuild: a lost airframe is replaced from the island's own materials,
     // one per rebuild period, only while the cave stands.
