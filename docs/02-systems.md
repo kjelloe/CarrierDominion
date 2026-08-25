@@ -102,6 +102,24 @@ upstream of it. The network ships each accrual's share only as far as the depot
 has **room** — a full depot leaves goods where they are, so stock piling up at
 the mine is the visible signal that the depot needs a warehouse.
 
+**The chain is geography** (proposal 3b, ruled 2026-08-25). Two islands of
+the same owner **link** when their centres lie within `networkLinkMetres`
+(12 km); goods flow hop by hop to the depot, and an island with no path to
+it is **cut off**: it keeps what it makes and its Command Centre stops
+building until the link is mended (the original's rule exactly). The graph
+is recomputed from scratch by breadth-first search out from each team's
+depot — but only when it can have changed, which is when OWNERSHIP or a
+DEPOT changes, because islands do not move. Those sites raise a dirty flag
+and the reducer refreshes once, before anything reads it.
+
+Measured: at our island density this costs nothing in ordinary play — a
+side that takes the nearest island always keeps its chain whole, so AI wars
+are byte-identical and the AI needed no new teaching. It bites on
+**overreach**: a distant prize taken across open water produces nothing
+until the ground between is taken too. The chart's NETWORK overlay draws
+the real links, and rings any island that has fallen off the chain.
+`networkLinkMetres: 0` restores the distance-free star.
+
 **Site the stockpile at the factory.** The network ships everything toward the
 depot, and a factory refines only what is piled on its own ground — a depot at
 the mine starves the plant on its own eight-a-beat trickle while sixty a beat

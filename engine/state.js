@@ -31,6 +31,7 @@ import { copyTurrets } from './turret.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
 import { prepareActionStart, prepareHomeIslands } from './action_start.js';
 import { raiseNeutralSilos } from './batcave.js';
+import { computeNetwork } from './network.js';
 
 function presetsFrom(presetRules) {
   const out = [];
@@ -82,6 +83,7 @@ function copyIsland(island) {
     nodeHp: island.nodeHp,
     nodeZ: island.nodeZ,
     caveTicks: island.caveTicks,
+    networkHops: island.networkHops,
     building: island.building,
     buildTicks: island.buildTicks,
   };
@@ -238,6 +240,7 @@ function copyState(state) {
       icRebuildMaterials: state.params.icRebuildMaterials,
       icRebuildTicks: state.params.icRebuildTicks,
       neutralSiloRounds: state.params.neutralSiloRounds,
+      networkLink: state.params.networkLink,
       victoryIslandPermil: state.params.victoryIslandPermil,
       pointCap: state.params.pointCap,
       timeCapTicks: state.params.timeCapTicks,
@@ -263,6 +266,7 @@ function copyState(state) {
     nextShot: state.nextShot,
     turrets: copyTurrets(state.turrets),
     nextTurret: state.nextTurret,
+    netDirty: state.netDirty,
     contacts: copyContacts(state.contacts),
     events: events,
   };
@@ -533,6 +537,10 @@ function createInitialState(seed, rules) {
       icRebuildTicks: rules.units.interceptor === undefined
         ? 0 : rules.units.interceptor.rebuildTicks,
       neutralSiloRounds: base.neutralSiloRounds === undefined ? 0 : base.neutralSiloRounds,
+      // How far the resource network can reach between two islands
+      // (proposal 3b): 0 switches topology off and restores the star.
+      networkLink: world.networkLinkMetres === undefined
+        ? 0 : world.networkLinkMetres * unitsPerMetre,
       victoryIslandPermil: base.victoryIslandPermil,
       pointCap: base.pointCap,
       timeCapTicks: base.timeCapTicks,
@@ -560,6 +568,9 @@ function createInitialState(seed, rules) {
     nextShot: 0,
     turrets: [],
     nextTurret: 0,
+    // Raised when ownership or a depot changes; the reducer recomputes the
+    // resource network once and clears it (engine/network.js).
+    netDirty: 0,
     // What each team remembers seeing (engine/contacts.js). Empty at the
     // start: nobody has seen anything yet.
     contacts: [],
@@ -573,6 +584,8 @@ function createInitialState(seed, rules) {
   raiseNeutralSilos(state, state.params.neutralSiloRounds);
   if (base.actionStart === 1) prepareActionStart(state);
   else if (base.homeIslandStart === 1) prepareHomeIslands(state);
+  // The chain, once, before the first tick reads it.
+  computeNetwork(state);
   return state;
 }
 

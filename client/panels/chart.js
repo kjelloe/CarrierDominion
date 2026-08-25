@@ -139,24 +139,56 @@ function renderChart(panel, view, teamColour) {
   draw.lineWidth = 1;
   draw.strokeRect(edgeA.x, edgeA.y, edgeB.x - edgeA.x, edgeB.y - edgeA.y);
 
-  // The resource overlay: our network is a star to the depot, and the chart
-  // says so honestly - every owned island's shipping line, drawn to it.
+  // The resource overlay: the real LINK GRAPH (proposal 3b) - every pair of
+  // your islands close enough to link, drawn solid, plus the cut-off ones
+  // marked so a broken chain is visible rather than deduced. With topology
+  // off the reach is 0 and the overlay falls back to the star.
   const depotId = view.stockpileIsland;
   const depot = view.islands.find((island) => island.id === depotId);
-  if (panel.network && depot !== undefined) {
-    draw.strokeStyle = colours.good;
+  if (panel.network) {
+    const reach = view.params.networkLink ?? 0;
+    const mine = view.islands.filter((island) => island.owner === view.team);
     draw.lineWidth = 1;
-    draw.setLineDash([4, 4]);
-    for (const island of view.islands) {
-      if (island.owner !== view.team || island.id === depotId) continue;
-      const from = plot(panel, island.x, island.y);
-      const to = plot(panel, depot.x, depot.y);
-      draw.beginPath();
-      draw.moveTo(from.x, from.y);
-      draw.lineTo(to.x, to.y);
-      draw.stroke();
+    if (reach > 0) {
+      draw.strokeStyle = colours.good;
+      for (let a = 0; a < mine.length; a++) {
+        for (let b = a + 1; b < mine.length; b++) {
+          const dx = mine[a].x - mine[b].x;
+          const dy = mine[a].y - mine[b].y;
+          if (dx * dx + dy * dy > reach * reach) continue;
+          const from = plot(panel, mine[a].x, mine[a].y);
+          const to = plot(panel, mine[b].x, mine[b].y);
+          draw.beginPath();
+          draw.moveTo(from.x, from.y);
+          draw.lineTo(to.x, to.y);
+          draw.stroke();
+        }
+      }
+      // A cut-off island wears a ring in the warning colour: it keeps what
+      // it makes and its Command Centre has stopped.
+      draw.strokeStyle = colours.bad;
+      for (const island of mine) {
+        if (island.networkHops >= 0) continue;
+        const at = plot(panel, island.x, island.y);
+        const radius = Math.max(5, island.radius / panel.scale) + 4;
+        draw.beginPath();
+        draw.arc(at.x, at.y, radius, 0, Math.PI * 2);
+        draw.stroke();
+      }
+    } else if (depot !== undefined) {
+      draw.strokeStyle = colours.good;
+      draw.setLineDash([4, 4]);
+      for (const island of mine) {
+        if (island.id === depotId) continue;
+        const from = plot(panel, island.x, island.y);
+        const to = plot(panel, depot.x, depot.y);
+        draw.beginPath();
+        draw.moveTo(from.x, from.y);
+        draw.lineTo(to.x, to.y);
+        draw.stroke();
+      }
+      draw.setLineDash([]);
     }
-    draw.setLineDash([]);
   }
 
   for (const island of view.islands) {

@@ -16,12 +16,15 @@ function bothAi(rules) {
 
 export { loadRules, withoutAi, bothAi };
 
-// A war with no machine seats AND no home islands: the blank ocean many
-// engine tests build their scenarios on. The home island (ruled 2026-08-25)
-// is the DEFAULT game; tests that hand-craft island ownership start bare.
+// The BLANK ocean: no machine seats, no home islands, no map teeth, and no
+// link topology - the world the scenario tests build on, where an island is
+// owned the moment a test says so. The real game has all four; each has its
+// own tests. (Topology off means every owned island is one hop from its
+// depot, which is exactly the distance-free star we shipped before.)
 function bareRules() {
   const rules = withoutAi(loadRules());
   rules.rules = { ...rules.rules, homeIslandStart: 0, neutralSiloRounds: 0 };
+  rules.world = { ...rules.world, networkLinkMetres: 0 };
   return rules;
 }
 

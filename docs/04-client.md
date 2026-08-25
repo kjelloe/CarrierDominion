@@ -86,9 +86,9 @@ hulls solid, contacts hollow, ghosts crossed out; the course diamond; drag
 pans, the wheel zooms, FIT reframes. A click means what it means on the
 world — open water is PROG (the course lays and the **A chip** lights; the
 chip or CLEAR COURSE puts it out), an island is its board, a friendly
-runway with a Manta named is an approach. The NETWORK button overlays every
-owned island's shipping line to the depot — our star network, drawn
-honestly. Everything comes from the fog-filtered view: the chart can never
+runway with a Manta named is an approach. The NETWORK button overlays the **link graph** — every pair of your islands
+close enough to supply one another, with a warning ring around any that has
+fallen off the chain. Everything comes from the fog-filtered view: the chart can never
 know more than the seat does.
 
 Three more 1988 constants from the same review: the **SCORE is always on

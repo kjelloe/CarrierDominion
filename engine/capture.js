@@ -10,6 +10,7 @@
 // which resets the clock to the newcomer. Combat will give the other, louder
 // way to stop one; this is the peaceful race.
 
+import { markNetworkDirty } from './network.js';
 import { dist2D } from '../shared/fixed.js';
 import { EVT_ISLAND_CAPTURED, EVT_POD_DEPLOYED, EVT_POD_LOST, pushEvent } from './events.js';
 import { KIND_WALRUS, UNIT_ACTIVE } from './units.js';
@@ -61,6 +62,7 @@ function stepCapture(state, podBuildTicks) {
     island.podTicks = island.podTicks + 1;
     if (island.podTicks < podBuildTicks) continue;
     island.owner = island.podTeam;
+    markNetworkDirty(state);
     island.nodeHp = state.params.commandCentreHp;
     island.podTeam = -1;
     island.podTicks = 0;

@@ -100,6 +100,12 @@ test('the comm pod frees ONE airframe from the leash, and only one', () => {
   yard.role = 1; // ROLE_FACTORY
   yard.factories = 1;
   yard.stockMaterials = 9000;
+  // On the real ruleset the chain is geography now: a yard that is not on
+  // the network never builds. Make it the depot - hops 0 - which is what a
+  // commander refitting there would do anyway.
+  state.teams[0].stockpileIsland = yard.id;
+  state.netDirty = 1;
+  state = apply(state, { type: 'advance_tick' });
   state = apply(state, { type: 'build_on_island', carrierId: 0, islandId: 0, what: 7 });
   assert.equal(state.islands[0].building, 7, 'the yard refused the pod');
   for (let i = 0; i <= state.economy.builds[7].ticks; i++) state = apply(state, TICK);

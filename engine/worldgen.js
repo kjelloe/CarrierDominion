@@ -127,6 +127,8 @@ function createIslands(seed, world, unitsPerMetre) {
       nodeZ: 0,
       // The Bat Cave's rebuild clock (0 = ready to rebuild when short).
       caveTicks: 0,
+      // Hops to this island's own depot, -1 when cut off (engine/network.js).
+      networkHops: -1,
       building: -1,
       buildTicks: 0,
     };

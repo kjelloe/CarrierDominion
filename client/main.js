@@ -42,6 +42,8 @@ import { createTranslator, fetchCatalog, pickLang, DEFAULT_LANG } from './i18n.j
 import { applyStyleToDocument, resolveStyle, styleFor } from './styles.js';
 import { startDiorama } from './render/diorama.js';
 import { dist2D } from '../shared/fixed.js';
+// A Manta parked on an island runway is still 'out' for the chips.
+const UNIT_LANDED_STATE = 4;
 import { islandName } from '../shared/names.js';
 import { worldSizeMetres } from '../engine/worldgen.js';
 import {
@@ -123,8 +125,20 @@ function afloatUnits() {
   if (state.view === undefined) return [];
   return state.view.units.filter(
     (unit) => unit.team === state.view.team
-      && (unit.state === UNIT_ACTIVE || unit.state === UNIT_RETURNING),
+      && (unit.state === UNIT_ACTIVE || unit.state === UNIT_RETURNING
+        || unit.state === UNIT_LANDED_STATE),
   );
+}
+
+// What NEXT and the chips will actually NAME: the hulls a commander flies.
+// The lighter runs its own errand, the aerostat has no stick, the decoys
+// are a screen - selecting any of them would only turn the next click on
+// open water into an order for something that never wanted one. This
+// matters from the first second now: with a home island the supply boat is
+// afloat at tick 1, and it used to grab the selection before the player had
+// touched anything, turning click-to-sail into click-to-move-the-boat.
+function selectableUnits() {
+  return afloatUnits().filter((unit) => unit.kind === KIND_MANTA || unit.kind === KIND_WALRUS);
 }
 
 function selectedUnit() {
@@ -187,7 +201,7 @@ function sendClimb(next) {
 }
 
 function cycleSelection() {
-  const units = afloatUnits();
+  const units = selectableUnits();
   if (units.length === 0) {
     state.selectedUnitId = -1;
     return;
@@ -861,7 +875,7 @@ function updateActionButtons() {
     1: alive && stowed(KIND_MANTA),
     2: alive && stowed(KIND_WALRUS),
     3: alive && stowed(3),
-    n: afloatUnits().length > 0,
+    n: selectableUnits().length > 0,
     t: chosen !== undefined && chosen.kind !== 3, // an aerostat has no stick
     u: chosen !== undefined && chosen.kind !== 2 && chosen.kind !== 3,
     r: chosen !== undefined && chosen.kind !== 3, // the eye comes down on its own
@@ -954,7 +968,7 @@ function bindInput(level) {
     // Direct hull select (the original's 1-4; ours are taken by the launch
     // keys, so the row above them serves): 5-8 name the Nth hull that is out.
     else if (key >= '5' && key <= '8') {
-      const out = afloatUnits();
+      const out = selectableUnits();
       const chosen = out[Number(key) - 5];
       if (chosen !== undefined) {
         state.selectedUnitId = chosen.id;
@@ -1263,7 +1277,7 @@ function onSnapshot(message) {
     state.piloting = false;
     state.scene3d.followUnitId = -1;
   }
-  if (state.selectedUnitId === -1 && afloatUnits().length > 0) cycleSelection();
+  if (state.selectedUnitId === -1 && selectableUnits().length > 0) cycleSelection();
 }
 
 function onRejected(reason) {
@@ -1385,11 +1399,19 @@ function updateAlwaysOn() {
       const letter = ['M', 'W', 'L', 'D', 'Y', 'I'][unit.kind] ?? '?';
       const pod = unit.commPod === 1 ? '\u25CE' : ''; // the comm-pod airframe
       chip.textContent = `${letter}${unit.id}${pod}${unit.state === 4 ? '\u2193' : ''}`;
-      chip.addEventListener('pointerdown', (event) => {
-        event.preventDefault();
-        state.selectedUnitId = unit.id;
-        if (state.piloting) state.scene3d.followUnitId = unit.id;
-      });
+      const flyable = unit.kind === KIND_MANTA || unit.kind === KIND_WALRUS;
+      if (flyable) {
+        chip.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          state.selectedUnitId = unit.id;
+          if (state.piloting) state.scene3d.followUnitId = unit.id;
+        });
+      } else {
+        // Shown, because knowing the boat is out matters; not selectable,
+        // because naming it would only misdirect the next click.
+        chip.style.cursor = 'default';
+        chip.style.opacity = '0.6';
+      }
       attachTip(chip, state.t('tip.unitChip'));
       root.append(chip);
       unitChips.chips.push({ id: unit.id, chip: chip });

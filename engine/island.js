@@ -25,6 +25,7 @@ import { clearTurretsOn, createTurret, loadoutForTurret, turretsOn } from './tur
 import { applySectionEffects } from './damage.js';
 import { createArms } from './weapons.js';
 import { KIND_MANTA } from './units.js';
+import { onNetwork } from './network.js';
 
 const ROLE_NONE = -1;
 const ROLE_RESOURCE = 0;
@@ -195,12 +196,18 @@ function stepBuild(state) {
     const island = state.islands[i];
     if (island.building === BUILD_NONE) continue;
     // Lose the island and you lose the site: the work does not carry over to
-    // whoever takes it next.
+    // whoever takes it next. This comes FIRST - the network check below would
+    // otherwise skip a neutral island before its site was cleared, and the
+    // ghost build would sit there for the rest of the war.
     if (island.owner < 0) {
       island.building = BUILD_NONE;
       island.buildTicks = 0;
       continue;
     }
+    // Cut off from the chain, the Command Centre stops constructing - the
+    // original's rule, and the reason a broken link is worth mending rather
+    // than shrugging at. The site WAITS; it is not lost.
+    if (!onNetwork(state, island)) continue;
     island.buildTicks = island.buildTicks - 1;
     if (island.buildTicks > 0) continue;
     addBuilt(island, island.building);

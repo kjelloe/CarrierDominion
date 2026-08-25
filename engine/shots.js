@@ -14,6 +14,7 @@
 //   trigger   a mine: it does not fly, it waits, and it goes off for whoever
 //             walks into it
 
+import { markNetworkDirty } from './network.js';
 import { clampI, floorDiv, isqrt, mulDiv, turnToward } from '../shared/fixed.js';
 import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import {
@@ -302,6 +303,7 @@ function hitNode(state, island, damage, byTeam) {
   const oldOwner = island.owner;
   clearWorks(state, island);
   island.owner = -1;
+  markNetworkDirty(state);
   pushEvent(state.events, EVT_NODE_DESTROYED, island.id, oldOwner, 0);
   addScore(state, byTeam, state.params.pointsPerKill, SCORE_KILL);
 }

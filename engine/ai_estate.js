@@ -15,6 +15,7 @@
 
 import { floorDiv } from '../shared/fixed.js';
 import { EVT_STOCKPILE_SET, pushEvent } from './events.js';
+import { markNetworkDirty } from './network.js';
 import {
   BUILD_FACTORY,
   BUILD_TURRET,
@@ -143,6 +144,7 @@ function siteStockpile(state, brain) {
       if (held === -1 && island.role === ROLE_FACTORY) held = island.id;
     }
     if (held === -1) return;
+    markNetworkDirty(state);
     team.stockpileIsland = held;
     pushEvent(state.events, EVT_STOCKPILE_SET, held, team.id, 0);
   }

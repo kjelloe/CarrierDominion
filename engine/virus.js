@@ -17,6 +17,7 @@
 // the island, because a virus needs a command centre to subvert and the one it
 // was working on is gone.
 
+import { markNetworkDirty } from './network.js';
 import { dist2D } from '../shared/fixed.js';
 import { EVT_ISLAND_CONVERTED, EVT_VIRUS_DEPLOYED, pushEvent } from './events.js';
 import { KIND_WALRUS, UNIT_ACTIVE } from './units.js';
@@ -54,6 +55,7 @@ function deployVirus(state, unit, island) {
 function convert(state, island) {
   const team = island.virusTeam;
   island.owner = team;
+  markNetworkDirty(state);
   island.nodeHp = state.params.commandCentreHp;
   island.virusTeam = -1;
   island.virusTicks = 0;

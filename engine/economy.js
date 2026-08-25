@@ -19,6 +19,7 @@
 
 import { mulDiv } from '../shared/fixed.js';
 import { EVT_STOCKPILE_SET, pushEvent } from './events.js';
+import { computeNetwork, markNetworkDirty, onNetwork } from './network.js';
 import { ROLE_FACTORY, ROLE_NONE, stockCapOf, terrainPermil } from './island.js';
 
 function capped(value, cap) {
@@ -136,6 +137,9 @@ function shipToStockpile(state) {
     for (let i = 0; i < state.islands.length; i++) {
       const island = state.islands[i];
       if (island.owner !== team.id || island.id === depot.id) continue;
+      // Cut off from the chain: it keeps what it makes until the link is
+      // restored, exactly as the original's manual describes.
+      if (!onNetwork(state, island)) continue;
       const fuel = shipAmount(island.stockFuel, share, cap - depot.stockFuel);
       const materials = shipAmount(island.stockMaterials, share, cap - depot.stockMaterials);
       const ordnance = shipAmount(island.stockOrdnance, share, cap - depot.stockOrdnance);
@@ -161,6 +165,7 @@ function claimDefaultStockpile(state) {
     if (team.stockpileIsland >= 0) {
       const held = islandById(state, team.stockpileIsland);
       if (held !== -1 && held.owner === team.id) continue;
+      markNetworkDirty(state);
       team.stockpileIsland = -1; // lost it; look for another
     }
     for (let i = 0; i < state.islands.length; i++) {

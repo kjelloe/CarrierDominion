@@ -75,6 +75,7 @@ import { checkFlares, fireFlares, stepFlares } from './flare.js';
 import { stepContacts } from './contacts.js';
 import { stepDecoyScreens, stepUnits } from './fleet.js';
 import { stepBatcaves } from './batcave.js';
+import { computeNetwork, markNetworkDirty } from './network.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchShot } from './shots.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
@@ -548,6 +549,7 @@ function applySetStockpile(next, command) {
   const team = teamById(next, carrier.team);
   if (team === -1) return reject(next);
   team.stockpileIsland = island.id;
+  markNetworkDirty(next);
   pushEvent(next.events, EVT_STOCKPILE_SET, island.id, team.id, 0);
   return next;
 }
@@ -580,6 +582,13 @@ function advanceTick(next) {
   // it. It goes BEFORE capture so a Walrus killed on the beach cannot also
   // plant its pod on the tick it died.
   next.tick = next.tick + 1;
+  // The resource network, refreshed once when something moved it (a
+  // capture, a conversion, a blown centre, a new depot) - before any
+  // system reads it this tick.
+  if (next.netDirty === 1) {
+    computeNetwork(next);
+    next.netDirty = 0;
+  }
   if (next.phase === PHASE_RUNNING) {
     stepAi(next, next.params.aiCadenceTicks, next.params.aiStandoff);
   }

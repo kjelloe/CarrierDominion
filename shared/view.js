@@ -237,6 +237,7 @@ function islandView(island, team) {
     // A runway is visible from the sea, like the rest of the works - and so
     // is the state of a command centre's shields: smoke is public.
     runway: island.runway,
+    networkHops: island.networkHops,
     nodeHp: island.nodeHp,
     building: island.building,
     buildTicks: mine ? island.buildTicks : -1,
@@ -419,6 +420,7 @@ function buildView(state, team) {
       sizeUnits: state.params.sizeUnits,
       tickHz: state.params.tickHz,
       pointCap: state.params.pointCap,
+      networkLink: state.params.networkLink,
       timeCapTicks: state.params.timeCapTicks,
     },
     // Not a treasury: the sum of what is sitting on the islands you hold.
@@ -482,6 +484,7 @@ function refereeIslandView(island) {
     // A runway is visible from the sea, like the rest of the works - and so
     // is the state of a command centre's shields: smoke is public.
     runway: island.runway,
+    networkHops: island.networkHops,
     nodeHp: island.nodeHp,
     building: island.building,
     buildTicks: island.buildTicks,
@@ -534,6 +537,7 @@ function refereeView(state) {
       sizeUnits: state.params.sizeUnits,
       tickHz: state.params.tickHz,
       pointCap: state.params.pointCap,
+      networkLink: state.params.networkLink,
       timeCapTicks: state.params.timeCapTicks,
     },
     resources: {
