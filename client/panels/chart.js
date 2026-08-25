@@ -210,6 +210,17 @@ function renderChart(panel, view, teamColour) {
     draw.font = '11px ui-monospace, monospace';
     draw.textAlign = 'center';
     draw.fillText(islandName(island), at.x, at.y - radius - 5);
+    // An island with guns on it wears a spur: the chart should not let a
+    // Walrus wander onto a defended beach unwarned.
+    const armed = (view.turrets ?? []).some((turret) => turret.island === island.id);
+    if (armed) {
+      draw.strokeStyle = colours.warn;
+      draw.lineWidth = 1.5;
+      draw.beginPath();
+      draw.moveTo(at.x + radius * 0.7, at.y - radius * 0.7);
+      draw.lineTo(at.x + radius * 1.5, at.y - radius * 1.5);
+      draw.stroke();
+    }
     const glyphs = [];
     if (island.role >= 0) glyphs.push(ROLE_LETTERS[island.role]);
     if (island.runway === 1) glyphs.push('=');

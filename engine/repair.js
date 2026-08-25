@@ -14,7 +14,7 @@ import { EVT_HULL_REPLACED, EVT_REPAIRED, pushEvent } from './events.js';
 import { repairSections, sectionsIntact } from './damage.js';
 import { hangarOpen } from './damage.js';
 import { provisionWalrus, refuelFromCarrier } from './hangar.js';
-import { KIND_LIGHTER, KIND_MANTA, KIND_WALRUS, UNIT_LOST, UNIT_STOWED } from './units.js';
+import { KIND_DECOY, KIND_DRONE, KIND_LIGHTER, KIND_MANTA, KIND_WALRUS, UNIT_LOST, UNIT_STOWED } from './units.js';
 import { createArms, rearm } from './weapons.js';
 
 // Points of repair earned this tick, given the rate per 100 ticks. The
@@ -104,16 +104,47 @@ function stepRepair(state) {
 function replaceHull(state, carrier) {
   if (carrier.hull <= 0 || !hangarOpen(carrier)) return 0;
   const cost = state.economy.chassisPerHull;
-  if (cost <= 0 || carrier.chassis < cost) return 0;
-  // The lighter comes first, and while there is no boat at all it is the ONLY
-  // thing the yard will build. Everything the ship needs - fuel, munitions,
-  // materials, more parts - arrives in one, so a side that has lost every boat
-  // cannot be resupplied, and would never receive the parts to fix that. A
-  // reserve spent on an aircraft instead is a war lost to bookkeeping.
-  if (assembleKind(state, carrier, KIND_LIGHTER, cost) === 1) return 1;
-  if (!hasBoat(state, carrier)) return 0;
-  if (assembleKind(state, carrier, KIND_MANTA, cost) === 1) return 1;
-  return assembleKind(state, carrier, KIND_WALRUS, cost);
+  const boat = hasBoat(state, carrier);
+  if (cost > 0 && carrier.chassis >= cost) {
+    // The lighter comes first, and while there is no boat at all it is the
+    // ONLY thing the yard will build. Everything the ship needs - fuel,
+    // munitions, materials, more parts - arrives in one, so a side that has
+    // lost every boat cannot be resupplied, and would never receive the
+    // parts to fix that. A reserve spent on an aircraft instead is a war
+    // lost to bookkeeping.
+    if (assembleKind(state, carrier, KIND_LIGHTER, cost) === 1) return 1;
+    if (boat) {
+      if (assembleKind(state, carrier, KIND_MANTA, cost) === 1) return 1;
+      if (assembleKind(state, carrier, KIND_WALRUS, cost) === 1) return 1;
+    }
+  }
+  // Equipment - a Viewing Drone or a decoy - is simpler than an airframe
+  // and priced accordingly (ruled 2026-08-25). "Last" has to mean last on
+  // the PARTS, not merely last in this function: equipment costs 4 and a
+  // hull costs 12, so trying equipment whenever a hull was unaffordable
+  // ate every trickle before it could add up. Seed 900913 lost both air
+  // groups by tick 20,000 and neither ever came back - a 100,000-tick
+  // stare across five kilometres, and the same starvation shape the
+  // logistics deadlock had. So: nothing is spent here while ANY airframe
+  // is waiting to be rebuilt.
+  if (!boat || awaitingHull(state, carrier)) return 0;
+  const kit = state.economy.chassisPerEquipment;
+  if (kit <= 0 || carrier.chassis < kit) return 0;
+  if (assembleKind(state, carrier, KIND_DRONE, kit) === 1) return 1;
+  return assembleKind(state, carrier, KIND_DECOY, kit);
+}
+
+// Is a hull of this ship's own complement waiting on parts? While one is,
+// the yard saves for it.
+function awaitingHull(state, carrier) {
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.carrierId !== carrier.id || unit.state !== UNIT_LOST) continue;
+    if (unit.kind === KIND_LIGHTER || unit.kind === KIND_MANTA || unit.kind === KIND_WALRUS) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function hasBoat(state, carrier) {
@@ -179,4 +210,4 @@ function conditionPermil(carrier) {
   return mulDiv(have, 1000, total);
 }
 
-export { stepRepair, stepRepairCarrier, repairDue, replaceHull, conditionPermil };
+export { awaitingHull, stepRepair, stepRepairCarrier, repairDue, replaceHull, conditionPermil };

@@ -82,5 +82,7 @@
   "factoryChassisOut": 1,
   "chassisPerHull": 12,
   "unitRepairHpPer100Ticks": 20,
-  "unitRepairMaterialsPer100Ticks": 10
+  "unitRepairMaterialsPer100Ticks": 10,
+  "chassisPerEquipment": 4,
+  "hammerReloadPer100Ticks": 3
 }

@@ -224,6 +224,8 @@ function copyEconomy(economy) {
     factoryOrdnance: economy.factoryOrdnance,
     factoryChassis: economy.factoryChassis,
     chassisPerHull: economy.chassisPerHull,
+    chassisPerEquipment: economy.chassisPerEquipment,
+    hammerReload: economy.hammerReload,
     networkPermil: economy.networkPermil,
     stockCap: economy.stockCap,
     warehouseCap: economy.warehouseCap,
@@ -252,6 +254,11 @@ function createEconomy(econRules) {
     factoryOrdnance: econRules.factoryOrdnanceOut,
     factoryChassis: econRules.factoryChassisOut,
     chassisPerHull: econRules.chassisPerHull,
+    // Equipment - the Viewing Drone and the defence decoy - is simpler than
+    // an airframe and priced accordingly (ruled 2026-08-25: the consumables
+    // come back through the spine that already exists).
+    chassisPerEquipment: econRules.chassisPerEquipment,
+    hammerReload: econRules.hammerReloadPer100Ticks,
     networkPermil: econRules.networkSharePermil,
     stockCap: econRules.islandStockCap,
     warehouseCap: econRules.warehouseStockCap,

@@ -10,7 +10,9 @@ import { buildView } from '../shared/view.js';
 import { AI_SEEK, chooseTarget } from '../engine/ai_carrier.js';
 import { islandsHeldBy, PHASE_OVER, WIN_ISLANDS } from '../engine/victory.js';
 import { EVT_WAR_OVER } from '../engine/events.js';
-import { UNIT_STOWED } from '../engine/units.js';
+import { KIND_MANTA, UNIT_STOWED } from '../engine/units.js';
+import { planFor } from '../engine/ai_estate.js';
+import { ROLE_DEFENCE, ROLE_FACTORY, ROLE_RESOURCE } from '../engine/island.js';
 
 // Home islands off (the tests build their own map maths) but the DEFAULT
 // aiTeams intact - this file is about the machine.
@@ -162,4 +164,46 @@ test('two AIs race each other without either getting stuck', (t) => {
   // And the vehicles that finished a job came home rather than idling ashore.
   const stowed = state.units.filter((u) => u.state === UNIT_STOWED);
   assert.ok(stowed.length > 0, 'nothing ever came back aboard');
+});
+
+// --- What the battery taught the machine (2026-08-25) ---
+
+test('the economy comes first: no mine, no fort - whatever the ground says', () => {
+  const state = createInitialState(SEED, withoutAi(rules));
+  const team = 0;
+  // A fortress-kind island, and a plant already held - which every team has
+  // from tick one now that the home island is ruled in. Before the guard,
+  // this became a DEFENCE island and left the team with no materials at all.
+  const home = state.islands[1];
+  home.owner = team;
+  home.role = ROLE_FACTORY;
+  const fortress = state.islands[0];
+  fortress.kind = 4; // KIND_FORTRESS
+  assert.equal(planFor(state, team, fortress), ROLE_RESOURCE,
+    'the machine fortified itself into a famine');
+
+  // With a mine in hand, the fortress is a fortress again.
+  const mine = state.islands[2];
+  mine.owner = team;
+  mine.role = ROLE_RESOURCE;
+  assert.equal(planFor(state, team, fortress), ROLE_DEFENCE);
+});
+
+test('the boat is called for PARTS, not only for fuel and shells', () => {
+  const withAi = loadRules();
+  withAi.rules = { ...withAi.rules, aiTeams: [0] };
+  let state = createInitialState(SEED, withAi);
+  const carrier = state.carriers[0];
+  // Full bunker, full magazine - and an airframe waiting on parts the ship
+  // does not have. The old list asked only about fuel and ordnance, so the
+  // boat stayed home and the air group never came back.
+  carrier.fuel = carrier.fuelCapacity;
+  carrier.ordnance = carrier.ordnanceCapacity;
+  carrier.chassis = 0;
+  carrier.supplyRun = 0;
+  const manta = state.units.find((u) => u.team === 0 && u.kind === KIND_MANTA);
+  manta.state = 3; // UNIT_LOST
+  manta.hp = 0;
+  for (let i = 0; i <= state.params.aiCadenceTicks; i++) state = apply(state, TICK);
+  assert.equal(state.carriers[0].supplyRun, 1, 'the machine left its parts at the depot');
 });

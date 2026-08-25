@@ -137,6 +137,21 @@ function renderIslandPanel(panel) {
     t('island.stock'),
     `m ${island.stockMaterials} / f ${island.stockFuel} / o ${island.stockOrdnance}`,
   ));
+  // What is waiting on that rock, before it shoots: a neutral silo, a
+  // Defence island's bat cave, or simply how many guns are up. The turret
+  // list is already fog-filtered - if you cannot see them, this is silent.
+  const guns = (panel.ctx.view()?.turrets ?? []).filter(
+    (turret) => turret.island === island.id,
+  );
+  const neutralGuns = guns.filter((turret) => turret.team < 0).length;
+  if (neutralGuns > 0) {
+    body.append(infoRow(t('island.teeth'), t('island.silo')));
+  } else if (guns.length > 0) {
+    body.append(infoRow(t('island.teeth'), t('island.guns', { n: guns.length })));
+  }
+  if (island.role === 2 && island.owner >= 0) {
+    body.append(infoRow('', t('island.batcave')));
+  }
   if (island.building >= 0) {
     body.append(infoRow('', t('island.building', {
       what: t(BUILD_KEYS[island.building]),

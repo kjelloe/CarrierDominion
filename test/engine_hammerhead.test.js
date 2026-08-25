@@ -100,3 +100,49 @@ test('the round detonates AT the mark and takes an emplacement with it', () => {
   assert.ok(target.hp < target.maxHp, 'the blast never reached the battery');
   assert.doesNotThrow(() => canonicalize(state));
 });
+
+// --- Resupply through the spine (ruled 2026-08-25) ---
+
+test('a spent Hammerhead rail refills from the ordnance store, slowly', () => {
+  let state = createInitialState(SEED, rules);
+  const ship = state.carriers[0];
+  ship.hammerRounds = 0;
+  ship.ordnance = ship.ordnanceCapacity;
+  const stock = ship.ordnance;
+  state = apply(state, TICK);
+  assert.equal(state.carriers[0].hammerRounds, 0, 'the rail refilled instantly');
+  for (let i = 0; i < 200; i++) state = apply(state, TICK);
+  const later = state.carriers[0];
+  assert.ok(later.hammerRounds > 0, 'the rail never refilled at all');
+  assert.ok(later.hammerRounds <= later.hammerMax, 'the rail overfilled');
+  assert.ok(later.ordnance < stock, 'the rounds were conjured');
+  assert.doesNotThrow(() => canonicalize(state));
+});
+
+test('a lost drone is rebuilt from chassis - after the airframes, and cheaper', () => {
+  let state = createInitialState(SEED, rules);
+  const ship = state.carriers[0];
+  const drone = state.units.find((u) => u.team === 0 && u.kind === KIND_DRONE);
+  drone.state = 3; // UNIT_LOST
+  drone.hp = 0;
+  // Parts for exactly one piece of equipment and nothing more: with every
+  // airframe intact, the yard has nothing else to spend them on.
+  ship.chassis = state.economy.chassisPerEquipment;
+  for (let i = 0; i < 200; i++) state = apply(state, TICK);
+  const rebuilt = state.units.find((u) => u.id === drone.id);
+  assert.equal(rebuilt.state, 0, 'the drone was never rebuilt');
+  assert.equal(state.carriers[0].chassis, 0, 'the parts were not spent');
+
+  // And a missing AIRFRAME still comes first: equipment waits its turn.
+  let second = createInitialState(SEED, rules);
+  const manta = second.units.find((u) => u.team === 0 && u.kind === 0);
+  const eye = second.units.find((u) => u.team === 0 && u.kind === KIND_DRONE);
+  manta.state = 3;
+  manta.hp = 0;
+  eye.state = 3;
+  eye.hp = 0;
+  second.carriers[0].chassis = second.economy.chassisPerHull;
+  for (let i = 0; i < 200; i++) second = apply(second, TICK);
+  assert.equal(second.units.find((u) => u.id === manta.id).state, 0,
+    'the airframe should have taken the parts first');
+});

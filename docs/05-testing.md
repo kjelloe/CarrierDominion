@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (463 tests and growing), node --test
+npm test      the unit and integration suite (471 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 ```
@@ -64,6 +64,17 @@ endpoints, winners, worst quiet stretches and wall time lands in
 ticks — both air groups annihilated and the replacement chassis never sailing,
 because the boat's hold filled entirely with fuel every trip. One seed is a
 measurement; five is a distribution.
+
+It earned itself again on 2026-08-25. A slice that gave the new equipment a
+resupply path turned seed 900913 into a 64,000-tick stare across five
+kilometres, and the chase from that one failure found **three** defects, none
+of them the one first suspected: equipment eating the parts an airframe was
+waiting for; the AI's supply list asking only for fuel and shells, so a ship
+with a full bunker and an annihilated air group never fetched the chassis
+piled up at its depot; and `planFor` fortifying a team that had no mine at
+all, because the home island hands everyone a plant at tick one and the
+fortress rule keyed off that. Four of the five seeds now resolve FASTER than
+before the chase started - 777001 fell from 116,320 ticks to 25,235.
 
 ## Probes
 

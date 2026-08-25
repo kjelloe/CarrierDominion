@@ -12,6 +12,7 @@ import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
 import { dist2D } from '../shared/fixed.js';
 import { KIND_INTERCEPTOR, KIND_MANTA, UNIT_ACTIVE, UNIT_STOWED } from '../engine/units.js';
+import { nextBuild } from '../engine/ai_estate.js';
 import { ROLE_DEFENCE } from '../engine/island.js';
 
 const TICK = { type: 'advance_tick' };
@@ -120,4 +121,48 @@ test('a Bat Cave scrambles, presses, and its wing dies with the island', () => {
   const wing = state.units.filter((u) => u.kind === KIND_INTERCEPTOR);
   assert.ok(wing.every((u) => u.state === 3), 'an orphan wing kept flying');
   assert.doesNotThrow(() => canonicalize(state));
+});
+
+// --- What the machine learned (ruled 2026-08-25) ---
+
+test('the machine raises its screen on contact and docks it when clear', () => {
+  const rules = loadRules();
+  rules.rules = { ...rules.rules, aiTeams: [0], homeIslandStart: 0, neutralSiloRounds: 0 };
+  let state = createInitialState(SEED, rules);
+  // Out of sight of each other: no screen, because a screen costs speed.
+  for (let i = 0; i <= state.params.aiCadenceTicks; i++) state = apply(state, TICK);
+  const out = () => state.units.filter(
+    (u) => u.team === 0 && u.kind === 4 && u.state === UNIT_ACTIVE,
+  ).length;
+  assert.equal(out(), 0, 'the machine screened an empty ocean');
+
+  // Bring the enemy alongside: the screen goes up.
+  state.carriers[1].x = state.carriers[0].x + 2000 * 256;
+  state.carriers[1].y = state.carriers[0].y;
+  for (let i = 0; i <= state.params.aiCadenceTicks; i++) state = apply(state, TICK);
+  assert.equal(out(), 4, 'the machine took the seekers bare-hulled');
+
+  // And home again when the enemy is gone.
+  state.carriers[1].hull = 0;
+  for (let i = 0; i <= state.params.aiCadenceTicks * 2; i++) state = apply(state, TICK);
+  assert.equal(out(), 0, 'the machine kept the speed penalty for nothing');
+});
+
+test('the machine puts a strip on a mine it has fed', () => {
+  const rules = loadRules();
+  rules.rules = { ...rules.rules, aiTeams: [0], homeIslandStart: 0, neutralSiloRounds: 0 };
+  const state = createInitialState(SEED, rules);
+  const mine = state.islands[0];
+  mine.owner = 0;
+  mine.role = 0; // ROLE_RESOURCE
+  mine.warehouses = 1;
+  mine.stockMaterials = 9000;
+  assert.equal(nextBuild(state, mine, state.economy), 6, 'a fed mine should get its strip');
+  // A poor mine builds storage instead: a runway with no fuel is a road.
+  mine.stockMaterials = 10;
+  assert.equal(nextBuild(state, mine, state.economy), 1);
+  // And once it has one, it goes back to storage.
+  mine.stockMaterials = 9000;
+  mine.runway = 1;
+  assert.equal(nextBuild(state, mine, state.economy), 1);
 });

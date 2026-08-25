@@ -32,6 +32,10 @@ const OPTION_VALUES = {
   game: [0, 1],
   // Observers welcome (1, the referee view) or the door closed (0).
   observers: [1, 0],
+  // The home island, and the resource network as geography (ruled
+  // 2026-08-25). 1 is the game as built; 0 is the older, simpler shape.
+  home: [1, 0],
+  network: [1, 0],
 };
 
 function fnv32(text) {
@@ -74,6 +78,8 @@ function createLobby(bootId, defaults) {
       speed: defaults.speed,
       game: 0,
       observers: 1,
+      home: 1,
+      network: 1,
     },
   };
 }
@@ -192,6 +198,8 @@ function lobbyView(lobby, seats) {
       speed: lobby.options.speed,
       game: lobby.options.game,
       observers: lobby.options.observers,
+      home: lobby.options.home,
+      network: lobby.options.network,
     },
     seats: roster,
     ready: allReady(seats) ? 1 : 0,

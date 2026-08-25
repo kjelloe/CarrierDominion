@@ -21,6 +21,8 @@ import { aimFor, carrierAim } from './targeting.js';
 // are the unit KIND_* values on purpose, so a unit's loadout is
 // state.loadouts[unit.kind].
 const LOADOUT_CARRIER = 3;
+// The Hammerhead's row in data/weapons.json (engine/reducer.js fires it).
+const HAMMERHEAD_ID = 9;
 
 function weaponFrom(stats, unitsPerMetre) {
   const range = stats.rangeMetres * unitsPerMetre;
@@ -321,6 +323,7 @@ function fireAll(state) {
     if (carrier.hull <= 0) continue;
     const weapon = state.weapons[carrier.weapon];
     reloadCarrier(carrier, weapon);
+    reloadHammer(state, carrier);
     coolDown(state, carrier);
     // A chewed-up mount fires slowly and a destroyed one not at all. The
     // point-defence upgrade quickens the healthy base rate.
@@ -396,6 +399,32 @@ function rearm(unit, weapons, carrier, presets) {
     entry.n = entry.n + rounds;
   }
   return unit;
+}
+
+// The Hammerhead rail is fed the same way (ruled 2026-08-25): rounds come
+// back out of the ordnance store, slowly, so a battery emptied in a siege
+// is a battery you wait for rather than one you never see again.
+function reloadHammer(state, carrier) {
+  if (carrier.hammerMax <= 0 || carrier.hammerRounds >= carrier.hammerMax) {
+    carrier.hammerAccum = 0;
+    return 0;
+  }
+  const weapon = state.weapons[HAMMERHEAD_ID];
+  if (weapon === undefined) return 0;
+  const accum = carrier.hammerAccum + state.economy.hammerReload;
+  const due = floorDiv(accum, 100);
+  carrier.hammerAccum = accum - due * 100;
+  if (due <= 0) return 0;
+  const room = carrier.hammerMax - carrier.hammerRounds;
+  const wanted = due < room ? due : room;
+  const affordable = weapon.ordnancePerRound > 0
+    ? floorDiv(carrier.ordnance, weapon.ordnancePerRound)
+    : wanted;
+  const taken = affordable < wanted ? affordable : wanted;
+  if (taken <= 0) return 0;
+  carrier.ordnance = carrier.ordnance - taken * weapon.ordnancePerRound;
+  carrier.hammerRounds = carrier.hammerRounds + taken;
+  return taken;
 }
 
 // The ready magazine is fed from the store continuously: a ship does not

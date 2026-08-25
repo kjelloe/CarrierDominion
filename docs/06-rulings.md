@@ -309,6 +309,23 @@ a slower early game; and link topology costs nothing at our island density
 — a side that takes the nearest island keeps its chain whole — so it bites
 only on overreach, which is what it was ruled in for.
 
+## The post-review rulings (2026-08-25)
+
+From the review of the twelve-slice run:
+
+- **The new consumables come back through the existing spine**: Viewing
+  Drones and defence decoys are rebuilt in the hangar from chassis, queued
+  LAST after the lighter, Manta and Walrus so the anti-deadlock priority is
+  untouched; Hammerhead rounds reload from the ship's ordnance store like
+  the laser's magazine. Nothing conjured, no new screen — the faithful-light
+  answer to the original's supply-priorities menu.
+- **The AI learns both blind spots**: runways on fed Resource islands, and
+  the decoy screen deployed when an enemy carrier is in contact.
+- **The teeth are surfaced before they bite**: the island board names a
+  silo or a bat cave, and the chart marks islands that carry guns.
+- **The war room gains two rows**: the home island and link topology can
+  each be switched off, so a table can play the older, simpler shapes.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

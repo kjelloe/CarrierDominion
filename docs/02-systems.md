@@ -179,6 +179,17 @@ which is what makes island-hopping the answer to the leash — exactly the
 original's range game. A parked Manta is a target like any other, and an
 airfield captured with aircraft on it captures the aircraft.
 
+## Resupply of the new equipment
+
+Viewing Drones, defence decoys and Hammerhead rounds all come back through
+the spine that already exists (ruled 2026-08-25). Drones and decoys are
+rebuilt in the hangar from **chassis** at a lower price than an airframe;
+Hammerhead rounds trickle back from the ship's **ordnance store**, as the
+laser's magazine does. Equipment is last on the parts, and that means last
+on the CLAIM, not merely last in the function: a 4-part decoy tried
+whenever a 12-part hull was unaffordable ate every trickle and no airframe
+was ever rebuilt again. While any hull is waiting, the yard saves for it.
+
 ## The Hammerhead and the Viewing Drone
 
 The carrier's heavy surface arm (proposal 5, ruled 2026-08-25,

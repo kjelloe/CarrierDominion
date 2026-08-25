@@ -29,7 +29,13 @@ function applyLobbyOptions(rules, options) {
     timeCapTicks: options.ending === 2 ? 24000 : 0,
     // The Action Game: the war pre-developed at tick zero (0 = strategy).
     actionStart: options.game === 1 ? 1 : 0,
+    // The war room may play the older, simpler shapes (ruled 2026-08-25):
+    // a from-zero opening with no home island, and the distance-free
+    // network. Absent means ON - old saves and old replays predate the
+    // switches and were played with both.
+    homeIslandStart: options.home === 0 ? 0 : 1,
   };
+  if (options.network === 0) world.networkLinkMetres = 0;
   return { ...rules, world: world, rules: base };
 }
 

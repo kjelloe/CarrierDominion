@@ -40,6 +40,7 @@ import {
   UNIT_LANDED,
   UNIT_LOST,
   UNIT_RETURNING,
+  UNIT_STOWED,
   findCarrierById,
   fuelPermil,
 } from './units.js';
@@ -215,6 +216,29 @@ function refuelFromIsland(state, unit) {
   unit.fuel = unit.fuel + taken;
 }
 
+// Put the screen out, or bring it home. Shared by the player's command and
+// the machine's judgement so both sides of a war raise the same shield.
+// Returns how many decoys moved.
+function setDecoyScreen(state, carrier, out) {
+  let moved = 0;
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.carrierId !== carrier.id || unit.kind !== KIND_DECOY || unit.hp <= 0) continue;
+    if (out === 1 && unit.state === UNIT_STOWED) {
+      unit.state = UNIT_ACTIVE;
+      unit.x = carrier.x;
+      unit.y = carrier.y;
+      moved = moved + 1;
+    } else if (out === 0 && unit.state === UNIT_ACTIVE) {
+      unit.state = UNIT_STOWED;
+      unit.x = carrier.x;
+      unit.y = carrier.y;
+      moved = moved + 1;
+    }
+  }
+  return moved;
+}
+
 // Which of the four stations this decoy holds: its rank among its ship's
 // own decoys, stable because unit ids are stable for the whole war.
 function decoySlot(state, unit) {
@@ -244,4 +268,4 @@ function stepDecoyScreens(state) {
   }
 }
 
-export { stepUnits, stepDecoyScreens };
+export { stepUnits, stepDecoyScreens, setDecoyScreen };

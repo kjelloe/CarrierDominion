@@ -343,5 +343,15 @@
   "tip.decoys": "narreskjermen: fire droner ute som agn for målsøkere - en firedel av toppfarten så lenge de er ute",
   "log.decoysOut": "narreskjerm ute",
   "log.decoysIn": "narreskjerm inne",
-  "stores.upComm": "sambandspod"
+  "stores.upComm": "sambandspod",
+  "island.teeth": "forsvar",
+  "island.silo": "en nøytral rakettsilo - den skyter på alle",
+  "island.batcave": "FLAGGERMUSHULE: denne øya sender opp jagere",
+  "island.guns": "{n} kanon(er) på ringen",
+  "start.home": "åpningen",
+  "start.homeOn": "en hjemmeøy",
+  "start.homeOff": "fra null",
+  "start.network": "nettverket",
+  "start.networkLinked": "bundet av geografi",
+  "start.networkDirect": "rett til depotet"
 }

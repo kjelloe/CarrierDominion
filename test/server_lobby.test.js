@@ -8,6 +8,7 @@ import { loadRules } from '../server/rules.js';
 import {
   CHAT_KEPT,
   CHAT_MAX,
+  OPTION_VALUES,
   allReady,
   applyLobby,
   canStart,
@@ -21,6 +22,7 @@ import {
   setOption,
   setReady,
 } from '../server/lobby.js';
+import { OPTION_ROWS } from '../client/panels/lobby.js';
 
 const rules = loadRules();
 
@@ -182,4 +184,23 @@ test('a spectator may still talk - they are in the room, just not sailing', () =
   const room1 = lobby();
   assert.equal(say(room1, seats, seats[0], 'good luck'), '');
   assert.equal(room1.chat[0].team, -1);
+});
+
+test('every ladder the room offers is one the server will accept', () => {
+  // The failure this catches: a row in the client that offers a value the
+  // server refuses, or stops short of one it allows. The island row sat at
+  // 32 for two days after the 64-island ruling because nothing checked.
+  for (const row of OPTION_ROWS) {
+    const ladder = OPTION_VALUES[row.key];
+    assert.notEqual(ladder, undefined, `the room offers "${row.key}", the server knows nothing of it`);
+    assert.deepEqual(row.values, ladder, `the "${row.key}" ladders have drifted apart`);
+  }
+});
+
+test('the room shows every option it holds', () => {
+  const lobby = createLobby('probe-boot', { seed: 1, islands: 8, enemy: 1, speed: 1 });
+  const shown = lobbyView(lobby, []).options;
+  for (const key of Object.keys(lobby.options)) {
+    assert.notEqual(shown[key], undefined, `the room keeps "${key}" to itself`);
+  }
 });

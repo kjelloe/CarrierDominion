@@ -145,7 +145,9 @@ function copyCarrier(carrier) {
     upComm: carrier.upComm,
     mantaPreset: carrier.mantaPreset,
     hammerRounds: carrier.hammerRounds,
+    hammerMax: carrier.hammerMax,
     hammerCooldown: carrier.hammerCooldown,
+    hammerAccum: carrier.hammerAccum,
     decoysOut: carrier.decoysOut,
     decoyPenalty: carrier.decoyPenalty,
     maxSpeedUpgraded: carrier.maxSpeedUpgraded,
@@ -342,7 +344,9 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     // The Hammerhead battery (ruled 2026-08-25): rounds aboard and the
     // launcher's cooldown. Fired only through a Viewing Drone's picture.
     hammerRounds: carrierRules.hammerheadRounds === undefined ? 0 : carrierRules.hammerheadRounds,
+    hammerMax: carrierRules.hammerheadRounds === undefined ? 0 : carrierRules.hammerheadRounds,
     hammerCooldown: 0,
+    hammerAccum: 0,
     // The decoy screen: 1 while any decoy rides out, and the top-speed
     // price the ship pays for it (both from data at build time).
     decoysOut: 0,

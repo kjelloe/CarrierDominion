@@ -10,7 +10,11 @@
 // lobby stays honest when three people are clicking at once.
 
 const OPTION_ROWS = [
-  { key: 'islands', label: 'start.islands', values: [4, 8, 16, 32] },
+  // The ladder MUST match server/lobby.js OPTION_VALUES: a row that offers
+  // less than the server allows is a room that cannot choose the war it is
+  // allowed to play (this one stopped at 32 for two days after the
+  // 64-island ruling).
+  { key: 'islands', label: 'start.islands', values: [4, 8, 16, 32, 48, 64] },
   { key: 'teams', label: 'start.teams', values: [2, 3, 4, 8, 16] },
   {
     key: 'enemy',
@@ -36,6 +40,18 @@ const OPTION_ROWS = [
     label: 'start.observers',
     values: [1, 0],
     text: ['start.observersOn', 'start.observersOff'],
+  },
+  {
+    key: 'home',
+    label: 'start.home',
+    values: [1, 0],
+    text: ['start.homeOn', 'start.homeOff'],
+  },
+  {
+    key: 'network',
+    label: 'start.network',
+    values: [1, 0],
+    text: ['start.networkLinked', 'start.networkDirect'],
   },
 ];
 

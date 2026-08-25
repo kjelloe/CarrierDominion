@@ -28,6 +28,9 @@ import {
 import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { teamById } from './economy.js';
 import { manageStrike, withdraw } from './ai_strike.js';
+import { setDecoyScreen } from './fleet.js';
+import { covered } from './contacts.js';
+import { awaitingHull } from './repair.js';
 import { manageIslands } from './ai_estate.js';
 import { fireFlares, shouldFlare } from './flare.js';
 
@@ -254,22 +257,74 @@ function manageSupply(state, brain, carrier) {
     ? mulDiv(carrier.ordnance, 1000, carrier.ordnanceCapacity)
     : 1000;
   const level = ordnanceLevel < fuelLevel ? ordnanceLevel : fuelLevel;
-  if (carrier.supplyRun === 0 && level < SUPPLY_CALL_PERMIL) {
+  // PARTS are a reason to call the boat too, and the shopping list forgot
+  // them: a ship with a full bunker, a full magazine and an annihilated air
+  // group would sit there forever while the chassis it needed piled up at
+  // the depot. Measured on seed 900913 - 192 chassis ashore, no boat out,
+  // no aircraft, 100,000 ticks of nothing. Fuel and ordnance were the only
+  // things the machine had ever thought to ask for.
+  const wantsParts = awaitingHull(state, carrier)
+    && carrier.chassis < state.economy.chassisPerHull;
+  if (carrier.supplyRun === 0 && (level < SUPPLY_CALL_PERMIL || wantsParts)) {
     carrier.supplyRun = 1;
     pushEvent(state.events, EVT_SUPPLY_RUN, carrier.id, carrier.team, 1);
-  } else if (carrier.supplyRun === 1 && level > SUPPLY_STAND_DOWN_PERMIL) {
+  } else if (carrier.supplyRun === 1 && level > SUPPLY_STAND_DOWN_PERMIL && !wantsParts) {
     carrier.supplyRun = 0;
     pushEvent(state.events, EVT_SUPPLY_RUN, carrier.id, carrier.team, 0);
   }
 }
 
 // One AI turn for one team. Called from the reducer on the AI cadence.
+// The decoy screen, as the machine plays it (ruled 2026-08-25). The rule
+// that matters is WHEN, not whether: "an enemy is on radar" was tried first
+// and produced a stable crawl - both fleets screened at twelve kilometres,
+// both at three quarters speed, so neither closed, and seed 900913 grew a
+// 64,000-tick dead stretch and ran to 165k ticks instead of 75k. The screen
+// is bait for seekers, so it goes out when seekers are a real prospect: one
+// already in the air with this ship's name on it, or an enemy carrier close
+// enough to launch. Otherwise the ship would rather have its speed.
+function seekerInbound(state, carrier) {
+  for (let i = 0; i < state.shots.length; i++) {
+    const shot = state.shots[i];
+    if (shot.team === carrier.team || shot.guided !== 1) continue;
+    if (shot.targetKind === 1 && shot.targetId === carrier.id) return 1;
+  }
+  return 0;
+}
+
+// Twice the longest guided reach in the ruleset: far enough to be inflated
+// before the first round arrives, near enough that it is a fight and not a
+// sighting. Derived, so it tracks the weapon table rather than a constant.
+function seekerAlertRange(state) {
+  let longest = 0;
+  for (let i = 0; i < state.weapons.length; i++) {
+    const weapon = state.weapons[i];
+    if (weapon.guided === 1 && weapon.range > longest) longest = weapon.range;
+  }
+  return longest * 2;
+}
+
+function manageScreen(state, brain, carrier) {
+  let threat = seekerInbound(state, carrier);
+  if (threat === 0) {
+    const alert = seekerAlertRange(state);
+    for (let i = 0; i < state.carriers.length; i++) {
+      const enemy = state.carriers[i];
+      if (enemy.team === brain.team || enemy.hull <= 0) continue;
+      if (!covered(state, brain.team, enemy.x, enemy.y)) continue;
+      if (dist2D(carrier.x, carrier.y, enemy.x, enemy.y) <= alert) threat = 1;
+    }
+  }
+  setDecoyScreen(state, carrier, threat);
+}
+
 function stepAiTeam(state, brain, standoffExtra) {
   const carrier = findCarrierForTeam(state, brain.team);
   if (carrier === -1 || carrier.hull <= 0) return;
   // Flares first: a missile arriving is more urgent than anything else on the
   // list, and the burst is worthless once it has landed.
   if (shouldFlare(state, carrier)) fireFlares(state, carrier);
+  manageScreen(state, brain, carrier);
   manageSupply(state, brain, carrier);
   // An island the AI takes and never develops produces nothing, so the estate
   // is managed before anything else: it is what pays for the rest.

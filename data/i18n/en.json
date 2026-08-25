@@ -343,5 +343,15 @@
   "tip.decoys": "the decoy screen: four drones ride out as bait for seekers - a quarter of your top speed while they do",
   "log.decoysOut": "decoy screen deployed",
   "log.decoysIn": "decoy screen docked",
-  "stores.upComm": "comm pod"
+  "stores.upComm": "comm pod",
+  "island.teeth": "defences",
+  "island.silo": "a neutral missile silo - it will fire on anyone",
+  "island.batcave": "BAT CAVE: this island scrambles interceptors",
+  "island.guns": "{n} gun(s) on the ring",
+  "start.home": "the opening",
+  "start.homeOn": "a home island",
+  "start.homeOff": "from zero",
+  "start.network": "the network",
+  "start.networkLinked": "linked by geography",
+  "start.networkDirect": "direct to the depot"
 }

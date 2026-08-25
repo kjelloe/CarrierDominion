@@ -18,6 +18,7 @@ import { EVT_STOCKPILE_SET, pushEvent } from './events.js';
 import { markNetworkDirty } from './network.js';
 import {
   BUILD_FACTORY,
+  BUILD_RUNWAY,
   BUILD_TURRET,
   BUILD_UPGRADE_PD,
   BUILD_UPGRADE_COMM,
@@ -55,6 +56,14 @@ function planFor(state, team, island) {
   const plants = countRole(state, team, ROLE_FACTORY);
   const guns = countRole(state, team, ROLE_DEFENCE);
   if (mines > 0 && plants < 1) return ROLE_FACTORY;
+  // NOTHING before the first mine. A plant with nothing to refine produces
+  // nothing, and the home island (ruled 2026-08-25) hands every team a
+  // plant at tick one - which used to make the fortress rule below fire on
+  // a team's SECOND island, leaving it a factory and a fort and no mine at
+  // all. Measured on seed 900913: no materials, so no repair, so a carrier
+  // pinned at three tenths of its hull withdrew for the rest of the war and
+  // the war never ended.
+  if (mines < 1) return ROLE_RESOURCE;
   if (island.kind === KIND_FORTRESS && plants > 0) return ROLE_DEFENCE;
   // Mine, plant, guns: the third island is the defended one. At "second mine
   // first" the AI never raised a gun at all in a whole war - it kept finding a
@@ -98,7 +107,17 @@ function nextBuild(state, island, economy) {
     return BUILD_WAREHOUSE;
   }
   if (island.role === ROLE_DEFENCE) return BUILD_TURRET;
-  if (island.role === ROLE_RESOURCE) return BUILD_WAREHOUSE;
+  if (island.role === ROLE_RESOURCE) {
+    // A strip on a fed mine is what lets the air group live with the
+    // telemetry leash: land, drink the island's fuel, fly on (ruled
+    // 2026-08-25). Warehouses first while the island is still poor - a
+    // runway on a mine with nothing in it is a runway with no fuel.
+    if (island.runway !== 1 && builtCount(island, BUILD_WAREHOUSE) > 0
+      && island.stockMaterials >= economy.builds[BUILD_RUNWAY].cost * 2) {
+      return BUILD_RUNWAY;
+    }
+    return BUILD_WAREHOUSE;
+  }
   return -1;
 }
 

@@ -64,6 +64,22 @@ const OPTIONS = [
     apply: (rules, value) => { rules.rules.actionStart = value === 1 ? 1 : 0; },
   },
   {
+    key: 'home',
+    label: 'start.home',
+    values: [1, 0],
+    text: ['start.homeOn', 'start.homeOff'],
+    apply: (rules, value) => { rules.rules.homeIslandStart = value; },
+  },
+  {
+    key: 'network',
+    label: 'start.network',
+    values: [1, 0],
+    text: ['start.networkLinked', 'start.networkDirect'],
+    apply: (rules, value) => {
+      if (value === 0) rules.world.networkLinkMetres = 0;
+    },
+  },
+  {
     key: 'speed',
     label: 'start.speed',
     values: [1, 2, 4, 8, 16],

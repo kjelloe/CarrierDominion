@@ -445,6 +445,8 @@ function createApp(options) {
       ending: app.lobby.options.ending,
       speed: app.lobby.options.speed,
       game: app.lobby.options.game,
+      home: app.lobby.options.home,
+      network: app.lobby.options.network,
       aiTeams: machine,
     };
     app.lobby.status = 'running';

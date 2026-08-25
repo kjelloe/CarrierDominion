@@ -73,7 +73,7 @@ import { setRole, startBuild, stepBuild } from './island.js';
 import { setPriority } from './damage.js';
 import { checkFlares, fireFlares, stepFlares } from './flare.js';
 import { stepContacts } from './contacts.js';
-import { stepDecoyScreens, stepUnits } from './fleet.js';
+import { setDecoyScreen, stepDecoyScreens, stepUnits } from './fleet.js';
 import { stepBatcaves } from './batcave.js';
 import { computeNetwork, markNetworkDirty } from './network.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
@@ -218,23 +218,7 @@ function applyDecoys(next, command, out) {
   if (next.phase !== PHASE_RUNNING) return reject(next);
   const carrier = findCarrier(next, command.carrierId);
   if (carrier === -1 || carrier.hull <= 0) return reject(next);
-  let moved = 0;
-  for (let i = 0; i < next.units.length; i++) {
-    const unit = next.units[i];
-    if (unit.carrierId !== carrier.id || unit.kind !== KIND_DECOY || unit.hp <= 0) continue;
-    if (out === 1 && unit.state === UNIT_STOWED) {
-      unit.state = UNIT_ACTIVE;
-      unit.x = carrier.x;
-      unit.y = carrier.y;
-      moved += 1;
-    } else if (out === 0 && unit.state === UNIT_ACTIVE) {
-      unit.state = UNIT_STOWED;
-      unit.x = carrier.x;
-      unit.y = carrier.y;
-      moved += 1;
-    }
-  }
-  if (moved === 0) return reject(next);
+  if (setDecoyScreen(next, carrier, out) === 0) return reject(next);
   return next;
 }
 
