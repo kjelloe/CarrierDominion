@@ -8,9 +8,10 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (474 tests and growing), node --test
+npm test      the unit and integration suite (528 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
+npm run probes every probe in debugging/probes, one after another (~13 min)
 ```
 
 Nothing lands unless the gate is green. The one thing to know about the order:
@@ -21,6 +22,24 @@ The same gate runs in CI (`.github/workflows/gate.yml`, ruling 2026-08-23):
 tests, then Playwright + smoke, then the five-seed battery, on every push to
 `dev_night`, `dev` and `main`. CI is a second opinion, not a substitute — the
 gate still runs locally before every commit.
+
+### Tests that guard a RULE rather than a behaviour
+
+Four files exist to keep promises the documents make but nothing enforced,
+each added after the promise had already been broken once:
+
+| File | What it will not let you do |
+|---|---|
+| `engine_subset.test.js` | Use `class`, `this`, `Map`, `Set`, exceptions, `async` or any array METHOD anywhere in `engine/` or `shared/` — the Luau-portable subset (docs/01). It reads the sources. Three files throw on purpose and are named exemptions; nothing else is. |
+| `engine_cosmetic.test.js` | Let the art style or the clock speed reach the ruleset from either fold, or ship a menu value that produces a war the canonical walk rejects. "Style is data" (ruling #13) had been a standing constraint with nothing behind it. |
+| `data_rules.test.js` | Move a number the documents quote without moving the document, or leave a ruleset key that nothing reads — the sweep found `startFuel` and `startOrdnance` sitting there looking live. Inert keys are declared, with the reason. |
+| `engine_authority_sweep.test.js` | Add a command without a probe saying who may issue it. |
+
+Two more guard the fog rather than a rule: `shared_view.test.js` asserts an
+enemy record carries exactly the same KEYS as one of your own — a field on
+one side and not the other is either a leak or a hole — and brands every
+number on an enemy's records with a sentinel that must not appear in the
+other side's view.
 
 ## The pinned fixture
 
@@ -102,6 +121,21 @@ zenith measured looking UP - the chase camera only ever sees the Preetham
 horizon band - and non-flat near water. `war_over` photographs states a live war takes hours to reach -
 the ending screen, a scope full of ghosts - by pausing the solo war and
 swapping in a doctored view through the `__debugView` hook.
+
+### What the watchdog trips on
+
+`server/watch.js` watches a running war for things the engine promises and
+reports them rather than crashing. Beyond the position, health and stock
+invariants it has always had, the squadron batch added three:
+
+- **a hull over its payload budget** — the fitting screen refuses it and
+  rearming clamps to it, so a hull carrying more than it can lift means one
+  of those two has a hole;
+- **a craft stuck in the deck cycle** — the cycle is about a hundred ticks,
+  so ten thousand means the clock is not running. This is a stall the stall
+  DETECTOR cannot see, because the war around it is busy;
+- **a course leg off the chart** — legs are validated on the way in, and
+  this is the tripwire for one that arrived another way.
 
 ## The playtest watchdog
 

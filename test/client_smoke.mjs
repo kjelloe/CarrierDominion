@@ -167,10 +167,26 @@ async function checkMode(browser, baseUrl, mode) {
   // anyone who clicked one of their own islands. Nothing in the gate opened
   // it, so nothing caught it. Hand back to the ship afterwards.
   await page.keyboard.press('t');
-  for (const key of ['i', 'q', 'z', '?', 'i', 'q', 'z', '?']) {
+  for (const key of ['i', 'q', 'z', 'j', '?', 'i', 'q', 'z', 'j', '?']) {
     await page.keyboard.press(key);
     await page.waitForTimeout(120);
   }
+  // And every PAGE of the squadron console, which is four screens behind one
+  // key: a page that throws when it draws is invisible to a gate that only
+  // opens the panel. J again to leave it as we found it.
+  await page.keyboard.press('j');
+  await page.waitForTimeout(150);
+  for (const page4 of ['BOARD', 'OUTFIT', 'DECK', 'SCREEN']) {
+    const tab = page.locator('#squadron-pages .sq-tab', { hasText: page4 });
+    if (await tab.count() > 0) {
+      await tab.first().click();
+      await page.waitForTimeout(150);
+    } else {
+      problems.push(`[${mode}] the squadron console has no ${page4} page`);
+    }
+  }
+  await page.keyboard.press('j');
+  await page.waitForTimeout(120);
   // And the island board, which has no key: it opens by clicking an island
   // you hold, from the chart where they are all reachable.
   await page.keyboard.press('c');

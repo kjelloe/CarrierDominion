@@ -5,6 +5,63 @@ golden hash and why.
 
 ---
 
+## 2026-08-26 — Review, part two: the checks that would have caught it
+
+Where the first review slice fixed behaviour, this one mostly builds the
+things that would have found it without me.
+
+**The fog, as a shape rather than a field list.** The contact views were
+checked by naming fields one at a time, which is precisely how a leak gets
+in. Two property tests instead: an enemy record must carry exactly the same
+KEYS as one of your own, and every number on an enemy's records is branded
+with a sentinel that must not appear in the other side's view. They found
+drift immediately - `chassis` was on the own carrier view and not on the
+contact one; nine unit fields (maxHp, ceiling, commPod, telemetry,
+deckPermil and the four payload figures) were missing from the unit contact
+view; and four CARRIER fields had landed on the unit contact view through a
+careless replace of mine. Islands and the referee view were already
+consistent, and are now pinned that way - the referee view has been wrong
+once before.
+
+**Save and resume with the newest vocabulary.** The command log IS the save
+format, and the six commands the squadron batch added had never been through
+it. One of them, `set_route`, is the first command in the game that carries
+an array. A war that uses all six now saves, reloads and replays to the same
+hash.
+
+**Three constraints that existed only in prose.** "Style is data; nothing
+cosmetic may touch the simulation" has been a standing constraint since
+2026-08-19 with nothing enforcing it. The Luau-portable subset has been a
+rule since day one and had eleven violations. The numbers the docs quote had
+never been checked against the ruleset - those all agreed, but the reverse
+sweep found five keys nothing reads. All three now have tests, and the dead-
+key test works both ways: a key declared inert that something starts reading
+fails too, so the list cannot rot into a lie.
+
+**Watchdog tripwires** for the three new invariants: a hull over its payload
+budget, a craft stuck in the deck cycle (a stall the stall detector cannot
+see, because the war around it is busy), and a course leg off the chart.
+
+**The gate opens every squadron page now**, not just the panel - four
+screens behind one key, and a page that throws while drawing is invisible to
+a gate that only presses J.
+
+**Two findings queued rather than taken**, both in dev-questions:
+`startFuel` and `startOrdnance` are unused while the ship sails brim-full,
+contradicting her own documented "finite issue" - and wiring them is a real
+balance change (measured: three seeds, three starting values, 20k to 299k
+ticks). And six portable modules are past the 300-line soft cap, reducer.js
+at 857; the subset test guards 900 so it cannot get worse meanwhile.
+
+**Looked at and deliberately left:** a sunk carrier's STOWED hulls stay
+stowed rather than being lost with her. Kills score through shots.js, so
+nothing reads them and changing it would move hashes for no gain.
+
+**Cost:** 529 tests (+7 files across both review slices), smoke green,
+battery 5/5.
+
+---
+
 ## 2026-08-26 — Review: the deck cycle's second order, and the subset enforced
 
 A review pass in the owner's absence, by the method in the engine-review

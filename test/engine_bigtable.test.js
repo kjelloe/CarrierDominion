@@ -10,6 +10,7 @@ import { apply } from '../engine/reducer.js';
 import { canonicalize, hashState } from '../shared/statehash.js';
 import { dist2D } from '../shared/fixed.js';
 import { worldHeightAt } from '../engine/heightmap.js';
+import { payloadGramsOf } from '../engine/payload.js';
 import { applyLobbyOptions } from '../shared/options.js';
 
 const SEED = 20260818;
@@ -103,4 +104,58 @@ test('two-team wars are byte-identical to the pinned era', () => {
     seed: SEED, islands: 8, teams: 2, enemy: 1, ending: 0, speed: 1, game: 0,
   });
   assert.equal(hashState(createInitialState(SEED, viaOptions)), before);
+});
+
+// The squadron batch added five systems that all carry per-hull or
+// per-carrier state (payload budgets, the deck cycle, typed pods, routes,
+// decoy patterns). Ruling #9 says nothing may hard-code two teams, and a
+// rule that only matters at three is exactly the one that gets it wrong
+// invisibly - so the whole table is swept rather than sampled.
+test('the newest systems are per-hull and per-ship, at a full table', () => {
+  const big = loadRules();
+  big.rules = { ...big.rules, teamCount: 16, aiTeams: [] };
+  big.world = { ...big.world, islandCount: 64 };
+  let state = createInitialState(SEED, big);
+  assert.equal(state.carriers.length, 16);
+
+  // Every ship has its own screen setting, and every hull that carries
+  // stores has a budget it is inside.
+  for (const carrier of state.carriers) {
+    assert.equal(carrier.decoyPattern, 0, `carrier ${carrier.id} started off-pattern`);
+    assert.equal(carrier.decoySpread, 1000);
+    assert.deepEqual(carrier.route, [], `carrier ${carrier.id} started with a course`);
+  }
+  for (const unit of state.units) {
+    assert.deepEqual(unit.route, [], `unit ${unit.id} started with a course`);
+    assert.equal(unit.deckTicks, 0);
+    if (unit.payloadMaxGrams <= 0) continue;
+    assert.ok(payloadGramsOf(unit, state.weapons) <= unit.payloadMaxGrams,
+      `unit ${unit.id} of team ${unit.team} sailed over its budget`);
+  }
+
+  // And a change to one seat's screen is a change to that seat only.
+  state = apply(state, {
+    type: 'set_decoy_pattern', carrierId: 7, pattern: 2, spread: 600,
+  });
+  for (const carrier of state.carriers) {
+    const want = carrier.id === 7 ? 2 : 0;
+    assert.equal(carrier.decoyPattern, want,
+      `setting seat 7's screen moved seat ${carrier.id}'s`);
+  }
+
+  // A course laid for one seat's hull belongs to that hull alone.
+  const mine = state.units.find((u) => u.team === 3 && u.kind === 0);
+  state = apply(state, { type: 'launch_unit', carrierId: 3, kind: 0 });
+  for (let i = 0; i < state.params.deckRangeTicks + state.params.launchTicks + 4; i++) {
+    state = apply(state, { type: 'advance_tick' });
+  }
+  const away = state.units.find((u) => u.team === 3 && u.kind === 0 && u.state === 1);
+  assert.notEqual(away, undefined, 'seat 3 never got a Manta off the deck');
+  state = apply(state, {
+    type: 'set_route', unitId: away.id, points: [away.x + 3000, away.y + 3000],
+  });
+  let withRoutes = 0;
+  for (const unit of state.units) if (unit.route.length > 0) withRoutes += 1;
+  assert.equal(withRoutes, 1, `${withRoutes} hulls took one seat's course`);
+  assert.ok(mine !== undefined);
 });

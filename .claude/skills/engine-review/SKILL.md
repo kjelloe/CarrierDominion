@@ -204,6 +204,22 @@ Look for these shapes first — every one produced a real bug:
   not close. Removing an "only when unset" guard can expose an oscillation
   that was always latent in the rule underneath it.
 
+- **A rule that lives only in prose.** Three of them were found in one
+  afternoon: "style is data" (a standing constraint since 2026-08-19), the
+  Luau-portable subset (a rule since day one, eleven violations), and "the
+  numbers the docs quote are the numbers in the data". Each is now a test.
+  When a document says "never" or "always", ask what would fail if it
+  stopped being true - and if the answer is "nothing", that is the finding.
+- **A view checked field by field.** The fog tests named the fields they
+  cared about, so a field added to the own view and forgotten on the contact
+  view said nothing. Check the SHAPE: same keys both sides, and brand the
+  enemy's numbers with sentinels that must not appear in your view. It found
+  fourteen drifted fields the moment it was written.
+- **A new command type that never went through the save.** The command log
+  IS the save format, so every command has to survive a JSON round trip and
+  replay to the same hash. Six had never been tried, one of them the first
+  to carry an array.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

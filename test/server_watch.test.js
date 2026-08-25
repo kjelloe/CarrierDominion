@@ -212,3 +212,49 @@ test('a resumed war is not called stuck on arrival', () => {
   }
   assert.ok(kinds(watch).includes('the war has stopped happening'));
 });
+
+// The tripwires added with the squadron batch (2026-08-26). Each one is a
+// thing the engine promises and the watchdog can see at a glance.
+test('the watchdog sees a hull carrying more than it can lift', () => {
+  const state = fresh();
+  const walrus = state.units.find((u) => u.kind === 1);
+  walrus.state = 1;
+  // Every station brim-full AND both capture devices: over 2,000 kg, which
+  // the fitting screen and rearming both refuse.
+  for (const entry of walrus.arms) {
+    const weapon = state.weapons[entry.w];
+    entry.n = weapon.magazine;
+  }
+  walrus.pod = 1;
+  walrus.virus = 1;
+  const watch = createWatch({});
+  watchTick(watch, state, 50);
+  const found = watchReport(watch).findings
+    .some((f) => f.kind === 'hull over its payload budget');
+  assert.ok(found, 'an overloaded hull went unnoticed');
+});
+
+test('the watchdog sees a craft stuck on the lift', () => {
+  const state = fresh();
+  const manta = state.units.find((u) => u.kind === 0);
+  manta.state = 5; // ON_DECK
+  manta.deckTicks = 20000;
+  const watch = createWatch({});
+  watchTick(watch, state, 50);
+  const found = watchReport(watch).findings
+    .some((f) => f.kind === 'stuck in the deck cycle');
+  assert.ok(found, 'a craft frozen on the lift went unnoticed');
+});
+
+test('the watchdog sees a course leg off the chart', () => {
+  const state = fresh();
+  const manta = state.units.find((u) => u.kind === 0);
+  manta.state = 1;
+  manta.route = [{ x: -500, y: 100 }];
+  manta.routeAt = 0;
+  const watch = createWatch({});
+  watchTick(watch, state, 50);
+  const found = watchReport(watch).findings
+    .some((f) => f.kind === 'course leg off the map');
+  assert.ok(found, 'a course into the margin went unnoticed');
+});

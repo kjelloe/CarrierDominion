@@ -25,6 +25,7 @@
 //                    which is the only way a LAN war falls behind
 
 import { isqrt, mulDiv } from '../shared/fixed.js';
+import { payloadGramsOf } from '../engine/payload.js';
 import { worldHeightAt } from '../engine/heightmap.js';
 import { stockCapOf } from '../engine/island.js';
 
@@ -107,12 +108,53 @@ function checkUnits(watch, state) {
       }
       if (entry.n < 0) note(watch, 'negative ammunition', state.tick, `unit ${unit.id}`);
     }
+    // Over her own payload budget (2026-08-25): the fitting screen refuses
+    // it and rearming clamps to it, so a hull carrying more than it can lift
+    // means one of those two has a hole. Only checked for hulls that HAVE a
+    // budget - a lighter carries cargo, which is a different book.
+    if (unit.payloadMaxGrams > 0
+      && payloadGramsOf(unit, state.weapons) > unit.payloadMaxGrams) {
+      note(watch, 'hull over its payload budget', state.tick,
+        `unit ${unit.id} carrying ${payloadGramsOf(unit, state.weapons)}`
+        + ` of ${unit.payloadMaxGrams} grams`);
+    }
+    // Stuck on the lift. The deck cycle is about a hundred ticks; ten
+    // thousand means the clock is not running, which is a stall the stall
+    // detector cannot see because the war around it is busy.
+    if ((unit.state === 5 || unit.state === 6 || unit.state === 7)
+      && unit.deckTicks > 10000) {
+      note(watch, 'stuck in the deck cycle', state.tick,
+        `unit ${unit.id} in state ${unit.state} for ${unit.deckTicks} ticks`);
+    }
     // A Manta at sea level under way is either landing or wrong; a Walrus on a
     // mountain is always wrong.
     if (unit.kind === 1 && unit.z > 0) {
       const ground = worldHeightAt(state.islands, unit.x, unit.y);
       if (unit.z > ground + 256) {
         note(watch, 'vehicle above the ground', state.tick, `unit ${unit.id}`);
+      }
+    }
+  }
+}
+
+// A course that points off the chart would steer a hull into the margin for
+// ever. Legs are validated on the way in; this is the tripwire for a leg
+// that got there another way.
+function checkRoutes(watch, state) {
+  const size = state.params.sizeUnits;
+  for (const unit of state.units) {
+    for (const leg of unit.route) {
+      if (leg.x < 0 || leg.y < 0 || leg.x > size || leg.y > size) {
+        note(watch, 'course leg off the map', state.tick,
+          `unit ${unit.id} leg ${leg.x},${leg.y}`);
+      }
+    }
+  }
+  for (const carrier of state.carriers) {
+    for (const leg of carrier.route) {
+      if (leg.x < 0 || leg.y < 0 || leg.x > size || leg.y > size) {
+        note(watch, 'course leg off the map', state.tick,
+          `carrier ${carrier.id} leg ${leg.x},${leg.y}`);
       }
     }
   }
@@ -197,6 +239,7 @@ function watchTick(watch, state, elapsedMs) {
   checkCarriers(watch, state);
   checkUnits(watch, state);
   checkIslands(watch, state);
+  checkRoutes(watch, state);
   checkShots(watch, state);
   checkProgress(watch, state);
   return watch;
