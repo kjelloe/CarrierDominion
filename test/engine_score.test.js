@@ -31,7 +31,7 @@ import { KIND_MANTA, UNIT_ACTIVE } from '../engine/units.js';
 import { EVT_SCORED } from '../engine/events.js';
 
 // Home islands off: these tests do their own island arithmetic.
-const base = { ...loadRules(), rules: { ...loadRules().rules, homeIslandStart: 0 } };
+const base = { ...loadRules(), rules: { ...loadRules().rules, startShape: 1 } };
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
 

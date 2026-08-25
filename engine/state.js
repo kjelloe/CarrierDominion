@@ -29,7 +29,14 @@ import { copyContacts } from './contacts.js';
 import { copySections, createSections } from './damage.js';
 import { copyTurrets } from './turret.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
-import { prepareActionStart, prepareHomeIslands } from './action_start.js';
+import {
+  START_DEVELOPED,
+  START_HOME,
+  START_LATE,
+  prepareActionStart,
+  prepareHomeIslands,
+  prepareLateWar,
+} from './action_start.js';
 import { raiseNeutralSilos } from './batcave.js';
 import { computeNetwork } from './network.js';
 
@@ -586,8 +593,12 @@ function createInitialState(seed, rules) {
   // Every island's token silo goes up FIRST (ruled 2026-08-25), so a
   // developed start replaces its own island's silo with its own guns.
   raiseNeutralSilos(state, state.params.neutralSiloRounds);
-  if (base.actionStart === 1) prepareActionStart(state);
-  else if (base.homeIslandStart === 1) prepareHomeIslands(state);
+  // How far along the war is when you sit down (ruled 2026-08-25): one
+  // ladder, four shapes. Absent means the default, a home island each.
+  const shape = base.startShape === undefined ? START_HOME : base.startShape;
+  if (shape === START_DEVELOPED) prepareActionStart(state);
+  else if (shape === START_LATE) prepareLateWar(state);
+  else if (shape === START_HOME) prepareHomeIslands(state);
   // The chain, once, before the first tick reads it.
   computeNetwork(state);
   return state;

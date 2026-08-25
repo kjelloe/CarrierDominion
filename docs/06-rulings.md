@@ -333,6 +333,57 @@ no mine, because the home island made "holds a plant" true from tick one)
 — and with those fixed, four of the five seeds resolve FASTER than before
 the batch: 25k–165k ticks, where 777001 alone fell from 116,320 to 25,235.
 
+## The start ladder (2026-08-25)
+
+Owner's ask: an option to choose how far along the war is when you sit down
+— *default (home island)*, *no island*, *developed war* with a third each and
+a third neutral, and *late war* with everything taken, developed and
+upgraded, "for late game testing for humans especially."
+
+- **One ladder, not a pile of switches.** `actionStart` and
+  `homeIslandStart` were independent booleans with combinations nobody had
+  designed. They are now one rule, `startShape`, with four rungs (0 home,
+  1 none, 2 developed, 3 late), one war-room row and one start-menu row.
+  `shared/options.js` folds the old pair, so saves and replays made before
+  the ladder still resolve to the rung they meant.
+- **A late war is a different war.** Handing out the whole archipelago is
+  already two thirds of it, which is the island victory — so a late war
+  raises the bar to 90% of the sea. Everybody starts holding their third;
+  the only way to win is to take what the other side built. Capping the
+  share instead was tried first and rejected as a lie: the menu said "the
+  whole archipelago held" and dealt one island each on a small map.
+- **The late ship is a veteran's ship**: all four refits fitted, engines and
+  mast at their upgraded figures, a comm pod on one Manta, full stores, a
+  full Hammerhead rail, supply running.
+- **Closing the distance is a fleet manoeuvre, not a per-ship one.** Both
+  developed shapes walk their carriers in from the corners — the late one
+  55% of the way, against 30% — and they walk together, each step checked
+  against where the others have also moved, with 4 km of sea room owed
+  between hulls. Without that they walked onto the same point: 611 m apart
+  on seed 900913, one sunk in ten seconds. A blocked step is skipped rather
+  than ending the march, because this is a placement and not a voyage.
+
+### And the defect it uncovered
+
+The measurement that was supposed to confirm the late war instead found
+something older: **the default home-island start could spawn a carrier
+inside the enemy home island's battery.** Three four-island seeds in four
+did it, and the ship was destroyed inside a minute without scratching the
+enemy — the war decided by worldgen rather than by anybody's decision. It is
+the same failure the third review found in the developed start on
+2026-08-23; the default opening simply never got the clearance walk. It has
+one now, shared by every shape, with a fanned retreat (straight back from a
+gun is often straight into a beach) and a second pass that settles for water
+merely deeper than the ship draws when a crowded archipelago offers nothing
+better. Pinned by a test across five seeds, three island counts and all
+three armed shapes.
+
+A false lead is recorded with it, because it cost more than the fix: in the
+headless battery **team 0 is the empty player seat** (`aiTeams: [1]`). Every
+"team 0 dies without scratching team 1" reading was a stationary unmanned
+ship, not an AI defect. Check who is actually driving before diagnosing a
+one-sided war.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

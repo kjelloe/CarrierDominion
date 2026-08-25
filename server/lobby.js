@@ -28,13 +28,14 @@ const OPTION_VALUES = {
   enemy: [1, 0],
   ending: [0, 1, 2],
   speed: [1, 2, 4, 8, 16],
-  // 0 the Strategy Game (from zero), 1 the Action Game (minutes from contact).
-  game: [0, 1],
+  // How far along the war starts (ruled 2026-08-25): 0 a home island each,
+  // 1 nothing at all, 2 a developed war, 3 a late one. This one ladder
+  // replaced the old game/home pair - they were one decision wearing two
+  // hats, and saves recorded under the old pair still fold correctly.
+  start: [0, 1, 2, 3],
   // Observers welcome (1, the referee view) or the door closed (0).
   observers: [1, 0],
-  // The home island, and the resource network as geography (ruled
-  // 2026-08-25). 1 is the game as built; 0 is the older, simpler shape.
-  home: [1, 0],
+  // The resource network as geography, or the older distance-free star.
   network: [1, 0],
 };
 
@@ -76,9 +77,8 @@ function createLobby(bootId, defaults) {
       enemy: defaults.enemy,
       ending: 0,
       speed: defaults.speed,
-      game: 0,
+      start: 0,
       observers: 1,
-      home: 1,
       network: 1,
     },
   };
@@ -196,9 +196,8 @@ function lobbyView(lobby, seats) {
       enemy: lobby.options.enemy,
       ending: lobby.options.ending,
       speed: lobby.options.speed,
-      game: lobby.options.game,
+      start: lobby.options.start,
       observers: lobby.options.observers,
-      home: lobby.options.home,
       network: lobby.options.network,
     },
     seats: roster,

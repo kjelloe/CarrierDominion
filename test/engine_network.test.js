@@ -20,7 +20,7 @@ const SEED = 20260818;
 // FAR island outside it, and a bridge that can join them.
 function chainState() {
   const rules = withoutAi(loadRules());
-  rules.rules = { ...rules.rules, homeIslandStart: 0, neutralSiloRounds: 0 };
+  rules.rules = { ...rules.rules, startShape: 1, neutralSiloRounds: 0 };
   const state = createInitialState(SEED, rules);
   const link = state.params.networkLink;
   const [depot, near, far, bridge] = state.islands;

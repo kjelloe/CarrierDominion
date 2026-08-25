@@ -204,3 +204,19 @@ test('the room shows every option it holds', () => {
     assert.notEqual(shown[key], undefined, `the room keeps "${key}" to itself`);
   }
 });
+
+test('a war saved under the old switches still folds to the shape it was played in', () => {
+  // The command log is the save format, so a war recorded before the start
+  // ladder existed must still replay as the war it was: the fold reads the
+  // two switches the ladder replaced.
+  const rules = loadRules();
+  const legacyAction = applyLobby(rules, { islands: 8, teams: 2, game: 1 });
+  assert.equal(legacyAction.rules.startShape, 2, 'the old Action Game lost its estates');
+  const legacyBare = applyLobby(rules, { islands: 8, teams: 2, home: 0 });
+  assert.equal(legacyBare.rules.startShape, 1, 'the old from-zero opening grew an island');
+  const legacyDefault = applyLobby(rules, { islands: 8, teams: 2 });
+  assert.equal(legacyDefault.rules.startShape, 0);
+  // And the ladder wins when it is present.
+  const modern = applyLobby(rules, { islands: 8, teams: 2, start: 3, game: 1, home: 0 });
+  assert.equal(modern.rules.startShape, 3, 'the ladder should outrank what it replaced');
+});

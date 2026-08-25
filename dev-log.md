@@ -5,6 +5,82 @@ golden hash and why.
 
 ---
 
+## 2026-08-25 — The start ladder, and the spawn defect it uncovered
+
+Owner's ask: choose how far along the war is when you sit down. Four rungs —
+a home island each (default), nothing but the ship, developed (a third each,
+a third neutral), and late (everything held, built and upgraded) "for late
+game testing for humans especially."
+
+**One rule, not two switches.** `actionStart` and `homeIslandStart` were
+independent booleans whose four combinations included two nobody designed.
+They collapse into `startShape` (0..3): one rules key, one war-room row, one
+start-menu row, one i18n string set, one fold in `shared/options.js` — which
+also maps the old pair, so saves and replays from before today land on the
+rung they meant.
+
+**The late war needed a different victory.** Handing out the whole
+archipelago IS two thirds of it, which ends the war before tick one. First
+answer was to cap the share, which turned out to be a lie: on a four-island
+sea the menu promised "the whole archipelago held" and dealt one rock each.
+Second answer, kept: a late war raises the island bar to 90%. Everybody
+starts holding their third, so holding a third cannot be the win — you have
+to take what the other side built. Derived from `startShape` at build time,
+so a replay recomputes it.
+
+**Closing the distance became a fleet manoeuvre.** The per-carrier nudge the
+developed start had used since August 23 walked both ships to the same
+point when the late war asked it to go further: 611 m apart on seed 900913,
+one sunk in ten seconds. It now runs over the whole fleet in lockstep, ten
+rounds, each step vetoed by land, by a rival battery's envelope, or by 4 km
+of sea room owed to another hull — and a vetoed step no longer ends that
+ship's march, because a placement is not a voyage. One island in the
+straight line used to read as a wall: a 32-island late war stopped every
+carrier a third of the way in while the water past the rock was open to the
+middle. Nearest enemy island at tick zero fell from 26 km to 16 km on that
+configuration.
+
+### What the measurement actually found
+
+Chasing "the late war fires no shots in five minutes" led somewhere else.
+On a four-island sea, **three seeds in four spawn a carrier inside the enemy
+HOME island's 3,500 m battery** — destroyed inside a minute, without
+scratching the enemy ship. Same failure the third review found in the
+developed start on 2026-08-23; the default opening simply never got the
+clearance walk. It has one now, shared by all shapes:
+
+- fanned retreat (seven bearings, not one) — straight back from a gun is
+  often straight into a beach, and stopping there leaves you at the muzzle;
+- a second pass that accepts water merely deeper than the ship draws when
+  the strict test (a clear 500 m ring) finds nothing — a spawn can sit in
+  four fathoms with a shoal inside every ring, and keeping a clearance rule
+  by staying under the guns is the wrong trade.
+
+Pinned: no carrier starts within any hostile battery's reach, across five
+seeds x three island counts x three armed shapes.
+
+**A wrong turn worth recording.** Before finding the battery, I "fixed" the
+symptom in worldgen — a spawn-separation pass pushing corners apart. It
+moved two seeds of five and made one war END FASTER, which is the signal
+that it was treating the wrong thing. Reverted. The tell I nearly missed:
+the loser always died with the winner at 100% hull, and in the headless
+battery **team 0 is the empty player seat** (`aiTeams: [1]`). A stationary
+unmanned ship, not an AI defect. Check who is driving before diagnosing a
+one-sided war.
+
+**Cost:** 479 tests (+6), fixture unchanged, smoke green, battery 5/5 — all
+five resolve by sinking, 19k–96k ticks. New probe `late_war.mjs` walks the
+four rungs through the real menu and photographs the late war's first
+moment; it asserts the front (the nearest enemy-held island) is inside the
+20 km leash, which is the honest form of "already in the war" — the enemy
+FLAGSHIP is 10-20 km out and often not on the scope at tick zero.
+
+**Open for the owner (PLAYTEST A5):** is 90% the right bar for a late war,
+or should it run on points and time? And should a late war start nose to
+nose rather than 10-20 km apart?
+
+---
+
 ## 2026-08-24 — The third capture path: shoot the command centre out
 
 Second source review, item 1 - the one genuine MECHANIC the CRASH review

@@ -41,7 +41,7 @@ test('every neutral island keeps a token silo; a developed start replaces its ow
 // the BLANK ocean by definition, so this one asks for silos explicitly.
 function toothyRules() {
   const rules = withoutAi(loadRules());
-  rules.rules = { ...rules.rules, homeIslandStart: 0 };
+  rules.rules = { ...rules.rules, startShape: 1 };
   return rules;
 }
 
@@ -127,7 +127,7 @@ test('a Bat Cave scrambles, presses, and its wing dies with the island', () => {
 
 test('the machine raises its screen on contact and docks it when clear', () => {
   const rules = loadRules();
-  rules.rules = { ...rules.rules, aiTeams: [0], homeIslandStart: 0, neutralSiloRounds: 0 };
+  rules.rules = { ...rules.rules, aiTeams: [0], startShape: 1, neutralSiloRounds: 0 };
   let state = createInitialState(SEED, rules);
   // Out of sight of each other: no screen, because a screen costs speed.
   for (let i = 0; i <= state.params.aiCadenceTicks; i++) state = apply(state, TICK);
@@ -150,7 +150,7 @@ test('the machine raises its screen on contact and docks it when clear', () => {
 
 test('the machine puts a strip on a mine it has fed', () => {
   const rules = loadRules();
-  rules.rules = { ...rules.rules, aiTeams: [0], homeIslandStart: 0, neutralSiloRounds: 0 };
+  rules.rules = { ...rules.rules, aiTeams: [0], startShape: 1, neutralSiloRounds: 0 };
   const state = createInitialState(SEED, rules);
   const mine = state.islands[0];
   mine.owner = 0;

@@ -210,7 +210,7 @@ test('patrols wait for a real silence, then sweep the enemy holdings', () => {
   const aiRules = loadRules();
   // No leash and no home islands: this test is about patrol PATIENCE, and
   // its crafted map puts the mark wherever seed geometry fell.
-  aiRules.rules = { ...aiRules.rules, aiTeams: [0], telemetryLossMetres: 0, homeIslandStart: 0 };
+  aiRules.rules = { ...aiRules.rules, aiTeams: [0], telemetryLossMetres: 0, startShape: 1 };
   let state = createInitialState(SEED, aiRules);
   state.islands[2].owner = 1; // the enemy holds something worth looking at
 

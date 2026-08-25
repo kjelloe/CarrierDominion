@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 import { loadRules, withoutAi, bareRules } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
+import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
 import { dist2D } from '../shared/fixed.js';
 import { ROLE_FACTORY } from '../engine/island.js';
@@ -46,14 +47,128 @@ test('bare rules still give the blank ocean the engine tests build on', () => {
   assert.equal(state.islands.filter((island) => island.owner !== -1).length, 0);
 });
 
-test('the action game keeps its own estates - no double home', () => {
+test('the developed war is about a third each, and a third left neutral', () => {
   const rules = withoutAi(loadRules());
-  rules.rules = { ...rules.rules, actionStart: 1 };
+  rules.rules = { ...rules.rules, startShape: 2 };
   const state = createInitialState(SEED, rules);
-  // Round-robin estates only: 2 islands per team on the 8-island sea
-  // (share = max(2, floor(8/3))), not 2 + an extra home.
+  // One share in (teams + 1), rounded: three each on the eight-island sea,
+  // two left neutral - and no extra home island on top (ruled 2026-08-25).
   for (const team of state.teams) {
     const held = state.islands.filter((island) => island.owner === team.id);
-    assert.equal(held.length, 2, `team ${team.id} holds ${held.length}`);
+    assert.equal(held.length, 3, `team ${team.id} holds ${held.length}`);
+  }
+  assert.equal(state.islands.filter((island) => island.owner === -1).length, 2);
+});
+
+// A war decided by worldgen is not a war. Measured on a four-island sea:
+// three seeds in four dropped a carrier inside the 3,500 m envelope of the
+// enemy's brand-new home battery, and the ship was destroyed inside a minute
+// without ever firing back.
+test('no carrier starts under the enemy home battery', () => {
+  for (const seed of [20260818, 900913, 777001, 31337, 424242]) {
+    for (const islands of [4, 6, 8]) {
+      for (const shape of [0, 2, 3]) {
+        const where = `seed ${seed}, ${islands} islands, shape ${shape}`;
+        const rules = withoutAi(loadRules());
+        rules.rules = { ...rules.rules, startShape: shape };
+        rules.world = { ...rules.world, islandCount: islands };
+        const state = createInitialState(seed, rules);
+        // The reach the clearance rule is written against.
+        let reach = 0;
+        for (const turret of state.turrets) {
+          for (const arm of turret.arms) {
+            const weapon = state.weapons[arm.w];
+            if (weapon !== undefined && weapon.range > reach) reach = weapon.range;
+          }
+        }
+        for (const carrier of state.carriers) {
+          assert.equal(carrier.grounded, 0, `${where}: carrier ${carrier.id} starts aground`);
+          for (const turret of state.turrets) {
+            if (turret.team === carrier.team) continue;
+            const gap = dist2D(carrier.x, carrier.y, turret.x, turret.y);
+            assert.ok(gap > reach,
+              `${where}: carrier ${carrier.id} starts ${gap} from a hostile battery`);
+          }
+        }
+      }
+    }
+  }
+});
+
+// --- The late war (ruled 2026-08-25): for testing an endgame by hand ---
+
+function lateState(islands) {
+  const rules = withoutAi(loadRules());
+  rules.rules = { ...rules.rules, startShape: 3 };
+  if (islands !== undefined) rules.world = { ...rules.world, islandCount: islands };
+  return createInitialState(SEED, rules);
+}
+
+test('a late war hands out the archipelago, built and refitted', () => {
+  const state = lateState();
+  // "The whole archipelago held" means exactly that: an even division leaves
+  // nothing neutral, and only an odd remainder may sit out.
+  const neutral = state.islands.filter((island) => island.owner === -1);
+  assert.ok(neutral.length < state.teams.length,
+    `${neutral.length} islands left unclaimed in a LATE war`);
+
+  for (const team of state.teams) {
+    const held = state.islands.filter((island) => island.owner === team.id);
+    assert.ok(held.length >= 3, `team ${team.id} holds only ${held.length}`);
+    // Every island is somebody's concern: a role, a command centre, works.
+    for (const island of held) {
+      assert.ok(island.role >= 0, `island ${island.id} has no role`);
+      assert.ok(island.nodeHp > 0, `island ${island.id} has no command centre`);
+      assert.ok(island.factories + island.warehouses + island.turrets > 0,
+        `island ${island.id} is undeveloped`);
+    }
+    // A plant, a mine and a garrison - not a monoculture.
+    const roles = held.map((island) => island.role);
+    assert.ok(roles.includes(1) && roles.includes(0) && roles.includes(2),
+      `team ${team.id} got ${roles.join(',')} - a late war should have all three`);
+    assert.notEqual(team.stockpileIsland, -1, 'a late war with no depot');
+  }
+
+  // And the ship a long war would have left you.
+  for (const carrier of state.carriers) {
+    assert.equal(carrier.upSpeed, 1);
+    assert.equal(carrier.upPd, 1);
+    assert.equal(carrier.upRadar, 1);
+    assert.equal(carrier.upComm, 1);
+    assert.equal(carrier.maxSpeed, carrier.maxSpeedUpgraded, 'the engines were not fitted');
+    assert.equal(carrier.radar, carrier.radarUpgraded, 'the mast was not fitted');
+    assert.equal(carrier.fuel, carrier.fuelCapacity);
+    assert.equal(carrier.hammerRounds, carrier.hammerMax);
+    assert.equal(carrier.supplyRun, 1);
+  }
+  const podded = state.units.filter((u) => u.commPod === 1);
+  assert.equal(podded.length, state.carriers.length, 'one comm pod per ship, no more');
+  assert.doesNotThrow(() => canonicalize(state));
+});
+
+test('a late war never wins itself before the first tick', () => {
+  // Two thirds of the islands ends an ordinary war, and an even split of
+  // EVERYTHING is past that line before anyone moves. A late war answers by
+  // raising the bar rather than by dealing fewer islands: everybody already
+  // holds their third, so holding a third cannot be the win.
+  for (const count of [4, 8, 16, 32]) {
+    let state = lateState(count);
+    const share = Math.floor(count / state.teams.length);
+    const needed = Math.floor(count * state.params.victoryIslandPermil / 1000);
+    assert.ok(needed > share,
+      `a ${count}-island late war starts with ${share} of ${needed} needed`);
+    assert.equal(state.phase, 0, `a ${count}-island late war started already over`);
+    state = apply(state, { type: 'advance_tick' });
+    assert.equal(state.phase, 0, `a ${count}-island late war ended on tick one`);
+  }
+});
+
+test('the raised bar belongs to the late war and nothing else', () => {
+  const rules = withoutAi(loadRules());
+  for (const shape of [0, 1, 2]) {
+    rules.rules = { ...rules.rules, startShape: shape };
+    const state = createInitialState(SEED, rules);
+    assert.equal(state.params.victoryIslandPermil, loadRules().rules.victoryIslandPermil,
+      `start shape ${shape} moved the island victory`);
   }
 });

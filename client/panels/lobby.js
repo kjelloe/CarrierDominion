@@ -10,6 +10,12 @@
 // lobby stays honest when three people are clicking at once.
 
 const OPTION_ROWS = [
+  {
+    key: 'start',
+    label: 'start.start',
+    values: [0, 1, 2, 3],
+    text: ['start.startHome', 'start.startNone', 'start.startDeveloped', 'start.startLate'],
+  },
   // The ladder MUST match server/lobby.js OPTION_VALUES: a row that offers
   // less than the server allows is a room that cannot choose the war it is
   // allowed to play (this one stopped at 32 for two days after the
@@ -28,24 +34,12 @@ const OPTION_ROWS = [
     values: [0, 1, 2],
     text: ['start.endIslands', 'start.endPoints', 'start.endTime'],
   },
-  {
-    key: 'game',
-    label: 'start.game',
-    values: [0, 1],
-    text: ['start.gameStrategy', 'start.gameAction'],
-  },
   { key: 'speed', label: 'start.speed', values: [1, 2, 4, 8, 16] },
   {
     key: 'observers',
     label: 'start.observers',
     values: [1, 0],
     text: ['start.observersOn', 'start.observersOff'],
-  },
-  {
-    key: 'home',
-    label: 'start.home',
-    values: [1, 0],
-    text: ['start.homeOn', 'start.homeOff'],
   },
   {
     key: 'network',

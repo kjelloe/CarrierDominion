@@ -84,7 +84,10 @@ Look for these shapes first — every one produced a real bug:
 - **Config the new option forgot.** A new lobby option must reach ALL of:
   OPTION_VALUES, the start menu's OPTIONS, applyLobbyOptions (or be
   explicitly server-side like observers), savedOptions on resume, and the
-  replay fold. Check the whole chain, not the first link.
+  replay fold. Check the whole chain, not the first link. When an option
+  REPLACES older ones (`startShape` for `actionStart` + `homeIslandStart`),
+  the fold must still read the old keys or every save and replay made
+  before it silently changes shape.
 
 - **A predicate that reads bookkeeping the feature does not maintain.**
   `onNetwork()` asked `island.networkHops >= 0`, which is meaningless when
@@ -128,6 +131,37 @@ Look for these shapes first — every one produced a real bug:
   every team's second island and starved them of mines. After changing a
   start condition, grep for the predicates that were rare and are now
   always true.
+
+- **A per-actor placement rule with no view of the other actors.** The
+  spawn nudge moved each carrier toward the middle on its own, which was
+  invisible while it only closed 30% of the way; asked to close 55% it
+  walked both ships onto the same point (611 m apart, one sunk in ten
+  seconds). A placement rule that runs per actor must be re-read the moment
+  its magnitude changes, and usually wants to run over the whole fleet in
+  lockstep instead.
+- **A veto that ends the search instead of skipping a candidate.** The same
+  nudge stopped for good at the first blocked step, so one island in the
+  straight line read as a wall and every carrier halted a third of the way
+  in while the water past it was open to the middle. Ask whether a refused
+  option should end the loop or just be skipped - for a placement (as
+  opposed to a voyage) it is nearly always skipped.
+- **A guard applied to one caller and not its sibling.** The 2026-08-23
+  review gave the DEVELOPED start a clearance walk so no carrier spawns
+  inside a hostile battery. The DEFAULT start does the same thing - hands
+  out islands and arms them - and never got it: three four-island seeds in
+  four executed a carrier in under a minute. When a fix lands in one
+  branch, grep for every other branch that does the same kind of work.
+
+### And two habits, not classes
+
+- **Check who is driving.** In the headless sim and battery, team 0 is the
+  EMPTY PLAYER SEAT (`aiTeams: [1]`). "Team 0 dies without scratching team
+  1" is a stationary unmanned ship, not an AI defect. Half a session went
+  into that reading before the seat was checked.
+- **A symptom fix that makes the metric WORSE is the tell.** Pushing spawns
+  apart in worldgen moved two seeds of five and made one war end faster.
+  That was the signal to stop and look for the real cause (a battery, not a
+  distance). Revert, do not tune.
 
 ## Verifying and landing
 

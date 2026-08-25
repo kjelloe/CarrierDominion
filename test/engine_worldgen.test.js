@@ -42,13 +42,16 @@ const rules = loadRules();
 // rule) - also drift-free: the fixture's two teams start on home islands
 // that are their own depots, so their chains are trivially whole. Re-pinned
 // once more for the RESUPPLY fields (carrier.hammerMax/hammerAccum, the two
-// economy rates) - drift-free. The
+// economy rates) - drift-free - and last for the START LADDER, where one
+// rule (startShape) replaced the actionStart and homeIslandStart pair;
+// drift-free, because the default shape is the one the pins were taken
+// under. The
 // MAP itself has not changed since
 // the first pin: islands, nodes and start positions are byte-identical
 // throughout (the ring-walk fix in the same slice touches only tables of
 // more than four teams, which no pin covers).
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = '75a5bc030bf822d7';
+const GOLDEN_WORLD_HASH = 'f1bac44dbb2ae998';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

@@ -14,16 +14,30 @@ Every number here is in `data/*.json`. None of them is in engine code.
 The carrier is deliberately slow (owner ruling): time compression is the answer
 to the waiting, not a faster ship.
 
-## The home island
+## How far along the war is when you sit down
 
-The Strategy game starts each team on **one developed base** (proposal 3a,
-ruled 2026-08-25 — the original's Base island): its nearest island comes
-owned, role Factory with one plant, a runway, two turrets, a modest stock,
-the depot nomination, and the supply run already running — the two lighters
-sailing at tick 1 are the first thing a new war does. The opening race is
-for the **second** island, not the first pod. The Action Game keeps its own
-round-robin estates; `homeIslandStart: 0` gives the old bare ocean (the
-engine tests build on it via `bareRules()`).
+One ladder, four shapes, one rule — `startShape` (ruled 2026-08-25). It
+replaced a pair of independent switches (`actionStart` and
+`homeIslandStart`) that could be set to combinations nobody had designed;
+`shared/options.js` still folds the old pair so saves and replays from
+before the ladder resolve to the right rung.
+
+| `startShape` | The war you sit down to |
+|---|---|
+| `0` **home island** — the default | One developed base each |
+| `1` **nothing but the ship** | The old bare ocean, a race from zero |
+| `2` **developed** | About a third each, a third neutral |
+| `3` **late** | The whole archipelago held, built and refitted |
+
+### 0 — a home island each
+
+Each team's nearest island comes owned, role Factory with one plant, a
+runway, two turrets, a modest stock, the depot nomination, and the supply
+run already running — the two lighters sailing at tick 1 are the first thing
+a new war does. The opening race is for the **second** island, not the first
+pod. Shape `1` is the old bare ocean, which the engine tests build on via
+`bareRules()`. Shapes `2` and `3` are further down, under *The developed war
+and the late one*, because they share their machinery.
 
 Measured consequence (five-seed battery): AI-vs-AI wars now resolve between
 ticks 35,006 and 116,271 (was 33k–231k) — economies that start alive fight
@@ -444,13 +458,15 @@ After the whistle nothing new is decided: no gun chooses, no pod completes, no
 point scores. The final score is final. Rounds already in the air still fly —
 and still hit — because they were decided when they left the rail.
 
-## The Action Game
+## The developed war and the late one
 
-The original shipped two starts and so do we (ruling 2026-08-23): the
-**Strategy Game** — everything from zero, the default — and the **Action
-Game**, the developed war, minutes from contact. `engine/action_start.js`
-runs at the end of `createInitialState` when the `actionStart` rule is 1:
-each team gets its nearest share of the archipelago — a stocked factory
+The original shipped two starts (ruling 2026-08-23) and the ladder grew to
+four (2026-08-25). `engine/action_start.js` runs at the end of
+`createInitialState` and prepares whichever shape `startShape` names.
+
+### 2 — developed, a third each
+
+Each team gets its nearest share of the archipelago — a stocked factory
 island nominated as the stockpile, a resource island, the rest defence
 islands with two guns up — supply runs start on, and each carrier is nudged
 up to 30% of the way toward the map centre. The rest of the archipelago
@@ -459,17 +475,62 @@ stays neutral: there is still a race, it just starts at speed.
 Order matters (third review): **every team's estate is allocated first,
 round-robin** — one island per team per round, so a crowded table shorts
 late rounds rather than late seats — and only then do the carriers move.
-The nudge refuses to stop in water a rival action-start battery already
-reaches (longest turret weapon plus a 1,200 m margin), and a seat whose
-spawn ended up inside an envelope anyway backs straight away from the
-nearest gun until clear. The first shape of this start sank seed 31337's
-team 14 at tick 7,137 without a decision being made; the suite now asserts
-no carrier spawns in reach on any battery seed at the full table.
+No shape lets a carrier start under someone else's guns — clearance is the
+longest turret weapon plus a 1,200 m margin. A spawn inside an envelope
+backs away from the nearest battery until clear, fanned either side of
+straight-back because straight back is often straight into a beach, and with
+a second pass that will settle for water merely deeper than the ship draws
+when a crowded archipelago offers nothing better.
 
-It is a **rule**, not a script: the flag is in `data/rules.json`, folded by
-the lobby's GAME option, covered by the rules hash, and the prepared start is
-deterministic from the seed — so an Action war saves, resumes and replays
-like any other.
+**The default opening never had this** until 2026-08-25, and it was the
+older and worse version of the bug the third review found in the developed
+start. Measured on a four-island sea: three seeds in four dropped a carrier
+inside the 3,500 m envelope of the enemy's brand-new home battery, and it
+was destroyed inside a minute without scratching the enemy ship — a war
+decided by where worldgen happened to drop the hulls. The suite now asserts
+that no carrier starts within any hostile battery's reach across five seeds,
+three island counts and all three armed shapes.
+
+### 3 — the late war
+
+Every island somebody's, every island built out, every refit fitted: the
+state a four-hour war arrives at, without the four hours. It exists so a
+human can test an endgame — the owner's ask — so the ship comes as a long
+war would have left it: all four refits fitted, engines and mast at their
+upgraded figures, a comm pod on one Manta, full stores, a full Hammerhead
+rail, supply running.
+
+Handing out the whole archipelago collides with the island victory: two
+thirds of the islands ends a war, and an even split is past that line before
+anyone moves. Capping the share was the first answer and it was a lie — the
+menu promised "the whole archipelago held" and dealt one rock each on a
+four-island sea. The honest answer is that **a late war is a different war**:
+everybody already holds their third, so holding a third cannot be the win.
+The bar moves to 90% of the sea and the only way to reach it is to take what
+the other side has built. It is derived from `startShape`, so a replay
+recomputes it rather than storing it.
+
+### Closing the distance
+
+Both developed shapes move the carriers in from their corners, the late one
+furthest — 55% of the crossing against the developed start's 30% — because
+what a late war exists to skip is the sail. The fleet closes **together**,
+a tenth at a time, so every ship is checked against where the others have
+also moved to:
+
+- a step is refused if it would go aground, enter a rival battery's envelope,
+  or come within 4 km of another hull;
+- a refusal does not end that ship's march. This is a placement, not a
+  voyage: one rock in the straight line used to read as a wall, stopping
+  every carrier a third of the way in when the water past it was open to the
+  middle. The furthest reachable step wins.
+
+Without the separation rule the march walked both ships onto the same point
+— 611 m apart on seed 900913, and the AI sank one in ten seconds.
+
+It is a **rule**, not a script: it is in `data/rules.json`, folded by the
+lobby and the start menu alike, covered by the rules hash, and deterministic
+from the seed — so any shape saves, resumes and replays like any other.
 
 Table size is a lobby option too: **2 to 16 carriers, free for all** (one
 team each, ruling 2026-08-23). Up to four teams start in the corners, pinned

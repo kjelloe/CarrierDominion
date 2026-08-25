@@ -23,7 +23,7 @@ export { loadRules, withoutAi, bothAi };
 // depot, which is exactly the distance-free star we shipped before.)
 function bareRules() {
   const rules = withoutAi(loadRules());
-  rules.rules = { ...rules.rules, homeIslandStart: 0, neutralSiloRounds: 0 };
+  rules.rules = { ...rules.rules, startShape: 1, neutralSiloRounds: 0 };
   rules.world = { ...rules.world, networkLinkMetres: 0 };
   return rules;
 }

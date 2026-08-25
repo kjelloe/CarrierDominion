@@ -16,7 +16,7 @@ import { ROLE_DEFENCE, ROLE_FACTORY, ROLE_RESOURCE } from '../engine/island.js';
 
 // Home islands off (the tests build their own map maths) but the DEFAULT
 // aiTeams intact - this file is about the machine.
-const rules = { ...loadRules(), rules: { ...loadRules().rules, homeIslandStart: 0 } };
+const rules = { ...loadRules(), rules: { ...loadRules().rules, startShape: 1 } };
 const TICK = { type: 'advance_tick' };
 const SEED = 20260818;
 

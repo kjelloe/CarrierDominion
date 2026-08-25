@@ -57,18 +57,11 @@ const OPTIONS = [
     },
   },
   {
-    key: 'game',
-    label: 'start.game',
-    values: [0, 1],
-    text: ['start.gameStrategy', 'start.gameAction'],
-    apply: (rules, value) => { rules.rules.actionStart = value === 1 ? 1 : 0; },
-  },
-  {
-    key: 'home',
-    label: 'start.home',
-    values: [1, 0],
-    text: ['start.homeOn', 'start.homeOff'],
-    apply: (rules, value) => { rules.rules.homeIslandStart = value; },
+    key: 'start',
+    label: 'start.start',
+    values: [0, 1, 2, 3],
+    text: ['start.startHome', 'start.startNone', 'start.startDeveloped', 'start.startLate'],
+    apply: (rules, value) => { rules.rules.startShape = value; },
   },
   {
     key: 'network',

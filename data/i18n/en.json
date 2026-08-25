@@ -353,5 +353,10 @@
   "start.homeOff": "from zero",
   "start.network": "the network",
   "start.networkLinked": "linked by geography",
-  "start.networkDirect": "direct to the depot"
+  "start.networkDirect": "direct to the depot",
+  "start.start": "the war starts",
+  "start.startHome": "a home island each",
+  "start.startNone": "with nothing but the ship",
+  "start.startDeveloped": "developed - a third each",
+  "start.startLate": "late - the whole archipelago held"
 }

@@ -444,8 +444,7 @@ function createApp(options) {
       teams: app.lobby.options.teams,
       ending: app.lobby.options.ending,
       speed: app.lobby.options.speed,
-      game: app.lobby.options.game,
-      home: app.lobby.options.home,
+      start: app.lobby.options.start,
       network: app.lobby.options.network,
       aiTeams: machine,
     };

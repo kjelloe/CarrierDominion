@@ -353,5 +353,10 @@
   "start.homeOff": "fra null",
   "start.network": "nettverket",
   "start.networkLinked": "bundet av geografi",
-  "start.networkDirect": "rett til depotet"
+  "start.networkDirect": "rett til depotet",
+  "start.start": "krigen starter",
+  "start.startHome": "med en hjemmeøy hver",
+  "start.startNone": "med bare skipet",
+  "start.startDeveloped": "utviklet - en tredel hver",
+  "start.startLate": "sent - hele øygruppen tatt"
 }

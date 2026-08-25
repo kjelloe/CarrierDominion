@@ -16,7 +16,7 @@ const SEED = 20260818;
 
 function actionRules() {
   const rules = withoutAi(loadRules());
-  rules.rules = { ...rules.rules, actionStart: 1 };
+  rules.rules = { ...rules.rules, startShape: 2 };
   return rules;
 }
 

@@ -22,14 +22,24 @@
 // missile battery and was sunk by tick 7,137 without a decision being made.
 
 import { dist2D, mulDiv } from '../shared/fixed.js';
-import { mulCos, mulSin } from '../shared/trig.js';
+import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { worldHeightAt } from './heightmap.js';
 import { UNIT_STOWED } from './units.js';
 import { raiseTurret, ROLE_DEFENCE, ROLE_FACTORY, ROLE_RESOURCE } from './island.js';
+import { applySectionEffects } from './damage.js';
+import { KIND_MANTA } from './units.js';
 import { clearTurretsOn } from './turret.js';
 
-// How much of the crossing the Action start skips: each carrier moves this
-// far toward the map centre, stopping early wherever open water runs out.
+// The four ways a war can open (ruled 2026-08-25). One ladder, because they
+// are one decision: how far along is this war when you sit down?
+const START_HOME = 0;      // a developed home island each - the default
+const START_NONE = 1;      // nothing but the ship, the old from-zero race
+const START_DEVELOPED = 2; // about a third each, a third neutral
+const START_LATE = 3;      // the whole archipelago held, built and refitted
+
+// How much of the crossing the developed start skips: each carrier moves
+// this far toward the map centre, stopping early wherever open water runs
+// out.
 const CLOSER_PERMIL = 300;
 
 // A spawn must not sit inside a gun envelope it never chose to enter: the
@@ -154,13 +164,157 @@ function prepareHomeIslands(state) {
     if (carrier === -1) continue;
     developHomeIsland(state, state.teams[t], carrier);
   }
+  // The home islands were just armed, and on a crowded sea somebody's spawn
+  // is now inside somebody else's shore battery. Measured on a four-island
+  // map: three seeds in four put a carrier within the 3,500 m envelope of
+  // the enemy's home battery, and it was sunk inside a minute WITHOUT
+  // scratching the enemy ship - a war decided by where worldgen happened to
+  // drop the hulls. The developed start has walked its spawns clear of
+  // hostile guns since the 2026-08-23 review; the default opening never
+  // did, which is the older and worse version of the same bug.
+  const clearance = longestTurretReach(state)
+    + HOSTILE_GUN_MARGIN_METRES * state.params.unitsPerMetre;
+  for (let c = 0; c < state.carriers.length; c++) {
+    const carrier = state.carriers[c];
+    backOffGuns(state, carrier, clearance);
+    stowedFollow(state, carrier);
+  }
   return state;
 }
 
+// How much sea two hulls are owed at the start. Without it the fleet nudge
+// walks every carrier onto the same point: a late war put two ships 611 m
+// apart on seed 900913 and the AI sank one in ten seconds - a knife fight,
+// not an endgame.
+const SPAWN_SEPARATION_METRES = 4000;
+
+function tooCloseToAnother(state, carrier, x, y, separation) {
+  for (let c = 0; c < state.carriers.length; c++) {
+    const other = state.carriers[c];
+    if (other.id === carrier.id) continue;
+    if (dist2D(x, y, other.x, other.y) < separation) return true;
+  }
+  return false;
+}
+
+// The fleet closes on the middle together, a tenth of the way per round, so
+// that every carrier is checked against where the others have ALSO moved to.
+// A step is refused if it would put a ship aground, inside a rival battery's
+// envelope, or in another ship's lap; refusing does NOT end that ship's
+// march, because this is a placement and not a voyage. One rock in the
+// straight line used to read as a wall - a 32-island late war stopped every
+// carrier at a third of the way in when the water past the rock was open all
+// the way to the middle - so a blocked step is skipped and the furthest
+// reachable one wins.
+//
+// The separation invariant holds throughout: every accepted position is
+// clear of every other ship AT THE MOMENT IT IS TAKEN, and nothing moves
+// except by an accepted step.
+function closeTheDistance(state, permilTotal, clearance) {
+  const centre = mulDiv(state.params.sizeUnits, 1, 2);
+  const separation = SPAWN_SEPARATION_METRES * state.params.unitsPerMetre;
+  const anchors = [];
+  for (let c = 0; c < state.carriers.length; c++) {
+    anchors[c] = { x: state.carriers[c].x, y: state.carriers[c].y };
+  }
+  for (let step = 1; step <= 10; step++) {
+    const permil = mulDiv(permilTotal, step, 10);
+    for (let c = 0; c < state.carriers.length; c++) {
+      const carrier = state.carriers[c];
+      const x = anchors[c].x + mulDiv(centre - anchors[c].x, permil, 1000);
+      const y = anchors[c].y + mulDiv(centre - anchors[c].y, permil, 1000);
+      if (!openWaterAt(state, carrier, x, y)) continue;
+      if (insideHostileGuns(state, carrier.team, x, y, clearance)) continue;
+      if (tooCloseToAnother(state, carrier, x, y, separation)) continue;
+      carrier.x = x;
+      carrier.y = y;
+    }
+  }
+  for (let c = 0; c < state.carriers.length; c++) {
+    backOffGuns(state, state.carriers[c], clearance);
+    stowedFollow(state, state.carriers[c]);
+  }
+}
+
+// A gun raised beside a spawn - by the sharing-out, or by an enemy home
+// island that happens to be the nearest rock to your corner. Step away from
+// the nearest battery until out of its envelope.
+//
+// Straight away from the gun is often straight into a beach, and stopping
+// dead there leaves the ship under the guns it was trying to leave, so the
+// step is fanned either side and the first bearing with water under it wins
+// - out to three quarters astern of the retreat, because a ship in a bay
+// gets out of it sideways. Only straight back INTO the muzzle is refused.
+// Failing every bearing means the pond has no answer, and the ship stays
+// where worldgen put it.
+const RETREAT_FAN = [0, 8192, -8192, 16384, -16384, 24576, -24576];
+
+function backOffGuns(state, carrier, clearance) {
+  const stepUnits = 400 * state.params.unitsPerMetre;
+  for (let retreat = 0; retreat < 40; retreat++) {
+    if (!insideHostileGuns(state, carrier.team, carrier.x, carrier.y, clearance)) break;
+    let threat = -1;
+    let threatDistance = 2147483647;
+    for (let g = 0; g < state.turrets.length; g++) {
+      const turret = state.turrets[g];
+      if (turret.team === carrier.team) continue;
+      const distance = dist2D(carrier.x, carrier.y, turret.x, turret.y);
+      if (distance < threatDistance) {
+        threatDistance = distance;
+        threat = turret;
+      }
+    }
+    if (threat === -1) break;
+    const away = threatDistance <= 0
+      ? 0
+      : atan2B(carrier.y - threat.y, carrier.x - threat.x);
+    // Two passes over the fan. The first wants proper sea room. The second
+    // settles for water deeper than the ship draws AND deeper than where it
+    // is standing, because a crowded archipelago can leave a spawn in four
+    // fathoms with a shoal inside every lookahead ring - and staying at the
+    // muzzle to keep a clearance rule is the wrong trade.
+    let moved = 0;
+    const here = worldHeightAt(state.islands, carrier.x, carrier.y);
+    for (let pass = 0; pass < 2 && moved === 0; pass++) {
+      for (let f = 0; f < RETREAT_FAN.length; f++) {
+        const bam = away + RETREAT_FAN[f];
+        const x = carrier.x + mulCos(stepUnits, bam);
+        const y = carrier.y + mulSin(stepUnits, bam);
+        if (pass === 0) {
+          if (!openWaterAt(state, carrier, x, y)) continue;
+        } else {
+          const there = worldHeightAt(state.islands, x, y);
+          if (there >= -carrier.draught || there >= here) continue;
+        }
+        carrier.x = x;
+        carrier.y = y;
+        moved = 1;
+        break;
+      }
+    }
+    if (moved === 0) break;
+  }
+}
+
+// The hangar moved with the ship: stowed hulls sit wherever it now is.
+function stowedFollow(state, carrier) {
+  for (let u = 0; u < state.units.length; u++) {
+    const unit = state.units[u];
+    if (unit.carrierId !== carrier.id || unit.state !== UNIT_STOWED) continue;
+    unit.x = carrier.x;
+    unit.y = carrier.y;
+    unit.targetX = carrier.x;
+    unit.targetY = carrier.y;
+  }
+}
+
 function prepareActionStart(state) {
-  const centreX = mulDiv(state.params.sizeUnits, 1, 2);
-  const centreY = centreX;
-  const share = Math.max(2, Math.floor(state.islands.length / (state.teams.length + 1)));
+  // A third each and a third neutral, as ruled - which for N teams means
+  // one share in (teams + 1), ROUNDED rather than floored so eight islands
+  // between two sides reads as three and three rather than two and two.
+  const slices = state.teams.length + 1;
+  const rounded = Math.floor((state.islands.length * 2 + slices) / (2 * slices));
+  const share = Math.max(2, rounded);
 
   // Every team's estate first, ROUND-ROBIN: one island per team per round,
   // nearest to that team's spawn. Sequential whole-share grabs let early
@@ -177,62 +331,132 @@ function prepareActionStart(state) {
     }
   }
 
-  // Now the nudge, against the finished map: closer to the fight, one tenth
-  // at a time, stopping at the last step that is still open water AND
-  // outside every rival battery's reach.
+  // Now the nudge, against the finished map.
   const clearance = longestTurretReach(state)
     + HOSTILE_GUN_MARGIN_METRES * state.params.unitsPerMetre;
-  for (let t = 0; t < state.teams.length; t++) {
-    const team = state.teams[t];
-    const carrier = carrierOf(state, team.id);
-    if (carrier === -1) continue;
-
-    for (let step = 1; step <= 10; step++) {
-      const permil = mulDiv(CLOSER_PERMIL, step, 10);
-      const x = carrier.x + mulDiv(centreX - carrier.x, permil, 1000);
-      const y = carrier.y + mulDiv(centreY - carrier.y, permil, 1000);
-      if (!openWaterAt(state, carrier, x, y)) break;
-      if (insideHostileGuns(state, team.id, x, y, clearance)) break;
-      carrier.x = x;
-      carrier.y = y;
-    }
-    // The allocation itself may have raised a rival's guns beside this
-    // seat's SPAWN (crowded rings, small maps): back straight away from the
-    // nearest offending battery until clear, staying in open water.
-    for (let retreat = 0; retreat < 40; retreat++) {
-      if (!insideHostileGuns(state, team.id, carrier.x, carrier.y, clearance)) break;
-      let threat = -1;
-      let threatDistance = 2147483647;
-      for (let g = 0; g < state.turrets.length; g++) {
-        const turret = state.turrets[g];
-        if (turret.team === team.id) continue;
-        const distance = dist2D(carrier.x, carrier.y, turret.x, turret.y);
-        if (distance < threatDistance) {
-          threatDistance = distance;
-          threat = turret;
-        }
-      }
-      if (threat === -1 || threatDistance <= 0) break;
-      const stepUnits = 400 * state.params.unitsPerMetre;
-      const x = carrier.x + mulDiv(carrier.x - threat.x, stepUnits, threatDistance);
-      const y = carrier.y + mulDiv(carrier.y - threat.y, stepUnits, threatDistance);
-      if (!openWaterAt(state, carrier, x, y)) break;
-      carrier.x = x;
-      carrier.y = y;
-    }
-
-    carrier.supplyRun = 1;
-    // The hangar moved with the ship: stowed hulls sit wherever it now is.
-    for (let u = 0; u < state.units.length; u++) {
-      const unit = state.units[u];
-      if (unit.carrierId !== carrier.id || unit.state !== UNIT_STOWED) continue;
-      unit.x = carrier.x;
-      unit.y = carrier.y;
-      unit.targetX = carrier.x;
-      unit.targetY = carrier.y;
-    }
-  }
+  closeTheDistance(state, CLOSER_PERMIL, clearance);
+  for (let c = 0; c < state.carriers.length; c++) state.carriers[c].supplyRun = 1;
   return state;
 }
 
-export { CLOSER_PERMIL, prepareActionStart, prepareHomeIslands };
+// The late war: every island somebody's, every island built out, every
+// refit fitted. For testing an endgame with human hands on it - the state a
+// four-hour war arrives at, without the four hours.
+//
+// Handing out the whole archipelago collides with the island victory: two
+// thirds ends the war, and an even split of four islands is two thirds of
+// nothing else. Capping the share was the first answer and it was a lie -
+// the menu promised "the whole archipelago held" and dealt one rock each.
+// The honest answer is that a late war is a different war: everyone already
+// holds their third, so holding your third cannot be the win. The bar moves
+// to nearly the whole sea, and the only way to reach it is to take what the
+// other side has built. Derived from startShape, so a replay recomputes it.
+const LATE_VICTORY_PERMIL = 900;
+
+function lateShare(state) {
+  const teams = state.teams.length;
+  let needed = mulDiv(state.islands.length, state.params.victoryIslandPermil, 1000);
+  if (needed < 1) needed = 1;
+  const even = Math.floor(state.islands.length / teams);
+  // The guard stays, for the degenerate maps no menu offers: even at the
+  // raised bar, two islands over two teams would still start won.
+  const capped = needed - 1;
+  if (capped < 1) return 0;
+  return even < capped ? even : capped;
+}
+
+// What the island at round N of the sharing-out becomes. The first is the
+// plant and the depot, the second feeds it, the third defends - and then
+// the pattern repeats, so a big estate is a mix rather than a monoculture.
+function lateRole(round) {
+  if (round === 0) return ROLE_FACTORY;
+  const step = round % 3;
+  if (step === 1) return ROLE_RESOURCE;
+  if (step === 2) return ROLE_DEFENCE;
+  return ROLE_FACTORY;
+}
+
+function developLateIsland(state, team, island, round) {
+  clearTurretsOn(state, island.id);
+  island.turrets = 0;
+  island.owner = team.id;
+  island.nodeHp = state.params.commandCentreHp;
+  island.role = lateRole(round);
+  if (island.role === ROLE_FACTORY) {
+    island.factories = 3;
+    island.warehouses = 2;
+    stockIsland(island, 30000, 6000, 4000, 40);
+    if (round === 0) team.stockpileIsland = island.id;
+  } else if (island.role === ROLE_RESOURCE) {
+    island.warehouses = 2;
+    island.runway = 1;
+    stockIsland(island, 12000, 9000, 500, 6);
+  } else {
+    island.runway = 1;
+    for (let g = 0; g < 3; g++) raiseTurret(state, island);
+    island.turrets = 3;
+    stockIsland(island, 6000, 2000, 1500, 2);
+  }
+}
+
+// Every refit fitted, every store full: the ship a commander would have
+// after a long and successful war.
+function refitCarrier(state, carrier) {
+  carrier.upSpeed = 1;
+  carrier.maxSpeedBase = carrier.maxSpeedUpgraded;
+  carrier.upPd = 1;
+  carrier.upRadar = 1;
+  carrier.radarBase = carrier.radarUpgraded;
+  carrier.upComm = 1;
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.carrierId !== carrier.id || unit.kind !== KIND_MANTA) continue;
+    unit.commPod = 1;
+    break;
+  }
+  applySectionEffects(carrier);
+  carrier.fuel = carrier.fuelCapacity;
+  carrier.ordnance = carrier.ordnanceCapacity;
+  carrier.materials = carrier.materialsCapacity;
+  carrier.chassis = state.economy.chassisPerHull * 2;
+  carrier.hammerRounds = carrier.hammerMax;
+  carrier.supplyRun = 1;
+}
+
+// Half the crossing, not a third: a late war exists to put a human in the
+// endgame, and a twenty-minute sail to first contact is the thing it is
+// meant to skip.
+const LATE_CLOSER_PERMIL = 550;
+
+function prepareLateWar(state) {
+  state.params.victoryIslandPermil = LATE_VICTORY_PERMIL;
+  const share = lateShare(state);
+  for (let round = 0; round < share; round++) {
+    for (let t = 0; t < state.teams.length; t++) {
+      const carrier = carrierOf(state, state.teams[t].id);
+      if (carrier === -1) continue;
+      const island = nearestUnowned(state, carrier.x, carrier.y);
+      if (island === -1) continue;
+      developLateIsland(state, state.teams[t], island, round);
+    }
+  }
+  for (let t = 0; t < state.teams.length; t++) {
+    const carrier = carrierOf(state, state.teams[t].id);
+    if (carrier !== -1) refitCarrier(state, carrier);
+  }
+  const clearance = longestTurretReach(state)
+    + HOSTILE_GUN_MARGIN_METRES * state.params.unitsPerMetre;
+  closeTheDistance(state, LATE_CLOSER_PERMIL, clearance);
+  return state;
+}
+
+export {
+  CLOSER_PERMIL,
+  START_HOME,
+  START_NONE,
+  START_DEVELOPED,
+  START_LATE,
+  prepareActionStart,
+  prepareHomeIslands,
+  prepareLateWar,
+};

@@ -77,9 +77,11 @@ expensive damage state in the game — though the chart keeps its ghosts.
 - **Ready**: every player must be ready before START is offered; the host presses
   it.
 - **Options**: map size, island count, the table size (**2–16 carriers, free
-  for all** — one team each; empty seats become AI), AI opponents, the game
-  type (**Strategy** from zero, or the **Action Game**'s developed war), the
-  point cap, the time cap, and whether the table takes observers.
+  for all** — one team each; empty seats become AI), AI opponents, **how far
+  along the war is** (one ladder of four: a home island each, nothing but the
+  ship, developed, or late — ruled 2026-08-25, see docs/02), the link
+  topology, the point cap, the time cap, and whether the table takes
+  observers.
   `applyLobby(rules, options)` folds the choices into a ruleset, which is then
   hashed into `state.rulesHash` — so the settings a war was played under are part
   of its identity and a replay cannot silently use different ones.

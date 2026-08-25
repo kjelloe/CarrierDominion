@@ -5,7 +5,7 @@ the ones I cannot judge for you and that would spoil the game if they are
 wrong; **B** is confirmation that built things behave; **C** is polish and
 can wait for a rainy evening.
 
-Budget: **A is about 45 minutes**, B another 30, C as long as you like.
+Budget: **A is about an hour**, B another 30, C as long as you like.
 
 For each step: what to do, what I expect, and *what I need back from you* —
 a sentence is plenty. "Fine" is a useful answer. So is "hated it".
@@ -25,8 +25,10 @@ DRONE while an eye is up.
 
 ## A1 — The opening now starts developed *(5 min)*
 
-Start a solo war from the menu (leave the defaults; `the opening` should
-read **a home island**).
+Start a solo war from the menu (leave the defaults; **the war starts** should
+read **a home island each** — it is the first rung of a four-rung ladder,
+new since your last session: *a home island each* / *with nothing but the
+ship* / *developed — a third each* / *late — the whole archipelago held*).
 
 1. Before touching anything, open the **CHART** tab.
 2. Find your island — it is the one with your colour, a runway mark and the
@@ -38,8 +40,8 @@ some stock) with the supply run already going, and a lighter already at sea.
 The race is for your *second* island, not your first.
 
 **Tell me:** does starting from a base feel better or worse than the old
-from-zero opening? This is reversible — the war room and start menu both
-have `the opening: from zero`.
+from-zero opening? This is reversible — click **the war starts** once for
+*with nothing but the ship*, which is exactly the old opening.
 
 ---
 
@@ -114,7 +116,34 @@ minute.
 
 ---
 
-## A5 — The decoy screen and its price *(5 min)*
+## A5 — The late war, which is what you asked for *(15 min)*
+
+The last rung of **the war starts** is the one built for you: the whole
+archipelago already held and developed, every refit already fitted, and the
+enemy's nearest island about 10 km away. No four-hour build-up.
+
+1. From the menu set **islands** to 16 and **the war starts** to *late — the
+   whole archipelago held*. Begin.
+2. Press `Q` before anything else: all four upgrade rows should read as
+   fitted, stores full, the Hammerhead rail loaded.
+3. Open **CHART**. You hold half the sea; there is no neutral ground and the
+   frontier runs down the middle.
+4. Now fight it. Take an island off them — bombard the command centre, or
+   pod it — and see whether an endgame with everything switched on is
+   actually enjoyable or just busy.
+
+**Expect:** the war you would reach after four hours, from the first tick.
+
+**Tell me:** (a) is this the shape you wanted for late-game testing?
+(b) Winning needs **90% of the islands** — 14 of 16 — because everybody
+starts on half and holding half cannot be the win. Too demanding, about
+right, or should a late war just run on points and time? (c) The carriers
+start 10–20 km apart depending on the seed. Close enough, or should the
+late war put you nose to nose?
+
+---
+
+## A6 — The decoy screen and its price *(5 min)*
 
 1. Press `Y`. Four decoys ride out around the ship, and the SCREEN button
    lights.
@@ -197,8 +226,9 @@ assault, distant surf and gunfire. The war room has it too.
 ## C3 — A second seat
 
 `./run.sh --lan`, join from a phone or a second machine, and try the new war
-room rows: **the opening** and **the network**. Turn both off for a war in
-the older, simpler shape.
+room rows: **the war starts** and **the network**. Set the first to *with
+nothing but the ship* and turn the second off for a war in the older,
+simpler shape.
 
 ## C4 — Watch a war back
 
@@ -212,6 +242,9 @@ the older, simpler shape.
    annoying?** It is the single biggest change and the easiest to soften.
 2. **Is the early game still fun now that islands bite (A4)?**
 3. **Is the Hammerhead worth its console (A3), or is it a toy?**
+4. **Is the late war (A5) the late-game test bench you asked for?** The
+   90%-of-the-islands bar and how close the carriers start are both one
+   number each.
 
 Everything in A is tuned by one or two numbers. Say the word and I move
 them.

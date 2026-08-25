@@ -184,11 +184,16 @@ network conserves goods, and spectators see a chart instead of one side's war.
 
 The 2026-08-23 batch scaled the table up: carrier refits (speed, point
 defence, radar range - built at a factory like anything else), a replay
-viewer, the Action Game start (the developed war, minutes from contact),
+viewer, the developed-war start (minutes from contact),
 lobbies of up to 16 carriers free-for-all, observers as the referee - behind
 the table's own on/off switch - the High tier's Preetham sky and mirror
 water, CI on every push, and a written plan (docs/08) for the Luau/Roblox
 twin and the true mobile tier.
+
+How far along a war starts is now one ladder of four (2026-08-25): a home
+island each, nothing but the ship, developed, or **late** — the whole
+archipelago held, built and refitted, for testing an endgame without playing
+four hours to reach one.
 
 The 2026-08-24/25 source reviews then closed the gap to the original: the
 astern gear, the signals log, island names and the location line, hangar
