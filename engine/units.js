@@ -33,6 +33,10 @@ const ORDER_ATTACK = 5;
 const ORDER_ESCORT = 6;
 // Land on a friendly island runway, refuel from its stock, await relaunch.
 const ORDER_LAND = 7;
+// KIND 3: the Viewing Drone (ruled 2026-08-25) - a slow aerial camera, the
+// eye the Hammerhead aims through. No arms, no orders: it climbs, drifts
+// down over its endurance, and is gone.
+const KIND_DRONE = 3;
 
 function createManta(id, team, carrierId, rules, unitsPerMetre) {
   const stats = rules.units.manta;
@@ -78,6 +82,7 @@ function createManta(id, team, carrierId, rules, unitsPerMetre) {
     blocked: 0,
     avoidTicks: 0,
     avoidHeading: 0,
+    sinkRate: 0,
     pod: 0,
     virus: 0,
     orderTargetKind: -1,
@@ -140,6 +145,7 @@ function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
     blocked: 0,
     avoidTicks: 0,
     avoidHeading: 0,
+    sinkRate: 0,
     // A pod is standard complement - the original sailed with them - but a
     // virus bomb is a munition, drawn from the ship's ordnance store at the
     // ramp (engine/hangar.js provisionWalrus), not carried from the shipyard.
@@ -208,6 +214,7 @@ function createLighter(id, team, carrierId, rules, unitsPerMetre) {
     blocked: 0,
     avoidTicks: 0,
     avoidHeading: 0,
+    sinkRate: 0,
     pod: 0,
     virus: 0,
     orderTargetKind: -1,
@@ -219,6 +226,72 @@ function createLighter(id, team, carrierId, rules, unitsPerMetre) {
     cargoCap: stats.cargoCapacity,
     loadRange: stats.loadRangeMetres * unitsPerMetre,
     workRate: stats.workPerTick,
+    arms: [],
+    weapon: -1,
+    cooldown: 0,
+    heat: 0,
+    heatAccum: 0,
+    overheated: 0,
+  };
+}
+
+// The Viewing Drone: the lighter's record shape (the canonical walk wants
+// one field set per list), with the aerostat's numbers. Fuel IS endurance:
+// one unit per tick, burned by the ordinary burn machinery.
+function createDrone(id, team, carrierId, rules, unitsPerMetre) {
+  const stats = rules.units.drone;
+  return {
+    id: id,
+    team: team,
+    kind: KIND_DRONE,
+    carrierId: carrierId,
+    landedIsland: -1,
+    state: UNIT_STOWED,
+    order: ORDER_HOLD,
+    x: 0,
+    y: 0,
+    z: 0,
+    heading: 0,
+    speed: 0,
+    hp: stats.hull,
+    maxHp: stats.hull,
+    fuel: stats.enduranceTicks,
+    fuelAccum: 0,
+    targetX: 0,
+    targetY: 0,
+    control: -1,
+    throttle: 0,
+    rudder: 0,
+    climb: 0,
+    maxSpeed: 0,
+    minSpeed: 0,
+    accel: 0,
+    turnRate: 0,
+    cruiseAltitude: stats.ceilingMetres * unitsPerMetre,
+    ceiling: stats.ceilingMetres * unitsPerMetre,
+    climbRate: stats.climbMetresPerTick * unitsPerMetre,
+    radar: stats.viewRadiusMetres * unitsPerMetre,
+    fuelCapacity: stats.enduranceTicks,
+    fuelBurn: 100,
+    fuelBurnHover: 100,
+    arriveRadius: 0,
+    maxClimbPermil: 0,
+    landSpeed: 0,
+    blocked: 0,
+    avoidTicks: 0,
+    avoidHeading: 0,
+    sinkRate: stats.sinkMetresPerTick * unitsPerMetre,
+    pod: 0,
+    virus: 0,
+    orderTargetKind: -1,
+    orderTargetId: -1,
+    cargoFuel: 0,
+    cargoMaterials: 0,
+    cargoOrdnance: 0,
+    cargoChassis: 0,
+    cargoCap: 0,
+    loadRange: 0,
+    workRate: 0,
     arms: [],
     weapon: -1,
     cooldown: 0,
@@ -278,6 +351,7 @@ function copyUnit(unit) {
     blocked: unit.blocked,
     avoidTicks: unit.avoidTicks,
     avoidHeading: unit.avoidHeading,
+    sinkRate: unit.sinkRate,
     pod: unit.pod,
     virus: unit.virus,
     orderTargetKind: unit.orderTargetKind,
@@ -386,6 +460,8 @@ export {
   leakFuel,
   UNIT_LANDED,
   ORDER_LAND,
+  KIND_DRONE,
+  createDrone,
   KIND_MANTA,
   KIND_WALRUS,
   KIND_LIGHTER,

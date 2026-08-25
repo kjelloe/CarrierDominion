@@ -199,6 +199,28 @@
       "heatCoolPer100Ticks": 0,
       "heatReadyPermil": 0,
       "ordnancePerRound": 25
+    },
+    {
+      "key": "hammerhead",
+      "comment": "The carrier's heavy surface arm (ruled 2026-08-25, player-only): aimed by crosshair through a Viewing Drone's picture, flies low and detonates at the mark. Useless against aircraft, decisive against emplacements and shipping. Rounds are dear and finite.",
+      "guided": 0,
+      "rangeMetres": 8000,
+      "damage": 60,
+      "cooldownTicks": 100,
+      "magazine": 4,
+      "speedUnitsPerTick": 3840,
+      "turnRateBamPerTick": 0,
+      "blastRadiusMetres": 60,
+      "hitsAir": 0,
+      "hitsSurface": 1,
+      "splash": 1,
+      "trigger": 0,
+      "lifeTicks": 0,
+      "heatPerShot": 0,
+      "heatMax": 0,
+      "heatCoolPer100Ticks": 0,
+      "heatReadyPermil": 0,
+      "ordnancePerRound": 40
     }
   ],
   "loadouts": {

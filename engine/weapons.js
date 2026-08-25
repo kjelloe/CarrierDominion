@@ -11,7 +11,7 @@
 // laser. Flight and damage are in shots.js - this module stops at the trigger.
 
 import { floorDiv, mulDiv } from '../shared/fixed.js';
-import { KIND_MANTA, copyArms, unitEngageable } from './units.js';
+import { KIND_DRONE, KIND_MANTA, copyArms, unitEngageable } from './units.js';
 import { gunCooldown } from './damage.js';
 import { sweepTurrets } from './turret.js';
 import { launchShot, stepShots, TARGET_CARRIER, TARGET_TURRET, TARGET_UNIT } from './shots.js';
@@ -188,7 +188,7 @@ function addHeat(holder, weapon) {
 }
 
 function isAir(kind) {
-  return kind === KIND_MANTA;
+  return kind === KIND_MANTA || kind === KIND_DRONE;
 }
 
 function distSq(ax, ay, az, bx, by, bz) {

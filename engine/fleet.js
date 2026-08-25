@@ -30,7 +30,9 @@ import {
   ORDER_ATTACK,
   ORDER_ESCORT,
   ORDER_HOLD,
+  KIND_DRONE,
   ORDER_LAND,
+  burnUnitFuel,
   UNIT_ACTIVE,
   UNIT_LANDED,
   UNIT_LOST,
@@ -52,6 +54,25 @@ function stepUnits(state) {
       continue;
     }
     if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) continue;
+
+    // The Viewing Drone: no orders, no helm - it climbs to its ceiling,
+    // drifts back down as its endurance burns, and is gone at the water.
+    if (unit.kind === KIND_DRONE) {
+      const dry = burnUnitFuel(unit, unit.fuelBurn) === 1;
+      if (unit.fuel > floorDiv(unit.fuelCapacity, 2) && unit.z < unit.ceiling) {
+        unit.z = unit.z + unit.climbRate;
+        if (unit.z > unit.ceiling) unit.z = unit.ceiling;
+      } else {
+        unit.z = unit.z - unit.sinkRate;
+      }
+      if (dry || unit.z <= 0) {
+        unit.z = 0;
+        unit.state = UNIT_LOST;
+        unit.hp = 0;
+        pushEvent(state.events, EVT_UNIT_LOST, unit.id, unit.team, 0);
+      }
+      continue;
+    }
 
     const carrier = findCarrierById(state, unit.carrierId);
     if (unit.state === UNIT_RETURNING && carrier !== -1) {

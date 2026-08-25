@@ -30,6 +30,7 @@ import {
   CMD_ORDER_UNIT_ESCORT,
   CMD_ORDER_UNIT_LAND,
   CMD_SET_LOADOUT_PRESET,
+  CMD_FIRE_HAMMERHEAD,
   CMD_SET_SUPPLY_BIAS,
   CMD_SURRENDER,
   CMD_SET_REPAIR_PRIORITY,
@@ -72,8 +73,11 @@ import { checkFlares, fireFlares, stepFlares } from './flare.js';
 import { stepContacts } from './contacts.js';
 import { stepUnits } from './fleet.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
+import { launchShot } from './shots.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
+import { dist2D, floorDiv } from '../shared/fixed.js';
 import {
+  KIND_DRONE,
   KIND_LIGHTER,
   KIND_MANTA,
   ORDER_ATTACK,
@@ -163,6 +167,42 @@ function liftOff(unit) {
   unit.state = UNIT_ACTIVE;
   unit.landedIsland = -1;
   unit.throttle = 100;
+}
+
+// The Hammerhead (ruled 2026-08-25, player-only): valid only while one of
+// the team's Viewing Drones is up and the mark is inside ITS picture, and
+// inside the missile's own range from the ship. The round is a splash shot
+// whose life ends AT the mark - splash rounds detonate at the end of their
+// run, so the existing rule does the fuzing.
+const HAMMERHEAD_WEAPON = 9;
+
+function applyFireHammerhead(next, command) {
+  if (next.phase !== PHASE_RUNNING) return reject(next);
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1 || carrier.hull <= 0) return reject(next);
+  if (carrier.hammerRounds <= 0 || carrier.hammerCooldown > 0) return reject(next);
+  const weaponId = HAMMERHEAD_WEAPON;
+  const weapon = next.weapons[weaponId];
+  if (weapon === undefined) return reject(next);
+  const range = dist2D(carrier.x, carrier.y, command.x, command.y);
+  if (range > weapon.range) return reject(next);
+  let seen = 0;
+  for (let i = 0; i < next.units.length; i++) {
+    const unit = next.units[i];
+    if (unit.team !== carrier.team || unit.kind !== KIND_DRONE) continue;
+    if (unit.state !== UNIT_ACTIVE) continue;
+    if (dist2D(unit.x, unit.y, command.x, command.y) <= unit.radar) seen = 1;
+  }
+  if (seen === 0) return reject(next);
+  if (carrier.ordnance < weapon.ordnancePerRound) return reject(next);
+  carrier.ordnance = carrier.ordnance - weapon.ordnancePerRound;
+  carrier.hammerRounds = carrier.hammerRounds - 1;
+  carrier.hammerCooldown = weapon.cooldown;
+  const shot = launchShot(next, carrier.team, carrier.x, carrier.y, 64,
+    weaponId, weapon, { kind: 0, id: -1, x: command.x, y: command.y, z: 0 });
+  const flight = weapon.speed > 0 ? floorDiv(range, weapon.speed) : 1;
+  shot.life = flight < 1 ? 1 : flight;
+  return next;
 }
 
 function applyLoadoutPreset(next, command) {
@@ -512,6 +552,11 @@ function advanceTick(next) {
     stepAi(next, next.params.aiCadenceTicks, next.params.aiStandoff);
   }
   stepCarriers(next);
+  for (let i = 0; i < next.carriers.length; i++) {
+    if (next.carriers[i].hammerCooldown > 0) {
+      next.carriers[i].hammerCooldown = next.carriers[i].hammerCooldown - 1;
+    }
+  }
   stepUnits(next);
   // The leash bites where the tick's movement put everyone: a craft that
   // crossed the loss line this tick is gone before it can shoot from there.
@@ -561,6 +606,7 @@ function apply(state, command) {
   if (type === CMD_ORDER_UNIT_ESCORT) return applyUnitEscort(next, command);
   if (type === CMD_ORDER_UNIT_LAND) return applyUnitLand(next, command);
   if (type === CMD_SET_LOADOUT_PRESET) return applyLoadoutPreset(next, command);
+  if (type === CMD_FIRE_HAMMERHEAD) return applyFireHammerhead(next, command);
   if (type === CMD_SET_SUPPLY_BIAS) return applySupplyBias(next, command);
   if (type === CMD_LAUNCH_UNIT) return applyLaunch(next, command);
   if (type === CMD_RECALL_UNIT) return applyRecall(next, command);

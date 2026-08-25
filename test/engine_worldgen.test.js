@@ -29,13 +29,15 @@ const rules = loadRules();
 // launches at tick 1, which are the two supply lighters sailing from the
 // new home depots. That is the ruling working, not a bug. Re-pinned again
 // the same day for the loadout presets (carrier.mantaPreset,
-// state.presets, the weapons.json table) - drift-free. The
+// state.presets, the weapons.json table) - drift-free, and once more for
+// the Hammerhead (carrier battery fields, the weapon row, two Viewing
+// Drones aboard every carrier) - drift-free. The
 // MAP itself has not changed since
 // the first pin: islands, nodes and start positions are byte-identical
 // throughout (the ring-walk fix in the same slice touches only tables of
 // more than four teams, which no pin covers).
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = 'd2f137109de7f1dd';
+const GOLDEN_WORLD_HASH = '97f5ba24e00a8de7';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

@@ -49,7 +49,8 @@
     "podMaterials": 80,
     "virusOrdnance": 120,
     "radarUpgradedRangeMetres": 12000,
-    "pdUpgradedCooldownTicks": 10
+    "pdUpgradedCooldownTicks": 10,
+    "hammerheadRounds": 4
   },
   "manta": {
     "hull": 60,
@@ -91,5 +92,15 @@
     "loadRangeMetres": 400,
     "workPerTick": 400,
     "arriveRadiusMetres": 90
+  },
+  "drone": {
+    "comment": "The Viewing Drone (ruled 2026-08-25): a slow aerial camera. It climbs to its ceiling, drifts down over its endurance, and is gone - the eye the Hammerhead aims through. Two aboard; they are equipment, not aircraft.",
+    "ceilingMetres": 600,
+    "climbMetresPerTick": 2,
+    "sinkMetresPerTick": 1,
+    "enduranceTicks": 2400,
+    "viewRadiusMetres": 4000,
+    "perCarrier": 2,
+    "hull": 30
   }
 }

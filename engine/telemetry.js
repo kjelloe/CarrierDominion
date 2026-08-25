@@ -15,7 +15,7 @@
 
 import { dist2D } from '../shared/fixed.js';
 import { EVT_TELEMETRY_LOST, pushEvent } from './events.js';
-import { KIND_LIGHTER, UNIT_ACTIVE, UNIT_LOST, UNIT_RETURNING } from './units.js';
+import { KIND_MANTA, KIND_WALRUS, UNIT_ACTIVE, UNIT_LOST, UNIT_RETURNING } from './units.js';
 
 function carrierById(state, id) {
   for (let i = 0; i < state.carriers.length; i++) {
@@ -28,7 +28,9 @@ function carrierById(state, id) {
 // view so the cockpit warning and the engine's verdict cannot disagree.
 function telemetryState(state, unit) {
   if (state.params.telemetryLoss <= 0) return 0;
-  if (unit.kind === KIND_LIGHTER) return 0;
+  // Only the strike drones are leashed: the lighter is autonomous and the
+  // Viewing Drone IS the relay - it does not ride one.
+  if (unit.kind !== KIND_MANTA && unit.kind !== KIND_WALRUS) return 0;
   // In the hangar or down on a runway the island's Command Centre holds the
   // aircraft (manual item 2) - no link to lose.
   if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return 0;

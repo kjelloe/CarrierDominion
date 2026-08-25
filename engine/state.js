@@ -12,7 +12,7 @@ import { atan2B } from '../shared/trig.js';
 import { hashState } from '../shared/statehash.js';
 import { seedRng } from '../shared/prng.js';
 import { HEADING_MANUAL } from './commands.js';
-import { copyUnit, createLighter, createManta, createWalrus } from './units.js';
+import { KIND_DRONE, copyUnit, createDrone, createLighter, createManta, createWalrus } from './units.js';
 import { copyBrain, createBrain } from './ai_carrier.js';
 import { copyEconomy, createEconomy } from './economy.js';
 import {
@@ -139,6 +139,8 @@ function copyCarrier(carrier) {
     upPd: carrier.upPd,
     upRadar: carrier.upRadar,
     mantaPreset: carrier.mantaPreset,
+    hammerRounds: carrier.hammerRounds,
+    hammerCooldown: carrier.hammerCooldown,
     maxSpeedUpgraded: carrier.maxSpeedUpgraded,
     radarUpgraded: carrier.radarUpgraded,
     pdCooldownUpgraded: carrier.pdCooldownUpgraded,
@@ -317,6 +319,10 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     // The launch loadout preset for the air group (ruled 2026-08-25):
     // 0 balanced, 1 scout, 2 bomber, 3 interceptor - data in weapons.json.
     mantaPreset: 0,
+    // The Hammerhead battery (ruled 2026-08-25): rounds aboard and the
+    // launcher's cooldown. Fired only through a Viewing Drone's picture.
+    hammerRounds: carrierRules.hammerheadRounds === undefined ? 0 : carrierRules.hammerheadRounds,
+    hammerCooldown: 0,
     maxSpeedUpgraded: carrierRules.maxSpeedUpgradedUnitsPerTick,
     radarUpgraded: carrierRules.radarUpgradedRangeMetres * unitsPerMetre,
     pdCooldownUpgraded: carrierRules.pdUpgradedCooldownTicks,
@@ -409,9 +415,18 @@ function createInitialState(seed, rules) {
     for (let l = 0; l < rules.units.carrier.hangarLighters; l++) {
       units.push(createLighter(units.length, carrier.team, carrier.id, rules, unitsPerMetre));
     }
+    // The Viewing Drones (ruled 2026-08-25): aboard from tick zero like
+    // every hull - launching is a state change, not a spawn.
+    const droneCount = rules.units.drone === undefined ? 0 : rules.units.drone.perCarrier;
+    for (let d = 0; d < droneCount; d++) {
+      units.push(createDrone(units.length, carrier.team, carrier.id, rules, unitsPerMetre));
+    }
   }
-  // Every hull's magazines, full, from the loadout for its kind.
+  // Every hull's magazines, full, from the loadout for its kind. The
+  // Viewing Drone (kind 3) is unarmed - and loadouts[3] is the CARRIER's
+  // battery, an index collision that must never reach a unit.
   for (let i = 0; i < units.length; i++) {
+    if (units[i].kind === KIND_DRONE) continue;
     units[i].arms = createArms(loadouts[units[i].kind], weapons);
     units[i].weapon = units[i].arms.length > 0 ? units[i].arms[0].w : -1;
   }

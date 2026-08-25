@@ -40,6 +40,8 @@ const CMD_SURRENDER = 'surrender';
 const CMD_ORDER_UNIT_LAND = 'order_unit_land';
 // The launch loadout preset (ruled 2026-08-25): scout / bomber / interceptor.
 const CMD_SET_LOADOUT_PRESET = 'set_loadout_preset';
+// The Hammerhead: aimed at a POINT the Viewing Drone can see.
+const CMD_FIRE_HAMMERHEAD = 'fire_hammerhead';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -105,7 +107,8 @@ function validateCommand(command) {
   if (type === CMD_LAUNCH_UNIT) {
     if (!isInt(command.carrierId)) return 'carrierId must be an integer';
     if (!isInt(command.kind)) return 'kind must be an integer';
-    if (command.kind < 0 || command.kind > 2) return 'no such unit kind';
+    // Kind 3 is the Viewing Drone (ruled 2026-08-25).
+    if (command.kind < 0 || command.kind > 3) return 'no such unit kind';
     return '';
   }
   if (type === CMD_SET_STOCKPILE) {
@@ -158,6 +161,12 @@ function validateCommand(command) {
   }
   if (type === CMD_ORDER_UNIT_ESCORT) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
+    return '';
+  }
+  if (type === CMD_FIRE_HAMMERHEAD) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.x) || !isInt(command.y)) return 'target must be integer coordinates';
+    if (command.x < 0 || command.y < 0) return 'target off the map';
     return '';
   }
   if (type === CMD_SET_LOADOUT_PRESET) {
@@ -276,6 +285,7 @@ export {
   CMD_SURRENDER,
   CMD_ORDER_UNIT_LAND,
   CMD_SET_LOADOUT_PRESET,
+  CMD_FIRE_HAMMERHEAD,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

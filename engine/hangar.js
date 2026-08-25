@@ -17,6 +17,7 @@ import {
   UNIT_ACTIVE,
   UNIT_RETURNING,
   UNIT_STOWED,
+  KIND_DRONE,
 } from './units.js';
 
 const LAUNCH_AHEAD_UNITS = 120 * 256; // 120 m clear of the bow
@@ -83,7 +84,13 @@ function launchUnit(unit, carrier, deckHeightUnits) {
   unit.throttle = 0;
   unit.rudder = 0;
   unit.climb = 0;
-  if (unit.kind === KIND_MANTA) {
+  if (unit.kind === KIND_DRONE) {
+    // The aerostat goes straight up from amidships.
+    unit.x = carrier.x;
+    unit.y = carrier.y;
+    unit.z = deckHeightUnits;
+    unit.speed = 0;
+  } else if (unit.kind === KIND_MANTA) {
     unit.x = carrier.x + aheadX;
     unit.y = carrier.y + aheadY;
     unit.z = deckHeightUnits;

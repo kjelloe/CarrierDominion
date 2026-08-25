@@ -135,8 +135,10 @@ test('authority covers the logistics commands too', () => {
     /another team/,
   );
   assert.equal(checkAuthority(state, 0, { type: 'launch_unit', carrierId: 0, kind: 2 }), '');
+  // Kind 3 is the Viewing Drone now (ruled 2026-08-25); 4 is still nothing.
+  assert.equal(checkAuthority(state, 0, { type: 'launch_unit', carrierId: 0, kind: 3 }), '');
   assert.match(
-    checkAuthority(state, 0, { type: 'launch_unit', carrierId: 0, kind: 3 }),
+    checkAuthority(state, 0, { type: 'launch_unit', carrierId: 0, kind: 4 }),
     /no such unit kind/,
   );
   assert.match(

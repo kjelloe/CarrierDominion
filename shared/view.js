@@ -71,6 +71,8 @@ function ownCarrierView(carrier) {
     upPd: carrier.upPd,
     upRadar: carrier.upRadar,
     mantaPreset: carrier.mantaPreset,
+    hammerRounds: carrier.hammerRounds,
+    hammerCooldown: carrier.hammerCooldown,
     sections: sectionsView(carrier.sections),
     contact: 0,
   };
@@ -112,6 +114,8 @@ function contactView(carrier) {
     upPd: 0,
     upRadar: 0,
     mantaPreset: 0,
+    hammerRounds: -1,
+    hammerCooldown: -1,
     // What is broken aboard an enemy ship is exactly what you would most like
     // to know, so a radar contact tells you nothing about it.
     sections: [],
