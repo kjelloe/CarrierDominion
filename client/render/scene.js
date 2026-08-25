@@ -14,6 +14,7 @@ import {
   buildCarrier,
   buildCommandNode,
   buildDroneUnit,
+  buildDecoyUnit,
   buildIslandMesh,
   buildLighter,
   buildManta,
@@ -295,6 +296,7 @@ function syncUnits(view3d, view) {
       if (unit.kind === 0) group = buildManta(colour, detail);
       else if (unit.kind === 2) group = buildLighter(colour, detail);
       else if (unit.kind === 3) group = buildDroneUnit(colour);
+      else if (unit.kind === 4) group = buildDecoyUnit(colour);
       else group = buildWalrus(colour, detail);
       if (unit.contact === 1) dimForContact(group);
       view3d.units[unit.id] = group;

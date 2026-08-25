@@ -25,7 +25,7 @@ import {
   pushEvent,
   EVT_NODE_DESTROYED,
 } from './events.js';
-import { UNIT_LOST, unitEngageable } from './units.js';
+import { KIND_DECOY, UNIT_LOST, unitEngageable } from './units.js';
 import { clearWorks } from './island.js';
 import { armourMultiplierPermil, damageSection, sectionAt } from './damage.js';
 import { worldHeightAt } from './heightmap.js';
@@ -166,7 +166,34 @@ function findTargetPosition(state, shot) {
 // A guided round re-aims every tick, within its turn rate. When its target is
 // gone it keeps its last heading and flies on until its life runs out, which is
 // both simpler and more honest than deleting it mid-air.
+// The standing bait (ruled 2026-08-25): a guided round hunting a CARRIER
+// that passes near one of the victim's deployed decoys takes the bait -
+// permanently. The flare breaks a lock in a flash; the decoy stands there
+// being convincing. Both are the original's systems, side by side.
+function seduce(state, shot) {
+  if (shot.guided !== 1 || shot.targetKind !== TARGET_CARRIER) return;
+  if (state.params.decoySeduce <= 0) return;
+  let victim = -1;
+  for (let i = 0; i < state.carriers.length; i++) {
+    if (state.carriers[i].id === shot.targetId) victim = state.carriers[i];
+  }
+  if (victim === -1) return;
+  const reach = state.params.decoySeduce;
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.team !== victim.team || unit.kind !== KIND_DECOY) continue;
+    if (unit.state !== 1 || unit.hp <= 0) continue;
+    const dx = shot.x - unit.x;
+    const dy = shot.y - unit.y;
+    if (dx * dx + dy * dy > reach * reach) continue;
+    shot.targetKind = TARGET_UNIT;
+    shot.targetId = unit.id;
+    return;
+  }
+}
+
 function guide(state, shot) {
+  seduce(state, shot);
   if (shot.guided !== 1) return;
   const target = findTargetPosition(state, shot);
   if (target === -1) return;

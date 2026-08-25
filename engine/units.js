@@ -37,6 +37,9 @@ const ORDER_LAND = 7;
 // eye the Hammerhead aims through. No arms, no orders: it climbs, drifts
 // down over its endurance, and is gone.
 const KIND_DRONE = 3;
+// KIND 4: the passive defence decoy (ruled 2026-08-25) - an inflatable
+// stationed off the ship, bait for seekers, dead weight for the engines.
+const KIND_DECOY = 4;
 
 function createManta(id, team, carrierId, rules, unitsPerMetre) {
   const stats = rules.units.manta;
@@ -301,6 +304,27 @@ function createDrone(id, team, carrierId, rules, unitsPerMetre) {
   };
 }
 
+// The decoy: the drone's record shape, riding the ship in rigid formation.
+function createDecoy(id, team, carrierId, rules, unitsPerMetre) {
+  const stats = rules.units.decoy;
+  const record = createDrone(id, team, carrierId, {
+    units: {
+      drone: {
+        ceilingMetres: 0, climbMetresPerTick: 0, sinkMetresPerTick: 0,
+        enduranceTicks: 1, viewRadiusMetres: 0, perCarrier: 0,
+        hull: stats.hull,
+      },
+    },
+  }, unitsPerMetre);
+  record.kind = KIND_DECOY;
+  record.fuel = 0;
+  record.fuelCapacity = 0;
+  record.fuelBurn = 0;
+  record.fuelBurnHover = 0;
+  record.radar = 0;
+  return record;
+}
+
 // The magazines, copied by value. Kept here rather than imported from
 // weapons.js so the two modules do not have to know about each other: units.js
 // owns the record, weapons.js owns what the record means.
@@ -462,6 +486,8 @@ export {
   ORDER_LAND,
   KIND_DRONE,
   createDrone,
+  KIND_DECOY,
+  createDecoy,
   KIND_MANTA,
   KIND_WALRUS,
   KIND_LIGHTER,

@@ -856,6 +856,7 @@ function updateActionButtons() {
   );
   const enabled = {
     x: alive, e: alive, l: alive, k: alive, q: alive, z: alive,
+    y: alive,
     c: true, m: true,
     1: alive && stowed(KIND_MANTA),
     2: alive && stowed(KIND_WALRUS),
@@ -939,6 +940,17 @@ function bindInput(level) {
     else if (key === '1') launch(KIND_MANTA);
     else if (key === '2') launch(KIND_WALRUS);
     else if (key === '3') launch(3); // the Viewing Drone
+    else if (key === 'y') {
+      // One button either way: out if any are home, home if any are out.
+      if (state.view !== undefined && state.carrierId >= 0) {
+        const anyOut = state.view.units.some(
+          (u) => u.team === state.view.team && u.kind === 4 && u.state === 1,
+        );
+        state.transport.send({
+          type: anyOut ? 'dock_decoys' : 'deploy_decoys', carrierId: state.carrierId,
+        });
+      }
+    }
     // Direct hull select (the original's 1-4; ours are taken by the launch
     // keys, so the row above them serves): 5-8 name the Nth hull that is out.
     else if (key >= '5' && key <= '8') {
@@ -1370,7 +1382,7 @@ function updateAlwaysOn() {
     for (const unit of out) {
       const chip = document.createElement('div');
       chip.className = 'unit-chip';
-      const letter = ['M', 'W', 'L', 'D'][unit.kind] ?? '?';
+      const letter = ['M', 'W', 'L', 'D', 'Y'][unit.kind] ?? '?';
       chip.textContent = `${letter}${unit.id}${unit.state === 4 ? '\u2193' : ''}`;
       chip.addEventListener('pointerdown', (event) => {
         event.preventDefault();

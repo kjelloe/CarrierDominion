@@ -61,7 +61,8 @@ test('both hangars are full at tick zero and nothing is on the map', () => {
   const perCarrier = rules.units.carrier.hangarMantas
     + rules.units.carrier.hangarWalruses
     + rules.units.carrier.hangarLighters
-    + rules.units.drone.perCarrier; // the Viewing Drones are aboard too
+    + rules.units.drone.perCarrier // the Viewing Drones are aboard too
+    + rules.units.decoy.perCarrier; // and the defence decoys
   assert.equal(state.units.length, perCarrier * state.carriers.length);
   for (const unit of state.units) {
     assert.equal(unit.state, UNIT_STOWED);

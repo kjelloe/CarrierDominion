@@ -102,5 +102,13 @@
     "viewRadiusMetres": 4000,
     "perCarrier": 2,
     "hull": 30
+  },
+  "decoy": {
+    "comment": "The passive defence drones (ruled 2026-08-25, one-button): four inflatable decoys stationed around the ship. A guided round hunting the carrier that passes near one takes the bait; the price of the shield is a quarter of the ship's top speed while they ride out.",
+    "hull": 30,
+    "perCarrier": 4,
+    "stationMetres": 600,
+    "speedPenaltyPermil": 250,
+    "seduceRadiusMetres": 900
   }
 }

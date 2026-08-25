@@ -31,6 +31,8 @@ import {
   CMD_ORDER_UNIT_LAND,
   CMD_SET_LOADOUT_PRESET,
   CMD_FIRE_HAMMERHEAD,
+  CMD_DEPLOY_DECOYS,
+  CMD_DOCK_DECOYS,
   CMD_SET_SUPPLY_BIAS,
   CMD_SURRENDER,
   CMD_SET_REPAIR_PRIORITY,
@@ -71,12 +73,13 @@ import { setRole, startBuild, stepBuild } from './island.js';
 import { setPriority } from './damage.js';
 import { checkFlares, fireFlares, stepFlares } from './flare.js';
 import { stepContacts } from './contacts.js';
-import { stepUnits } from './fleet.js';
+import { stepDecoyScreens, stepUnits } from './fleet.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchShot } from './shots.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import { dist2D, floorDiv } from '../shared/fixed.js';
 import {
+  KIND_DECOY,
   KIND_DRONE,
   KIND_LIGHTER,
   KIND_MANTA,
@@ -87,6 +90,7 @@ import {
   UNIT_ACTIVE,
   UNIT_LANDED,
   UNIT_RETURNING,
+  UNIT_STOWED,
   findUnit,
 } from './units.js';
 import { designated } from './targeting.js';
@@ -202,6 +206,33 @@ function applyFireHammerhead(next, command) {
     weaponId, weapon, { kind: 0, id: -1, x: command.x, y: command.y, z: 0 });
   const flight = weapon.speed > 0 ? floorDiv(range, weapon.speed) : 1;
   shot.life = flight < 1 ? 1 : flight;
+  return next;
+}
+
+// The decoy screen, one button either way: DEPLOY puts every sound decoy
+// on station, DOCK brings every survivor home. The stations themselves are
+// held by the fleet step - a rigid formation on the ship's own heading.
+function applyDecoys(next, command, out) {
+  if (next.phase !== PHASE_RUNNING) return reject(next);
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1 || carrier.hull <= 0) return reject(next);
+  let moved = 0;
+  for (let i = 0; i < next.units.length; i++) {
+    const unit = next.units[i];
+    if (unit.carrierId !== carrier.id || unit.kind !== KIND_DECOY || unit.hp <= 0) continue;
+    if (out === 1 && unit.state === UNIT_STOWED) {
+      unit.state = UNIT_ACTIVE;
+      unit.x = carrier.x;
+      unit.y = carrier.y;
+      moved += 1;
+    } else if (out === 0 && unit.state === UNIT_ACTIVE) {
+      unit.state = UNIT_STOWED;
+      unit.x = carrier.x;
+      unit.y = carrier.y;
+      moved += 1;
+    }
+  }
+  if (moved === 0) return reject(next);
   return next;
 }
 
@@ -551,6 +582,7 @@ function advanceTick(next) {
   if (next.phase === PHASE_RUNNING) {
     stepAi(next, next.params.aiCadenceTicks, next.params.aiStandoff);
   }
+  stepDecoyScreens(next);
   stepCarriers(next);
   for (let i = 0; i < next.carriers.length; i++) {
     if (next.carriers[i].hammerCooldown > 0) {
@@ -607,6 +639,8 @@ function apply(state, command) {
   if (type === CMD_ORDER_UNIT_LAND) return applyUnitLand(next, command);
   if (type === CMD_SET_LOADOUT_PRESET) return applyLoadoutPreset(next, command);
   if (type === CMD_FIRE_HAMMERHEAD) return applyFireHammerhead(next, command);
+  if (type === CMD_DEPLOY_DECOYS) return applyDecoys(next, command, 1);
+  if (type === CMD_DOCK_DECOYS) return applyDecoys(next, command, 0);
   if (type === CMD_SET_SUPPLY_BIAS) return applySupplyBias(next, command);
   if (type === CMD_LAUNCH_UNIT) return applyLaunch(next, command);
   if (type === CMD_RECALL_UNIT) return applyRecall(next, command);

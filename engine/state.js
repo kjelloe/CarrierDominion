@@ -12,7 +12,7 @@ import { atan2B } from '../shared/trig.js';
 import { hashState } from '../shared/statehash.js';
 import { seedRng } from '../shared/prng.js';
 import { HEADING_MANUAL } from './commands.js';
-import { KIND_DRONE, copyUnit, createDrone, createLighter, createManta, createWalrus } from './units.js';
+import { KIND_DECOY, KIND_DRONE, copyUnit, createDecoy, createDrone, createLighter, createManta, createWalrus } from './units.js';
 import { copyBrain, createBrain } from './ai_carrier.js';
 import { copyEconomy, createEconomy } from './economy.js';
 import {
@@ -141,6 +141,8 @@ function copyCarrier(carrier) {
     mantaPreset: carrier.mantaPreset,
     hammerRounds: carrier.hammerRounds,
     hammerCooldown: carrier.hammerCooldown,
+    decoysOut: carrier.decoysOut,
+    decoyPenalty: carrier.decoyPenalty,
     maxSpeedUpgraded: carrier.maxSpeedUpgraded,
     radarUpgraded: carrier.radarUpgraded,
     pdCooldownUpgraded: carrier.pdCooldownUpgraded,
@@ -223,6 +225,8 @@ function copyState(state) {
       telemetryFade: state.params.telemetryFade,
       telemetryLoss: state.params.telemetryLoss,
       commandCentreHp: state.params.commandCentreHp,
+      decoyStation: state.params.decoyStation,
+      decoySeduce: state.params.decoySeduce,
       victoryIslandPermil: state.params.victoryIslandPermil,
       pointCap: state.params.pointCap,
       timeCapTicks: state.params.timeCapTicks,
@@ -323,6 +327,10 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     // launcher's cooldown. Fired only through a Viewing Drone's picture.
     hammerRounds: carrierRules.hammerheadRounds === undefined ? 0 : carrierRules.hammerheadRounds,
     hammerCooldown: 0,
+    // The decoy screen: 1 while any decoy rides out, and the top-speed
+    // price the ship pays for it (both from data at build time).
+    decoysOut: 0,
+    decoyPenalty: 0,
     maxSpeedUpgraded: carrierRules.maxSpeedUpgradedUnitsPerTick,
     radarUpgraded: carrierRules.radarUpgradedRangeMetres * unitsPerMetre,
     pdCooldownUpgraded: carrierRules.pdUpgradedCooldownTicks,
@@ -421,12 +429,18 @@ function createInitialState(seed, rules) {
     for (let d = 0; d < droneCount; d++) {
       units.push(createDrone(units.length, carrier.team, carrier.id, rules, unitsPerMetre));
     }
+    carrier.decoyPenalty = rules.units.decoy === undefined
+      ? 0 : rules.units.decoy.speedPenaltyPermil;
+    const decoyCount = rules.units.decoy === undefined ? 0 : rules.units.decoy.perCarrier;
+    for (let d = 0; d < decoyCount; d++) {
+      units.push(createDecoy(units.length, carrier.team, carrier.id, rules, unitsPerMetre));
+    }
   }
   // Every hull's magazines, full, from the loadout for its kind. The
   // Viewing Drone (kind 3) is unarmed - and loadouts[3] is the CARRIER's
   // battery, an index collision that must never reach a unit.
   for (let i = 0; i < units.length; i++) {
-    if (units[i].kind === KIND_DRONE) continue;
+    if (units[i].kind === KIND_DRONE || units[i].kind === KIND_DECOY) continue;
     units[i].arms = createArms(loadouts[units[i].kind], weapons);
     units[i].weapon = units[i].arms.length > 0 ? units[i].arms[0].w : -1;
   }
@@ -474,6 +488,11 @@ function createInitialState(seed, rules) {
       // The command centre's Neutron Shields (second source review, item
       // 1): what "vast quantities of firepower" has to chew through.
       commandCentreHp: base.commandCentreHp,
+      // The decoy screen's geometry (units.decoy is otherwise per-hull data).
+      decoyStation: rules.units.decoy === undefined
+        ? 0 : rules.units.decoy.stationMetres * unitsPerMetre,
+      decoySeduce: rules.units.decoy === undefined
+        ? 0 : rules.units.decoy.seduceRadiusMetres * unitsPerMetre,
       victoryIslandPermil: base.victoryIslandPermil,
       pointCap: base.pointCap,
       timeCapTicks: base.timeCapTicks,

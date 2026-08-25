@@ -5,7 +5,8 @@
 // tick, because the carrier it is chasing is itself under way - aiming once at
 // launch would send it to where the ship used to be.
 
-import { floorDiv } from '../shared/fixed.js';
+import { floorDiv, wrapAngle } from '../shared/fixed.js';
+import { mulCos, mulSin } from '../shared/trig.js';
 import { worldHeightAt } from './heightmap.js';
 import {
   DRIVE_ARRIVED,
@@ -30,6 +31,7 @@ import {
   ORDER_ATTACK,
   ORDER_ESCORT,
   ORDER_HOLD,
+  KIND_DECOY,
   KIND_DRONE,
   ORDER_LAND,
   burnUnitFuel,
@@ -54,6 +56,30 @@ function stepUnits(state) {
       continue;
     }
     if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) continue;
+
+    // A decoy on station rides the ship in rigid formation: four points
+    // around the hull on its own heading. It neither burns nor steers -
+    // if it is hit, the sweep takes it like any hull.
+    if (unit.kind === KIND_DECOY) {
+      if (unit.state === UNIT_ACTIVE) {
+        const carrier2 = findCarrierById(state, unit.carrierId);
+        if (carrier2 === -1 || carrier2.hull <= 0) {
+          unit.state = UNIT_LOST;
+          unit.hp = 0;
+          pushEvent(state.events, EVT_UNIT_LOST, unit.id, unit.team, 0);
+          continue;
+        }
+        const slot = decoySlot(state, unit);
+        const bam = wrapAngle(carrier2.heading + slot * 16384);
+        const station = state.params.decoyStation;
+        unit.x = carrier2.x + mulCos(station, bam);
+        unit.y = carrier2.y + mulSin(station, bam);
+        unit.z = 0;
+        unit.heading = carrier2.heading;
+        unit.speed = carrier2.speed;
+      }
+      continue;
+    }
 
     // The Viewing Drone: no orders, no helm - it climbs to its ceiling,
     // drifts back down as its endurance burns, and is gone at the water.
@@ -188,4 +214,33 @@ function refuelFromIsland(state, unit) {
   unit.fuel = unit.fuel + taken;
 }
 
-export { stepUnits };
+// Which of the four stations this decoy holds: its rank among its ship's
+// own decoys, stable because unit ids are stable for the whole war.
+function decoySlot(state, unit) {
+  let slot = 0;
+  for (let i = 0; i < state.units.length; i++) {
+    const other = state.units[i];
+    if (other.carrierId !== unit.carrierId || other.kind !== KIND_DECOY) continue;
+    if (other.id === unit.id) break;
+    slot += 1;
+  }
+  return slot;
+}
+
+// The screen's price: the ship pays a quarter of her top speed while any
+// decoy rides out. Recomputed every tick from what is actually deployed,
+// so the last decoy dying lifts the penalty by itself.
+function stepDecoyScreens(state) {
+  for (let c = 0; c < state.carriers.length; c++) {
+    const carrier = state.carriers[c];
+    let out = 0;
+    for (let i = 0; i < state.units.length; i++) {
+      const unit = state.units[i];
+      if (unit.carrierId === carrier.id && unit.kind === KIND_DECOY
+        && unit.state === UNIT_ACTIVE && unit.hp > 0) out = 1;
+    }
+    carrier.decoysOut = out;
+  }
+}
+
+export { stepUnits, stepDecoyScreens };

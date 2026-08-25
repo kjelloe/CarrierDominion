@@ -42,6 +42,9 @@ const CMD_ORDER_UNIT_LAND = 'order_unit_land';
 const CMD_SET_LOADOUT_PRESET = 'set_loadout_preset';
 // The Hammerhead: aimed at a POINT the Viewing Drone can see.
 const CMD_FIRE_HAMMERHEAD = 'fire_hammerhead';
+// The decoy screen, one button (ruled 2026-08-25): all four out, all home.
+const CMD_DEPLOY_DECOYS = 'deploy_decoys';
+const CMD_DOCK_DECOYS = 'dock_decoys';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -161,6 +164,10 @@ function validateCommand(command) {
   }
   if (type === CMD_ORDER_UNIT_ESCORT) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
+    return '';
+  }
+  if (type === CMD_DEPLOY_DECOYS || type === CMD_DOCK_DECOYS) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
     return '';
   }
   if (type === CMD_FIRE_HAMMERHEAD) {
@@ -286,6 +293,8 @@ export {
   CMD_ORDER_UNIT_LAND,
   CMD_SET_LOADOUT_PRESET,
   CMD_FIRE_HAMMERHEAD,
+  CMD_DEPLOY_DECOYS,
+  CMD_DOCK_DECOYS,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

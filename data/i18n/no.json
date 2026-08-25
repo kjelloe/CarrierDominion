@@ -338,5 +338,9 @@
   "status.hammerAway": "Hammerhead avfyrt - {rounds} igjen på rampen",
   "status.hammerRefused": "batteriet er blindt, lader, eller målet er utenfor rekkevidde",
   "drone.info": "HAMMERHEAD {rounds} · ØYE {seconds}s",
-  "help.drone": "3 sender opp dronen - i DRONE-visning avfyrer et klikk en Hammerhead dit"
+  "help.drone": "3 sender opp dronen - i DRONE-visning avfyrer et klikk en Hammerhead dit",
+  "act.decoys": "SKJERM",
+  "tip.decoys": "narreskjermen: fire droner ute som agn for målsøkere - en firedel av toppfarten så lenge de er ute",
+  "log.decoysOut": "narreskjerm ute",
+  "log.decoysIn": "narreskjerm inne"
 }

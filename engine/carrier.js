@@ -107,6 +107,13 @@ function stepCarrier(carrier, islands, sizeUnits, events) {
   // 4): a quarter of the scale, like the original's speed indicator. The
   // shallow-water limit binds the MAGNITUDE either way.
   let targetSpeed = mulDiv(carrier.maxSpeed, carrier.throttle, 100);
+  // The decoy screen's price (ruled 2026-08-25): a quarter of the top speed
+  // while the drones ride out - dock them to run.
+  if (carrier.decoysOut === 1 && carrier.decoyPenalty > 0) {
+    const screened = mulDiv(carrier.maxSpeed, 1000 - carrier.decoyPenalty, 1000);
+    if (targetSpeed > screened) targetSpeed = screened;
+    if (targetSpeed < -screened) targetSpeed = -screened;
+  }
   const limit = shoalLimit(carrier, clearance);
   if (targetSpeed > limit) targetSpeed = limit;
   if (targetSpeed < -limit) targetSpeed = -limit;

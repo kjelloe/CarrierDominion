@@ -172,6 +172,18 @@ refused if the mark is outside the drone's 4 km picture or the missile's
 four rounds aboard, a hundred ticks on the rail between launches. The AI
 does not use it — a human toy first, as ruled.
 
+## The decoy screen
+
+Four **defence decoys** ride every carrier (ruled 2026-08-25, one-button:
+`Y` or SCREEN). Deployed, they hold a rigid four-point formation 600 m off
+the ship on her own heading, and any **guided round hunting the carrier**
+that passes within 900 m of one takes the bait — permanently. The flare
+breaks a lock in a flash; the decoy stands there being convincing — both
+are the original's systems, side by side. The price is the original's too:
+**a quarter of the ship's top speed** while any decoy rides out — dock them
+to run. A decoy is a hull: it can be shot, and the last one dying lifts the
+penalty by itself.
+
 ## The helm has an autopilot
 
 The original's map + PROG + A, collapsed to one click: with nothing selected,

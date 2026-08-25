@@ -338,5 +338,9 @@
   "status.hammerAway": "Hammerhead away - {rounds} on the rail",
   "status.hammerRefused": "the battery is blind, reloading, or the mark is beyond reach",
   "drone.info": "HAMMERHEAD {rounds} · EYE {seconds}s",
-  "help.drone": "3 launches the Viewing Drone - in DRONE view a click fires a Hammerhead at it"
+  "help.drone": "3 launches the Viewing Drone - in DRONE view a click fires a Hammerhead at it",
+  "act.decoys": "SCREEN",
+  "tip.decoys": "the decoy screen: four drones ride out as bait for seekers - a quarter of your top speed while they do",
+  "log.decoysOut": "decoy screen deployed",
+  "log.decoysIn": "decoy screen docked"
 }

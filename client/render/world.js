@@ -762,6 +762,27 @@ function buildDroneUnit(teamColour) {
   return group;
 }
 
+// The defence decoy: a bright inflatable riding the swell - meant to be
+// SEEN, that is its whole job.
+function buildDecoyUnit(teamColour) {
+  const group = new THREE.Group();
+  const float = new THREE.Mesh(
+    new THREE.SphereGeometry(6, 8, 6),
+    new THREE.MeshBasicMaterial({ color: 0xffb45a }),
+  );
+  float.scale.set(1, 0.65, 1);
+  float.position.y = 2;
+  group.add(float);
+  const band = new THREE.Mesh(
+    new THREE.TorusGeometry(6, 0.8, 5, 12),
+    new THREE.MeshLambertMaterial({ color: teamColour }),
+  );
+  band.rotation.x = -Math.PI / 2;
+  band.position.y = 2;
+  group.add(band);
+  return group;
+}
+
 // The selection marker (playtest ruling 2026-08-24): pressing NEXT has to
 // SHOW you what you now command. A ring with a pointer above it, unlit so it
 // reads as an overlay rather than an object, in the panel's own self colour.
@@ -871,6 +892,7 @@ export {
   buildSelectionMarker,
   buildRunway,
   buildDroneUnit,
+  buildDecoyUnit,
   buildCommandNode,
   updateCommandNode,
   NEUTRAL_NODE_COLOUR,
