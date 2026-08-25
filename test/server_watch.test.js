@@ -151,8 +151,14 @@ test('the server serves what the watchdog found', async () => {
   const app = createApp({ seed: SEED, rules: rules, watch: true });
   const address = await app.listen(0, '127.0.0.1');
   try {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const body = await (await fetch(`http://127.0.0.1:${address.port}/watch`)).json();
+    // POLL, do not sleep: a fixed 300 ms is enough on an idle machine and
+    // not enough when the whole suite is running beside it - this test
+    // flaked three times before the wait learned to wait for the FACT.
+    let body = { ticks: 0, findings: [] };
+    for (let attempt = 0; attempt < 100 && body.ticks === 0; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      body = await (await fetch(`http://127.0.0.1:${address.port}/watch`)).json();
+    }
     assert.ok(body.ticks > 0, 'the watchdog watched nothing');
     assert.deepEqual(body.findings, [], `a live war reported ${JSON.stringify(body.findings)}`);
     const health = await (await fetch(`http://127.0.0.1:${address.port}/healthz`)).json();

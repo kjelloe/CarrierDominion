@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (454 tests and growing), node --test
+npm test      the unit and integration suite (457 tests and growing), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 ```

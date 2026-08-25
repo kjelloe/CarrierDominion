@@ -21,7 +21,7 @@ export { loadRules, withoutAi, bothAi };
 // is the DEFAULT game; tests that hand-craft island ownership start bare.
 function bareRules() {
   const rules = withoutAi(loadRules());
-  rules.rules = { ...rules.rules, homeIslandStart: 0 };
+  rules.rules = { ...rules.rules, homeIslandStart: 0, neutralSiloRounds: 0 };
   return rules;
 }
 

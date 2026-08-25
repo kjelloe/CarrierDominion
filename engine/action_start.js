@@ -26,6 +26,7 @@ import { mulCos, mulSin } from '../shared/trig.js';
 import { worldHeightAt } from './heightmap.js';
 import { UNIT_STOWED } from './units.js';
 import { raiseTurret, ROLE_DEFENCE, ROLE_FACTORY, ROLE_RESOURCE } from './island.js';
+import { clearTurretsOn } from './turret.js';
 
 // How much of the crossing the Action start skips: each carrier moves this
 // far toward the map centre, stopping early wherever open water runs out.
@@ -95,6 +96,8 @@ function stockIsland(island, fuel, materials, ordnance, chassis) {
 }
 
 function developIsland(state, team, island, round) {
+  clearTurretsOn(state, island.id);
+  island.turrets = 0;
   island.owner = team.id;
   island.nodeHp = state.params.commandCentreHp;
   if (round === 0) {
@@ -130,6 +133,9 @@ function carrierOf(state, teamId) {
 function developHomeIsland(state, team, carrier) {
   const island = nearestUnowned(state, carrier.x, carrier.y);
   if (island === -1) return;
+  // The token silo goes with the previous (non-)tenancy, like any capture.
+  clearTurretsOn(state, island.id);
+  island.turrets = 0;
   island.owner = team.id;
   island.nodeHp = state.params.commandCentreHp;
   island.role = ROLE_FACTORY;

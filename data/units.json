@@ -110,5 +110,25 @@
     "stationMetres": 600,
     "speedPenaltyPermil": 250,
     "seduceRadiusMetres": 900
+  },
+  "interceptor": {
+    "comment": "The Bat Cave's Marauder (ruled 2026-08-25): a droid interceptor a Defence island scrambles at intruders inside its ring. Slower and softer than a Manta, leashed to its own island, rebuilt by the island's materials when lost.",
+    "hull": 40,
+    "maxSpeedUnitsPerTick": 380,
+    "minSpeedUnitsPerTick": 240,
+    "accelUnitsPerTickSq": 6,
+    "turnRateBamPerTick": 260,
+    "cruiseAltitudeMetres": 350,
+    "ceilingMetres": 600,
+    "climbRateUnitsPerTick": 220,
+    "radarRangeMetres": 5000,
+    "fuelCapacity": 260000,
+    "fuelBurnPer100Ticks": 220,
+    "arriveRadiusMetres": 300,
+    "patrolMetres": 6000,
+    "leashMetres": 8000,
+    "rebuildMaterials": 200,
+    "rebuildTicks": 6000,
+    "perIsland": 2
   }
 }

@@ -31,5 +31,6 @@
   "telemetryFadeMetres": 20000,
   "telemetryLossMetres": 26000,
   "commandCentreHp": 400,
-  "homeIslandStart": 1
+  "homeIslandStart": 1,
+  "neutralSiloRounds": 6
 }

@@ -184,6 +184,34 @@ are the original's systems, side by side. The price is the original's too:
 to run. A decoy is a hull: it can be shot, and the last one dying lifts the
 penalty by itself.
 
+## The islands have teeth
+
+Two rulings of 2026-08-25, taken together because they shape the same thing
+— what an island assault costs.
+
+**Every neutral island keeps a token missile silo**: team -1, six rounds,
+no resupply, standing from the day the map is made (CRASH: "all the islands
+have missile silos"). Taking even a free island now costs something. The
+silo is a feature of the MAP, not the island's works — it is deliberately
+not counted in `island.turrets`, because that counter is the owner's
+bookkeeping and counting it froze every role choice on the board. A
+developed start, and any capture, clears it with the rest of the previous
+tenancy.
+
+**A Defence island is a Bat Cave**: it scrambles up to two droid
+interceptors — the original's Marauders — at any hostile hull inside its
+6 km ring. They fly the ordinary flight model on an ordinary ATTACK order
+with the ordinary autopilot trigger discipline, never chase past their
+island's 8 km leash, park themselves at the node when the sky clears, and
+are rebuilt from the island's OWN materials (200 a hull, one per 6,000
+ticks). They are the one deliberate exception to units-from-tick-zero:
+they belong to islands, not to a carrier's complement, and appear when a
+cave first scrambles. Take the island and its wing goes with it.
+
+Measured consequence (five-seed battery): wars now resolve between ticks
+35,810 and 112,498 — the spread narrowed and the early game slowed, which
+is what teeth on the map are for.
+
 ## The helm has an autopilot
 
 The original's map + PROG + A, collapsed to one click: with nothing selected,

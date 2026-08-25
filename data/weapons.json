@@ -243,6 +243,10 @@
     ],
     "turretMissile": [
       8
+    ],
+    "interceptor": [
+      0,
+      3
     ]
   },
   "mantaPresets": {

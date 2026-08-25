@@ -40,6 +40,9 @@ const KIND_DRONE = 3;
 // KIND 4: the passive defence decoy (ruled 2026-08-25) - an inflatable
 // stationed off the ship, bait for seekers, dead weight for the engines.
 const KIND_DECOY = 4;
+// KIND 5: the Bat Cave's interceptor (ruled 2026-08-25) - a Defence
+// island's droid aircraft. carrierId is -1: its home is landedIsland.
+const KIND_INTERCEPTOR = 5;
 
 function createManta(id, team, carrierId, rules, unitsPerMetre) {
   const stats = rules.units.manta;
@@ -304,6 +307,32 @@ function createDrone(id, team, carrierId, rules, unitsPerMetre) {
   };
 }
 
+// The interceptor: manta-shaped, island-homed. Created when a Bat Cave
+// first scrambles (a deliberate exception to units-from-tick-zero: these
+// belong to islands, not the complement, and pre-creating two per island
+// on a 64-island sea would be bloat for nothing).
+function createInterceptor(id, team, homeIsland, rules, unitsPerMetre) {
+  const stats = rules.units.interceptor;
+  const record = createManta(id, team, -1, { units: { manta: {
+    hull: stats.hull,
+    maxSpeedUnitsPerTick: stats.maxSpeedUnitsPerTick,
+    minSpeedUnitsPerTick: stats.minSpeedUnitsPerTick,
+    accelUnitsPerTickSq: stats.accelUnitsPerTickSq,
+    turnRateBamPerTick: stats.turnRateBamPerTick,
+    cruiseAltitudeMetres: stats.cruiseAltitudeMetres,
+    ceilingMetres: stats.ceilingMetres,
+    climbUnitsPerTick: stats.climbRateUnitsPerTick,
+    fuelBurnHoverPer100Ticks: stats.fuelBurnPer100Ticks,
+    radarRangeMetres: stats.radarRangeMetres,
+    fuelCapacity: stats.fuelCapacity,
+    fuelBurnPer100Ticks: stats.fuelBurnPer100Ticks,
+    arriveRadiusMetres: stats.arriveRadiusMetres,
+  } } }, unitsPerMetre);
+  record.kind = KIND_INTERCEPTOR;
+  record.landedIsland = homeIsland;
+  return record;
+}
+
 // The decoy: the drone's record shape, riding the ship in rigid formation.
 function createDecoy(id, team, carrierId, rules, unitsPerMetre) {
   const stats = rules.units.decoy;
@@ -488,6 +517,8 @@ export {
   createDrone,
   KIND_DECOY,
   createDecoy,
+  KIND_INTERCEPTOR,
+  createInterceptor,
   KIND_MANTA,
   KIND_WALRUS,
   KIND_LIGHTER,

@@ -1382,7 +1382,7 @@ function updateAlwaysOn() {
     for (const unit of out) {
       const chip = document.createElement('div');
       chip.className = 'unit-chip';
-      const letter = ['M', 'W', 'L', 'D', 'Y'][unit.kind] ?? '?';
+      const letter = ['M', 'W', 'L', 'D', 'Y', 'I'][unit.kind] ?? '?';
       chip.textContent = `${letter}${unit.id}${unit.state === 4 ? '\u2193' : ''}`;
       chip.addEventListener('pointerdown', (event) => {
         event.preventDefault();

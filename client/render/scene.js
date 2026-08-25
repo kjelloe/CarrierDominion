@@ -297,6 +297,7 @@ function syncUnits(view3d, view) {
       else if (unit.kind === 2) group = buildLighter(colour, detail);
       else if (unit.kind === 3) group = buildDroneUnit(colour);
       else if (unit.kind === 4) group = buildDecoyUnit(colour);
+      else if (unit.kind === 5) group = buildManta(colour, false); // the Marauder
       else group = buildWalrus(colour, detail);
       if (unit.contact === 1) dimForContact(group);
       view3d.units[unit.id] = group;
@@ -322,7 +323,7 @@ function syncTurrets(view3d, view) {
     seen[turret.id] = true;
     if (view3d.turrets[turret.id] !== undefined) continue;
     const group = buildTurret(
-      TEAM_COLOURS[turret.team % TEAM_COLOURS.length],
+      turret.team < 0 ? NEUTRAL_NODE_COLOUR : TEAM_COLOURS[turret.team % TEAM_COLOURS.length],
       turret.kind === 1,
       view3d.preset.modelDetail === true,
     );

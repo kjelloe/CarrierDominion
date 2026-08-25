@@ -125,6 +125,8 @@ function createIslands(seed, world, unitsPerMetre) {
       // terrain height, computed once so the shot sweep never samples noise.
       nodeHp: 0,
       nodeZ: 0,
+      // The Bat Cave's rebuild clock (0 = ready to rebuild when short).
+      caveTicks: 0,
       building: -1,
       buildTicks: 0,
     };

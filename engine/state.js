@@ -30,6 +30,7 @@ import { copySections, createSections } from './damage.js';
 import { copyTurrets } from './turret.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
 import { prepareActionStart, prepareHomeIslands } from './action_start.js';
+import { raiseNeutralSilos } from './batcave.js';
 
 function presetsFrom(presetRules) {
   const out = [];
@@ -80,6 +81,7 @@ function copyIsland(island) {
     runway: island.runway,
     nodeHp: island.nodeHp,
     nodeZ: island.nodeZ,
+    caveTicks: island.caveTicks,
     building: island.building,
     buildTicks: island.buildTicks,
   };
@@ -227,6 +229,14 @@ function copyState(state) {
       commandCentreHp: state.params.commandCentreHp,
       decoyStation: state.params.decoyStation,
       decoySeduce: state.params.decoySeduce,
+      icRaw: state.params.icRaw.slice(),
+      icPerIsland: state.params.icPerIsland,
+      icPatrol: state.params.icPatrol,
+      icLeash: state.params.icLeash,
+      icPark: state.params.icPark,
+      icRebuildMaterials: state.params.icRebuildMaterials,
+      icRebuildTicks: state.params.icRebuildTicks,
+      neutralSiloRounds: state.params.neutralSiloRounds,
       victoryIslandPermil: state.params.victoryIslandPermil,
       pointCap: state.params.pointCap,
       timeCapTicks: state.params.timeCapTicks,
@@ -493,6 +503,34 @@ function createInitialState(seed, rules) {
         ? 0 : rules.units.decoy.stationMetres * unitsPerMetre,
       decoySeduce: rules.units.decoy === undefined
         ? 0 : rules.units.decoy.seduceRadiusMetres * unitsPerMetre,
+      // The Bat Cave (ruled 2026-08-25): ring, leash and rebuild terms,
+      // scaled; the airframe's own stats stay in rules and are read by
+      // createInterceptor when a cave first scrambles.
+      icRaw: rules.units.interceptor === undefined ? [] : [
+        rules.units.interceptor.hull,
+        rules.units.interceptor.maxSpeedUnitsPerTick,
+        rules.units.interceptor.minSpeedUnitsPerTick,
+        rules.units.interceptor.accelUnitsPerTickSq,
+        rules.units.interceptor.turnRateBamPerTick,
+        rules.units.interceptor.cruiseAltitudeMetres,
+        rules.units.interceptor.ceilingMetres,
+        rules.units.interceptor.climbRateUnitsPerTick,
+        rules.units.interceptor.radarRangeMetres,
+        rules.units.interceptor.fuelCapacity,
+        rules.units.interceptor.fuelBurnPer100Ticks,
+        rules.units.interceptor.arriveRadiusMetres,
+      ],
+      icPerIsland: rules.units.interceptor === undefined ? 0 : rules.units.interceptor.perIsland,
+      icPatrol: rules.units.interceptor === undefined
+        ? 0 : rules.units.interceptor.patrolMetres * unitsPerMetre,
+      icLeash: rules.units.interceptor === undefined
+        ? 0 : rules.units.interceptor.leashMetres * unitsPerMetre,
+      icPark: 400 * unitsPerMetre,
+      icRebuildMaterials: rules.units.interceptor === undefined
+        ? 0 : rules.units.interceptor.rebuildMaterials,
+      icRebuildTicks: rules.units.interceptor === undefined
+        ? 0 : rules.units.interceptor.rebuildTicks,
+      neutralSiloRounds: base.neutralSiloRounds === undefined ? 0 : base.neutralSiloRounds,
       victoryIslandPermil: base.victoryIslandPermil,
       pointCap: base.pointCap,
       timeCapTicks: base.timeCapTicks,
@@ -528,6 +566,9 @@ function createInitialState(seed, rules) {
   // The Action Game (ruling 2026-08-23): the war pre-developed at tick zero.
   // Inside createInitialState on purpose - the flag is a RULE, hashed with
   // the rest, so a replay of an action war is an action war.
+  // Every island's token silo goes up FIRST (ruled 2026-08-25), so a
+  // developed start replaces its own island's silo with its own guns.
+  raiseNeutralSilos(state, state.params.neutralSiloRounds);
   if (base.actionStart === 1) prepareActionStart(state);
   else if (base.homeIslandStart === 1) prepareHomeIslands(state);
   return state;

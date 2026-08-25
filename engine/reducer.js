@@ -74,6 +74,7 @@ import { setPriority } from './damage.js';
 import { checkFlares, fireFlares, stepFlares } from './flare.js';
 import { stepContacts } from './contacts.js';
 import { stepDecoyScreens, stepUnits } from './fleet.js';
+import { stepBatcaves } from './batcave.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchShot } from './shots.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
@@ -608,6 +609,8 @@ function advanceTick(next) {
     stepCapture(next, next.params.podBuildTicks);
     stepVirus(next, next.params.virusBuildTicks);
     stepBuild(next);
+    // The islands' own teeth: Bat Caves scramble, press, park and rebuild.
+    stepBatcaves(next);
     stepEconomy(next);
   }
   stepSupply(next);

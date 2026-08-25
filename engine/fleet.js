@@ -33,6 +33,7 @@ import {
   ORDER_HOLD,
   KIND_DECOY,
   KIND_DRONE,
+  KIND_INTERCEPTOR,
   ORDER_LAND,
   burnUnitFuel,
   UNIT_ACTIVE,
@@ -133,7 +134,7 @@ function stepUnits(state) {
 
     // A lighter uses the surface drive model, like a Walrus - it simply never
     // gets an order that would take it ashore.
-    const outcome = unit.kind === KIND_MANTA
+    const outcome = unit.kind === KIND_MANTA || unit.kind === KIND_INTERCEPTOR
       ? stepManta(unit, state.islands, sizeUnits)
       : stepWalrus(unit, state.islands, sizeUnits);
 

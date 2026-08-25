@@ -100,6 +100,8 @@ function createLoadouts(rulesWeapons) {
     source.carrier,
     source.turretLaser,
     source.turretMissile,
+    // Row 6: the Bat Cave's interceptor (ruled 2026-08-25).
+    source.interceptor === undefined ? [] : source.interceptor,
   ];
   const out = [];
   for (let i = 0; i < rows.length; i++) {
