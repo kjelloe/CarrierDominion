@@ -98,7 +98,7 @@ One plain object, all integers, no absent values. The top level:
 | `economy` | production rates, build costs, network share |
 | `teams` | id, stockpile island, score, the quartermaster's production bias |
 | `carriers` | hulls, stores, sections, magazines, derived capability |
-| `units` | Mantas, Walruses, lighters — every one exists from tick zero |
+| `units` | Mantas, Walruses, lighters, Viewing Drones and defence decoys — every one exists from tick zero. The island interceptor (kind 5) is the one exception: it belongs to an island's Bat Cave, not to a carrier's complement, and is created when a cave first scrambles |
 | `islands` | terrain seed, ownership, role, works, stock |
 | `turrets` | island batteries |
 | `shots` | rounds in the air, and mines waiting |

@@ -168,8 +168,12 @@ test('the server serves what the watchdog found', async () => {
     const real = body.findings.filter((f) => f.kind !== 'tick slower than real time');
     assert.deepEqual(real, [],
       `a live war reported ${JSON.stringify(real)} after ${body.ticks} ticks`);
+    // healthz counts findings, so it carries the same machine-load caveat:
+    // it may be 1 on a loaded box because the watchdog noticed the box. It
+    // must never exceed what /watch actually reports.
     const health = await (await fetch(`http://127.0.0.1:${address.port}/healthz`)).json();
-    assert.equal(health.watching, 0);
+    assert.equal(health.watching, body.findings.length,
+      'healthz and /watch disagree about what was found');
   } finally {
     await app.close();
   }

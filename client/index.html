@@ -108,6 +108,9 @@
     body.weapon-mode #weapon-group .wep .n { font-size: 11px; }
     /* A button whose moment has not come is visible but plainly asleep. */
     .act.off { opacity: 0.32; pointer-events: none; }
+    /* A standing toggle that is ON says so, like PAUSE does. */
+    .act.on { color: var(--hud-panel); background: var(--hud-ink); border-color: var(--hud-ink); }
+    .act.on .k { color: var(--hud-panel); }
     /* The 1988 constants (second source review): the SCORE is always on
        screen, PAUSE is a button, and the autopilot state has a lit A. */
     #score-strip {

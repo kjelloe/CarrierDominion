@@ -326,6 +326,13 @@ From the review of the twelve-slice run:
 - **The war room gains two rows**: the home island and link topology can
   each be switched off, so a table can play the older, simpler shapes.
 
+All four built the same day. The battery then found three economy defects
+in the chase that followed (equipment eating airframe parts; the AI's
+supply list never asking for parts; `planFor` fortifying a team that had
+no mine, because the home island made "holds a plant" true from tick one)
+— and with those fixed, four of the five seeds resolve FASTER than before
+the batch: 25k–165k ticks, where 777001 alone fell from 116,320 to 25,235.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on
