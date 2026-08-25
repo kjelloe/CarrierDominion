@@ -116,11 +116,12 @@ minute.
 
 ---
 
-## A5 — The late war, which is what you asked for *(15 min)*
+## A5 — The late war and nose to nose *(20 min)*
 
-The last rung of **the war starts** is the one built for you: the whole
-archipelago already held and developed, every refit already fitted, and the
-enemy's nearest island about 10 km away. No four-hour build-up.
+The last two rungs of **the war starts** are the ones built for you: the
+whole archipelago already held and developed, every refit already fitted.
+No four-hour build-up. *Late* puts the enemy's nearest island about 10 km
+off; *nose to nose* is the same war with the fleets already touching.
 
 1. From the menu set **islands** to 16 and **the war starts** to *late — the
    whole archipelago held*. Begin.
@@ -131,15 +132,18 @@ enemy's nearest island about 10 km away. No four-hour build-up.
 4. Now fight it. Take an island off them — bombard the command centre, or
    pod it — and see whether an endgame with everything switched on is
    actually enjoyable or just busy.
+5. Then restart on the last rung, **nose to nose** — the same late war, but
+   the fleet begins on one patch of water 4 km apart, enemy ship on the
+   scope from the first tick. Two carriers are bow to bow; a bigger table is
+   a ring brawl.
 
-**Expect:** the war you would reach after four hours, from the first tick.
+**Expect:** the war you would reach after four hours, from the first tick —
+and on the last rung, that war already in contact.
 
-**Tell me:** (a) is this the shape you wanted for late-game testing?
-(b) Winning needs **90% of the islands** — 14 of 16 — because everybody
-starts on half and holding half cannot be the win. Too demanding, about
-right, or should a late war just run on points and time? (c) The carriers
-start 10–20 km apart depending on the seed. Close enough, or should the
-late war put you nose to nose?
+**Tell me:** is 4 km the right "nose to nose", or should it be closer? (At
+611 m the AI sank a ship in ten seconds, so there is a floor somewhere.)
+90% and the late war's 10–20 km are settled — this is the only number still
+open on the ladder.
 
 ---
 

@@ -67,7 +67,7 @@ test('the developed war is about a third each, and a third left neutral', () => 
 test('no carrier starts under the enemy home battery', () => {
   for (const seed of [20260818, 900913, 777001, 31337, 424242]) {
     for (const islands of [4, 6, 8]) {
-      for (const shape of [0, 2, 3]) {
+      for (const shape of [0, 2, 3, 4]) {
         const where = `seed ${seed}, ${islands} islands, shape ${shape}`;
         const rules = withoutAi(loadRules());
         rules.rules = { ...rules.rules, startShape: shape };
@@ -160,6 +160,50 @@ test('a late war never wins itself before the first tick', () => {
     assert.equal(state.phase, 0, `a ${count}-island late war started already over`);
     state = apply(state, { type: 'advance_tick' });
     assert.equal(state.phase, 0, `a ${count}-island late war ended on tick one`);
+  }
+});
+
+// Nose to nose (ruled 2026-08-25): the late war, begun in each other's
+// faces. Marching further in cannot get there - a late sea is wall to wall
+// gun envelopes - so the fleet is gathered round one patch of open water.
+test('nose to nose starts the fleet in contact, not across the map', () => {
+  for (const seed of [20260818, 900913, 777001, 31337]) {
+    for (const [islands, teams] of [[8, 2], [16, 2], [16, 4], [32, 4]]) {
+      const where = `seed ${seed}, ${islands} islands, ${teams} teams`;
+      const rules = withoutAi(loadRules());
+      rules.rules = { ...rules.rules, startShape: 4, teamCount: teams };
+      rules.world = { ...rules.world, islandCount: islands };
+      const state = createInitialState(seed, rules);
+      const metre = state.params.unitsPerMetre;
+
+      let closest = Infinity;
+      for (let a = 0; a < state.carriers.length; a++) {
+        assert.equal(state.carriers[a].grounded, 0, `${where}: carrier ${a} aground`);
+        for (let b = a + 1; b < state.carriers.length; b++) {
+          const gap = dist2D(state.carriers[a].x, state.carriers[a].y,
+            state.carriers[b].x, state.carriers[b].y);
+          if (gap < closest) closest = gap;
+        }
+      }
+      // Contact from the first tick: the nearest rival inside radar, and
+      // never nearer than the sea room a hull is owed - 611 m was a knife
+      // fight that killed a ship in ten seconds.
+      assert.ok(closest >= 4000 * metre - metre,
+        `${where}: closest pair only ${Math.round(closest / metre)} m apart`);
+      assert.ok(closest <= state.carriers[0].radar,
+        `${where}: closest pair ${Math.round(closest / metre)} m apart,`
+        + ` outside the ${Math.round(state.carriers[0].radar / metre)} m scope`);
+
+      // It is still a LATE war underneath: everything held and refitted.
+      assert.equal(state.islands.filter((i) => i.owner === -1).length < teams, true,
+        `${where}: neutral ground in a late war`);
+      for (const carrier of state.carriers) {
+        assert.equal(carrier.upSpeed, 1, `${where}: unrefitted ship`);
+        assert.equal(carrier.hammerRounds, carrier.hammerMax);
+      }
+      assert.equal(state.params.victoryIslandPermil, 900, `${where}: the bar did not rise`);
+      assert.doesNotThrow(() => canonicalize(state));
+    }
   }
 });
 

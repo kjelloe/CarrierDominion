@@ -21,6 +21,7 @@ const OPTIONS = [
     // deserves (ruling 2026-08-23). The ocean scales with the square root,
     // so density holds: 64 islands is a ~58 km sea.
     values: [4, 8, 16, 32, 48, 64],
+    def: 8,
     apply: (rules, value) => { rules.world.islandCount = value; },
   },
   {
@@ -59,8 +60,9 @@ const OPTIONS = [
   {
     key: 'start',
     label: 'start.start',
-    values: [0, 1, 2, 3],
-    text: ['start.startHome', 'start.startNone', 'start.startDeveloped', 'start.startLate'],
+    values: [0, 1, 2, 3, 4],
+    text: ['start.startHome', 'start.startNone', 'start.startDeveloped',
+      'start.startLate', 'start.startNose'],
     apply: (rules, value) => { rules.rules.startShape = value; },
   },
   {
@@ -87,9 +89,15 @@ const OPTIONS = [
   },
 ];
 
+// First in the ladder is the default unless the option says otherwise. The
+// islands ladder starts at 4 so the cycle reads small-to-large, but a
+// four-island sea is 14 km across and a war on it is a knife fight - not
+// what a first war should be, and not what the ruleset itself defaults to.
 function defaultChoices() {
   const out = {};
-  for (const option of OPTIONS) out[option.key] = option.values[0];
+  for (const option of OPTIONS) {
+    out[option.key] = option.def === undefined ? option.values[0] : option.def;
+  }
   return out;
 }
 

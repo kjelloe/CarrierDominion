@@ -33,9 +33,11 @@ import {
   START_DEVELOPED,
   START_HOME,
   START_LATE,
+  START_NOSE,
   prepareActionStart,
   prepareHomeIslands,
   prepareLateWar,
+  prepareNoseToNose,
 } from './action_start.js';
 import { raiseNeutralSilos } from './batcave.js';
 import { computeNetwork } from './network.js';
@@ -598,6 +600,7 @@ function createInitialState(seed, rules) {
   const shape = base.startShape === undefined ? START_HOME : base.startShape;
   if (shape === START_DEVELOPED) prepareActionStart(state);
   else if (shape === START_LATE) prepareLateWar(state);
+  else if (shape === START_NOSE) prepareNoseToNose(state);
   else if (shape === START_HOME) prepareHomeIslands(state);
   // The chain, once, before the first tick reads it.
   computeNetwork(state);

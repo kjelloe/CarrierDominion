@@ -1,12 +1,12 @@
 // debugging/probes/late_war.mjs
 //
 // The start ladder, through the glass (ruled 2026-08-25): the menu offers
-// one row - "the war starts" - with four shapes, and the LATE one drops a
-// human into a finished archipelago with a refitted ship and an enemy
-// already on the scope. Screenshots the late war's first moment, which is
-// the whole point of the option.
+// one row - "the war starts" - with five shapes. The LATE one drops a human
+// into a finished archipelago with a refitted ship and the front about
+// 10 km off; NOSE TO NOSE is the same war begun in the enemy's face.
+// Screenshots both, which is the whole point of the options.
 //
-//   node debugging/probes/late_war.mjs
+//   node debugging/probes/late_war.mjs [late|nose]
 
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -36,26 +36,28 @@ await page.goto(`http://127.0.0.1:${address.port}/`, { waitUntil: 'load' });
 await page.waitForSelector('#start-panel.open', { timeout: 20000 });
 
 // Sixteen islands: enough sea for a late war to look like one, and the
-// count the assertions below are written against.
+// count the assertions below are written against. The menu now opens on 8
+// (a four-island sea is a knife fight), so one click gets there.
 const islandRow = page.locator('.start-row', { hasText: 'islands' }).first();
-for (let i = 0; i < 2; i++) await islandRow.click();
+await islandRow.click();
 
-// Walk the ladder: four shapes, each named.
+// Walk the ladder: five shapes, each named.
 const row = page.locator('.start-row', { hasText: 'the war starts' });
+const rung = async () => (await row.textContent()).replace('the war starts', '').trim();
 const shapes = [];
-for (let i = 0; i < 4; i++) {
-  shapes.push((await row.textContent()).replace('the war starts', '').trim());
+for (let i = 0; i < 5; i++) {
+  shapes.push(await rung());
   await row.click();
 }
 console.log(`the ladder: ${shapes.join(' / ')}`);
 
-// Land on LATE and sail.
-for (let i = 0; i < 4; i++) {
-  const now = (await row.textContent()).replace('the war starts', '').trim();
-  if (now.startsWith('late')) break;
+// Land on the rung this run is for and sail.
+const wanted = process.argv[2] === 'nose' ? 'nose' : 'late';
+for (let i = 0; i < 5; i++) {
+  if ((await rung()).startsWith(wanted)) break;
   await row.click();
 }
-await page.screenshot({ path: join(SHOTS, 'late-war-menu.png') });
+await page.screenshot({ path: join(SHOTS, `${wanted}-war-menu.png`) });
 await page.locator('#start-begin').click();
 await page.waitForFunction(
   () => Number(document.getElementById('hud-tick')?.textContent) > 10,
@@ -84,19 +86,21 @@ const war = await page.evaluate(() => {
       && i.factories + i.warehouses + i.turrets > 0).length,
   };
 });
-await page.screenshot({ path: join(SHOTS, 'late-war-opening.png') });
-console.log(`late war: ${war.mine} of ${war.islands} islands held`
+await page.screenshot({ path: join(SHOTS, `${wanted}-war-opening.png`) });
+console.log(`${wanted} war: ${war.mine} of ${war.islands} islands held`
   + ` (${war.works} developed), ${war.neutral} neutral, refits ${war.refits},`
   + ` hammer ${war.hammer}, enemy carriers on the scope: ${war.contacts},`
   + ` nearest enemy island ${war.frontKm} km`);
 
 // The whole archipelago, split evenly, every rock of mine built out, the
 // ship as a long war would have left it, and the front within strike range.
+// Nose to nose promises more than reach: the enemy SHIP on the scope.
 const ok = !failed
-  && shapes.length === 4
+  && shapes.length === 5
   && war.islands === 16 && war.mine === 8 && war.neutral === 0
   && war.works === war.mine
-  && war.refits === '1111' && war.hammer > 0 && war.frontKm <= 20;
+  && war.refits === '1111' && war.hammer > 0 && war.frontKm <= 20
+  && (wanted !== 'nose' || war.contacts >= 1);
 if (!ok) {
   console.log('FAIL: the late war is not the endgame it promises');
   process.exitCode = 1;
@@ -104,4 +108,4 @@ if (!ok) {
 
 await browser.close();
 await app.close();
-console.log('the ladder walked, and the late war photographed');
+console.log(`the ladder walked, and the ${wanted} war photographed`);

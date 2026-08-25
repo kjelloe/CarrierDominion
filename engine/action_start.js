@@ -30,12 +30,13 @@ import { applySectionEffects } from './damage.js';
 import { KIND_MANTA } from './units.js';
 import { clearTurretsOn } from './turret.js';
 
-// The four ways a war can open (ruled 2026-08-25). One ladder, because they
+// The five ways a war can open (ruled 2026-08-25). One ladder, because they
 // are one decision: how far along is this war when you sit down?
 const START_HOME = 0;      // a developed home island each - the default
 const START_NONE = 1;      // nothing but the ship, the old from-zero race
 const START_DEVELOPED = 2; // about a third each, a third neutral
 const START_LATE = 3;      // the whole archipelago held, built and refitted
+const START_NOSE = 4;      // the late war, begun in each other's faces
 
 // How much of the crossing the developed start skips: each carrier moves
 // this far toward the map centre, stopping early wherever open water runs
@@ -428,6 +429,90 @@ function refitCarrier(state, carrier) {
 // meant to skip.
 const LATE_CLOSER_PERMIL = 550;
 
+// How much sea a nose-to-nose fleet is owed. Four kilometres is contact
+// from the first tick - inside radar, inside the aircraft leash, one turn
+// from a gun fight - without being the knife fight that killed a ship in
+// ten seconds at 611 m.
+const NOSE_SEPARATION_METRES = 4000;
+
+// The meeting ground is looked for at the middle of the map and then in
+// rings outward, eight bearings a ring, taking the first that is open water
+// clear of every battery with room for the whole fleet. Deterministic by
+// construction: no search order depends on anything but the map.
+const MEETING_RINGS = 12;
+const MEETING_BEARINGS = 8;
+
+// Everyone round one patch of water: seat 0 due east of it, the rest evenly
+// round the circle, so a two-carrier war is bow to bow and a sixteen-carrier
+// one is a ring brawl. The circle grows until the closest pair has its sea
+// room, then keeps growing while anybody is aground or under guns - and if
+// no size works, the fleet is left where the late war put it, which is a
+// longer war rather than a broken one.
+function gatherAtMeetingGround(state, clearance) {
+  const separation = NOSE_SEPARATION_METRES * state.params.unitsPerMetre;
+  const centre = mulDiv(state.params.sizeUnits, 1, 2);
+  const teams = state.carriers.length;
+  if (teams < 2) return;
+  // Two hulls sit either side of the middle, so half the separation each;
+  // more hulls need a wider circle to keep neighbours that far apart.
+  const step = mulDiv(separation, 1, 2);
+  // Radius OUTERMOST: the tightest circle that works anywhere on the chart
+  // beats a loose one at the middle. The other way round, a two-carrier war
+  // took a 28 km ring at the map centre and called it nose to nose.
+  for (let grow = 0; grow < 8; grow++) {
+    const radius = step + step * grow;
+    for (let ring = 0; ring < MEETING_RINGS; ring++) {
+      const offset = step * ring;
+      for (let b = 0; b < MEETING_BEARINGS; b++) {
+        const bam = mulDiv(b, 65536, MEETING_BEARINGS);
+        const groundX = centre + mulCos(offset, bam);
+        const groundY = centre + mulSin(offset, bam);
+        if (tryMeetingGround(state, groundX, groundY, radius, separation, clearance)) return;
+        if (offset === 0) break; // the centre itself is one place, not eight
+      }
+    }
+  }
+}
+
+// Can the whole fleet stand round this point at this radius? All or nothing:
+// the positions are only written back once every one of them passes.
+function tryMeetingGround(state, groundX, groundY, radius, separation, clearance) {
+  const places = [];
+  for (let c = 0; c < state.carriers.length; c++) {
+    const carrier = state.carriers[c];
+    const bam = mulDiv(c, 65536, state.carriers.length);
+    const x = groundX + mulCos(radius, bam);
+    const y = groundY + mulSin(radius, bam);
+    if (!openWaterAt(state, carrier, x, y)) return false;
+    if (insideHostileGuns(state, carrier.team, x, y, clearance)) return false;
+    for (let p = 0; p < places.length; p++) {
+      if (dist2D(x, y, places[p].x, places[p].y) < separation) return false;
+    }
+    places.push({ x: x, y: y });
+  }
+  for (let c = 0; c < state.carriers.length; c++) {
+    const carrier = state.carriers[c];
+    carrier.x = places[c].x;
+    carrier.y = places[c].y;
+    stowedFollow(state, carrier);
+  }
+  return true;
+}
+
+// Nose to nose (ruled 2026-08-25, owner): the late war's archipelago and
+// the late war's ship, but the fleet begins in each other's faces instead of
+// 10-20 km apart. Marching further in does not get there - a late sea is
+// wall-to-wall gun envelopes and islands, which is what leaves the ordinary
+// late war at arm's length - so this shape does not march at all. It picks
+// ONE meeting ground and puts everybody round it.
+function prepareNoseToNose(state) {
+  prepareLateWar(state);
+  const clearance = longestTurretReach(state)
+    + HOSTILE_GUN_MARGIN_METRES * state.params.unitsPerMetre;
+  gatherAtMeetingGround(state, clearance);
+  return state;
+}
+
 function prepareLateWar(state) {
   state.params.victoryIslandPermil = LATE_VICTORY_PERMIL;
   const share = lateShare(state);
@@ -456,7 +541,9 @@ export {
   START_NONE,
   START_DEVELOPED,
   START_LATE,
+  START_NOSE,
   prepareActionStart,
   prepareHomeIslands,
   prepareLateWar,
+  prepareNoseToNose,
 };

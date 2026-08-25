@@ -29,10 +29,11 @@ const OPTION_VALUES = {
   ending: [0, 1, 2],
   speed: [1, 2, 4, 8, 16],
   // How far along the war starts (ruled 2026-08-25): 0 a home island each,
-  // 1 nothing at all, 2 a developed war, 3 a late one. This one ladder
-  // replaced the old game/home pair - they were one decision wearing two
-  // hats, and saves recorded under the old pair still fold correctly.
-  start: [0, 1, 2, 3],
+  // 1 nothing at all, 2 a developed war, 3 a late one, 4 a late one begun
+  // nose to nose. This one ladder replaced the old game/home pair - they
+  // were one decision wearing two hats, and saves recorded under the old
+  // pair still fold correctly.
+  start: [0, 1, 2, 3, 4],
   // Observers welcome (1, the referee view) or the door closed (0).
   observers: [1, 0],
   // The resource network as geography, or the older distance-free star.

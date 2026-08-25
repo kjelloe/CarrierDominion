@@ -190,10 +190,12 @@ the table's own on/off switch - the High tier's Preetham sky and mirror
 water, CI on every push, and a written plan (docs/08) for the Luau/Roblox
 twin and the true mobile tier.
 
-How far along a war starts is now one ladder of four (2026-08-25): a home
-island each, nothing but the ship, developed, or **late** — the whole
+How far along a war starts is now one ladder of five (2026-08-25): a home
+island each, nothing but the ship, developed, **late** — the whole
 archipelago held, built and refitted, for testing an endgame without playing
-four hours to reach one.
+four hours to reach one — and **nose to nose**, the same late war with the
+fleet gathered on one patch of water, 4 km apart, in contact from the first
+tick.
 
 The 2026-08-24/25 source reviews then closed the gap to the original: the
 astern gear, the signals log, island names and the location line, hangar

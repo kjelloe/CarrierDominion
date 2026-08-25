@@ -5,6 +5,54 @@ golden hash and why.
 
 ---
 
+## 2026-08-25 — Nose to nose, and the ladder settled
+
+Owner's answers to the four questions the start ladder left open: **90% is
+the right bar** for a late war, **10-20 km apart is fine** for it, **the
+menu should open on 8 islands**, and — the new work — a fifth rung,
+*"Nose-to-nose which is late game by close start"*.
+
+**The menu default.** The islands ladder reads 4 → 8 → 16 → … so the cycle
+runs small-to-large, and the first rung was silently the default: a fresh
+menu opened on a 14 km sea. Options may now state a default instead of
+inheriting one from position; islands states 8, the ruleset's own figure.
+The war room already read its default from the ruleset, so only the menu was
+ever wrong.
+
+**Nose to nose (shape 4)** reuses the late war entire and replaces only the
+placement. Marching further in could not have delivered it: a late sea is
+wall-to-wall gun envelopes, which is exactly what holds the ordinary late
+war at 10-20 km. So this shape does not march — it picks ONE meeting ground
+and puts the fleet on a circle round it: seat 0 due east, the rest evenly
+spaced, 4 km between neighbours. A candidate is taken only if EVERY hull on
+it has open water, no battery in reach and its sea room; never a fleet
+half-placed.
+
+The search order mattered more than the search. Radius has to be the OUTER
+loop — the tightest circle that works anywhere on the chart beats a loose
+one at the middle. Written the other way round (ground first, then grow the
+ring) a two-carrier war took a 28 km ring at the map centre and called it
+nose to nose.
+
+Measured, 16 islands: two carriers exactly 4 km apart on every map and seed;
+four make a ring 5.7-8 km across; sixteen put neighbours at 4 km. A round is
+in the air inside the first minute on all three battery seeds, against 0-15
+minutes for the ordinary late war. Two of three then ended within a minute —
+which is the empty player seat again (see yesterday's entry): 4 km is lethal
+to a ship that does not manoeuvre. Whether it is lethal to a HUMAN is the
+one number left open, and PLAYTEST A5 asks it.
+
+**Cost:** 480 tests (+1), fixture unchanged, smoke green, battery 5/5 and
+unmoved (shape 0 is untouched by any of this). `late_war.mjs` now takes a
+rung argument and photographs either.
+
+**Unrelated, found while running the probe sweep:** `debugging/probes/
+lobby.mjs` fails — a host's option change does not reach the guest, and both
+sides start on the default island count. It fails identically with this
+slice stashed, so it is older than today; not diagnosed yet.
+
+---
+
 ## 2026-08-25 — The start ladder, and the spawn defect it uncovered
 
 Owner's ask: choose how far along the war is when you sit down. Four rungs —

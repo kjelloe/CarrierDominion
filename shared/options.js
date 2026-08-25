@@ -6,7 +6,7 @@
 
 // The ladder, or what the two older switches meant before it existed.
 function startShapeOf(options) {
-  if (Number.isInteger(options.start) && options.start >= 0 && options.start <= 3) {
+  if (Number.isInteger(options.start) && options.start >= 0 && options.start <= 4) {
     return options.start;
   }
   if (options.game === 1) return 2; // the old Action Game
@@ -38,7 +38,8 @@ function applyLobbyOptions(rules, options) {
     pointCap: options.ending === 1 ? 4000 : 0,
     timeCapTicks: options.ending === 2 ? 24000 : 0,
     // How far along the war starts (ruled 2026-08-25): 0 a home island
-    // each, 1 nothing at all, 2 a developed war, 3 a late one. Saves and
+    // each, 1 nothing at all, 2 a developed war, 3 a late one, 4 a late one
+    // begun nose to nose. Saves and
     // replays recorded before the ladder carry the two switches it
     // replaced, so those are still read - a war must replay as it was
     // played, and the command log is the save format.

@@ -13,8 +13,9 @@ const OPTION_ROWS = [
   {
     key: 'start',
     label: 'start.start',
-    values: [0, 1, 2, 3],
-    text: ['start.startHome', 'start.startNone', 'start.startDeveloped', 'start.startLate'],
+    values: [0, 1, 2, 3, 4],
+    text: ['start.startHome', 'start.startNone', 'start.startDeveloped',
+      'start.startLate', 'start.startNose'],
   },
   // The ladder MUST match server/lobby.js OPTION_VALUES: a row that offers
   // less than the server allows is a room that cannot choose the war it is

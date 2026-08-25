@@ -33,7 +33,9 @@ const offered = await page.evaluate(() => ({
 }));
 await page.screenshot({ path: join(SHOTS, 'start-menu.png') });
 
-// Change two of them: islands 4 -> 8, and the enemy off. Rows are seed first,
+// Change two of them: islands 8 -> 16 (the menu opens on 8 since the
+// 2026-08-25 ruling; a four-island sea is a knife fight), and the enemy off.
+// Rows are seed first,
 // then the options in order.
 const rows = page.locator('.start-row');
 await rows.nth(1).click(); // islands
@@ -57,7 +59,7 @@ const war = await page.evaluate(() => ({
 console.log(`menu offered: ${offered.title} / ${offered.rows.length} rows`);
 console.log(`after two clicks: ${JSON.stringify(chosen.slice(1, 3))}`);
 console.log(`war: ${war.islands} islands, menu gone ${war.menuGone}, seed ${war.seed}`);
-if (offered.rows.length < 6 || !war.menuGone || war.islands !== 8) {
+if (offered.rows.length < 6 || !war.menuGone || war.islands !== 16) {
   console.log('FAIL: the menu did not describe the war it started');
   process.exitCode = 1;
 }

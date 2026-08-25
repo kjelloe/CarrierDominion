@@ -363,6 +363,20 @@ upgraded, "for late game testing for humans especially."
   on seed 900913, one sunk in ten seconds. A blocked step is skipped rather
   than ending the march, because this is a placement and not a voyage.
 
+### The owner's answers (same day)
+
+- **90% is the right bar** for a late war. Kept as built.
+- **10–20 km apart is fine** for the ordinary late war. Kept as built.
+- **The start menu now opens on 8 islands**, not 4 — the ruleset's own
+  default, and not a 14 km sea. The ladder still reads 4 first so the cycle
+  runs small-to-large; the default is now stated rather than inherited from
+  position.
+- **A fifth rung: nose to nose** — "late game by close start". It reuses the
+  late war entire and replaces only the placement: one meeting ground, the
+  fleet on a circle round it, 4 km between neighbours. Marching further in
+  could not have delivered it, because a late sea is wall-to-wall gun
+  envelopes — the thing that leaves the ordinary late war at arm's length.
+
 ### And the defect it uncovered
 
 The measurement that was supposed to confirm the late war instead found

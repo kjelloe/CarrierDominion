@@ -16,7 +16,7 @@ to the waiting, not a faster ship.
 
 ## How far along the war is when you sit down
 
-One ladder, four shapes, one rule — `startShape` (ruled 2026-08-25). It
+One ladder, five shapes, one rule — `startShape` (ruled 2026-08-25). It
 replaced a pair of independent switches (`actionStart` and
 `homeIslandStart`) that could be set to combinations nobody had designed;
 `shared/options.js` still folds the old pair so saves and replays from
@@ -28,6 +28,7 @@ before the ladder resolve to the right rung.
 | `1` **nothing but the ship** | The old bare ocean, a race from zero |
 | `2` **developed** | About a third each, a third neutral |
 | `3` **late** | The whole archipelago held, built and refitted |
+| `4` **nose to nose** | The late war, begun in each other's faces |
 
 ### 0 — a home island each
 
@@ -509,6 +510,33 @@ everybody already holds their third, so holding a third cannot be the win.
 The bar moves to 90% of the sea and the only way to reach it is to take what
 the other side has built. It is derived from `startShape`, so a replay
 recomputes it rather than storing it.
+
+### 4 — nose to nose
+
+The late war's archipelago and the late war's ship, opened at 4 km instead
+of 10–20. Marching further in does not get there: a late sea is wall-to-wall
+gun envelopes and islands, which is exactly what leaves the ordinary late
+war at arm's length. So this shape does not march at all — it picks **one
+meeting ground** and puts the whole fleet round it.
+
+The ground is looked for at the map's middle and then in rings outward,
+eight bearings a ring, and the fleet is placed on a circle around it: seat 0
+due east, the rest evenly spaced, so two carriers are bow to bow and sixteen
+are a ring brawl. A candidate is taken only if **every** hull on it has open
+water, no hostile battery in reach, and its sea room — all or nothing, never
+a fleet half-placed. Radius is the outer loop, so the tightest workable
+circle anywhere on the chart beats a loose one at the middle; searching the
+other way round took a 28 km ring at the centre and called it nose to nose.
+If no circle works the fleet stays where the late war put it, which is a
+longer war rather than a broken one.
+
+Measured: two carriers land exactly 4 km apart on every map and seed tried,
+four make a ring 5.7–8 km across, sixteen put neighbours at 4 km and
+opposite ends 40 km apart. A round is in the air within the first minute on
+every seed, against 0–15 minutes for the ordinary late war. Two of three
+AI seeds then ended within a minute — but team 0 in a headless run is the
+**empty player seat**, and 4 km is lethal to a ship that does not manoeuvre.
+Whether it is lethal to a human is the one number still open (PLAYTEST A5).
 
 ### Closing the distance
 

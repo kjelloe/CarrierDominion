@@ -219,4 +219,11 @@ test('a war saved under the old switches still folds to the shape it was played 
   // And the ladder wins when it is present.
   const modern = applyLobby(rules, { islands: 8, teams: 2, start: 3, game: 1, home: 0 });
   assert.equal(modern.rules.startShape, 3, 'the ladder should outrank what it replaced');
+  // Every rung the war room offers must survive the fold, and a rung that
+  // does not exist must not: an out-of-range start falls back to the
+  // default rather than reaching the dispatcher as a shape nobody built.
+  const nose = applyLobby(rules, { islands: 8, teams: 2, start: 4 });
+  assert.equal(nose.rules.startShape, 4, 'nose to nose did not survive the fold');
+  const nonsense = applyLobby(rules, { islands: 8, teams: 2, start: 9 });
+  assert.equal(nonsense.rules.startShape, 0, 'a rung that does not exist was passed through');
 });
