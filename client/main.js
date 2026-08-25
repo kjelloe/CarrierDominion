@@ -1591,9 +1591,14 @@ function gunBearing(own) {
   if (own === undefined) return 0;
   const view = state.view;
   if (view !== undefined && own.aimKind >= 0 && own.aimId >= 0) {
-    const target = own.aimKind === 1
-      ? view.carriers.find((c) => c.id === own.aimId)
-      : view.units.find((u) => u.id === own.aimId);
+    // A complete kind switch, not an else: units, turrets and carriers have
+    // separate id sequences that all start at zero, so a kind this does not
+    // know must find NOTHING rather than the wrong entity of another list.
+    // Validation bounds aimKind to unit-or-carrier today; that is exactly
+    // the sort of bound that gets widened.
+    let target;
+    if (own.aimKind === 1) target = view.carriers.find((c) => c.id === own.aimId);
+    else if (own.aimKind === 0) target = view.units.find((u) => u.id === own.aimId);
     if (target !== undefined) {
       const bam = Math.atan2(target.y - own.y, target.x - own.x) * (65536 / (Math.PI * 2));
       return ((Math.round(bam - own.heading) % 65536) + 65536) % 65536;

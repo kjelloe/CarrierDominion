@@ -124,6 +124,7 @@ function contactView(carrier) {
     decoySpread: 1000,
     ordnance: -1,
     ordnanceCapacity: -1,
+    chassis: -1,
     materials: -1,
     materialsCapacity: -1,
     flareCooldown: -1,
@@ -255,10 +256,19 @@ function unitContactView(unit) {
     heat: -1,
     overheated: 0,
     heatMax: 0,
-    aimKind: -1,
-    aimId: -1,
-    decoyPattern: 0,
-    decoySpread: 1000,
+    // Everything below is the hull's OWN business, blanked here so that the
+    // contact record has the same shape as an own record. A field on one and
+    // not the other is either a leak or a hole, and test/shared_view.test.js
+    // now fails on either - which is how these nine were found.
+    maxHp: -1,
+    ceiling: -1,
+    commPod: 0,
+    telemetry: -1,
+    deckPermil: 0,
+    payloadGrams: -1,
+    payloadMaxGrams: -1,
+    podGrams: 0,
+    virusGrams: 0,
     contact: 1,
   };
 }

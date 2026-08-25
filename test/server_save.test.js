@@ -114,3 +114,59 @@ test('a resumed war comes back at the speed its table chose', async () => {
   assert.equal(app.speed, 8, 'the table chose x8 and the environment overruled it');
   await app.close();
 });
+
+// The command log IS the save format (docs/01), so every command in the
+// vocabulary has to survive a JSON round trip and replay to the same hash.
+// The six commands the squadron batch added had never been through it, and
+// one of them carries an ARRAY - the first command that does.
+test('a war full of the newest commands saves and resumes to the same hash', () => {
+  const game = createGame(SEED, rules);
+  for (let i = 0; i < 10; i++) stepGame(game);
+
+  const walrus = game.state.units.find((u) => u.team === 0 && u.kind === 1);
+  const manta = game.state.units.find((u) => u.team === 0 && u.kind === 0);
+  const carrier = game.state.carriers[0];
+
+  // The fitting screen, the pod rack, the deck, the screen, and a course -
+  // including the array-carrying one.
+  enqueueCommand(game, { type: 'set_station', unitId: walrus.id, station: 1, rounds: 0 });
+  enqueueCommand(game, { type: 'set_pod_role', unitId: walrus.id, role: 2 });
+  enqueueCommand(game, { type: 'set_device', unitId: walrus.id, device: 1, fitted: 1 });
+  enqueueCommand(game, {
+    type: 'set_decoy_pattern', carrierId: 0, pattern: 1, spread: 600,
+  });
+  for (let i = 0; i < 5; i++) stepGame(game);
+
+  enqueueCommand(game, { type: 'launch_unit', carrierId: 0, kind: 0 });
+  enqueueCommand(game, { type: 'abort_deck', unitId: manta.id });
+  enqueueCommand(game, { type: 'launch_unit', carrierId: 0, kind: 0 });
+  for (let i = 0; i < 120; i++) stepGame(game);
+
+  const flown = game.state.units.find((u) => u.team === 0 && u.kind === 0 && u.state === 1);
+  if (flown !== undefined) {
+    enqueueCommand(game, {
+      type: 'set_route',
+      unitId: flown.id,
+      points: [carrier.x + 4000, carrier.y + 4000, carrier.x + 6000, carrier.y + 2000],
+    });
+  }
+  enqueueCommand(game, {
+    type: 'set_route', carrierId: 0, points: [carrier.x + 9000, carrier.y],
+  });
+  for (let i = 0; i < 60; i++) stepGame(game);
+
+  // Every one of them is in the log, and the log is what gets saved.
+  const kinds = {};
+  for (const entry of game.commandLog) kinds[entry.type] = 1;
+  for (const type of ['set_station', 'set_pod_role', 'set_device',
+    'set_decoy_pattern', 'abort_deck', 'set_route']) {
+    assert.equal(kinds[type], 1, `${type} never reached the command log`);
+  }
+
+  const saved = JSON.parse(JSON.stringify(saveGame(game, SEED, 0)));
+  const problem = { reason: '' };
+  const resumed = resumeGame(saved, loadRules(), problem);
+  assert.notEqual(resumed, -1, problem.reason);
+  assert.equal(hashState(resumed.state), hashState(game.state),
+    'a war with the newest commands did not replay to the same hash');
+});

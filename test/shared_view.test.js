@@ -186,3 +186,91 @@ test('the scoreboard is fog while the war runs and a result once it ends', () =>
   const over = buildView(state, 0);
   assert.deepEqual(over.scores, [{ id: 0, score: 120 }, { id: 1, score: 340 }]);
 });
+
+// --- The fog, checked as a PROPERTY rather than field by field -------------
+//
+// The tests above name the fields they care about, which is how a leak gets
+// in: add something to the own view, forget the contact view, and nothing
+// says so. These two check the shape instead, so a field added to one side
+// and not the other fails here on the day it is written.
+
+test('an enemy hull carries exactly the same keys as one of your own', () => {
+  const state = createInitialState(SEED, rules);
+  state.carriers[1].x = state.carriers[0].x + 1000;
+  state.carriers[1].y = state.carriers[0].y;
+  const unit = state.units.find((u) => u.team === 1);
+  unit.state = 1; // UNIT_ACTIVE
+  unit.x = state.carriers[0].x + 1000;
+  unit.y = state.carriers[0].y;
+
+  const view = buildView(state, 0);
+  const mine = view.carriers.find((c) => c.team === 0);
+  const theirs = view.carriers.find((c) => c.team === 1);
+  assert.notEqual(theirs, undefined, 'the enemy should be on the scope for this test');
+  assert.deepEqual(Object.keys(theirs).sort(), Object.keys(mine).sort(),
+    'the contact view and the own view have drifted apart - a field added to'
+    + ' one and not the other is either a leak or a hole');
+
+  const myUnit = view.units.find((u) => u.team === 0);
+  const theirUnit = view.units.find((u) => u.team === 1);
+  if (myUnit !== undefined && theirUnit !== undefined) {
+    assert.deepEqual(Object.keys(theirUnit).sort(), Object.keys(myUnit).sort(),
+      'the unit contact view and the own unit view have drifted apart');
+  }
+});
+
+test('nothing but position, heading and kind survives the fog', () => {
+  // Every number on the enemy's records is given a value that appears
+  // nowhere else in the war. Anything of theirs that reaches your view but
+  // is not something radar honestly gives you shows up as one of these.
+  const state = createInitialState(SEED, rules);
+  const RADAR_GIVES = ['id', 'team', 'kind', 'x', 'y', 'z', 'heading', 'contact', 'unitKind'];
+  const sentinels = [];
+  let next = 700001;
+
+  const brand = (record) => {
+    for (const key of Object.keys(record)) {
+      if (RADAR_GIVES.includes(key)) continue;
+      if (typeof record[key] !== 'number') continue;
+      record[key] = next;
+      sentinels.push(next);
+      next += 1;
+    }
+  };
+  state.carriers[1].x = state.carriers[0].x + 1000;
+  state.carriers[1].y = state.carriers[0].y;
+  brand(state.carriers[1]);
+  // Branding overwrote the position; put it back where radar can see it.
+  state.carriers[1].x = state.carriers[0].x + 1000;
+  state.carriers[1].y = state.carriers[0].y;
+  state.carriers[1].hull = 900;
+  state.carriers[1].maxHull = 1000;
+
+  const text = JSON.stringify(buildView(state, 0));
+  const leaked = sentinels.filter((value) => text.includes(String(value)));
+  assert.deepEqual(leaked, [],
+    `${leaked.length} enemy field(s) reached the other side's view`);
+});
+
+test('an island reads the same shape whoever holds it, and to the referee', async () => {
+  const { refereeView } = await import('../shared/view.js');
+  const state = createInitialState(SEED, rules);
+  state.islands[0].owner = 0;
+  state.islands[1].owner = 1;
+  const view = buildView(state, 0);
+  const mine = view.islands.find((i) => i.owner === 0);
+  const theirs = view.islands.find((i) => i.owner === 1);
+  assert.deepEqual(Object.keys(theirs).sort(), Object.keys(mine).sort(),
+    'an island you hold and one you do not have different shapes');
+
+  // The referee view is a THIRD island shape, and it has been wrong before:
+  // the fog guard was copied into it with a variable that did not exist there.
+  const referee = refereeView(state);
+  assert.deepEqual(Object.keys(referee.islands[0]).sort(), Object.keys(mine).sort(),
+    'the referee island view has drifted from the seat view');
+  assert.deepEqual(
+    Object.keys(referee.carriers[0]).sort(),
+    Object.keys(view.carriers.find((c) => c.team === 0)).sort(),
+    'the referee carrier view has drifted from the seat view',
+  );
+});
