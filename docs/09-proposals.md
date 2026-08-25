@@ -1,7 +1,12 @@
 # 09 — Proposals: the Base island, the Hammerhead, and the defence drones
 
-Design and spec only (owner directive 2026-08-24: "design and spec 3, 5, 6
-so we can discuss them before implementing"). Three systems from the Amiga
+**All three were ruled in and built on 2026-08-25** — see docs/06 for the
+decisions and docs/02 for what the systems became. This document is kept as
+written: it is the reasoning the rulings answered, and the open questions
+here are the ones the answers settled.
+
+Design and spec only when written (owner directive 2026-08-24: "design and
+spec 3, 5, 6 so we can discuss them before implementing"). Three systems from the Amiga
 manual, each specced against OUR engine's constraints, with the open
 questions that need a ruling before a line of code is written.
 

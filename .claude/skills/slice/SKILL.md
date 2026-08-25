@@ -57,6 +57,16 @@ dev-log honest. This is the procedure.
    what the camera actually sees: the zenith check reads horizon-white until
    the probe looks up (docs/07 lesson 7).
 
+10. **Derived state is recomputed where it can CHANGE, not on a timer.**
+    The resource network depends on island positions (fixed) plus ownership
+    and the depot, so a dirty flag raised at those few sites beats both a
+    per-tick recompute (too expensive at sixteen teams) and an accrual-beat
+    one (stale for up to 100 ticks). Find the small set of writers first.
+11. **A family test that is a RANGE will rot.** The three refits were
+    `what >= 3 && what <= 5` until the runway took 6 and the comm pod took
+    7; `isRefit()` now names the four. Ranges over ids are a promise that
+    ids stay adjacent, and they never do.
+
 ## Order of work
 
 1. **Write the test first**, and name it as a sentence about the game:

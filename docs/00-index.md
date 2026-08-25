@@ -1,6 +1,6 @@
 # Carrier Dominion — documentation
 
-What is actually built, as of 2026-08-24. These describe the code that exists;
+What is actually built, as of 2026-08-25. These describe the code that exists;
 they are not a plan. For the plan and the rulings behind it see
 [`../plan-version1.md`](../plan-version1.md); for what changed and why, in
 order, see [`../dev-log.md`](../dev-log.md).
@@ -15,7 +15,7 @@ order, see [`../dev-log.md`](../dev-log.md).
 | [06-rulings.md](06-rulings.md) | The design of record: every owner ruling, dated, in one place |
 | [07-graphics.md](07-graphics.md) | The three graphics tiers: targets, the style×tier contract, and the High-tier roadmap |
 | [08-ports-plan.md](08-ports-plan.md) | Planning only: the Luau/Roblox twin and the true mobile Low tier — what each needs, for after the human-first pass |
-| [09-proposals.md](09-proposals.md) | Design only: the Base island & network topology, the Hammerhead, and the defence drones — specced for discussion |
+| [09-proposals.md](09-proposals.md) | The three proposals as they were specced for discussion — **all ruled in and built** on 2026-08-25; kept for the reasoning and the open questions their answers settled |
 
 ## The three rules everything else hangs off
 

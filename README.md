@@ -41,7 +41,7 @@ Controls:
 | `A` `D` | rudder (arrow keys work too) |
 | `↑` `↓` | climb / dive, when you are flying a Manta |
 | `X` | all stop |
-| `1` `2` | launch a Manta / a Walrus |
+| `1` `2` `3` | launch a Manta / a Walrus / a Viewing Drone (the Hammerhead's eye) |
 | `N` | select the next unit that is out |
 | `T` | take the controls of the selected unit (again to hand back) |
 | `R` | recall the selected unit to the carrier |
@@ -49,12 +49,13 @@ Controls:
 | `B` | virus bomb: take an enemy island whole, works and guns included |
 | `F` | fire - down the nose when you are flying, at what is in range when you are not |
 | `E` | decoy flares: break the lock on every seeker near the ship |
+| `Y` | the decoy screen: four drones out as standing bait - a quarter of your top speed while they ride |
 | `V` | next weapon: laser / cluster / napalm / missile, or cannon / mines |
 | `L` `K` | supply run on or off / make the nearest island your depot |
 | `Q` | the quartermaster: island stocks, the depot, and the factory production bias |
 | `U` | escort: the selected unit takes station on the carrier and fights what comes |
 | `Z` | the damage control board - click a section to set its repair priority |
-| `C` | camera: chase / **gunsight** (first person, on the mount) / strategic map |
+| `C` | camera: chase / **gunsight** (first person, on the mount) / strategic map. The tab row adds CHART (the map screen) and, while an eye is up, DRONE - where a click fires a Hammerhead |
 | `,` `.` | time compression down / up (`space` pauses; in LAN it takes a vote) |
 | `I` | the signals log: the last sixteen reports, with ages |
 | `O` | rear view, in chase and gunsight |
@@ -187,7 +188,16 @@ the table's own on/off switch - the High tier's Preetham sky and mirror
 water, CI on every push, and a written plan (docs/08) for the Luau/Roblox
 twin and the true mobile tier.
 
-The showcase batch (same day) put a face on it: a live diorama of an island
+The 2026-08-24/25 source reviews then closed the gap to the original: the
+astern gear, the signals log, island names and the location line, hangar
+repair with damage-scaled speed and a fuel-leak clock, the telemetry leash
+(a drone past 26 km self-destructs) with island runways as its answer, the
+CHART screen, command-centre destruction as a third capture path, the home
+island, loadout presets, the Hammerhead and its Viewing Drone, the decoy
+screen, Bat Caves and neutral silos, the comm-pod refit, and the resource
+network as a real link graph.
+
+The showcase batch (2026-08-23) put a face on it: a live diorama of an island
 assault behind the start menu AND the war room, a title card, distant surf
 and gunfire under the menu, a live style preview on the look row, the
 High-tier models pass (working clutter on every hull, in every style), maps

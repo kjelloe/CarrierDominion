@@ -302,6 +302,13 @@ The docs/09 discussion and the remaining source-review items, decided:
   and the amber grid folded in along the way — the economy/AI rework lands
   with the most test coverage behind it.
 
+**All of it built the same day** (docs/02 carries the systems). Two
+measurements worth keeping: the home island and the island teeth moved
+AI-vs-AI wars from 33k–231k ticks to 35,810–112,498, a narrower spread and
+a slower early game; and link topology costs nothing at our island density
+— a side that takes the nearest island keeps its chain whole — so it bites
+only on overreach, which is what it was ruled in for.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

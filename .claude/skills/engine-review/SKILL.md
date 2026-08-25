@@ -86,6 +86,30 @@ Look for these shapes first — every one produced a real bug:
   explicitly server-side like observers), savedOptions on resume, and the
   replay fold. Check the whole chain, not the first link.
 
+- **A predicate that reads bookkeeping the feature does not maintain.**
+  `onNetwork()` asked `island.networkHops >= 0`, which is meaningless when
+  topology is switched off — so every hand-owned island in a test read as
+  "cut off". A predicate must answer from something true in BOTH modes:
+  with the feature off it now asks only "does somebody own this".
+- **Guard order inside a loop.** A new `continue` for "cut off from the
+  chain" was placed ABOVE the existing "lose the island, lose the site"
+  branch, so a build on rock that went neutral was skipped before it was
+  cleared and sat there for the rest of the war. When adding a skip to a
+  loop, read every branch it now jumps in front of.
+- **A counter with an owner.** `island.turrets` means "the OWNER'S works",
+  and `anythingBuilt()` reads it to decide whether a role is still
+  changeable. Counting a neutral map feature into it froze every role
+  choice on the board. Before incrementing a counter, ask whose question it
+  answers.
+- **Enum values that meet in one switch.** `FLIGHT_LANDING` was given 4,
+  which is `DRIVE_BLOCKED`, and fleet.js compares flight and drive outcomes
+  in one chain: every landing read as "blocked" and orbited forever.
+- **A default that grabs the player's attention.** Auto-selecting the first
+  afloat hull was harmless while nothing was afloat at war start; the home
+  island put a supply lighter on the water at tick 1 and the same line
+  turned click-to-sail into click-to-move-the-boat. When a start condition
+  changes, re-read every "if nothing is chosen yet" default.
+
 ## Verifying and landing
 
 - Measure economy/pacing claims with the headless sim, not by eye: a quick
