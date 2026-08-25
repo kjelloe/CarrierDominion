@@ -15,6 +15,15 @@ function carrierTeam(state, carrierId) {
   return -1;
 }
 
+// A scan, not Array.includes: engine/ stays inside the Luau-portable subset
+// (docs/01).
+function isUnitCommand(type) {
+  for (let i = 0; i < UNIT_COMMANDS.length; i++) {
+    if (UNIT_COMMANDS[i] === type) return true;
+  }
+  return false;
+}
+
 function unitTeam(state, unitId) {
   for (let i = 0; i < state.units.length; i++) {
     if (state.units[i].id === unitId) return state.units[i].team;
@@ -38,7 +47,7 @@ function checkAuthority(state, team, command) {
     return '';
   }
 
-  if (UNIT_COMMANDS.includes(command.type)) {
+  if (isUnitCommand(command.type)) {
     const owner = unitTeam(state, command.unitId);
     if (owner === -1) return 'no such unit';
     if (owner !== team) return 'that unit belongs to another team';

@@ -13,6 +13,7 @@ import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { CONTACT_CARRIER, remembered } from './contacts.js';
 import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
+import { beginLaunch } from './deck.js';
 import { fireUnit, roundsOf, selectWeapon } from './weapons.js';
 import {
   KIND_MANTA,
@@ -21,6 +22,7 @@ import {
   UNIT_ACTIVE,
   UNIT_RETURNING,
   fuelPermil,
+  unitCommitted,
 } from './units.js';
 
 // How many airframes go out at once. Two is enough to matter and leaves the
@@ -91,6 +93,20 @@ function airborneMantas(state, team) {
   return out;
 }
 
+// Airframes already committed to this strike, whether they are flying or
+// still riding the lift. The top-up counts THESE: counting only the airborne
+// ones launched a fresh Manta on every AI turn of the five seconds the deck
+// cycle takes, and the ship emptied its hangar into the sea.
+function committedMantas(state, team) {
+  let count = 0;
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.team !== team || unit.kind !== KIND_MANTA) continue;
+    if (unitCommitted(unit)) count = count + 1;
+  }
+  return count;
+}
+
 // Send an aircraft at a point. Getting it there is only half the job: a Manta
 // fires only when somebody pulls the trigger (ruling #18), and for an AI-flown
 // aircraft that somebody is this module.
@@ -136,13 +152,39 @@ function huntGhost(state, brain, mark, flying, carrier) {
   }
   if (scout === -1) {
     if (carrier === -1) return;
+    // One scout, and only if nothing is already on its way up.
+    if (committedMantas(state, brain.team) > 0) return;
     const ready = readyToLaunch(state, carrier.id, KIND_MANTA);
     if (ready === -1 || fuelPermil(ready) <= STRIKE_FUEL_PERMIL) return;
-    launchUnit(ready, carrier, state.params.deckHeight, state.weapons);
-    pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
-    scout = ready;
+    beginLaunch(state, ready, carrier);
+    return;
   }
   vectorTo(scout, mark.x, mark.y);
+}
+
+// An insertion sort, written out, because Array.sort is not in the
+// Luau-portable subset (docs/01) and a table sort with a closure comparator
+// is the least portable thing in the file. The order is unchanged: the
+// comparison ends in the island id, so it is a total order and the result
+// does not depend on the sort being stable.
+function marksBefore(a, b, carrier) {
+  if (a.turrets !== b.turrets) return a.turrets < b.turrets;
+  const da = dist2D(carrier.x, carrier.y, a.nodeX, a.nodeY);
+  const db = dist2D(carrier.x, carrier.y, b.nodeX, b.nodeY);
+  if (da !== db) return da < db;
+  return a.id < b.id;
+}
+
+function sortMarks(marks, carrier) {
+  for (let i = 1; i < marks.length; i++) {
+    const held = marks[i];
+    let j = i - 1;
+    while (j >= 0 && marksBefore(held, marks[j], carrier)) {
+      marks[j + 1] = marks[j];
+      j = j - 1;
+    }
+    marks[j + 1] = held;
+  }
 }
 
 // Patrolling costs bunker fuel every sortie, so it is a luxury the ship only
@@ -188,13 +230,7 @@ function patrolMark(state, team, carrier) {
   if (marks.length === 0) return -1;
   // Least guns first, nearest first inside a tier: the sweep starts where a
   // scout is most likely to come home.
-  marks.sort((a, b) => {
-    if (a.turrets !== b.turrets) return a.turrets - b.turrets;
-    const da = dist2D(carrier.x, carrier.y, a.nodeX, a.nodeY);
-    const db = dist2D(carrier.x, carrier.y, b.nodeX, b.nodeY);
-    if (da !== db) return da - db;
-    return a.id - b.id;
-  });
+  sortMarks(marks, carrier);
   const island = marks[floorDiv(state.tick, PATROL_ROTATE_TICKS) % marks.length];
   const away = dist2D(carrier.x, carrier.y, island.nodeX, island.nodeY);
   if (away <= PATROL_STANDOFF_UNITS) {
@@ -303,13 +339,15 @@ function manageStrike(state, brain) {
   }
   if (carrier === -1) return target.id;
 
-  for (let launched = flying.length; launched < STRIKE_MANTAS; launched++) {
+  for (let launched = committedMantas(state, brain.team);
+    launched < STRIKE_MANTAS; launched++) {
     const ready = readyToLaunch(state, carrier.id, KIND_MANTA);
     if (ready === -1) break;
     if (fuelPermil(ready) <= STRIKE_FUEL_PERMIL) break;
-    launchUnit(ready, carrier, state.params.deckHeight, state.weapons);
-    pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
-    vectorTo(ready, target.x, target.y);
+    // The deck cycle takes it from here, and the loop above vectors it on
+    // the turn it is actually away. The launched event is the deck's to push
+    // when she leaves the ramp, not this file's when she is ordered up.
+    if (beginLaunch(state, ready, carrier) === 0) break;
   }
   return target.id;
 }

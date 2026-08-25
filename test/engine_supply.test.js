@@ -11,7 +11,9 @@ import { canonicalize } from '../shared/statehash.js';
 import { dist2D } from '../shared/fixed.js';
 import { worldHeightAt } from '../engine/heightmap.js';
 import { lighterFor, loadingStation } from '../engine/supply.js';
-import { KIND_LIGHTER, ORDER_DELIVER, ORDER_LOAD, UNIT_STOWED } from '../engine/units.js';
+import {
+  KIND_LIGHTER, ORDER_DELIVER, ORDER_LOAD, ORDER_RETURN, UNIT_STOWED,
+} from '../engine/units.js';
 import { EVT_SUPPLY_DELIVERED, EVT_SUPPLY_LOADED, EVT_SUPPLY_RUN } from '../engine/events.js';
 import { KIND_RESOURCE } from '../engine/worldgen.js';
 
@@ -218,4 +220,74 @@ test('a depot with parts launches a replacement boat when every one is lost', (t
   const after = drive(run.state, 3000);
   const afloat = after.units.filter((u) => u.kind === KIND_LIGHTER && u.state !== 3 && u.state !== 0);
   assert.ok(afloat.length <= 1, 'the depot built a fleet of spares');
+});
+
+// The deck cycle (2026-08-26) put a window between "ordered up" and "afloat"
+// that the supply run had never had to think about. Two things live in it.
+// The bare ocean turns the deck cycle off and owns no islands; these two
+// tests are about the cycle AND need somewhere to run to, so they put the
+// ruleset's own timings back and stock a depot the same way stockedDepot
+// does.
+function withDeck() {
+  const real = loadRules();
+  const deckRules = {
+    ...rules,
+    rules: {
+      ...rules.rules,
+      deckRangeTicks: real.rules.deckRangeTicks,
+      launchTicks: real.rules.launchTicks,
+      dockTicks: real.rules.dockTicks,
+    },
+  };
+  const state = createInitialState(SEED, deckRules);
+  const depot = state.islands[0];
+  depot.owner = 0;
+  depot.kind = KIND_RESOURCE;
+  depot.stockFuel = 40000;
+  state.teams[0].stockpileIsland = depot.id;
+  const carrier = state.carriers[0];
+  carrier.x = depot.x;
+  carrier.y = depot.y - depot.radius * 2;
+  carrier.fuel = 20000;
+  return state;
+}
+
+test('a boat ordered up is not ordered up again on every tick of the cycle', () => {
+  let state = withDeck();
+  state.carriers[0].supplyRun = 1;
+  const before = state.units.filter((u) => u.kind === KIND_LIGHTER
+    && u.carrierId === 0 && u.state === UNIT_STOWED).length;
+  // Right through the cycle: exactly ONE boat should leave, however many
+  // ticks the run gets to look at an empty sea.
+  for (let i = 0; i < state.params.deckRangeTicks + state.params.launchTicks + 20; i++) {
+    state = apply(state, TICK);
+  }
+  const afloat = state.units.filter((u) => u.kind === KIND_LIGHTER
+    && u.carrierId === 0 && u.state !== UNIT_STOWED).length;
+  assert.equal(afloat, 1, `${afloat} boats went out for one run`);
+  assert.ok(before >= 1, 'no boat was aboard to send');
+});
+
+test('a run that stands down while the boat is still on the ramp does not maroon her', () => {
+  let state = withDeck();
+  state.carriers[0].supplyRun = 1;
+  // Far enough for her to be afloat and idle - the order used to be given at
+  // the moment of launch, so this state could not exist.
+  for (let i = 0; i < state.params.deckRangeTicks + state.params.launchTicks + 4; i++) {
+    state = apply(state, TICK);
+  }
+  const boat = state.units.find((u) => u.kind === KIND_LIGHTER && u.carrierId === 0
+    && u.state !== UNIT_STOWED);
+  assert.notEqual(boat, undefined, 'no boat went out at all');
+
+  state.carriers[0].supplyRun = 0;
+  // She is called home at once and, being alongside, is aboard shortly after.
+  state = apply(state, TICK);
+  const called = state.units.find((u) => u.id === boat.id);
+  assert.equal(called.order, ORDER_RETURN, 'nobody called the idle boat home');
+
+  for (let i = 0; i < 2000; i++) state = apply(state, TICK);
+  const now = state.units.find((u) => u.id === boat.id);
+  assert.equal(now.state, UNIT_STOWED,
+    'the boat was left at sea with no run to belong to');
 });

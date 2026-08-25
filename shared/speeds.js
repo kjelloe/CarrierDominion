@@ -11,12 +11,20 @@
 const SPEEDS = [0, 1, 2, 4, 8, 16]; // 0 is paused
 
 function isSpeed(multiplier) {
-  return SPEEDS.includes(multiplier);
+  // A scan, not Array.includes: shared/ is read by the engine's portable
+  // half as well as by the client (docs/01).
+  for (let i = 0; i < SPEEDS.length; i++) {
+    if (SPEEDS[i] === multiplier) return true;
+  }
+  return false;
 }
 
 // The next rung up or down from where you are, clamped at both ends.
 function stepSpeed(current, direction) {
-  const index = SPEEDS.indexOf(current);
+  let index = -1;
+  for (let i = 0; i < SPEEDS.length; i++) {
+    if (SPEEDS[i] === current) index = i;
+  }
   if (index === -1) return 1;
   const next = index + direction;
   if (next < 0) return SPEEDS[0];

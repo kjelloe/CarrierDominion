@@ -73,7 +73,14 @@ function stepGame(game) {
 
   const snapshot = createSnapshot(game.state);
   game.snapshots.push(snapshot);
-  while (game.snapshots.length > game.snapshotCapacity) game.snapshots.shift();
+  // Drop the oldest by rebuilding the ring: Array.shift is not in the
+  // Luau-portable subset (docs/01), and the capacity is a handful.
+  if (game.snapshots.length > game.snapshotCapacity) {
+    const kept = [];
+    const first = game.snapshots.length - game.snapshotCapacity;
+    for (let i = first; i < game.snapshots.length; i++) kept.push(game.snapshots[i]);
+    game.snapshots = kept;
+  }
   return snapshot;
 }
 

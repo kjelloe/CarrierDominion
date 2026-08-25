@@ -68,6 +68,19 @@ test('a finished war decides nothing new', () => {
   assert.doesNotThrow(() => canonicalize(state));
 });
 
+// Everything a side owns that can be spent, in one reading. If a command
+// moves any of it after the whistle, the sweep below sees it.
+function purse(state) {
+  const carrier = state.carriers[0];
+  const islands = state.islands.map((i) => `${i.id}:${i.stockMaterials},${i.stockFuel},`
+    + `${i.stockOrdnance},${i.building}`);
+  const hulls = state.units
+    .filter((u) => u.team === 0)
+    .map((u) => `${u.id}:${u.arms.map((a) => a.n).join('.')},${u.pod},${u.virus}`);
+  return [carrier.fuel, carrier.ordnance, carrier.materials, carrier.chassis,
+    islands.join('|'), hulls.join('|')];
+}
+
 test('after the whistle nobody takes your money, and no trigger answers', () => {
   // Post-war spending refused (third review): a site started after the war
   // can never finish, a pod or bomb bought after it can never land, and a
@@ -93,6 +106,50 @@ test('after the whistle nobody takes your money, and no trigger answers', () => 
   state = apply(state, { type: 'fire_unit', unitId: pilot.id });
   assert.ok(!state.events.some((e) => e.code === EVT_SHOT_FIRED),
     'a manual trigger fired after the war');
+
+  // And the FITTING SCREEN, which arrived after that ruling and was not told
+  // about it: set_station and set_device are withdrawals from the stores
+  // exactly as build_on_island is.
+  const walrus = state.units.find((u) => u.team === 0 && u.kind === KIND_WALRUS);
+  const ordnanceBefore = state.carriers[0].ordnance;
+  const materialsBefore = state.carriers[0].materials;
+  const roundsBefore = walrus.arms[0].n;
+  state = apply(state, {
+    type: 'set_station', unitId: walrus.id, station: 0, rounds: roundsBefore - 10,
+  });
+  state = apply(state, {
+    type: 'set_station', unitId: walrus.id, station: 0, rounds: roundsBefore,
+  });
+  assert.equal(state.carriers[0].ordnance, ordnanceBefore,
+    'the fitting screen traded stores after the war');
+  assert.equal(state.units.find((u) => u.id === walrus.id).arms[0].n, roundsBefore,
+    'a station was refitted after the war');
+
+  state = apply(state, { type: 'set_device', unitId: walrus.id, device: 0, fitted: 0 });
+  assert.equal(state.carriers[0].materials, materialsBefore,
+    'a device was landed for a refund after the war');
+});
+
+// Every command that MOVES GOODS, swept: the aftermath rule is a property of
+// the vocabulary, not of the three commands that happened to be found first.
+// A new spending command that forgets the guard fails here.
+test('no command moves goods after the whistle', () => {
+  let state = fresh();
+  state.phase = PHASE_OVER;
+  const walrus = state.units.find((u) => u.team === 0 && u.kind === KIND_WALRUS);
+  const before = purse(state);
+  const spenders = [
+    { type: 'build_on_island', carrierId: 0, islandId: 0, what: 0 },
+    { type: 'set_station', unitId: walrus.id, station: 0, rounds: 0 },
+    { type: 'set_station', unitId: walrus.id, station: 0, rounds: 60 },
+    { type: 'set_device', unitId: walrus.id, device: 0, fitted: 0 },
+    { type: 'set_device', unitId: walrus.id, device: 1, fitted: 1 },
+  ];
+  for (const command of spenders) {
+    state = apply(state, command);
+    assert.deepEqual(purse(state), before,
+      `${command.type} moved goods after the war`);
+  }
   assert.doesNotThrow(() => canonicalize(state));
 });
 

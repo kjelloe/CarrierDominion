@@ -5,6 +5,70 @@ golden hash and why.
 
 ---
 
+## 2026-08-26 — Review: the deck cycle's second order, and the subset enforced
+
+A review pass in the owner's absence, by the method in the engine-review
+skill. Five findings, four fixed, one queued because it is a balance
+decision.
+
+**The fitting screen took money after the whistle.** `set_station` and
+`set_device` are withdrawals from the stores exactly as `build_on_island`
+is, and they arrived after the 2026-08-23 ruling without being told about
+it. Guarded - and the test is now a SWEEP over every command that moves
+goods, so the next spending command that forgets fails here rather than
+being found by eye.
+
+**The machine did not pay the deck cost the player pays.** The AI and the
+supply run called `launchUnit` directly, so a human waited five seconds on
+the lift and the machine did not. Everyone rides the lift now, which needed
+three careful edits rather than one:
+
+- the AI's "have I already sent a Walrus?" counted only ACTIVE, so it would
+  have ordered a second and a third during the five seconds the first was on
+  the ramp. There is a `unitCommitted()` for that now, and the strike's
+  top-up counts committed airframes rather than airborne ones.
+- the strike used to push the launched event itself; the deck pushes it when
+  she actually leaves, so the manual push was a duplicate.
+- the supply boat used to be given its order at the moment of launch. Launch
+  RESETS a hull's orders, so the order was thrown away - and worse, a run
+  that stood down while she was still on the ramp left her adrift at sea for
+  the rest of the war, because the recall only looked for a boat that was
+  loading. She is ordered when she is afloat, and anything not actively
+  delivering is called home.
+
+**The hold's ceiling is a delivery rule, not a container.** Landing stores
+off a hull put the ordnance store over capacity, because the ship starts
+with both the hold and every magazine full. Capping it made the fitting
+screen dead at tick one; destroying the excess would have broken ruling #3.
+The rule now reads: `ordnanceCapacity` is what the ship can take in from
+OUTSIDE - it is the limit engine/supply.js unloads against - and a round
+moving from a rack to the hold never left the ship. The instrument bars
+clamp at the brim so nothing draws past its bezel.
+
+**The Luau-portable subset was a rule nobody checked.** Eleven violations,
+including a comparator `sort` in the AI, `.includes` in the reducer itself,
+and `.shift()` in the snapshot ring. All rewritten as loops - the AI's sort
+is an insertion sort with the same total order, so the result is unchanged -
+and there is now a TEST that reads the sources and fails on the next one.
+Three files throw on purpose (the hash canonicaliser, the fixed-point
+overflow guard, the PRNG's empty range); those are named exemptions.
+
+**Queued, not fixed:** `startFuel` and `startOrdnance` sit unused in
+`data/rules.json` while the ship sails with a brim-full bunker and hold -
+which contradicts the comment beside `startMaterials` saying she sails with
+a finite issue. Wiring them is a balance change and it is a real one:
+measured over three seeds, seed 31337 runs 50k ticks at the current 6000,
+299k at the ruleset's 2000, and 42k at 3000. Owner's call (dev-questions).
+Also queued: six portable modules are past the 300-line soft cap by half
+again or more, reducer.js at 857. The subset test guards 900 so it cannot
+get worse.
+
+**Cost:** 514 tests (+3 files), smoke green, battery 5/5 - and pacing moved,
+because the machine now pays for its own deck: seed 20260818 resolves at
+59,728 rather than 160,891.
+
+---
+
 ## 2026-08-26 — The last three consoles: gunnery, the screen, resources
 
 The tail of docs/10 gap 5, and with it the 1988 interface review is closed

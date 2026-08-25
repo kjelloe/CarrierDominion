@@ -24,6 +24,7 @@ import {
   UNIT_ACTIVE,
   UNIT_RETURNING,
   UNIT_STOWED,
+  unitCommitted,
 } from './units.js';
 import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { teamById } from './economy.js';
@@ -32,6 +33,7 @@ import { setDecoyScreen } from './fleet.js';
 import { covered } from './contacts.js';
 import { awaitingHull } from './repair.js';
 import { manageIslands, planFor } from './ai_estate.js';
+import { beginLaunch } from './deck.js';
 import { fireFlares, shouldFlare } from './flare.js';
 
 const AI_SEEK = 0; // steaming toward the chosen island
@@ -99,11 +101,14 @@ function steerCarrierTo(carrier, x, y, slowRadius) {
 }
 
 // The Walrus this brain is currently using, or -1.
+// The vehicle this brain has committed, whether it is ashore, at sea, or
+// still riding the lift. Counting only ACTIVE would send a second Walrus
+// every turn of the five seconds the deck cycle takes, and then a third.
 function activeWalrus(state, brain) {
   if (brain.walrusId === -1) return -1;
   const unit = findUnitById(state, brain.walrusId);
   if (unit === -1) return -1;
-  if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return -1;
+  if (!unitCommitted(unit)) return -1;
   return unit;
 }
 
@@ -145,11 +150,16 @@ function invade(state, brain, carrier) {
       brain.targetIsland = -1;
       return;
     }
-    launchUnit(ready, carrier, state.params.deckHeight, state.weapons);
-    pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
+    // Through the deck, like the player (2026-08-26). The machine used to
+    // launch instantly while a human waited five seconds on the lift, which
+    // was an oversight of the deck slice rather than a decision.
+    if (beginLaunch(state, ready, carrier) === 0) return;
     brain.walrusId = ready.id;
     walrus = ready;
   }
+
+  // Still on its way up: nothing to order yet.
+  if (walrus.state !== UNIT_ACTIVE && walrus.state !== UNIT_RETURNING) return;
 
   if (walrus.pod !== 1) {
     orderReturn(walrus);

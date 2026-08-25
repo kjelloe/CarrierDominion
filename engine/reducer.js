@@ -245,6 +245,10 @@ function applyLoadoutPreset(next, command) {
 // refuse are the three the screen shows: the hull is not in the hangar, the
 // hold has not got them, or the hull cannot lift them.
 function applyStation(next, command) {
+  // Nobody takes your money after the whistle (ruled 2026-08-23). Fitting is
+  // a withdrawal from the ordnance store like any other, and the fitting
+  // screen arrived after that ruling without being told about it.
+  if (next.phase !== PHASE_RUNNING) return reject(next);
   const unit = findUnit(next, command.unitId);
   if (unit === -1) return reject(next);
   // Outfitting happens in the hangar. A Manta over the sea does not grow a
@@ -265,6 +269,14 @@ function applyStation(next, command) {
   if (change < 0) {
     // Landing stores back into the hold: the ordnance comes back, because
     // nothing is conjured and nothing is thrown overboard either.
+    //
+    // Uncapped, deliberately. `ordnanceCapacity` governs what the ship can
+    // take in from OUTSIDE - it is the limit engine/supply.js unloads
+    // against - and a round moving from a rack to the hold never left the
+    // ship. Capping it here made the fitting screen dead at tick one, when
+    // the hold and every magazine are both full, and would have destroyed
+    // the difference or refused the move. Conservation is the invariant
+    // (ruling #3); the hold's ceiling is a delivery rule.
     entry.n = wanted;
     carrier.ordnance = carrier.ordnance + (-change) * weapon.ordnancePerRound;
     return next;
@@ -287,6 +299,7 @@ function applyStation(next, command) {
 const DEVICE_POD = 0;
 
 function applyDevice(next, command) {
+  if (next.phase !== PHASE_RUNNING) return reject(next);
   const unit = findUnit(next, command.unitId);
   if (unit === -1 || unit.kind !== KIND_WALRUS) return reject(next);
   if (unit.state !== UNIT_STOWED) return reject(next);
@@ -297,6 +310,8 @@ function applyDevice(next, command) {
   if (had === command.fitted) return next;
 
   if (command.fitted === 0) {
+    // Back into the ship's own stores, uncapped for the same reason as a
+    // landed magazine: it never left the ship.
     if (pod) {
       unit.pod = 0;
       carrier.materials = carrier.materials + carrier.podMaterials;
@@ -613,16 +628,20 @@ function applyFlares(next, command) {
 // command log is the replay: a war where the AI took over at tick 40,000 has to
 // replay as a war where the AI took over at tick 40,000.
 function applySetAi(next, command) {
-  const has = [];
-  for (let i = 0; i < next.ai.length; i++) has.push(next.ai[i].team);
+  // An explicit scan rather than Array.includes: the engine stays inside the
+  // Luau-portable subset (docs/01), and a table has no `includes`.
+  let has = 0;
+  for (let i = 0; i < next.ai.length; i++) {
+    if (next.ai[i].team === command.team) has = 1;
+  }
   if (command.active === 1) {
     if (command.team < 0 || command.team >= next.teams.length) return reject(next);
-    if (has.includes(command.team)) return next;
+    if (has === 1) return next;
     next.ai.push(createBrain(command.team));
     pushEvent(next.events, EVT_AI_SEAT, command.team, 1, 0);
     return next;
   }
-  if (!has.includes(command.team)) return next;
+  if (has === 0) return next;
   const kept = [];
   for (let i = 0; i < next.ai.length; i++) {
     if (next.ai[i].team !== command.team) kept.push(next.ai[i]);

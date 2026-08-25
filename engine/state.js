@@ -43,16 +43,24 @@ import {
 import { raiseNeutralSilos } from './batcave.js';
 import { computeNetwork } from './network.js';
 
+// A flat copy of a row of numbers. Array.slice is not in the Luau-portable
+// subset (docs/01), and every one of these is a table of integers.
+function copyNumbers(row) {
+  const out = [];
+  for (let i = 0; i < row.length; i++) out.push(row[i]);
+  return out;
+}
+
 function presetsFrom(presetRules) {
   const out = [];
   const fills = presetRules === undefined ? [[1000, 1000, 1000, 1000]] : presetRules.fills;
-  for (let i = 0; i < fills.length; i++) out.push(fills[i].slice());
+  for (let i = 0; i < fills.length; i++) out.push(copyNumbers(fills[i]));
   return out;
 }
 
 function copyPresets(presets) {
   const out = [];
-  for (let i = 0; i < presets.length; i++) out.push(presets[i].slice());
+  for (let i = 0; i < presets.length; i++) out.push(copyNumbers(presets[i]));
   return out;
 }
 
@@ -257,7 +265,7 @@ function copyState(state) {
       commandCentreHp: state.params.commandCentreHp,
       decoyStation: state.params.decoyStation,
       decoySeduce: state.params.decoySeduce,
-      icRaw: state.params.icRaw.slice(),
+      icRaw: copyNumbers(state.params.icRaw),
       icPerIsland: state.params.icPerIsland,
       icPatrol: state.params.icPatrol,
       icLeash: state.params.icLeash,

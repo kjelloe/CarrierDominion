@@ -285,9 +285,13 @@ function drawGunnery(ctx, box, own, aimBam, colours, readout) {
   ctx.textAlign = 'left';
 }
 
+// Clamped at the brim: the ordnance hold can sit ABOVE its delivery ceiling
+// after stores are landed off a hull (they never left the ship), and a bar
+// drawn at 108% runs out through the side of its own bezel.
 function permilOf(value, capacity) {
   if (capacity <= 0) return 0;
-  return Math.round((value * 1000) / capacity);
+  const permil = Math.round((value * 1000) / capacity);
+  return permil > 1000 ? 1000 : permil;
 }
 
 function createInstruments(canvas) {

@@ -152,18 +152,27 @@ test('a ghost on the chart is worth one scout, and the search disproves itself',
   }];
   state.tick = 10;
 
-  // The AI sends exactly one aircraft to look.
+  // The AI sends exactly one aircraft to look. Long enough for the deck
+  // cycle (2026-08-26: the machine rides the lift like the player), and the
+  // "exactly one" is the point - during those five seconds the brain must
+  // not order a second, and a third, while the first is still on the ramp.
+  const deck = state.params.deckRangeTicks + state.params.launchTicks + 40;
   let scouts = 0;
-  for (let i = 0; i < 40 && scouts === 0; i++) {
+  for (let i = 0; i < deck && scouts === 0; i++) {
     state = apply(state, TICK);
     scouts = state.units.filter(
       (u) => u.team === 0 && u.kind === KIND_MANTA && u.state === UNIT_ACTIVE,
     ).length;
   }
   assert.equal(scouts, 1, 'a memory is worth one scout, not a strike package');
-  const scout = state.units.find(
+  // The vector comes on the brain's next turn, not on the tick she clears
+  // the ramp: the deck cycle put the launch and the order in different AI
+  // turns, which is honest - she is not steerable while she is on the lift.
+  const scoutId = state.units.find(
     (u) => u.team === 0 && u.kind === KIND_MANTA && u.state === UNIT_ACTIVE,
-  );
+  ).id;
+  for (let i = 0; i <= state.params.aiCadenceTicks + 2; i++) state = apply(state, TICK);
+  const scout = state.units.find((u) => u.id === scoutId);
   assert.equal(scout.targetX, spotX, 'the scout was not sent at the ghost');
 
   // It flies there, scans the empty spot, the ghost is disproved, and with
@@ -222,9 +231,11 @@ test('patrols wait for a real silence, then sweep the enemy holdings', () => {
     'the opening became a carrier hunt',
   );
 
-  // Thirty thousand quiet ticks later, the silence is worth breaking.
+  // Thirty thousand quiet ticks later, the silence is worth breaking - and
+  // she still has to ride the lift like everyone else (2026-08-26).
   state.tick = 30010;
-  for (let i = 0; i < 6; i++) state = apply(state, TICK);
+  const deck = state.params.deckRangeTicks + state.params.launchTicks + 20;
+  for (let i = 0; i < deck; i++) state = apply(state, TICK);
   const scout = state.units.find(
     (u) => u.team === 0 && u.kind === KIND_MANTA && u.state === UNIT_ACTIVE,
   );

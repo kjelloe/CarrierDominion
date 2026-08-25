@@ -523,6 +523,16 @@ function stowedCount(state, carrierId, kind) {
 // Out, alive, and therefore both a target and a shooter. Lives here rather
 // than in weapons.js because it is a fact about the unit, and because shots.js
 // needs it too.
+// On its way out, or out: STOWED is the only state that means "still in the
+// hangar and available". The deck cycle (2026-08-25) put three states in
+// between, and every "have I already sent one?" query has to know about them
+// or it sends a second, and a third.
+function unitCommitted(unit) {
+  return unit.state === UNIT_ON_DECK || unit.state === UNIT_LAUNCHING
+    || unit.state === UNIT_ACTIVE || unit.state === UNIT_RETURNING
+    || unit.state === UNIT_DOCKING;
+}
+
 function unitEngageable(unit) {
   if (unit.hp <= 0) return false;
   // A Manta parked on a runway is a target like any other - a runway is a
@@ -584,6 +594,7 @@ export {
   UNIT_ON_DECK,
   UNIT_LAUNCHING,
   UNIT_DOCKING,
+  unitCommitted,
   ORDER_LAND,
   KIND_DRONE,
   createDrone,

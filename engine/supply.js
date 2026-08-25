@@ -15,6 +15,7 @@ import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { EVT_SUPPLY_DELIVERED, EVT_SUPPLY_LOADED, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { islandById, teamById } from './economy.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
+import { beginLaunch } from './deck.js';
 import {
   KIND_LIGHTER,
   ORDER_DELIVER,
@@ -22,6 +23,8 @@ import {
   UNIT_ACTIVE,
   UNIT_LOST,
   UNIT_RETURNING,
+  UNIT_ON_DECK,
+  UNIT_LAUNCHING,
 } from './units.js';
 import { EVT_HULL_REPLACED } from './events.js';
 import { createArms } from './weapons.js';
@@ -51,6 +54,17 @@ function lighterFor(state, carrierId) {
     if (unit.state === UNIT_ACTIVE || unit.state === UNIT_RETURNING) return unit;
   }
   return -1;
+}
+
+// A boat already ordered up, still on the ramp. The run has to know about it
+// or it orders another one on every tick of the deck cycle.
+function boatOnTheRamp(state, carrierId) {
+  for (let i = 0; i < state.units.length; i++) {
+    const unit = state.units[i];
+    if (unit.kind !== KIND_LIGHTER || unit.carrierId !== carrierId) continue;
+    if (unit.state === UNIT_ON_DECK || unit.state === UNIT_LAUNCHING) return 1;
+  }
+  return 0;
 }
 
 function laden(unit) {
@@ -344,23 +358,37 @@ function stepSupply(state) {
     let unit = lighterFor(state, carrier.id);
 
     if (carrier.supplyRun !== 1 || depot === -1 || depot.owner !== carrier.team) {
-      // No run, or nowhere to run to: whatever is out finishes its delivery
-      // and then comes home.
-      if (unit !== -1 && unit.order === ORDER_LOAD) orderReturn(unit);
+      // No run, or nowhere to run to: whatever is out finishes its DELIVERY
+      // and then comes home; anything else comes home now. "Anything else"
+      // has to include a boat that is merely holding, which it never used to
+      // be - the boat was ordered at the moment of launch, so it could not
+      // be afloat without an order. Since it rides the deck cycle (2026-08-26)
+      // there is a window where it is afloat and idle, and a run that stood
+      // down inside that window left the boat adrift for the rest of the war.
+      if (unit !== -1 && unit.order !== ORDER_DELIVER) orderReturn(unit);
       continue;
     }
 
     if (unit === -1) {
+      // Already going down the ramp: wait for her rather than ordering a
+      // second boat every tick of the deck cycle.
+      if (boatOnTheRamp(state, carrier.id) === 1) continue;
       const ready = readyToLaunch(state, carrier.id, KIND_LIGHTER);
       if (ready === -1) {
         // Nothing aboard: the depot builds one and sends it out.
         dispatchBoat(state, carrier, depot);
         continue;
       }
-      launchUnit(ready, carrier, state.params.deckHeight, state.weapons);
-      pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
-      ready.order = ORDER_LOAD;
-      unit = ready;
+      // Through the deck like everything else (2026-08-26). The ORDER is set
+      // when she is actually afloat - launching resets a hull's orders, so
+      // an order given on the lift is an order thrown away.
+      beginLaunch(state, ready, carrier);
+      continue;
+    }
+    // Afloat with nothing to do: put her on the run.
+    if (unit.order !== ORDER_LOAD && unit.order !== ORDER_DELIVER
+      && unit.state === UNIT_ACTIVE && laden(unit) === 0) {
+      unit.order = ORDER_LOAD;
     }
     if (unit.order !== ORDER_LOAD && unit.order !== ORDER_DELIVER) unit.order = ORDER_LOAD;
     runLighter(state, unit, carrier, depot);
