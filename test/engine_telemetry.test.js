@@ -7,7 +7,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { loadRules, withoutAi } from './helpers/rules.mjs';
+import { loadRules, withoutAi, instantDeck } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { canonicalize } from '../shared/statehash.js';
@@ -19,7 +19,8 @@ import { KIND_LIGHTER, KIND_MANTA, ORDER_RETURN, UNIT_ACTIVE, UNIT_LOST } from '
 // get 26 km from the ship without leaving the chart. The leash is a big-map
 // mechanic, so the tests sail the 32-island ocean.
 function bigRules() {
-  const rules = withoutAi(loadRules());
+  // The leash is the subject; the deck choreography is not.
+  const rules = instantDeck(withoutAi(loadRules()));
   rules.world = { ...rules.world, islandCount: 32 };
   return rules;
 }
@@ -77,7 +78,7 @@ test('a sunk carrier is a dead signal source - its drones follow it down', () =>
 });
 
 test('the machine obeys the leash: a drone past fade is brought home', () => {
-  const withAi = loadRules();
+  const withAi = instantDeck(loadRules());
   withAi.world = { ...withAi.world, islandCount: 32 };
   withAi.rules = { ...withAi.rules, aiTeams: [0, 1] };
   let state = createInitialState(SEED, withAi);

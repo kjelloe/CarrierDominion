@@ -90,7 +90,28 @@ const isOff = (key) => page.evaluate(
 );
 const pilotAsleep = await isOff('T');
 const podAsleep = await isOff('P');
+// Launching is a deck OPERATION now (ruled 2026-08-25): about a hundred
+// ticks from the order to the ramp. A fixed pause after pressing the button
+// looks at the world while the craft is still on the lift.
+//
+// The wait is generous because in SOLO the engine is driven by the animation
+// frame, and a headless browser on a loaded machine can run the war at a
+// couple of ticks a second - a hundred ticks is five seconds at the table
+// and the better part of a minute here.
+async function awaitAway(target, kind) {
+  await target.waitForFunction(
+    (want) => {
+      const view = window.__lastView;
+      if (view === undefined) return false;
+      return view.units.some((u) => u.kind === want && u.team === view.team && u.state === 1);
+    },
+    kind,
+    { timeout: 90000 },
+  );
+}
+
 await page.keyboard.press('1'); // launch a Manta
+await awaitAway(page, 0);
 await page.waitForTimeout(600);
 await page.keyboard.press('n'); // name it
 await page.waitForTimeout(300);

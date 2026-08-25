@@ -82,7 +82,18 @@ const before = await landscape.page.evaluate(
   () => window.__lastView.units.filter((u) => u.state === 1 || u.state === 2).length,
 );
 await landscape.page.tap('.act:has(.k:text-is("1"))');
-await landscape.page.waitForTimeout(700);
+// And WAIT for her to be away. Launching is a deck operation now (ruled
+// 2026-08-25) and a phone-sized headless page runs the solo war at a few
+// ticks a second, so a hundred-tick cycle is a long wall-clock wait.
+await landscape.page.waitForFunction(
+  () => {
+    const view = window.__lastView;
+    if (view === undefined) return false;
+    return view.units.some((u) => u.kind === 0 && u.team === view.team && u.state === 1);
+  },
+  undefined,
+  { timeout: 90000 },
+).catch(() => {});
 const after = await landscape.page.evaluate(
   () => window.__lastView.units.filter((u) => u.state === 1 || u.state === 2).length,
 );

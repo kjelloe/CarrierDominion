@@ -5,7 +5,8 @@ the ones I cannot judge for you and that would spoil the game if they are
 wrong; **B** is confirmation that built things behave; **C** is polish and
 can wait for a rainy evening.
 
-Budget: **A is about an hour**, B another 30, C as long as you like.
+Budget: **A is about an hour and a half**, B another 30, C as long as you
+like. A6 and A7 are the new ones and the ones I most want read.
 
 For each step: what to do, what I expect, and *what I need back from you* —
 a sentence is plenty. "Fine" is a useful answer. So is "hated it".
@@ -17,7 +18,8 @@ a sentence is plenty. "Fine" is a useful answer. So is "hated it".
 Keys you will need: `W/S` throttle (the ship goes astern below zero), `A/D`
 rudder, `1/2/3` launch Manta / Walrus / Viewing Drone, `N` next hull,
 `T` take the controls, `F` fire, `Y` decoy screen, `I` signals log,
-`Q` quartermaster, `Z` damage board, `C` camera, `?` the legend.
+`Q` quartermaster, **`J` the squadron console**, `Z` damage board,
+`C` camera, `?` the legend.
 The tab row above the horizon is HELM / WEAPON / BIRDSEYE / CHART, plus
 DRONE while an eye is up.
 
@@ -147,7 +149,53 @@ open on the ladder.
 
 ---
 
-## A6 — The decoy screen and its price *(5 min)*
+## A6 — The squadron console *(15 min — new, and the point of the batch)*
+
+You asked for the original's Manta and Walrus screens. Press **`J`**.
+
+1. **BOARD.** Every hull of that kind, numbered, with what it is doing. The
+   bar is fuel — or the deck clock, when one is running.
+2. **OUTFIT.** This is the fitting screen. Every store now has a WEIGHT and
+   every hull a budget: a full Manta fit is *exactly* 750 kg, so the loadout
+   you have always launched with is the brim. Press `−` on the laser a few
+   times and watch the budget fall; the rounds go back into the hold.
+3. Switch to **WALRUS**. She carries 1,400 kg of guns and mines in a 2,000 kg
+   hull, the ACCB pod is 400 and the virus bomb 300 — so **she takes one or
+   the other, never both.** Try to FIT the bomb with everything aboard: it
+   refuses. Land the mines and it goes on.
+4. The pod is **typed** now — POD: RESOURCE / FACTORY / DEFENCE. Click it to
+   cycle. Whatever is in the rack is the role the island wakes up in, and the
+   island board can still change its mind afterwards.
+5. **DECK.** Press LAUNCH and watch: *in the hangar → on the flight deck →
+   launching → away*, about five seconds. Press it again and hit **ABORT**
+   halfway. The lift is the midship section — wreck it (Z) and nothing goes
+   up at all.
+
+**Tell me:** (a) is the weight budget a good decision or an annoying one?
+(b) Is five seconds the right length for a launch, or should the deck be
+quicker? (c) Is the console in the right place at `J`, or should it be a tab
+on the top row beside CHART?
+
+---
+
+## A7 — Plotting a course *(5 min)*
+
+Open **CHART**. Press **PROG**, then tap three or four spots — each becomes a
+numbered leg, dashed while you are laying it. Press **LAY COURSE**.
+
+With nothing selected the course goes to the ship. Select a Manta or Walrus
+first (`N`) and it goes to that hull instead. **CLEAR** throws away a course
+you are still laying; press it again and it cancels the standing one.
+
+**Expect:** the hull runs the legs in order and only reports "arrived" at the
+last one. Up to eight legs.
+
+**Tell me:** is eight enough? And is PROG-then-LAY the right shape, or would
+you rather each tap sent immediately?
+
+---
+
+## A8 — The decoy screen and its price *(5 min)*
 
 1. Press `Y`. Four decoys ride out around the ship, and the SCREEN button
    lights.
@@ -246,6 +294,9 @@ simpler shape.
    annoying?** It is the single biggest change and the easiest to soften.
 2. **Is the early game still fun now that islands bite (A4)?**
 3. **Is the Hammerhead worth its console (A3), or is it a toy?**
+5. **Does the fitting screen (A6) make outfitting a decision worth making?**
+   The weight numbers are the original's, and every one of them is a line in
+   a data file.
 4. **Is the late war (A5) the late-game test bench you asked for?** The
    90%-of-the-islands bar and how close the carriers start are both one
    number each.

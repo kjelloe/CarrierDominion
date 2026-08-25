@@ -7,6 +7,7 @@
 // also means the tunables end up inside the state hash automatically.
 
 import { dist2D, mulDiv, floorDiv } from '../shared/fixed.js';
+import { copyRoute } from './route.js';
 
 const KIND_MANTA = 0;
 const KIND_WALRUS = 1;
@@ -18,6 +19,12 @@ const UNIT_ACTIVE = 1; // out and under way
 const UNIT_RETURNING = 2; // heading home under its own orders
 const UNIT_LOST = 3; // destroyed or out of fuel away from the carrier
 const UNIT_LANDED = 4; // a Manta down on an island runway (manual item 2)
+// The deck cycle (ruled 2026-08-25). Launching is an operation, not a
+// keystroke: a craft rides the lift up, ranges on the deck, and only then
+// goes away. See engine/deck.js.
+const UNIT_ON_DECK = 5;   // out of the hangar, ranged, not yet away
+const UNIT_LAUNCHING = 6; // going down the ramp or off the catapult
+const UNIT_DOCKING = 7;   // inside the recovery envelope, coming aboard
 
 // What it is trying to do.
 const ORDER_HOLD = 0;
@@ -60,6 +67,8 @@ function createManta(id, team, carrierId, rules, unitsPerMetre) {
     landedIsland: -1,
     commPod: 0,
     state: UNIT_STOWED,
+    // How far through the current leg of the deck cycle (engine/deck.js).
+    deckTicks: 0,
     order: ORDER_HOLD,
     x: 0,
     y: 0,
@@ -77,6 +86,9 @@ function createManta(id, team, carrierId, rules, unitsPerMetre) {
     fuelAccum: 0,
     targetX: 0,
     targetY: 0,
+    // A course with more than one leg (ruled 2026-08-25), engine/route.js.
+    route: [],
+    routeAt: 0,
     control: -1,
     throttle: 0,
     rudder: 0,
@@ -132,6 +144,8 @@ function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
     landedIsland: -1,
     commPod: 0,
     state: UNIT_STOWED,
+    // How far through the current leg of the deck cycle (engine/deck.js).
+    deckTicks: 0,
     order: ORDER_HOLD,
     x: 0,
     y: 0,
@@ -152,6 +166,9 @@ function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
     fuelAccum: 0,
     targetX: 0,
     targetY: 0,
+    // A course with more than one leg (ruled 2026-08-25), engine/route.js.
+    route: [],
+    routeAt: 0,
     control: -1,
     throttle: 0,
     rudder: 0,
@@ -210,6 +227,8 @@ function createLighter(id, team, carrierId, rules, unitsPerMetre) {
     landedIsland: -1,
     commPod: 0,
     state: UNIT_STOWED,
+    // How far through the current leg of the deck cycle (engine/deck.js).
+    deckTicks: 0,
     order: ORDER_HOLD,
     x: 0,
     y: 0,
@@ -227,6 +246,9 @@ function createLighter(id, team, carrierId, rules, unitsPerMetre) {
     fuelAccum: 0,
     targetX: 0,
     targetY: 0,
+    // A course with more than one leg (ruled 2026-08-25), engine/route.js.
+    route: [],
+    routeAt: 0,
     control: -1,
     throttle: 0,
     rudder: 0,
@@ -282,6 +304,8 @@ function createDrone(id, team, carrierId, rules, unitsPerMetre) {
     landedIsland: -1,
     commPod: 0,
     state: UNIT_STOWED,
+    // How far through the current leg of the deck cycle (engine/deck.js).
+    deckTicks: 0,
     order: ORDER_HOLD,
     x: 0,
     y: 0,
@@ -298,6 +322,9 @@ function createDrone(id, team, carrierId, rules, unitsPerMetre) {
     fuelAccum: 0,
     targetX: 0,
     targetY: 0,
+    // A course with more than one leg (ruled 2026-08-25), engine/route.js.
+    route: [],
+    routeAt: 0,
     control: -1,
     throttle: 0,
     rudder: 0,
@@ -406,6 +433,7 @@ function copyUnit(unit) {
     landedIsland: unit.landedIsland,
     commPod: unit.commPod,
     state: unit.state,
+    deckTicks: unit.deckTicks,
     order: unit.order,
     x: unit.x,
     y: unit.y,
@@ -422,6 +450,8 @@ function copyUnit(unit) {
     fuelAccum: unit.fuelAccum,
     targetX: unit.targetX,
     targetY: unit.targetY,
+    route: copyRoute(unit.route),
+    routeAt: unit.routeAt,
     control: unit.control,
     throttle: unit.throttle,
     rudder: unit.rudder,
@@ -551,6 +581,9 @@ export {
   damagePermil,
   leakFuel,
   UNIT_LANDED,
+  UNIT_ON_DECK,
+  UNIT_LAUNCHING,
+  UNIT_DOCKING,
   ORDER_LAND,
   KIND_DRONE,
   createDrone,

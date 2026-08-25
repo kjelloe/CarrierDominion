@@ -47,6 +47,8 @@ const PROBES = {
   set_station: { type: 'set_station', unitId: 0, station: 0, rounds: 10 },
   set_device: { type: 'set_device', unitId: 0, device: 0, fitted: 1 },
   set_pod_role: { type: 'set_pod_role', unitId: 0, role: 1 },
+  abort_deck: { type: 'abort_deck', unitId: 0 },
+  set_route: { type: 'set_route', unitId: 0, points: [100, 100, 200, 200] },
   fire_hammerhead: { type: 'fire_hammerhead', carrierId: 0, x: 100, y: 100 },
   deploy_decoys: { type: 'deploy_decoys', carrierId: 0 },
   dock_decoys: { type: 'dock_decoys', carrierId: 0 },

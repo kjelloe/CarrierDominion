@@ -75,12 +75,20 @@ test('unit records are integers only and survive a copy intact', () => {
   const state = fresh();
   for (const unit of state.units) {
     for (const [key, value] of Object.entries(unit)) {
-      // `arms` is the one nested field: a magazine per weapon the hull carries.
-      // The rule still holds inside it.
+      // `arms` is a magazine per weapon the hull carries; `route` is a
+      // course of up to eight legs (ruled 2026-08-25). Both are nested, and
+      // the integers-only rule still holds inside them.
       if (key === 'arms') {
         for (const entry of value) {
           assert.ok(Number.isInteger(entry.w), `arms weapon id is not an integer: ${entry.w}`);
           assert.ok(Number.isInteger(entry.n), `arms round count is not an integer: ${entry.n}`);
+        }
+        continue;
+      }
+      if (key === 'route') {
+        for (const leg of value) {
+          assert.ok(Number.isInteger(leg.x), `a leg x is not an integer: ${leg.x}`);
+          assert.ok(Number.isInteger(leg.y), `a leg y is not an integer: ${leg.y}`);
         }
         continue;
       }
@@ -95,6 +103,12 @@ test('unit records are integers only and survive a copy intact', () => {
   // The magazines must be copied, not shared.
   copy.units[0].arms[0].n = 1;
   assert.notEqual(state.units[0].arms[0].n, 1);
+  // And so must the course: a shared route array is the aliasing bug the
+  // house rule about copyState exists to prevent.
+  state.units[0].route = [{ x: 10, y: 20 }];
+  const copyTwo = copyState(state);
+  copyTwo.units[0].route[0].x = 99;
+  assert.equal(state.units[0].route[0].x, 10, 'the route is shared, not copied');
 });
 
 test('launching puts a Manta in the air ahead of its carrier', () => {

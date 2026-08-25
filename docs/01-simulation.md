@@ -56,6 +56,7 @@ documented here as well as there:
 
 ```
 stepAi          the AI decides first, so its orders take effect THIS tick
+stepDeck        the lift, the ramp and the dock, BEFORE anything moves
 stepCarriers    hulls move
 stepUnits       aircraft and vehicles move
 stepFlares      launchers cool
@@ -76,6 +77,9 @@ Two orderings that were chosen rather than fallen into:
   reached this tick, and a hull that just closed to weapon range gets to use it.
 - **Weapons before capture.** A Walrus killed on the beach cannot also plant its
   pod on the tick it died.
+- **The deck before movement.** A craft that leaves the ramp this tick is
+  placed relative to where the ship was when the order came, and then moves
+  under its own power like everything else.
 
 A finished war still ticks — the world does not freeze — but nothing new is
 decided, and that clause is enforced: after `PHASE_OVER` no gun chooses a
@@ -98,7 +102,7 @@ One plain object, all integers, no absent values. The top level:
 | `economy` | production rates, build costs, network share |
 | `teams` | id, stockpile island, score, the quartermaster's production bias |
 | `carriers` | hulls, stores, sections, magazines, derived capability |
-| `units` | Mantas, Walruses, lighters, Viewing Drones and defence decoys — every one exists from tick zero. The island interceptor (kind 5) is the one exception: it belongs to an island's Bat Cave, not to a carrier's complement, and is created when a cave first scrambles |
+| `units` | Mantas, Walruses, lighters, Viewing Drones and defence decoys — every one exists from tick zero, each with its payload budget, its deck clock and its course. The island interceptor (kind 5) is the one exception: it belongs to an island's Bat Cave, not to a carrier's complement, and is created when a cave first scrambles |
 | `islands` | terrain seed, ownership, role, works, stock |
 | `turrets` | island batteries |
 | `shots` | rounds in the air, and mines waiting |

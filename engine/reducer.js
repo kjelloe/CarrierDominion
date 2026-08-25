@@ -33,6 +33,8 @@ import {
   CMD_SET_STATION,
   CMD_SET_DEVICE,
   CMD_SET_POD_ROLE,
+  CMD_ABORT_DECK,
+  CMD_SET_ROUTE,
   CMD_FIRE_HAMMERHEAD,
   CMD_DEPLOY_DECOYS,
   CMD_DOCK_DECOYS,
@@ -63,6 +65,7 @@ import {
   pushEvent,
 } from './events.js';
 import { stepCarriers } from './carrier.js';
+import { abortDeck, beginLaunch, stepDeck } from './deck.js';
 import { checkDeploy, deployPod, stepCapture } from './capture.js';
 import { checkVirus, deployVirus, stepVirus } from './virus.js';
 import { createBrain, stepAi } from './ai_carrier.js';
@@ -84,6 +87,7 @@ import { launchShot } from './shots.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import { dist2D, floorDiv } from '../shared/fixed.js';
 import { deviceFits, roundsThatFit } from './payload.js';
+import { clearRoute, legOf, setRoute } from './route.js';
 import {
   KIND_DECOY,
   KIND_DRONE,
@@ -377,13 +381,64 @@ function applySupplyBias(next, command) {
   return next;
 }
 
+// Launching BEGINS the deck cycle (ruled 2026-08-25); engine/deck.js takes
+// it from the hangar to the ramp and pushes the launched event when the
+// craft is actually away. A wrecked hangar refuses at the lift.
 function applyLaunch(next, command) {
   const carrier = findCarrier(next, command.carrierId);
   if (carrier === -1) return reject(next);
   const unit = readyToLaunch(next, carrier.id, command.kind);
   if (unit === -1) return reject(next);
-  launchUnit(unit, carrier, next.params.deckHeight, next.weapons);
-  pushEvent(next.events, EVT_UNIT_LAUNCHED, unit.id, unit.team, unit.kind);
+  if (beginLaunch(next, unit, carrier) === 0) return reject(next);
+  return next;
+}
+
+// PROG, from the 1988 map: lay a course of up to eight legs for a unit or
+// for the ship. An empty list is CLEAR. The first leg becomes the thing the
+// existing movement code was already steering at, so nothing else changes.
+function applyRoute(next, command) {
+  const points = command.points;
+  if (command.unitId !== undefined) {
+    const unit = findUnit(next, command.unitId);
+    if (unit === -1) return reject(next);
+    if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
+    if (points.length === 0) {
+      clearRoute(unit);
+      return next;
+    }
+    setRoute(unit, points);
+    const leg = legOf(unit);
+    unit.targetX = leg.x;
+    unit.targetY = leg.y;
+    unit.order = ORDER_MOVE;
+    unit.control = -1;
+    unit.orderTargetKind = -1;
+    unit.orderTargetId = -1;
+    pushEvent(next.events, EVT_UNIT_ORDERED, unit.id, unit.order, 0);
+    return next;
+  }
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  if (points.length === 0) {
+    clearRoute(carrier);
+    carrier.courseX = -1;
+    carrier.courseY = -1;
+    pushEvent(next.events, EVT_COURSE, carrier.id, 0, 0);
+    return next;
+  }
+  setRoute(carrier, points);
+  const leg = legOf(carrier);
+  carrier.courseX = leg.x;
+  carrier.courseY = leg.y;
+  pushEvent(next.events, EVT_COURSE, carrier.id, 1, 0);
+  return next;
+}
+
+// ABORT: back below decks, from anywhere in the cycle.
+function applyAbortDeck(next, command) {
+  const unit = findUnit(next, command.unitId);
+  if (unit === -1) return reject(next);
+  if (abortDeck(unit) === 0) return reject(next);
   return next;
 }
 
@@ -673,6 +728,11 @@ function advanceTick(next) {
     stepAi(next, next.params.aiCadenceTicks, next.params.aiStandoff);
   }
   stepDecoyScreens(next);
+  // The deck cycle runs BEFORE the hulls move (ruled 2026-08-25): a craft
+  // that leaves the ramp this tick is placed relative to where the ship was
+  // when the order was given, and then moves under its own power like
+  // everything else.
+  stepDeck(next);
   stepCarriers(next);
   for (let i = 0; i < next.carriers.length; i++) {
     if (next.carriers[i].hammerCooldown > 0) {
@@ -738,6 +798,8 @@ function apply(state, command) {
   if (type === CMD_DOCK_DECOYS) return applyDecoys(next, command, 0);
   if (type === CMD_SET_SUPPLY_BIAS) return applySupplyBias(next, command);
   if (type === CMD_LAUNCH_UNIT) return applyLaunch(next, command);
+  if (type === CMD_ABORT_DECK) return applyAbortDeck(next, command);
+  if (type === CMD_SET_ROUTE) return applyRoute(next, command);
   if (type === CMD_RECALL_UNIT) return applyRecall(next, command);
   if (type === CMD_ORDER_UNIT_MOVE) return applyUnitMove(next, command);
   if (type === CMD_ORDER_UNIT_ATTACK) return applyUnitAttack(next, command);

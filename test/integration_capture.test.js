@@ -15,6 +15,8 @@ import { EVT_ISLAND_CAPTURED } from '../engine/events.js';
 
 // The enemy is off: this test is about whether the MECHANICS complete, not
 // about who gets there first. engine_ai.test.js covers the race.
+// The whole loop at full length, deck cycle included - this is the one
+// test that plays the ship as she is.
 const rules = withoutAi(loadRules());
 const SEED = 20260818;
 const TICK_BUDGET = 120000; // 100 minutes of game time; the run takes seconds
@@ -71,11 +73,19 @@ test('a carrier crosses to an island and its Walrus takes it', (t) => {
   enqueueCommand(game, { type: 'set_throttle', carrierId: 0, throttle: 0 });
   runUntil(game, (s) => s.carriers[0].speed === 0, 2000);
 
-  // 2. Put a Walrus in the water and send it at the command node.
+  // 2. Put a Walrus in the water and send it at the command node. Launching
+  // is a deck OPERATION now (ruled 2026-08-25): she rides the lift up,
+  // ranges, and only then goes down the ramp - so the event arrives some
+  // seconds after the order, and this is the test that waits for it.
   enqueueCommand(game, { type: 'launch_unit', carrierId: 0, kind: KIND_WALRUS });
-  stepGame(game);
-  const launched = game.state.events.find((e) => e.code === 8);
+  let launched;
+  const deckTicks = game.state.params.deckRangeTicks + game.state.params.launchTicks + 4;
+  for (let i = 0; i < deckTicks && launched === undefined; i++) {
+    stepGame(game);
+    launched = game.state.events.find((e) => e.code === 8);
+  }
   assert.notEqual(launched, undefined, 'the Walrus never launched');
+  t.diagnostic(`deck cycle: ${deckTicks} ticks from order to away`);
   const unitId = launched.a;
   enqueueCommand(game, {
     type: 'order_unit_move', unitId: unitId, x: island.nodeX, y: island.nodeY,

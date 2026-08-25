@@ -110,10 +110,21 @@ check(heldRudder === 1, `holding the port arrow read rudder ${heldRudder}`);
 check(releasedRudder === 0, 'releasing the arrow did not centre up');
 
 // 3. The icon columns: the MANTA button launches one, same as the key.
+// Launching is a deck operation now (ruled 2026-08-25), so the check is
+// that she is AWAY a hundred ticks later, not 600 ms later.
 await page.locator('#actions-right .act').first().dispatchEvent('pointerdown');
-await page.waitForTimeout(600);
+await page.waitForFunction(
+  () => {
+    const view = window.__lastView;
+    if (view === undefined) return false;
+    return view.units.some((u) => u.kind === 0 && u.team === view.team && u.state === 1);
+  },
+  undefined,
+  { timeout: 90000 },
+).catch(() => {});
+await page.waitForTimeout(300);
 const airborne = await page.evaluate(
-  () => window.__lastView.units.filter((u) => u.state === 1).length,
+  () => window.__lastView.units.filter((u) => u.kind === 0 && u.state === 1).length,
 );
 check(airborne >= 1, 'the MANTA button launched nothing');
 

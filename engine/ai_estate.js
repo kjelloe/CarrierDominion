@@ -37,10 +37,15 @@ import {
 } from './island.js';
 import { KIND_FORTRESS, KIND_RESOURCE } from './worldgen.js';
 
-function countRole(state, team, role) {
+// How many islands this team holds in a role. `exceptId` leaves one out,
+// which is what planFor needs: the question is what THIS island should be
+// given the REST of the estate, and counting the island in its own answer
+// makes the answer oscillate (see planFor).
+function countRole(state, team, role, exceptId) {
   let count = 0;
   for (let i = 0; i < state.islands.length; i++) {
     const island = state.islands[i];
+    if (island.id === exceptId) continue;
     if (island.owner === team && island.role === role) count = count + 1;
   }
   return count;
@@ -51,10 +56,17 @@ function countRole(state, team, role) {
 // every one of them became a mine, no factory was ever planned, and the carrier
 // ran on the trickle of crude a mine produces. A factory on poor ground beats
 // no factory at all.
+// What this island should be, given the REST of the estate - and the rest
+// is the whole point. Counting the island in its own answer made a single
+// island flip role every three ticks for a whole war: RESOURCE, so the plan
+// wants a FACTORY; now FACTORY, so the plan wants a RESOURCE. Nothing was
+// ever built on it, no team ever raised a plant, and both fleets ran their
+// bunkers dry by tick 300,000 with full holds of ore.
 function planFor(state, team, island) {
-  const mines = countRole(state, team, ROLE_RESOURCE);
-  const plants = countRole(state, team, ROLE_FACTORY);
-  const guns = countRole(state, team, ROLE_DEFENCE);
+  const skip = island.id;
+  const mines = countRole(state, team, ROLE_RESOURCE, skip);
+  const plants = countRole(state, team, ROLE_FACTORY, skip);
+  const guns = countRole(state, team, ROLE_DEFENCE, skip);
   if (mines > 0 && plants < 1) return ROLE_FACTORY;
   // NOTHING before the first mine. A plant with nothing to refine produces
   // nothing, and the home island (ruled 2026-08-25) hands every team a
@@ -176,10 +188,24 @@ function manageIslands(state, brain) {
   for (let i = 0; i < state.islands.length; i++) {
     const island = state.islands[i];
     if (island.owner !== brain.team) continue;
-    if (island.role === ROLE_NONE) {
-      setRole(state, island, planFor(state, brain.team, island));
-      continue;
+    // A role is settled once ground is broken. Before that the plan may
+    // still change its mind - and since pods are TYPED (ruled 2026-08-25)
+    // an island arrives already roled, so "has no role" stopped being the
+    // question. Asking only that froze the machine's estate: every captured
+    // island came up a Resource island, no team ever built a factory, and
+    // seed 20260818 ran its ship dry at tick 100,000 with a full hold and
+    // an empty bunker.
+    const want = planFor(state, brain.team, island);
+    if (island.role !== want) {
+      // setRole refuses once anything is built, which is the guard that
+      // keeps this from churning a working island.
+      setRole(state, island, want);
     }
+    // And then BUILD, in the same turn. Re-roling used to skip the build,
+    // which is a trap: planFor reads the team's own role counts, so every
+    // re-role changes the answer for the next island, and a fleet of bare
+    // islands can swap roles at each other for ever without a spade going
+    // in the ground. The first thing built settles the role for good.
     if (island.building !== -1) continue;
     const what = nextBuild(state, island, state.economy);
     if (what === -1) continue;

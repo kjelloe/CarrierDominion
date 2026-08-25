@@ -1,4 +1,9 @@
-# 10 — The squadron console: what 1988 had and we do not
+# 10 — The squadron console
+
+**Status: built, 2026-08-25.** This document was written as a gap analysis
+against the original and is kept as one — the "what we do not have" reading
+is now history, and each gap closes with a note saying how. The owner's
+rulings on the four open questions are in docs/06.
 
 Source: 83 screenshots of a PC/DOS playthrough
 (`../retrogradegames/carrierdominion/screenshots/`, 2026-08-25), read against
@@ -47,6 +52,10 @@ equivalent of is a squadron console at all.**
 
 ## Gap 1 — Outfitting *(the biggest, and the one with no counterpart)*
 
+> **Closed.** `engine/payload.js` + the OUTFIT page of the squadron console.
+> Weight budget, per-station fitting, typed pods, repair state and fuel, all
+> against the original's own numbers where it stated them.
+
 The original devotes a whole page per craft:
 
 ```
@@ -88,6 +97,11 @@ individually, and nothing has a weight.
 
 ## Gap 2 — Launching is a procedure, not a keystroke
 
+> **Closed.** `engine/deck.js`. The lift is the MIDSHIP section, so a wrecked
+> hangar strands the air group exactly as the original's LIFT did. The one
+> thing deliberately not carried over is shuffling craft fore and aft on the
+> deck: a 1988 interface for a 1988 problem, and not a decision.
+
 The original moves a craft through the ship:
 
 ```
@@ -108,6 +122,9 @@ We launch on `1`/`2` in one tick and recover by flying near the ship.
 
 ## Gap 3 — The squadron board
 
+> **Closed** (the board and the numbered selector; the 2x2 quad camera view
+> is not built — four live feeds is a renderer question, not a console one).
+
 Always visible in the bottom bar of a squadron console:
 
 ```
@@ -124,6 +141,11 @@ there is no board and no quad view.
 
 ## Gap 4 — Course programming
 
+> **Closed.** `engine/route.js` and PROG / LAY COURSE on the chart. Eight
+> legs, numbered, for a unit or the ship; reaching a mark takes the next leg
+> silently and only the last is an arrival. The inset route map while
+> piloting is not built - the chart draws the course instead.
+
 `PROG` / `CLEAR` on the map, with **numbered waypoints** dropped by a D-pad
 cursor, per craft; while piloting, an inset map in the corner of the
 viewport draws the programmed route and the craft's place on it. Status
@@ -133,7 +155,7 @@ set"*.
 We have single-target click-to-move for units, and a one-leg course
 autopilot for the carrier.
 
-## Gap 5 — Smaller things
+## Gap 5 — Smaller things *(all still open)*
 
 - **Craft selectors 1–4** as permanent icon buttons per squadron (we have
   `N`, direct keys `5`–`8`, and chips).

@@ -28,9 +28,21 @@ await page.goto(`http://127.0.0.1:${address.port}/?mode=solo&graphics=medium&spe
 });
 await page.waitForFunction(() => Number(document.getElementById('hud-tick')?.textContent) > 20);
 
-// Launch a Manta, select it, take the controls.
+// Launch a Manta, wait for her to be AWAY, select her, take the controls.
+// Launching is a deck operation now (ruled 2026-08-25); pressing N and T on
+// a timer used to take the controls of a ship that had nothing to fly, and
+// read as a broken gunsight.
 await page.keyboard.press('1');
-await page.waitForTimeout(900);
+await page.waitForFunction(
+  () => {
+    const view = window.__lastView;
+    if (view === undefined) return false;
+    return view.units.some((u) => u.kind === 0 && u.team === view.team && u.state === 1);
+  },
+  undefined,
+  { timeout: 90000 },
+);
+await page.waitForTimeout(300);
 await page.keyboard.press('n');
 await page.keyboard.press('t');
 await page.waitForTimeout(900);

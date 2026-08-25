@@ -166,6 +166,44 @@ Look for these shapes first — every one produced a real bug:
   instantly, but nothing in the gate ever opened that panel. When a panel or
   screen is added, add one line to the smoke gate that opens it.
 
+- **A priority list that orders the ATTEMPTS, again.** The supply boat
+  loaded fuel, then ordnance, then materials, and filled its whole hold with
+  whichever came first. The note above `chassisWanted` records the identical
+  lesson being learned once already for parts - and nobody generalised it,
+  so materials had it too: a carrier sat at 87 of 1,000 hull with ZERO
+  materials beside a depot holding 61,571. When a fixed order is found
+  filling a bounded container, ask whether ANY of its other items have the
+  same problem, not just the one in front of you.
+- **A shopping list that never learned the newest store.** Third time for
+  this one: fuel and ordnance from the start, chassis after seed 900913,
+  materials never at all. When a new commodity is added, grep every place
+  that decides "do I need supplies".
+- **An operation that restarts its own clock.** `beginDocking` was called
+  every tick while the craft sat in the recovery envelope, so the approach
+  never finished - aircraft flew an endless final, ran dry, and were rebuilt
+  at chassis cost. A state entered from a per-tick check needs a guard that
+  the state is not already entered.
+- **A timed operation that every test and probe was written before.** The
+  deck cycle put five seconds between "launch" and "airborne" and broke the
+  smoke gate, the chips probe and a dozen scenario tests - none of them
+  wrong, all of them written when launching was instant. When an action
+  grows a duration, grep for everything that presses the button and then
+  asserts.
+
+- **A rule that counts its own subject.** `planFor` asked "what should this
+  island be" while counting that island's current role in the answer: a
+  RESOURCE island made the plan want a FACTORY, and a FACTORY island made it
+  want a RESOURCE. One island flipped every three ticks for a whole war,
+  nothing was ever built on it, no team raised a plant, and both fleets ran
+  dry by tick 300,000 with full holds of ore. The fix is in the question:
+  what should this be **given the rest** of the estate. Whenever a decision
+  about X reads a tally that includes X, ask whether it should.
+
+  This one is doubly worth remembering because the OLD code was safe by
+  accident - it only ever planned an island with no role, so the loop could
+  not close. Removing an "only when unset" guard can expose an oscillation
+  that was always latent in the rule underneath it.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

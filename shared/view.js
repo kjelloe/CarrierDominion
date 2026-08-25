@@ -13,6 +13,7 @@ import { teamHoldings } from '../engine/economy.js';
 import { covered, ghostsFor } from '../engine/contacts.js';
 import { telemetryState } from '../engine/telemetry.js';
 import { payloadGramsOf } from '../engine/payload.js';
+import { deckProgressPermil } from '../engine/deck.js';
 
 // What is in the magazines. A contact gets an empty list: how many missiles an
 // enemy has left is not something radar tells you.
@@ -56,6 +57,8 @@ function ownCarrierView(carrier) {
     radar: carrier.radar,
     weapon: carrier.weapon,
     arms: armsView(carrier.arms),
+    route: routeView(carrier.route),
+    routeAt: carrier.routeAt,
     heat: carrier.heat,
     overheated: carrier.overheated,
     ordnance: carrier.ordnance,
@@ -101,6 +104,8 @@ function contactView(carrier) {
     radar: 0,
     weapon: -1,
     arms: [],
+    route: [],
+    routeAt: 0,
     heat: -1,
     overheated: 0,
     ordnance: -1,
@@ -126,6 +131,14 @@ function contactView(carrier) {
   };
 }
 
+// A course is a plan, so it is own-hulls-only: an enemy's route on your
+// chart would be the fog leak the networkHops one already was.
+function routeView(route) {
+  const out = [];
+  for (let i = 0; i < route.length; i++) out.push({ x: route[i].x, y: route[i].y });
+  return out;
+}
+
 function ownUnitView(state, unit) {
   return {
     // The link state (0 sound, 1 fading, 2 gone), from the same function
@@ -149,6 +162,9 @@ function ownUnitView(state, unit) {
     // What the fitting screen needs to draw a budget (ruled 2026-08-25).
     // Grams below the client, kilograms on it.
     payloadGrams: payloadGramsOf(unit, state.weapons),
+    // How far through the current leg of the deck cycle, per-mil, so the
+    // squadron board can draw a progress bar without knowing tick counts.
+    deckPermil: deckProgressPermil(unit, state.params),
     payloadMaxGrams: unit.payloadMaxGrams,
     podGrams: unit.podGrams,
     virusGrams: unit.virusGrams,
@@ -157,10 +173,15 @@ function ownUnitView(state, unit) {
     fuelCapacity: unit.fuelCapacity,
     targetX: unit.targetX,
     targetY: unit.targetY,
+    route: routeView(unit.route),
+    routeAt: unit.routeAt,
     control: unit.control,
     throttle: unit.throttle,
     maxSpeed: unit.maxSpeed,
     pod: unit.pod,
+    // Which kind of pod is in the rack (ruled 2026-08-25): the fitting
+    // screen shows it and the island wakes up in it.
+    podRole: unit.podRole,
     blocked: unit.blocked,
     cargoFuel: unit.cargoFuel,
     cargoMaterials: unit.cargoMaterials,
@@ -197,6 +218,7 @@ function unitContactView(unit) {
     throttle: 0,
     maxSpeed: 0,
     pod: 0,
+    podRole: -1,
     blocked: 0,
     cargoFuel: -1,
     cargoMaterials: -1,
@@ -205,6 +227,8 @@ function unitContactView(unit) {
     virus: 0,
     weapon: -1,
     arms: [],
+    route: [],
+    routeAt: 0,
     heat: -1,
     overheated: 0,
     contact: 1,

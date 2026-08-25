@@ -10,6 +10,7 @@
 import { mulDiv } from '../shared/fixed.js';
 import { atan2B } from '../shared/trig.js';
 import { hashState } from '../shared/statehash.js';
+import { copyRoute } from './route.js';
 import { seedRng } from '../shared/prng.js';
 import { HEADING_MANUAL } from './commands.js';
 import { KIND_DECOY, KIND_DRONE, copyUnit, createDecoy, createDrone, createLighter, createManta, createWalrus } from './units.js';
@@ -148,6 +149,8 @@ function copyCarrier(carrier) {
     flareReload: carrier.flareReload,
     flareRadius: carrier.flareRadius,
     flareCooldown: carrier.flareCooldown,
+    route: copyRoute(carrier.route),
+    routeAt: carrier.routeAt,
     podMaterials: carrier.podMaterials,
     virusOrdnance: carrier.virusOrdnance,
     courseX: carrier.courseX,
@@ -236,6 +239,10 @@ function copyState(state) {
       tickHz: state.params.tickHz,
       deckHeight: state.params.deckHeight,
       recoverRange: state.params.recoverRange,
+      // The deck cycle (ruled 2026-08-25), engine/deck.js.
+      deckRangeTicks: state.params.deckRangeTicks,
+      launchTicks: state.params.launchTicks,
+      dockTicks: state.params.dockTicks,
       podRange: state.params.podRange,
       podBuildTicks: state.params.podBuildTicks,
       virusRange: state.params.virusRange,
@@ -339,6 +346,8 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     // What the ship's stores charge for a Walrus payload: an ACCB pod is a
     // construction device and costs materials; a virus bomb is a munition and
     // costs ordnance. Ruling #3 - neither is conjured.
+    route: [],
+    routeAt: 0,
     podMaterials: carrierRules.podMaterials,
     virusOrdnance: carrierRules.virusOrdnance,
     // The programmed course (ruling 2026-08-23, the original's PROG + A):
@@ -508,6 +517,9 @@ function createInitialState(seed, rules) {
       tickHz: base.tickHz,
       deckHeight: rules.units.carrier.deckHeightMetres * unitsPerMetre,
       recoverRange: rules.units.carrier.recoverRangeMetres * unitsPerMetre,
+      deckRangeTicks: base.deckRangeTicks,
+      launchTicks: base.launchTicks,
+      dockTicks: base.dockTicks,
       podRange: base.podRangeMetres * unitsPerMetre,
       podBuildTicks: base.podBuildTicks,
       virusRange: base.virusRangeMetres * unitsPerMetre,

@@ -6,7 +6,7 @@
 // which is why this lives in engine/ rather than server/ - the browser loads
 // exactly the same file.
 
-import { CMD_ADVANCE_TICK, UNIT_COMMANDS, validateCommand } from './commands.js';
+import { CMD_ADVANCE_TICK, CMD_SET_ROUTE, UNIT_COMMANDS, validateCommand } from './commands.js';
 
 function carrierTeam(state, carrierId) {
   for (let i = 0; i < state.carriers.length; i++) {
@@ -28,6 +28,15 @@ function checkAuthority(state, team, command) {
   if (problem !== '') return problem;
   if (command.type === CMD_ADVANCE_TICK) return 'advance_tick is server-owned';
   if (team < 0) return 'spectators may not issue commands';
+
+  // A route belongs to a unit OR to the ship (ruled 2026-08-25), so it is
+  // the one command whose subject is not fixed by its type.
+  if (command.type === CMD_SET_ROUTE && command.unitId !== undefined) {
+    const owner = unitTeam(state, command.unitId);
+    if (owner === -1) return 'no such unit';
+    if (owner !== team) return 'that unit belongs to another team';
+    return '';
+  }
 
   if (UNIT_COMMANDS.includes(command.type)) {
     const owner = unitTeam(state, command.unitId);

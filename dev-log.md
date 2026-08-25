@@ -5,6 +5,111 @@ golden hash and why.
 
 ---
 
+## 2026-08-25 — The squadron console: outfitting, the deck, and typed pods
+
+Owner watched 83 screenshots of a PC/DOS playthrough back against our client
+and named the gap exactly: managing, outfitting, launching, plotting course
+for, recovering and piloting Mantas and Walruses. The analysis is
+docs/10-squadron.md, and it comes to one line - **we have almost every
+mechanic and almost none of the console.**
+
+Four rulings (docs/06), three built in this pass, waypoints still to come.
+
+**The fitting screen is a weight problem.** Every store now weighs something
+and every hull has a budget, in grams on the record because a laser round
+weighs less than a kilogram and the engine has no floats. The numbers are the
+original's where the original stated them - a 60 kg air-to-air missile, a
+400 kg ACCB pod. A brim-full Manta is exactly 750 kg, so the preset the ship
+has always launched with is the brim rather than an overload. A Walrus is
+1,400 kg of guns and mines in a 2,000 kg hull, which means it goes ashore
+with the pod OR the bomb: it used to be handed both for free, and choosing is
+the whole point of the screen.
+
+Weight is a CAPACITY rule and not a flight model - a light Manta is not
+faster, exactly as in 1988. If that changes it belongs in flight.js.
+
+**Launching is an operation.** IN HANGER → ON FLIGHT DECK → LAUNCHING → away,
+about five seconds, with a progress bar and a standing ABORT; recovery is the
+mirror, DOCKING → IN DOCK, and drifting out of the envelope means going round
+again. The lift is the MIDSHIP section, which we already had - wreck it and
+the air group is stranded below decks, which is what the original's repair
+screen was telling you all along. Shuffling craft fore and aft on the deck is
+deliberately not carried over: a 1988 interface for a 1988 problem.
+
+Scenario tests run with the cycle at zero (`instantDeck`, alongside the other
+four things `bareRules` strips) and a zero-length cycle completes inside the
+command, so "launch" still means launched. integration_capture plays it for
+real.
+
+**Pods are typed.** POD - RESOURCE / FACTORY / DEFENCE, chosen at the ship,
+riding to the beach; the island board may still re-role it afterwards, which
+is the one liberty we keep.
+
+**The console** is `J` - two craft types, a numbered 1-4 selector, and three
+pages: BOARD (what every hull is doing, with the deck clock), OUTFIT (the
+fitting screen, with a plan of the craft and its hardpoints) and DECK
+(launch, abort, recall).
+
+### What the battery found
+
+Three things, and only one of them was the deck.
+
+1. **The supply boat loaded by a fixed order, not by shortfall.** Seed
+   20260818 stopped resolving at all: a carrier at 87 of 1,000 hull with ZERO
+   materials while its own depot held 61,571, because the hold filled with
+   fuel every run for a ship already 58,327 fuel to the good. It could not
+   mend, so it retreated, and kept retreating for 340,000 ticks. The boat now
+   loads EMPTIEST FIRST. The note above `chassisWanted` records the identical
+   lesson being learned once already for parts - nobody generalised it, and
+   materials had it too.
+2. **The AI's shopping list still had no word for materials.** Third time
+   that list has been found short: fuel and ordnance from the start, chassis
+   after seed 900913, materials never. A damaged ship now calls the boat.
+3. **Typed pods froze the machine's estate.** `planFor` was only ever asked
+   about an island with NO role, and after typed pods no island has none - so
+   no AI team ever built a factory again. The machine now loads the pod its
+   estate wants, and re-roles an island whose plan changed while nothing is
+   built on it.
+
+And the deck's own defect: `beginDocking` was called every tick while a craft
+sat in the envelope, restarting its clock, so nothing ever came aboard -
+aircraft flew an endless final, ran dry, and were rebuilt at chassis cost.
+
+Then a fourth, and it was mine. Letting the estate re-role an island whose
+plan had changed - the fix for typed pods - exposed an oscillation that had
+always been latent in `planFor`: it asked "what should this island be" while
+counting that island's own role in the answer. A RESOURCE island makes the
+plan want a FACTORY; a FACTORY island makes it want a RESOURCE. One island
+flipped every three ticks for a whole war. Nothing was built on it, no team
+ever raised a plant, and by tick 300,000 both fleets sat on full holds of ore
+with empty bunkers - which is what the from-zero AI race test had been trying
+to tell me for an hour. The question is now what an island should be GIVEN
+THE REST of the estate, which is stable by construction. The old code was
+safe only by accident: it planned an island once, when it had no role, so the
+loop could not close.
+
+The from-zero race resolves at tick 82,931 again.
+
+**Cost:** 502 tests (+22 across four new files), smoke green with a gate that
+now waits for the ramp instead of pressing T on a timer, battery 5/5
+(19k-161k ticks), the from-zero AI race back at 82,931. Both pins moved three times with --force: a state-shape
+change and a ruled gameplay change in the same batch, with one explained
+event drift (the fixture's tick-4 recovery now lands later). New probe
+`squadron.mjs` drives the console through the glass - fits a store and
+watches the budget move, types a pod, and runs a hull from the hangar to away.
+
+Six probes and the gate needed the same fix - press the button, then WAIT for
+the ramp, rather than pausing a fixed half-second. None of them was wrong;
+all of them were written when launching was instant. The waits are generous
+because in SOLO the engine is driven by the animation frame: a hundred ticks
+is five seconds at the table and the better part of a minute in a headless
+browser sharing a machine with the rest of the suite.
+
+**Still open from the batch:** the smaller 1988 things in docs/10 gap 5 - the turret console's TEMP gauge and
+orientation diagram, drone placement, the RESOURCES counts.
+
+---
+
 ## 2026-08-25 — Chasing the lobby probe, and what was behind it
 
 The lobby probe had been failing. Owner asked me to chase it. The room was

@@ -66,14 +66,28 @@ await page.keyboard.press('c'); // back to chase
 
 // 3. A flown Manta climbs on ArrowUp and dives on ArrowDown.
 await page.keyboard.press('1');
-await page.waitForTimeout(1500);
+// Away first. Launching is a deck operation now (ruled 2026-08-25), and T
+// on a timer took the controls of a Manta still on the lift - so the stick
+// did nothing and the probe blamed the vertical axis.
+await page.waitForFunction(
+  () => {
+    const view = window.__lastView;
+    if (view === undefined) return false;
+    return view.units.some((u) => u.kind === 0 && u.team === view.team && u.state === 1);
+  },
+  undefined,
+  { timeout: 90000 },
+);
+await page.waitForTimeout(400);
 await page.keyboard.press('t');
 await page.waitForTimeout(500);
-const before = await page.evaluate(() => window.__lastView.units.find((u) => u.state === 1).z);
+const before = await page.evaluate(
+  () => window.__lastView.units.find((u) => u.kind === 0 && u.state === 1).z,
+);
 await page.keyboard.down('ArrowUp');
 await page.waitForTimeout(4000);
 await page.keyboard.up('ArrowUp');
-const climbed = await page.evaluate(() => window.__lastView.units.find((u) => u.state === 1).z);
+const climbed = await page.evaluate(() => window.__lastView.units.find((u) => u.kind === 0 && u.state === 1).z);
 if (climbed <= before) {
   console.log(`FAIL: ArrowUp did not climb (${before} -> ${climbed})`);
   process.exitCode = 1;
@@ -81,7 +95,7 @@ if (climbed <= before) {
 await page.keyboard.down('ArrowDown');
 await page.waitForTimeout(4000);
 await page.keyboard.up('ArrowDown');
-const dived = await page.evaluate(() => window.__lastView.units.find((u) => u.state === 1).z);
+const dived = await page.evaluate(() => window.__lastView.units.find((u) => u.kind === 0 && u.state === 1).z);
 if (dived >= climbed) {
   console.log(`FAIL: ArrowDown did not dive (${climbed} -> ${dived})`);
   process.exitCode = 1;

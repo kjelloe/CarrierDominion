@@ -26,6 +26,11 @@ function createChartPanel(ctx) {
     centreX: 0,
     centreY: 0,
     network: false,
+    // PROG (ruled 2026-08-25): while it is lit, a tap on the chart is a LEG
+    // of a course being laid rather than an order to sail there now. LAY
+    // sends it; CLEAR throws it away.
+    prog: false,
+    legs: [],
     dragging: false,
     moved: false,
     lastX: 0,
@@ -42,6 +47,47 @@ function fitChart(panel, view) {
   panel.scale = size / Math.max(1, span - 60);
   panel.centreX = Math.floor(size / 2);
   panel.centreY = Math.floor(size / 2);
+}
+
+// Whose course the chart is drawing: the selected hull's if it has one,
+// otherwise the ship's.
+function routeOf(panel, view) {
+  const subject = panel.ctx.routeSubject === undefined ? undefined : panel.ctx.routeSubject();
+  if (subject !== undefined && subject.route !== undefined && subject.route.length > 0) {
+    return subject.route;
+  }
+  const own = view.carriers.find((c) => c.team === view.team && c.contact === 0);
+  return own === undefined || own.route === undefined ? [] : own.route;
+}
+
+// Numbered marks joined by a line, which is what a course looks like on
+// paper and looked like in 1988. Legs still being laid are dashed.
+function drawRoute(panel, draw, colours, legs, pending) {
+  if (legs === undefined || legs.length === 0) return;
+  draw.save();
+  draw.strokeStyle = colours.self;
+  draw.fillStyle = colours.self;
+  draw.lineWidth = 1;
+  if (pending) draw.setLineDash([4, 4]);
+  draw.beginPath();
+  let n = 0;
+  for (const leg of legs) {
+    const at = plot(panel, leg.x, leg.y);
+    if (n === 0) draw.moveTo(at.x, at.y);
+    else draw.lineTo(at.x, at.y);
+    n = n + 1;
+  }
+  draw.stroke();
+  draw.setLineDash([]);
+  n = 0;
+  draw.font = '10px monospace';
+  for (const leg of legs) {
+    n = n + 1;
+    const at = plot(panel, leg.x, leg.y);
+    draw.strokeRect(at.x - 3, at.y - 3, 6, 6);
+    draw.fillText(String(n), at.x + 6, at.y - 4);
+  }
+  draw.restore();
 }
 
 function toggleChart(panel, view) {
@@ -88,9 +134,15 @@ function bindChartInput(panel) {
     if (!panel.dragging) return;
     panel.dragging = false;
     if (panel.moved) return;
-    // A tap, not a drag: the same click the world takes.
+    // A tap, not a drag: the same click the world takes - unless PROG is
+    // lit (the 1988 map's own button), in which case the tap is a leg of a
+    // course rather than an order to go there now.
     const rect = canvas.getBoundingClientRect();
     const point = worldAt(panel, event.clientX - rect.left, event.clientY - rect.top);
+    if (panel.prog) {
+      if (panel.legs.length < 8) panel.legs.push(point);
+      return;
+    }
     panel.ctx.onPoint(point);
   });
   canvas.addEventListener('wheel', (event) => {
@@ -258,6 +310,11 @@ function renderChart(panel, view, teamColour) {
     draw.fillStyle = unit.contact === 1 ? colours.enemy : colours.self;
     draw.fillRect(at.x - 2, at.y - 2, 4, 4);
   }
+
+  // A course of more than one leg, drawn and numbered as the original drew
+  // it: the laid route in full, then the legs being programmed now.
+  drawRoute(panel, draw, colours, routeOf(panel, view), false);
+  drawRoute(panel, draw, colours, panel.legs, true);
 
   // The course diamond, exactly the scope's.
   const own = view.carriers.find((c) => c.team === view.team && c.contact === 0);

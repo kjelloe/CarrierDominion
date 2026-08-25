@@ -31,7 +31,7 @@ import { manageStrike, withdraw } from './ai_strike.js';
 import { setDecoyScreen } from './fleet.js';
 import { covered } from './contacts.js';
 import { awaitingHull } from './repair.js';
-import { manageIslands } from './ai_estate.js';
+import { manageIslands, planFor } from './ai_estate.js';
 import { fireFlares, shouldFlare } from './flare.js';
 
 const AI_SEEK = 0; // steaming toward the chosen island
@@ -165,6 +165,13 @@ function invade(state, brain, carrier) {
     return;
   }
   if (checkDeploy(walrus, island, state.params.podRange) === '') {
+    // Type the pod NOW, not when the vehicle sailed (ruled 2026-08-25: pods
+    // are typed). planFor reads the estate as it stands, and the estate at
+    // the beach is not the estate at the ship - a from-zero war can be tens
+    // of thousands of ticks between the two. Typing at launch gave every
+    // island in such a war the role the FIRST one wanted, so no AI team ever
+    // built a factory and both fleets ran their bunkers dry.
+    walrus.podRole = planFor(state, brain.team, island);
     deployPod(state, walrus, island);
     brain.mode = AI_WAIT;
     return;
@@ -244,6 +251,10 @@ function backOff(state, brain, carrier) {
 const SUPPLY_CALL_PERMIL = 500;
 const SUPPLY_STAND_DOWN_PERMIL = 900;
 
+// How many repairs' worth of materials counts as "enough aboard to mend".
+// Small: the point is to notice an EMPTY hold, not to hoard.
+const MEND_RESERVE = 20;
+
 function manageSupply(state, brain, carrier) {
   const team = teamById(state, brain.team);
   if (team === -1 || team.stockpileIsland < 0) {
@@ -265,10 +276,19 @@ function manageSupply(state, brain, carrier) {
   // things the machine had ever thought to ask for.
   const wantsParts = awaitingHull(state, carrier)
     && carrier.chassis < state.economy.chassisPerHull;
-  if (carrier.supplyRun === 0 && (level < SUPPLY_CALL_PERMIL || wantsParts)) {
+  // And MATERIALS, for the same reason and by the same oversight. Materials
+  // are what the yard turns into hull, so a damaged ship with an empty
+  // materials hold cannot mend - and a ship that cannot mend retreats, and
+  // keeps retreating. Seed 20260818 spent 340,000 ticks doing exactly that
+  // at 87 of 1,000 hull with 61,571 materials sitting at its own depot.
+  const wantsMaterials = carrier.hull < carrier.maxHull
+    && carrier.materials < state.economy.repairPerMaterial * MEND_RESERVE;
+  if (carrier.supplyRun === 0
+    && (level < SUPPLY_CALL_PERMIL || wantsParts || wantsMaterials)) {
     carrier.supplyRun = 1;
     pushEvent(state.events, EVT_SUPPLY_RUN, carrier.id, carrier.team, 1);
-  } else if (carrier.supplyRun === 1 && level > SUPPLY_STAND_DOWN_PERMIL && !wantsParts) {
+  } else if (carrier.supplyRun === 1 && level > SUPPLY_STAND_DOWN_PERMIL
+    && !wantsParts && !wantsMaterials) {
     carrier.supplyRun = 0;
     pushEvent(state.events, EVT_SUPPLY_RUN, carrier.id, carrier.team, 0);
   }

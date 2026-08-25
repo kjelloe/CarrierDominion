@@ -10,7 +10,7 @@
 // it on and the boat keeps cycling: load, deliver, load again. Switch it off
 // and it finishes the leg it is on and comes home.
 
-import { dist2D, mulDiv } from '../shared/fixed.js';
+import { dist2D, floorDiv, mulDiv } from '../shared/fixed.js';
 import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { EVT_SUPPLY_DELIVERED, EVT_SUPPLY_LOADED, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
 import { islandById, teamById } from './economy.js';
@@ -81,10 +81,61 @@ function chassisWanted(state, unit, carrier) {
   return wanted > 0 ? wanted : 0;
 }
 
-// Loaded in priority order, because a lighter is smaller than the ship's
-// appetite: the yard's shopping list rides first when hulls are down, then
-// fuel keeps the carrier moving, ordnance keeps it dangerous, and materials -
-// which become hull repair at the other end - ride in what is left.
+// How full the ship is of one good, in per-mil. A good with no capacity
+// reads as full: it is not something this run can be short of.
+function fillPermilOf(have, cap) {
+  if (cap <= 0) return 1000;
+  const permil = floorDiv(have * 1000, cap);
+  return permil > 1000 ? 1000 : permil;
+}
+
+// Loaded EMPTIEST FIRST, because a lighter is smaller than the ship's
+// appetite and a fixed order fills it with whatever happens to come first.
+//
+// That is not a hypothetical. The order used to be fuel, ordnance,
+// materials, and the note above chassisWanted records the same lesson being
+// learned once already for parts. Materials had it too and nobody
+// generalised: on seed 20260818 a carrier sat at 87 of 1,000 hull with
+// ZERO materials while its depot held 61,571 of them, because the boat
+// filled its entire hold with fuel every run for a ship that was already
+// 58,327 fuel to the good. It could not repair, so it retreated; it
+// retreated for the rest of the war, and the war never ended.
+//
+// The yard's shopping list still rides first when hulls are down - that is a
+// known shortfall rather than a level - and spare chassis still travel in
+// whatever is left.
+// The three staples, by index: 0 fuel, 1 ordnance, 2 materials.
+function fillOfGood(carrier, unit, good) {
+  if (good === 0) {
+    return fillPermilOf(carrier.fuel + unit.cargoFuel, carrier.fuelCapacity);
+  }
+  if (good === 1) {
+    return fillPermilOf(carrier.ordnance + unit.cargoOrdnance, carrier.ordnanceCapacity);
+  }
+  return fillPermilOf(carrier.materials + unit.cargoMaterials, carrier.materialsCapacity);
+}
+
+function stockOfGood(depot, good) {
+  if (good === 0) return depot.stockFuel;
+  if (good === 1) return depot.stockOrdnance;
+  return depot.stockMaterials;
+}
+
+function takeGood(depot, unit, good, amount) {
+  if (good === 0) {
+    depot.stockFuel = depot.stockFuel - amount;
+    unit.cargoFuel = unit.cargoFuel + amount;
+    return;
+  }
+  if (good === 1) {
+    depot.stockOrdnance = depot.stockOrdnance - amount;
+    unit.cargoOrdnance = unit.cargoOrdnance + amount;
+    return;
+  }
+  depot.stockMaterials = depot.stockMaterials - amount;
+  unit.cargoMaterials = unit.cargoMaterials + amount;
+}
+
 function loadFromDepot(state, unit, depot) {
   const room = unit.cargoCap - laden(unit);
   if (room <= 0) return 0;
@@ -102,20 +153,27 @@ function loadFromDepot(state, unit, depot) {
     worked = worked + parts;
   }
 
-  const fuel = moveAmount(depot.stockFuel, unit.workRate - worked, room - worked);
-  depot.stockFuel = depot.stockFuel - fuel;
-  unit.cargoFuel = unit.cargoFuel + fuel;
-  worked = worked + fuel;
-
-  const ordnance = moveAmount(depot.stockOrdnance, unit.workRate - worked, room - worked);
-  depot.stockOrdnance = depot.stockOrdnance - ordnance;
-  unit.cargoOrdnance = unit.cargoOrdnance + ordnance;
-  worked = worked + ordnance;
-
-  const materials = moveAmount(depot.stockMaterials, unit.workRate - worked, room - worked);
-  depot.stockMaterials = depot.stockMaterials - materials;
-  unit.cargoMaterials = unit.cargoMaterials + materials;
-  worked = worked + materials;
+  // The three staples, neediest first. Ties break in the listed order, so
+  // the choice is a function of the state and nothing else.
+  const taken = [0, 0, 0];
+  for (let round = 0; round < 3; round++) {
+    let pick = -1;
+    let pickFill = 1001;
+    for (let g = 0; g < 3; g++) {
+      if (taken[g] === 1) continue;
+      const fill = carrier === -1 ? 0 : fillOfGood(carrier, unit, g);
+      if (fill < pickFill) {
+        pickFill = fill;
+        pick = g;
+      }
+    }
+    if (pick === -1) break;
+    taken[pick] = 1;
+    const moved = moveAmount(stockOfGood(depot, pick), unit.workRate - worked, room - worked);
+    if (moved <= 0) continue;
+    takeGood(depot, unit, pick, moved);
+    worked = worked + moved;
+  }
 
   // Replacement chassis last: they are the least urgent of the four and the
   // bulkiest, so they travel in whatever the rest left behind.

@@ -34,6 +34,11 @@ import {
 } from './panels/start.js';
 import { createLobbyPanel, renderLobbyPanel } from './panels/lobby.js';
 import { createStoresPanel, renderStoresPanel, toggleStoresPanel as flipStoresPanel } from './panels/stores.js';
+import {
+  createSquadronPanel,
+  renderSquadronPanel,
+  toggleSquadronPanel as flipSquadronPanel,
+} from './panels/squadron.js';
 import { createChartPanel, renderChart, toggleChart, fitChart } from './panels/chart.js';
 import { createWaroverPanel, updateWaroverPanel } from './panels/warover.js';
 import { nextWeapon } from '../engine/weapons.js';
@@ -743,7 +748,7 @@ function attachTip(element, text) {
 const ACTIONS_LEFT = [
   ['x', 'act.stop', 'tip.stop'], ['e', 'act.flares', 'tip.flares'],
   ['l', 'act.supply', 'tip.supply'], ['k', 'act.depot', 'tip.depot'],
-  ['q', 'act.stores', 'tip.stores'],
+  ['q', 'act.stores', 'tip.stores'], ['j', 'act.squadron', 'tip.squadron'],
   ['z', 'act.damage', 'tip.damage'], ['c', 'act.camera', 'tip.camera'],
   ['m', 'act.sound', 'tip.sound'],
 ];
@@ -1001,6 +1006,9 @@ function bindInput(level) {
     else if (key === 'r') recallSelected();
     else if (key === 'u') orderEscort();
     else if (key === 'q') flipStoresPanel(state.stores);
+    // J for the squadron console (ruled 2026-08-25): the 1988 Manta and
+    // Walrus screens, where hulls are outfitted, launched and recovered.
+    else if (key === 'j') flipSquadronPanel(state.squadron);
     else if (key === 't') togglePiloting();
     else if (key === 'p') deployPod();
     else if (key === 'b') deployVirus();
@@ -1349,6 +1357,7 @@ function frame(nowMs) {
   renderDamagePanel(state.damage, deltaSeconds);
   renderIslandPanel(state.island);
   renderStoresPanel(state.stores);
+  renderSquadronPanel(state.squadron);
   renderSignals();
   updateLocation();
   updateAlwaysOn();
@@ -1662,6 +1671,7 @@ async function main() {
   state.podBuildTicks = rules.rules.podBuildTicks;
   state.buildCosts = rules.economy.builds.map((row) => row.materials);
   state.magazines = (rules.weapons?.list ?? []).map((weapon) => weapon.magazine ?? 0);
+  state.weaponWeights = (rules.weapons?.list ?? []).map((w) => w.weightGrams ?? 0);
   // The two boards get a context rather than the client: a translator, the
   // current view, the seat's ship, prices, and a way to send a command.
   const panelContext = {
@@ -1671,10 +1681,16 @@ async function main() {
     carrierId: () => state.carrierId,
     buildCost: (what) => state.buildCosts[what] ?? 0,
     send: (message) => state.transport.send(message),
+    // The weapon table comes from the RULESET the server served, not from
+    // the view: it is the same for every hull and never changes in a war.
+    weaponLabel: (id) => weaponName(state.t, { weapon: id }).toUpperCase(),
+    weaponWeight: (id) => state.weaponWeights[id] ?? 0,
+    weaponMagazine: (id) => state.magazines[id] ?? 0,
   };
   state.damage = createDamagePanel(panelContext);
   state.island = createIslandPanel(panelContext);
   state.stores = createStoresPanel(panelContext);
+  state.squadron = createSquadronPanel(panelContext);
   state.warover = createWaroverPanel(
     panelContext.t,
     MODE === 'lan'
@@ -1690,6 +1706,8 @@ async function main() {
   state.chart = createChartPanel({
     onPoint: (point) => handleWorldPoint(point),
     colours: () => state.instrumentColours,
+    // Whose course to draw: the hull under the pointer, if one is selected.
+    routeSubject: () => selectedUnit(),
   });
   const netBtn = document.getElementById('chart-network');
   netBtn.textContent = state.t('chart.network');
@@ -1697,10 +1715,59 @@ async function main() {
     state.chart.network = !state.chart.network;
     netBtn.classList.toggle('on', state.chart.network);
   });
+  // PROG and LAY (ruled 2026-08-25), the 1988 map's own pair: PROG turns
+  // taps into legs, LAY sends the course. Whoever is selected gets it -
+  // a Manta, a Walrus, or the ship when nothing is.
+  const progBtn = document.getElementById('chart-prog');
+  progBtn.textContent = state.t('chart.prog');
+  progBtn.addEventListener('click', () => {
+    state.chart.prog = !state.chart.prog;
+    progBtn.classList.toggle('on', state.chart.prog);
+    if (!state.chart.prog) state.chart.legs = [];
+    updateChartButtons();
+  });
+  attachTip(progBtn, state.t('tip.prog'));
+  const layBtn = document.getElementById('chart-lay');
+  layBtn.textContent = state.t('chart.lay');
+  layBtn.addEventListener('click', () => {
+    const legs = state.chart.legs;
+    if (legs.length === 0) return;
+    const points = [];
+    for (const leg of legs) points.push(leg.x, leg.y);
+    const unit = selectedUnit();
+    if (unit !== undefined) state.transport.send({ type: 'set_route', unitId: unit.id, points: points });
+    else if (state.carrierId >= 0) {
+      state.transport.send({ type: 'set_route', carrierId: state.carrierId, points: points });
+    }
+    state.chart.legs = [];
+    state.chart.prog = false;
+    progBtn.classList.remove('on');
+    updateChartButtons();
+  });
+  attachTip(layBtn, state.t('tip.lay'));
+  function updateChartButtons() {
+    layBtn.classList.toggle('off', state.chart.legs.length === 0);
+  }
+  state.updateChartButtons = updateChartButtons;
+  updateChartButtons();
+
   const clearBtn = document.getElementById('chart-clear');
   clearBtn.textContent = state.t('chart.clear');
   clearBtn.addEventListener('click', () => {
+    // A course being laid is thrown away first; only then does CLEAR reach
+    // the standing one.
+    if (state.chart.legs.length > 0) {
+      state.chart.legs = [];
+      updateChartButtons();
+      return;
+    }
+    const unit = selectedUnit();
+    if (unit !== undefined) {
+      state.transport.send({ type: 'set_route', unitId: unit.id, points: [] });
+      return;
+    }
     if (state.carrierId < 0) return;
+    state.transport.send({ type: 'set_route', carrierId: state.carrierId, points: [] });
     state.transport.send({ type: 'set_course', carrierId: state.carrierId, x: -1, y: -1 });
   });
   const fitBtn = document.getElementById('chart-fit');

@@ -10,6 +10,7 @@
 // clear. Backing off works by reversing the helm, never by teleporting.
 
 import { clampI, dist2D, floorDiv, mulDiv, stepToward, turnToward, wrapAngle } from '../shared/fixed.js';
+import { advanceRoute, clearRoute, legOf } from './route.js';
 import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { HEADING_MANUAL } from './commands.js';
 import {
@@ -147,6 +148,7 @@ function stepCarrier(carrier, islands, sizeUnits, events) {
       if (carrier.courseX >= 0) {
         carrier.courseX = -1;
         carrier.courseY = -1;
+        clearRoute(carrier);
         pushEvent(events, EVT_COURSE, carrier.id, 0, 0);
       }
     }
@@ -159,14 +161,22 @@ function stepCarrier(carrier, islands, sizeUnits, events) {
     carrier.y = nextY;
   }
 
-  // Course sailed: the autopilot lets go and reports, and the way comes off
-  // at the player's own throttle unless they act.
+  // Mark reached. If the course has another leg (ruled 2026-08-25) the
+  // autopilot takes it and holds the throttle; only the LAST leg is an
+  // arrival, and there the autopilot lets go and reports, and the way comes
+  // off at the player's own throttle unless they act.
   if (carrier.courseX >= 0
     && dist2D(carrier.x, carrier.y, carrier.courseX, carrier.courseY) <= COURSE_ARRIVE_UNITS) {
-    carrier.courseX = -1;
-    carrier.courseY = -1;
-    carrier.throttle = 0;
-    pushEvent(events, EVT_COURSE, carrier.id, 0, 0);
+    if (advanceRoute(carrier) === 1) {
+      const leg = legOf(carrier);
+      carrier.courseX = leg.x;
+      carrier.courseY = leg.y;
+    } else {
+      carrier.courseX = -1;
+      carrier.courseY = -1;
+      carrier.throttle = 0;
+      pushEvent(events, EVT_COURSE, carrier.id, 0, 0);
+    }
   }
 
   burnFuel(carrier);

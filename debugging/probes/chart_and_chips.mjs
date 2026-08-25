@@ -93,8 +93,22 @@ console.log(`chart: open ${chartOpen}, course set ${course.set} (A lit ${course.
   + ` HELM tab closes it ${chartClosed}`);
 
 // The chips: launch a Manta, a chip appears, clicking it names the hull.
+//
+// WAIT for her to be away. Launching is a deck operation now (ruled
+// 2026-08-25) - about five seconds from the order to the ramp - and a fixed
+// 600 ms pause used to look at the chip row while she was still on the lift,
+// finding only the supply lighter and calling the whole slice broken.
 await page.keyboard.press('1');
-await page.waitForTimeout(600);
+await page.waitForFunction(
+  () => {
+    const view = window.__lastView;
+    if (view === undefined) return false;
+    return view.units.some((u) => u.kind === 0 && u.team === view.team && u.state === 1);
+  },
+  undefined,
+  { timeout: 20000 },
+);
+await page.waitForTimeout(400);
 const chips = await page.evaluate(() => ({
   count: document.getElementById('unit-chips').children.length,
   label: document.getElementById('unit-chips').children[0]?.textContent ?? '',

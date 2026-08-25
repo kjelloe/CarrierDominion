@@ -190,6 +190,13 @@ the table's own on/off switch - the High tier's Preetham sky and mirror
 water, CI on every push, and a written plan (docs/08) for the Luau/Roblox
 twin and the true mobile tier.
 
+The **squadron console** (`J`, 2026-08-25) is the 1988 Manta and Walrus
+screens we had been missing: a numbered hull selector, a status board, a
+fitting screen where every store has a weight and every hull a budget, and a
+deck where launching is an operation — hangar, lift, ramp, away — with a
+standing ABORT. Pods are typed, courses have up to eight legs, and the
+gap analysis that drove all of it is docs/10.
+
 How far along a war starts is now one ladder of five (2026-08-25): a home
 island each, nothing but the ship, developed, **late** — the whole
 archipelago held, built and refitted, for testing an endgame without playing

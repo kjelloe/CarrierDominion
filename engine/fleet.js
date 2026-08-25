@@ -26,17 +26,21 @@ import {
 } from './events.js';
 import { orderReturn, recoverUnit, withinRecoveryRange } from './hangar.js';
 import { hangarOpen } from './damage.js';
+import { beginDocking } from './deck.js';
+import { advanceRoute, legOf } from './route.js';
 import {
   KIND_MANTA,
   ORDER_ATTACK,
   ORDER_ESCORT,
   ORDER_HOLD,
+  ORDER_MOVE,
   KIND_DECOY,
   KIND_DRONE,
   KIND_INTERCEPTOR,
   ORDER_LAND,
   burnUnitFuel,
   UNIT_ACTIVE,
+  UNIT_DOCKING,
   UNIT_LANDED,
   UNIT_LOST,
   UNIT_RETURNING,
@@ -57,7 +61,11 @@ function stepUnits(state) {
       refuelFromIsland(state, unit);
       continue;
     }
-    if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) continue;
+    // A craft on final flies its approach: DOCKING is a state of the deck
+    // cycle, not a parking brake. It keeps steering for the ship, which is
+    // what keeps it inside the envelope while the ship is under way.
+    if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
+      && unit.state !== UNIT_DOCKING) continue;
 
     // A decoy on station rides the ship in rigid formation: four points
     // around the hull on its own heading. It neither burns nor steers -
@@ -144,6 +152,16 @@ function stepUnits(state) {
       continue;
     }
     if (outcome === FLIGHT_ARRIVED || outcome === DRIVE_ARRIVED) {
+      // A mark reached is not a destination reached (ruled 2026-08-25): if
+      // there is another leg, steer for it and say nothing. Arrival is what
+      // happens at the END of a course.
+      if (advanceRoute(unit) === 1) {
+        const leg = legOf(unit);
+        unit.targetX = leg.x;
+        unit.targetY = leg.y;
+        unit.order = ORDER_MOVE;
+        continue;
+      }
       pushEvent(state.events, EVT_UNIT_ARRIVED, unit.id, unit.team, 0);
       continue;
     }
@@ -157,9 +175,18 @@ function stepUnits(state) {
     }
     if (outcome === FLIGHT_HOME || outcome === DRIVE_HOME) {
       const canLand = carrier !== -1 && hangarOpen(carrier);
-      if (canLand && withinRecoveryRange(unit, carrier, state.params.recoverRange)) {
-        recoverUnit(unit, carrier, state.weapons, state.presets);
-        pushEvent(state.events, EVT_UNIT_RECOVERED, unit.id, unit.team, 0);
+      // Coming aboard is an approach, not a snap (ruled 2026-08-25): the
+      // craft enters the recovery envelope and DOCKING runs on a clock,
+      // which engine/deck.js finishes. Drift back out and you come round
+      // again. The stores and the fuel are still recoverUnit's business.
+      // Once, at the start of the approach. Calling it every tick while the
+      // craft sits in the envelope restarts the clock every tick, and the
+      // approach never finishes: aircraft flew an endless final, ran dry,
+      // were rebuilt at chassis cost, and the economy bled out. Seed
+      // 20260818 stopped resolving at all.
+      if (canLand && unit.state !== UNIT_DOCKING
+        && withinRecoveryRange(unit, carrier, state.params.recoverRange)) {
+        beginDocking(state, unit, carrier);
       }
     }
   }

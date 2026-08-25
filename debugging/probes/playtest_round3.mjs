@@ -57,12 +57,35 @@ await page.waitForTimeout(300);
 check((await ship()).courseX === -1, 'the rudder and the autopilot shared the wheel');
 
 // ESCORT from its button: launch, order, confirm.
+// Launching is a deck OPERATION now (ruled 2026-08-25): about a hundred
+// ticks from the order to the ramp. A fixed pause after pressing the button
+// looks at the world while the craft is still on the lift.
+//
+// The wait is generous because in SOLO the engine is driven by the animation
+// frame, and a headless browser on a loaded machine can run the war at a
+// couple of ticks a second - a hundred ticks is five seconds at the table
+// and the better part of a minute here.
+async function awaitAway(target, kind) {
+  await target.waitForFunction(
+    (want) => {
+      const view = window.__lastView;
+      if (view === undefined) return false;
+      return view.units.some((u) => u.kind === want && u.team === view.team && u.state === 1);
+    },
+    kind,
+    { timeout: 90000 },
+  );
+}
+
 await page.keyboard.press('1');
-await page.waitForTimeout(800);
+await awaitAway(page, 0);
+await page.waitForTimeout(400);
 await page.keyboard.press('u');
 await page.waitForTimeout(400);
 const escorting = await page.evaluate(
-  () => window.__lastView.units.find((u) => u.state === 1)?.order,
+  // The MANTA's order. `units.find(u => u.state === 1)` used to pick the
+  // supply lighter, which is at sea from tick one and reported ORDER_LOAD.
+  () => window.__lastView.units.find((u) => u.kind === 0 && u.state === 1)?.order,
 );
 check(escorting === 6, `the escort order read ${escorting}, not 6`);
 

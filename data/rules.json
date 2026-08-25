@@ -31,5 +31,8 @@
   "telemetryLossMetres": 26000,
   "commandCentreHp": 400,
   "neutralSiloRounds": 6,
-  "startShape": 0
+  "startShape": 0,
+  "deckRangeTicks": 60,
+  "launchTicks": 40,
+  "dockTicks": 60
 }

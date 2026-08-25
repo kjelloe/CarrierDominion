@@ -48,7 +48,20 @@ await page.keyboard.press('x'); // all stop
 
 // Signals: launch a Manta, open the log, expect the launch reported.
 await page.keyboard.press('1');
-await page.waitForTimeout(500);
+// Wait for her to be AWAY. Launching is a deck operation now (ruled
+// 2026-08-25) and the signals log announces the launch when she leaves the
+// ramp, not when the order is given - which is the honest moment, and which
+// a fixed half-second pause arrives well before.
+await page.waitForFunction(
+  () => {
+    const view = window.__lastView;
+    if (view === undefined) return false;
+    return view.units.some((u) => u.kind === 0 && u.team === view.team && u.state === 1);
+  },
+  undefined,
+  { timeout: 90000 },
+);
+await page.waitForTimeout(300);
 await page.keyboard.press('i');
 const signals = await page.evaluate(() => ({
   open: document.getElementById('log-panel').classList.contains('open'),

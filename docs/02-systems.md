@@ -45,6 +45,70 @@ ticks 35,006 and 116,271 (was 33k–231k) — economies that start alive fight
 sooner and settle faster; early lulls grow (both sides build before
 contact) but stay under the watchdog's scaled window.
 
+## What a hull carries, and how it gets off the ship
+
+Two systems the 1988 screenshots showed we had skipped (docs/10, ruled
+2026-08-25).
+
+### The payload budget
+
+`engine/payload.js`. Every store weighs something and every hull has a
+budget, in **grams** on the record because a laser round weighs less than a
+kilogram and there are no floats below the client.
+
+| | budget | a full fit |
+|---|---|---|
+| Manta | 750 kg | laser 120 + cluster 270 + napalm 120 + missile 240 = **exactly 750** |
+| Walrus | 2,000 kg | cannon 960 + mines 440 = 1,400, and then **one** capture device: the ACCB pod is 400, the virus bomb 300 |
+
+The numbers are the original's where the original stated them — a 60 kg
+air-to-air missile, a 400 kg pod. Weight is a **capacity** rule and not a
+flight model: a light Manta is not faster here, exactly as in 1988.
+
+Two commands do the fitting screen's `+` and `−`. `set_station` moves rounds
+between the hold and one station of one **stowed** hull; `set_device` does
+the same for the capture devices. Three things refuse, and the screen shows
+all three: the hull is not in the hangar, the hold has not got them, or the
+hull cannot lift them. Landing stores returns them to the hold rather than
+throwing them over the side.
+
+The consequence the owner asked for: a Walrus goes ashore with the pod OR the
+bomb. It used to be handed both, free.
+
+### The deck cycle
+
+`engine/deck.js`. Launching is an operation:
+
+```
+IN HANGER --(lift, 3 s)--> ON FLIGHT DECK --(ramp, 2 s)--> away
+                DOCKING --(3 s)--> IN DOCK
+```
+
+The lift is the **MIDSHIP** section, which the damage model already had:
+wreck it and the air group is stranded below decks, which is what the
+original's repair-priorities screen was telling you by listing LIFT. A stall
+mid-cycle holds the craft on deck rather than losing it. **ABORT** is
+standing and sends a craft below from anywhere in the cycle. Drifting out of
+the recovery envelope abandons an approach — you come round again.
+
+Two things deliberately not carried over: shuffling craft fore and aft on the
+deck (a 1988 interface for a 1988 problem, and not a decision), and the
+angular "docking cone" — the envelope is the cone, because an angular gate
+would give the AI a way to circle for ever.
+
+Scenario tests run with the cycle at zero (`instantDeck`, beside the four
+things `bareRules` already strips), and a zero-length cycle completes inside
+the command so that "launch" still means launched.
+
+### A course with more than one leg
+
+`engine/route.js`. The 1988 map had PROG and CLEAR and dropped numbered
+waypoints; ours had one leg. A route is up to **eight** legs on the record,
+for a unit or for the ship, and the movement code is untouched — it still
+steers at `targetX/targetY`, and the route is only what happens on arrival.
+Reaching a mark takes the next leg silently; only the last one is an
+arrival. A course is a plan, so it is own-hulls-only in the view.
+
 ## Taking an island
 
 Two ways, and they answer different questions.

@@ -60,7 +60,7 @@ const rules = loadRules();
 // start positions are byte-identical throughout (the ring-walk fix touches
 // only tables of more than four teams, which no pin covers).
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = 'd9f492e245b9ca4a';
+const GOLDEN_WORLD_HASH = '37321bb7103651cb';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

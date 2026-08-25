@@ -48,6 +48,15 @@ const CMD_SET_LOADOUT_PRESET = 'set_loadout_preset';
 const CMD_SET_STATION = 'set_station';
 // The capture devices are payload too, so they are fitted the same way.
 const CMD_SET_DEVICE = 'set_device';
+// A course with more than one leg (ruled 2026-08-25): the 1988 map's PROG,
+// for a unit or for the ship. Points arrive flat - x0, y0, x1, y1 - and an
+// empty list is CLEAR. Old saves have no such command, which is exactly why
+// it is a new one rather than a new field on an old one.
+const CMD_SET_ROUTE = 'set_route';
+// ABORT (ruled 2026-08-25): a craft anywhere in the deck cycle goes back
+// below. What you press when a missile is inbound and you would rather not
+// have a fuelled Manta sitting on the roof.
+const CMD_ABORT_DECK = 'abort_deck';
 // Which KIND of ACCB pod is aboard (ruled 2026-08-25): the 1988 stores list
 // reads POD - RESOURCE / FACTORY / DEFENCE, so the island's purpose is
 // chosen at the ship. The island board may still re-role it after capture.
@@ -83,6 +92,7 @@ const UNIT_COMMANDS = [
   CMD_SET_STATION,
   CMD_SET_DEVICE,
   CMD_SET_POD_ROLE,
+  CMD_ABORT_DECK,
 ];
 
 function isInt(value) {
@@ -224,6 +234,23 @@ function validateCommand(command) {
     if (command.role < 0 || command.role > 2) return 'no such island role';
     return '';
   }
+  if (type === CMD_ABORT_DECK) {
+    if (!isInt(command.unitId)) return 'unitId must be an integer';
+    return '';
+  }
+  if (type === CMD_SET_ROUTE) {
+    const hasUnit = isInt(command.unitId);
+    const hasCarrier = isInt(command.carrierId);
+    if (hasUnit === hasCarrier) return 'a route belongs to a unit or a carrier';
+    if (!Array.isArray(command.points)) return 'points must be an array';
+    if (command.points.length % 2 !== 0) return 'points must be pairs';
+    if (command.points.length > 16) return 'too many legs';
+    for (let i = 0; i < command.points.length; i++) {
+      if (!isInt(command.points[i])) return 'points must be integers';
+      if (command.points[i] < 0) return 'a leg is off the map';
+    }
+    return '';
+  }
   if (type === CMD_SET_AI) {
     if (!isInt(command.team)) return 'team must be an integer';
     if (!isInt(command.active)) return 'active must be 0 or 1';
@@ -332,6 +359,8 @@ export {
   CMD_SET_STATION,
   CMD_SET_DEVICE,
   CMD_SET_POD_ROLE,
+  CMD_ABORT_DECK,
+  CMD_SET_ROUTE,
   CMD_FIRE_HAMMERHEAD,
   CMD_DEPLOY_DECOYS,
   CMD_DOCK_DECOYS,

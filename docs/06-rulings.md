@@ -398,6 +398,64 @@ headless battery **team 0 is the empty player seat** (`aiTeams: [1]`). Every
 ship, not an AI defect. Check who is actually driving before diagnosing a
 one-sided war.
 
+## The squadron batch (2026-08-25)
+
+Owner, after reading 83 screenshots of a PC/DOS playthrough back against our
+client: "we have to update the UI to have all the functionality of the
+original, in particular managing, outfitting, launching, plotting course for,
+recovering and piloting mantas and walruses." The gap analysis is docs/10.
+Four questions, four rulings:
+
+- **Outfitting: the full 1988 model.** A payload WEIGHT budget and a weight
+  on every store, fitted and landed per hardpoint — not presets dressed up.
+  The numbers are the original's where the original stated them: an
+  air-to-air missile 60 kg, the ACCB pod 400. A brim-full Manta fit is
+  exactly its 750 kg; a Walrus carries 1,400 kg of guns and mines in a
+  2,000 kg hull, so it takes the pod OR the virus bomb and never both. It
+  used to be handed both for free.
+- **The deck cycle, lift included.** IN HANGER → ON FLIGHT DECK → LAUNCHING
+  → away, and DOCKING → IN DOCK, with progress bars and a standing ABORT.
+  The lift is the MIDSHIP section, so a wrecked hangar strands the air group
+  exactly as the original's repair screen implied. Shuffling craft fore and
+  aft on the deck is deliberately NOT carried over: a 1988 interface for a
+  1988 problem, and not a decision.
+- **Waypoints for units and the carrier**, numbered, with the route drawn on
+  an inset map while piloting.
+- **Typed ACCB pods**, and the role still changeable afterwards. The 1988
+  stores list reads POD - RESOURCE / FACTORY / DEFENCE, so an island's
+  purpose is chosen at the ship; the island board may still re-role it,
+  which is the one liberty we keep over the original.
+
+### What the battery found, again
+
+The deck cycle stopped seed 20260818 resolving at all — 900,000 ticks, the
+watchdog calling it dead from tick 254,633. The cause was not the deck: it
+was **the supply boat loading by a fixed order instead of by shortfall.** A
+carrier sat at 87 of 1,000 hull with ZERO materials while its own depot held
+61,571 of them, because the hold filled with fuel every run for a ship
+already 58,327 fuel to the good. It could not mend, so it retreated; it
+retreated for the rest of the war. Two fixes, both general: the boat loads
+EMPTIEST FIRST, and the AI's shopping list finally asks for materials when
+the hull is damaged — the third time that list has been found short (fuel and
+ordnance were there from the start, chassis were added after seed 900913,
+materials were never there at all).
+
+The same measurement caught the deck cycle restarting a docking craft's
+clock every tick, so aircraft flew an endless final, ran dry and were rebuilt
+at chassis cost. And typed pods froze the machine's estate: `planFor` was
+only ever asked about an island with NO role, and after typed pods no island
+has none, so no AI team ever built a factory again. The machine now types its
+pod at the beach rather than at the ship - the estate at the beach is not the
+estate the vehicle sailed from - and re-roles an island whose plan has
+changed while nothing is built on it.
+
+That last fix then exposed an oscillation that had always been latent:
+`planFor` asked what an island should be while counting that island's own
+role in the answer, so one island flipped RESOURCE/FACTORY every three ticks
+for a whole war. It now asks what an island should be GIVEN THE REST of the
+estate. The old code was safe only by accident - it planned an island once,
+when it had no role, so the loop could not close.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

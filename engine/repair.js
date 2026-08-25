@@ -190,7 +190,7 @@ function assembleKind(state, carrier, kind, cost) {
     unit.virus = 0;
     refuelFromCarrier(unit, carrier);
     rearm(unit, state.weapons, carrier, state.presets);
-    provisionWalrus(unit, carrier);
+    provisionWalrus(unit, carrier, state.weapons);
     pushEvent(state.events, EVT_HULL_REPLACED, unit.id, unit.team, unit.kind);
     return 1;
   }

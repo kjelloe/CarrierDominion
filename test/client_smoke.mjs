@@ -97,17 +97,58 @@ async function checkMode(browser, baseUrl, mode) {
   await page.keyboard.press('1');
   await page.waitForFunction(
     () => {
+      // The hangar count proves the round trip: the Manta has left the
+      // hangar's books the moment the order is given, even though she is
+      // still on the lift. WHAT is selected cannot be asked yet - nothing
+      // is selectable until she is actually away, which is the next wait.
       const hangar = document.getElementById('hud-hangar');
-      const unit = document.getElementById('hud-unit');
-      // The hangar count proves the round trip. The SELECTED unit may be
-      // the supply lighter now - the home island starts the supply run, so
-      // a boat is often afloat (and auto-named) before the first launch.
-      return hangar !== null && /3 Manta/.test(hangar.textContent)
-        && unit !== null && /Manta|Walrus|Lighter|Lekter/.test(unit.textContent);
+      return hangar !== null && /3 Manta/.test(hangar.textContent);
     },
     undefined,
     { timeout: 10000 },
-  ).catch(() => problems.push(`[${mode}] launching a Manta never reached the HUD`));
+  ).catch(async () => {
+    // Say WHAT it read. "never reached the HUD" with no reading is a
+    // failure you cannot act on without re-running the gate by hand.
+    const saw = await page.evaluate(() => ({
+      hangar: document.getElementById('hud-hangar')?.textContent ?? '(no line)',
+      unit: document.getElementById('hud-unit')?.textContent ?? '(no line)',
+      states: (window.__lastView?.units ?? [])
+        .filter((u) => u.kind === 0).map((u) => u.state).join(','),
+    }));
+    problems.push(`[${mode}] launching a Manta never reached the HUD`
+      + ` - hangar "${saw.hangar}", unit "${saw.unit}", Manta states [${saw.states}]`);
+  });
+
+  // And WAIT for her to be away. Launching is a deck operation now (ruled
+  // 2026-08-25): about a hundred ticks from the order to the ramp, so
+  // pressing T on a timer used to take the controls of a Manta still on the
+  // lift. The wait is generous because in SOLO the engine is driven by the
+  // animation frame - five seconds at the table, and the better part of a
+  // minute in a headless browser sharing a machine with the whole suite.
+  await page.waitForFunction(
+    () => {
+      const view = window.__lastView;
+      if (view === undefined) return false;
+      return view.units.some((u) => u.kind === 0 && u.team === view.team && u.state === 1);
+    },
+    undefined,
+    { timeout: 90000 },
+  ).catch(() => problems.push(`[${mode}] the Manta never left the deck`));
+
+  // NOW she can be chosen, and the HUD should say so.
+  await page.waitForFunction(
+    () => {
+      const unit = document.getElementById('hud-unit');
+      return unit !== null && /Manta|Walrus|Lighter|Lekter/.test(unit.textContent);
+    },
+    undefined,
+    { timeout: 30000 },
+  ).catch(async () => {
+    const saw = await page.evaluate(
+      () => document.getElementById('hud-unit')?.textContent ?? '(no line)',
+    );
+    problems.push(`[${mode}] nothing was selected once she was away - unit "${saw}"`);
+  });
 
   await page.keyboard.press('t');
   await page.waitForFunction(

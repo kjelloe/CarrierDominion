@@ -158,7 +158,8 @@ repair priority between High, Medium and Low.
 ## Panels
 
 `client/panels/` holds the screens that are lists rather than instruments:
-`damage.js`, `island.js`, `lobby.js` (the war room), `start.js` (the game-start
+`damage.js`, `island.js`, `lobby.js` (the war room), `squadron.js` (the Manta
+and Walrus consoles — see below), `start.js` (the game-start
 menu — map, islands, opponents, caps, style, language), `stores.js` (the
 quartermaster: island stocks, the depot, the production bias, and the
 UPGRADES refit rows — click one to lay the ship's speed, point-defence or
@@ -174,6 +175,34 @@ Rows are **built once and updated in place**. Rebuilding them every frame
 replaced elements under the pointer, so a click landed on a node that had
 already been discarded and nothing happened — twice, in two different panels,
 before the rule was written down.
+
+### The squadron console
+
+`squadron.js`, on `J` (ruled 2026-08-25, from the 1988 screenshots in
+docs/10). The original gave each craft type a console; we had the mechanics
+and none of the console. Two kinds, a numbered 1–4 selector whose border
+says the hull's state — solid aboard, dashed away, faded destroyed — and
+three pages:
+
+- **BOARD** — every hull, what it is doing, and a bar that shows the deck
+  clock while one is running and fuel the rest of the time.
+- **OUTFIT** — the fitting screen. Stores down the left with `+`/`−` per
+  station; the craft down the right with its budget, its hardpoints, repair
+  state and fuel. A Walrus also gets its capture devices and the type of pod
+  in the rack.
+- **DECK** — LAUNCH, ABORT and RECALL, each lit only when it applies, over
+  the status and its progress bar.
+
+The console never sets a state: every change goes out as a command and comes
+back in a view, so what it draws is always what the reducer did.
+
+### PROG and LAY, on the chart
+
+The 1988 map's own pair. While **PROG** is lit a tap on the chart adds a
+numbered leg — dashed while it is being laid, solid once it is sailed — and
+**LAY COURSE** sends it to whatever is selected: a Manta, a Walrus, or the
+ship when nothing is. **CLEAR** throws away a course being laid first, and
+only then cancels the standing one.
 
 ## The shop window
 
@@ -285,6 +314,7 @@ to make noise before then.
 | `[` `]` | scope range |
 | `M` `K` `L` | sound / nominate depot / supply run |
 | `Q` | the quartermaster: island stocks, the depot, production bias |
+| `J` | the squadron console: the board, the fitting screen, the deck |
 | `U` | escort: the selected unit takes station on the carrier |
 | click sea, nothing selected | lay a course - the ship sails there itself |
 | `C` | camera: chase / gunsight / map |
