@@ -110,8 +110,33 @@ Look for these shapes first — every one produced a real bug:
   turned click-to-sail into click-to-move-the-boat. When a start condition
   changes, re-read every "if nothing is chosen yet" default.
 
+- **Priority that orders the ATTEMPTS but not the CLAIM.** Equipment was
+  "tried last" but cost a third of a hull, so it was tried whenever a hull
+  was unaffordable and ate every trickle - no airframe was ever rebuilt
+  again. When a cheap thing and a dear thing draw on one pool, the cheap
+  one must be blocked while the dear one waits, not merely sequenced after
+  it.
+- **A shopping list written before the shop had everything.** The AI called
+  its supply boat for fuel and ordnance because those were the only stores
+  that existed when the list was written; chassis arrived later and nothing
+  added them, so a carrier with a full bunker and no aircraft sat still
+  while parts piled up at its own depot. When a new store is added, grep
+  every place that decides "do I need supplies".
+- **A precondition that a new default made universally true.** planFor's
+  fortress rule keyed off "the team holds a plant", which was rare until
+  the home island handed every team one at tick zero - then it fired on
+  every team's second island and starved them of mines. After changing a
+  start condition, grep for the predicates that were rare and are now
+  always true.
+
 ## Verifying and landing
 
+- **Measure the FLOW, not the feature.** Seed 900913's stall was blamed on
+  the decoy screen, then on the equipment price; both were wrong, and both
+  cost a rewrite. Printing the chassis flow on both sides - depot stock,
+  carrier stock, boats afloat, lost hulls by kind - found it in one run.
+  When a war stalls, instrument the economy's plumbing before touching the
+  thing that changed most recently.
 - Measure economy/pacing claims with the headless sim, not by eye: a quick
   probe script printing ownership/stores/fuel every 50k ticks found the
   fuel-economy collapse in one run. Quote tick numbers.
