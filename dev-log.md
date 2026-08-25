@@ -57,8 +57,21 @@ at 857; the subset test guards 900 so it cannot get worse meanwhile.
 stowed rather than being lost with her. Kills score through shots.js, so
 nothing reads them and changing it would move hashes for no gain.
 
-**Cost:** 529 tests (+7 files across both review slices), smoke green,
-battery 5/5.
+**And two small things worth the trouble.** Ten imported names that nothing
+used any more, most of them left behind when the AI stopped calling
+`launchUnit` and started riding the deck cycle - none of them a bug, all of
+them a lie about what the file does. There is a `hygiene.test.js` for that
+now, and for merge markers and stray prints from the portable half.
+
+The other: a craft in the deck cycle sat at the WATERLINE on the spot the
+hangar left her, which is inside the hull and behind it the moment the ship
+makes way. Five seconds of an invisible aircraft. She rides the deck now, at
+deck height, and you can watch her ranged there before she goes - which is
+the visible half of a feature that was otherwise only a status line.
+
+**Cost:** 531 tests (+8 files across the three review slices), smoke green,
+battery 5/5, 29/30 probes - and the one failure was `squadron.mjs` asserting
+a page COUNT, stale one day after I wrote it. It asserts the page NAMES now.
 
 ---
 

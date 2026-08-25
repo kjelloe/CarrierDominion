@@ -55,7 +55,6 @@ import {
   EVT_RUDDER_SET,
   EVT_THROTTLE_SET,
   EVT_UNIT_CONTROL,
-  EVT_UNIT_LAUNCHED,
   EVT_UNIT_ORDERED,
   EVT_STOCKPILE_SET,
   EVT_CARRIER_SUNK,
@@ -85,12 +84,11 @@ import { stepBatcaves } from './batcave.js';
 import { computeNetwork, markNetworkDirty } from './network.js';
 import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchShot } from './shots.js';
-import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
+import { orderReturn, readyToLaunch } from './hangar.js';
 import { dist2D, floorDiv } from '../shared/fixed.js';
 import { deviceFits, roundsThatFit } from './payload.js';
 import { clearRoute, legOf, setRoute } from './route.js';
 import {
-  KIND_DECOY,
   KIND_DRONE,
   KIND_LIGHTER,
   KIND_MANTA,

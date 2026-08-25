@@ -8,7 +8,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 ## The gate
 
 ```
-npm test      the unit and integration suite (528 tests and growing), node --test
+npm test      the unit and integration suite (five hundred-odd tests), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
 npm run probes every probe in debugging/probes, one after another (~13 min)

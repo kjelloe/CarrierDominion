@@ -21,7 +21,6 @@ import {
   EVT_UNIT_BLOCKED,
   EVT_UNIT_LANDED,
   EVT_UNIT_LOST,
-  EVT_UNIT_RECOVERED,
   pushEvent,
 } from './events.js';
 import { orderReturn, recoverUnit, withinRecoveryRange } from './hangar.js';
@@ -37,7 +36,6 @@ import {
   KIND_DECOY,
   KIND_DRONE,
   KIND_INTERCEPTOR,
-  ORDER_LAND,
   burnUnitFuel,
   UNIT_ACTIVE,
   UNIT_DOCKING,

@@ -23,6 +23,7 @@
 import { hangarOpen } from './damage.js';
 import { launchUnit, recoverUnit, withinRecoveryRange } from './hangar.js';
 import {
+  KIND_MANTA,
   UNIT_DOCKING,
   UNIT_LAUNCHING,
   UNIT_ON_DECK,
@@ -126,6 +127,19 @@ function stepDeck(state) {
       unit.state = UNIT_RETURNING;
       unit.deckTicks = 0;
       continue;
+    }
+
+    // She rides the ship while she is on it. Without this she sits at the
+    // waterline on the spot the hangar left her, which is inside the hull
+    // and behind it the moment the ship makes way - the deck cycle would be
+    // five seconds of an invisible aircraft. On the deck she is visible,
+    // which is the point of the deck being a place.
+    if (unit.state === UNIT_ON_DECK || unit.state === UNIT_LAUNCHING) {
+      unit.x = carrier.x;
+      unit.y = carrier.y;
+      unit.z = unit.kind === KIND_MANTA ? state.params.deckHeight : 0;
+      unit.heading = carrier.heading;
+      unit.speed = carrier.speed;
     }
 
     unit.deckTicks = unit.deckTicks + 1;

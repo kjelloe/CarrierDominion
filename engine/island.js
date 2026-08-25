@@ -18,7 +18,7 @@
 // poured concrete the decision is made, which is what stops the role being a
 // free switch you flip whenever the front moves.
 
-import { mulDiv } from '../shared/fixed.js';
+import {  } from '../shared/fixed.js';
 import { EVT_ISLAND_ROLE, EVT_ISLAND_BUILT, EVT_TURRET_BUILT, pushEvent } from './events.js';
 import { KIND_FACTORY, KIND_FORTRESS, KIND_RESOURCE } from './worldgen.js';
 import { clearTurretsOn, createTurret, loadoutForTurret, turretsOn } from './turret.js';

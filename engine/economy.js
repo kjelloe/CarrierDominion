@@ -19,7 +19,7 @@
 
 import { mulDiv } from '../shared/fixed.js';
 import { EVT_STOCKPILE_SET, pushEvent } from './events.js';
-import { computeNetwork, markNetworkDirty, onNetwork } from './network.js';
+import { markNetworkDirty, onNetwork } from './network.js';
 import { ROLE_FACTORY, ROLE_NONE, stockCapOf, terrainPermil } from './island.js';
 
 function capped(value, cap) {

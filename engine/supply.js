@@ -12,9 +12,9 @@
 
 import { dist2D, floorDiv, mulDiv } from '../shared/fixed.js';
 import { atan2B, mulCos, mulSin } from '../shared/trig.js';
-import { EVT_SUPPLY_DELIVERED, EVT_SUPPLY_LOADED, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
+import { EVT_SUPPLY_DELIVERED, EVT_SUPPLY_LOADED, pushEvent } from './events.js';
 import { islandById, teamById } from './economy.js';
-import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
+import { orderReturn, readyToLaunch } from './hangar.js';
 import { beginLaunch } from './deck.js';
 import {
   KIND_LIGHTER,

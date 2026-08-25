@@ -93,13 +93,19 @@ await page.screenshot({ path: join(SHOTS, 'squadron-deck.png') });
 // The console must have all three pages, both kinds, a numbered hull for
 // every airframe, a fitting screen whose budget answers the buttons, a pod
 // rack that types, and a deck cycle that visibly passes through the deck.
+// Four pages since the drone screen joined them (2026-08-26). Asserting a
+// COUNT is what made this probe stale a day after it was written; asserting
+// the NAMES says what the console is supposed to offer.
+const wantPages = ['BOARD', 'OUTFIT', 'DECK', 'SCREEN'];
+const missing = wantPages.filter((name) => !pages.some((text) => text.includes(name)));
 const ok = problems.length === 0
-  && kinds.length === 2 && pages.length === 3 && craft.length >= 4
+  && kinds.length === 2 && missing.length === 0 && craft.length >= 4
   && before > 0 && after < before
   && podBefore !== podAfter
   && seen.includes('on the flight deck') && seen[seen.length - 1] === 'away';
 if (!ok) {
   for (const problem of problems) console.log(problem);
+  if (missing.length > 0) console.log(`pages missing: ${missing.join(', ')}`);
   console.log('FAIL: the squadron console is not the console the original had');
   process.exitCode = 1;
 }

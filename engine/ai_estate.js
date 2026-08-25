@@ -29,7 +29,6 @@ import {
   upgradeOwned,
   ROLE_DEFENCE,
   ROLE_FACTORY,
-  ROLE_NONE,
   ROLE_RESOURCE,
   builtCount,
   setRole,

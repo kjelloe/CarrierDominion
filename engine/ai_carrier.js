@@ -17,7 +17,7 @@ import { atan2B } from '../shared/trig.js';
 import { checkDeploy, deployPod } from './capture.js';
 import { checkVirus, deployVirus } from './virus.js';
 import { skirtRadius } from './heightmap.js';
-import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
+import { orderReturn, readyToLaunch } from './hangar.js';
 import {
   KIND_WALRUS,
   ORDER_MOVE,
@@ -26,7 +26,7 @@ import {
   UNIT_STOWED,
   unitCommitted,
 } from './units.js';
-import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
+import { EVT_SUPPLY_RUN, pushEvent } from './events.js';
 import { teamById } from './economy.js';
 import { manageStrike, withdraw } from './ai_strike.js';
 import { setDecoyScreen } from './fleet.js';

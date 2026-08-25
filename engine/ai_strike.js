@@ -11,8 +11,8 @@
 import { dist2D, floorDiv, mulDiv } from '../shared/fixed.js';
 import { atan2B, mulCos, mulSin } from '../shared/trig.js';
 import { CONTACT_CARRIER, remembered } from './contacts.js';
-import { EVT_SUPPLY_RUN, EVT_UNIT_LAUNCHED, pushEvent } from './events.js';
-import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
+import { EVT_SUPPLY_RUN, pushEvent } from './events.js';
+import { orderReturn, readyToLaunch } from './hangar.js';
 import { beginLaunch } from './deck.js';
 import { fireUnit, roundsOf, selectWeapon } from './weapons.js';
 import {
