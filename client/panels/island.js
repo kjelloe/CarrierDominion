@@ -7,6 +7,8 @@
 // client: a translator, the current view, the seat's carrier, the build costs,
 // and a way to send a command.
 
+import { islandName } from '../../shared/names.js';
+
 const ROLE_KEYS = ['island.roleResource', 'island.roleFactory', 'island.roleDefence'];
 const BUILD_KEYS = ['build.factory', 'build.warehouse', 'build.turret',
   'build.upSpeed', 'build.upPd', 'build.upRadar', 'build.runway'];

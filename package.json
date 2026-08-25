@@ -16,7 +16,8 @@
     "trig": "node tools/gen_trig.mjs",
     "repin": "node tools/repin_m0a.mjs",
     "sim": "node test/headless/sim_m0.mjs",
-    "battery": "node tools/sim_battery.mjs"
+    "battery": "node tools/sim_battery.mjs",
+    "probes": "node tools/run_probes.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"

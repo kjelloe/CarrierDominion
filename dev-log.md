@@ -5,6 +5,63 @@ golden hash and why.
 
 ---
 
+## 2026-08-25 — Chasing the lobby probe, and what was behind it
+
+The lobby probe had been failing. Owner asked me to chase it. The room was
+fine; the probe was clicking the wrong thing — and the sweep that followed
+found one real bug that had been live for days.
+
+**The lobby probe.** It clicked "the first settable row" and asserted the
+island count had changed. True until the war room gained rows above it — the
+start ladder went in at the top — after which the click cycled somebody
+else's option and the probe reported a broken lobby. Verified by hand first:
+a host's change reaches the guest in under half a second, and both sides
+start in the same war. Now selects by NAME and reads the chosen value back
+rather than hardcoding 16, because the menu's default island count is a
+ruling that has already moved once.
+
+**Two more of the same.** `start_menu.mjs` had drifted so far that its
+second click was commented "enemy carrier" while it cycled the table size.
+`second_war.mjs` timed out waiting for 32 islands it was never going to get.
+`gunsight.mjs` read `hud-weapons`, a HUD line the round-four rulings moved to
+the weapon group above the panel — it died on a null and read as a broken
+gunsight. `playtest_round2.mjs` asserted that four fifths of the throttle bar
+is 80, which stopped being true when the astern gear made the scale -25..100
+(four fifths is 75; 80 is at 0.84). All fixed, all now compute or read back
+rather than hardcode. The gunsight probe gained real assertions while I was
+in there — it was collecting the weapon readout and never checking it — and
+round two now covers the astern end of the scale it had not known existed.
+
+### The one that was not the probe's fault
+
+`client/panels/island.js` called `islandName()` **without importing it**. The
+island board threw a ReferenceError for every player who clicked one of their
+own islands: no title, no choices, a dead panel. It is on the critical path
+for the playtest — A2 asks you to open a board and build a runway.
+
+One line to fix. The interesting part is why it survived: the smoke gate
+fails on ANY console error and would have caught it in a second, but nothing
+in the gate ever opened that panel. The gate now opens every panel with a
+key and clicks an island you own, and asserts the board came up with a title.
+Verified by deliberately removing the import again: four failures, both
+transports, exactly as it should.
+
+One more turned up in the first full sweep: `turret_shot.mjs` asserted the
+renderer held EXACTLY the four guns it injects, which was true while a war
+began on a bare ocean. The home island (two guns a side) and the neutral
+silos put real batteries on the chart from tick zero, so ten were already
+drawn and fourteen read as a broken turret layer. It measures the delta now.
+
+**`npm run probes`** now runs the lot (`-- name` to narrow), so this cannot
+rot silently again. 28/28 green in about 13 minutes. Two skill rules follow it: select DOM by name, never by
+index; and a new panel needs one line in the smoke gate that opens it.
+
+**Cost:** no engine change — one missing import in the client, five stale
+probes, one new runner. 480 tests, fixture unchanged, smoke green with the
+new panel sweep, 28/28 probes.
+
+---
+
 ## 2026-08-25 — Nose to nose, and the ladder settled
 
 Owner's answers to the four questions the start ladder left open: **90% is

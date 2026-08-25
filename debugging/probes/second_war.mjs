@@ -2,7 +2,7 @@
 //
 // One join code, one evening, two wars. The host fights a 16-island war to
 // its end (the probe ends it by decree), takes BACK TO THE WAR ROOM from the
-// ending screen, turns the dial to 32 islands, and sails again - same page,
+// ending screen, turns the island dial up again, and sails again - same page,
 // same code, and the world on screen must be the SECOND war's archipelago,
 // not the first's meshes wearing new ids.
 //
@@ -37,8 +37,13 @@ await page.goto(`http://127.0.0.1:${address.port}/?mode=lan&graphics=medium`, {
 await page.waitForSelector('#start-panel.open', { timeout: 20000 });
 const firstCode = await page.evaluate(() => document.getElementById('start-title').textContent);
 
-// War one: sixteen islands.
-await page.locator('.start-row.island-act').first().click();
+// War one: one click up the islands ladder.
+//
+// BY NAME. Clicking "the first settable row" was islands until the war room
+// gained rows above it, after which this probe dialled somebody else's
+// option and timed out waiting for an island count that was never coming.
+const islandRow = page.locator('.start-row.island-act', { hasText: 'islands' }).first();
+await islandRow.click();
 await page.locator('#start-begin').first().click();
 await page.waitForTimeout(400);
 await page.locator('#start-begin').nth(1).click();
@@ -66,21 +71,24 @@ const reopened = await page.evaluate(() => ({
   waroverGone: !document.getElementById('warover-panel').classList.contains('open'),
 }));
 
-// War two: thirty-two islands, same code, same page.
-await page.locator('.start-row.island-act').first().click();
+// War two: one more click up the ladder, same code, same page. Read the
+// count back rather than naming it - the room's default has moved before.
+await page.locator('.start-row.island-act', { hasText: 'islands' }).first().click();
+const wantedTwo = Number((await page.locator('.start-row.island-act', { hasText: 'islands' })
+  .first().textContent()).replace(/[^0-9]/g, ''));
 await page.locator('#start-begin').first().click();
 await page.waitForTimeout(400);
 await page.locator('#start-begin').nth(1).click();
 await page.waitForFunction(
-  () => Number(document.getElementById('hud-tick')?.textContent) > 5
-    && (window.__lastView?.islands.length ?? 0) === 32,
-  undefined,
+  (want) => Number(document.getElementById('hud-tick')?.textContent) > 5
+    && (window.__lastView?.islands.length ?? 0) === want,
+  wantedTwo,
   { timeout: 20000 },
 );
 const warTwo = await page.evaluate(() => ({
   islands: window.__lastView.islands.length,
   // The renderer must hold exactly the new war's islands - stale meshes from
-  // war one would leave 16 cached under ids the new 32 reuse.
+  // war one would leave the old count cached under ids the new one reuses.
   meshes: Object.keys(window.__scene3d.islands).length,
   phase: window.__lastView.phase,
   menuGone: !document.getElementById('start-panel').classList.contains('open'),
@@ -93,10 +101,14 @@ console.log(`room "${firstCode}", war one ${warOne} islands`);
 console.log(`ending offered "${roomButton}"; reopened as "${reopened.title}"`);
 console.log(`war two: ${JSON.stringify(warTwo)}, meshes settled at ${meshesSettled}`);
 
-const ok = warOne === 16
+// The point is that ONE evening holds TWO wars: a second, differently
+// sized archipelago on the same page and the same join code, with no mesh
+// left over from the first. The sizes themselves are whatever the ladder
+// offers, which is why they are read back rather than named.
+const ok = warOne > 0 && warTwo.islands === wantedTwo && warTwo.islands !== warOne
   && reopened.title === firstCode && reopened.waroverGone
-  && warTwo.islands === 32 && warTwo.phase === 0 && warTwo.menuGone
-  && meshesSettled === 32;
+  && warTwo.phase === 0 && warTwo.menuGone
+  && meshesSettled === wantedTwo;
 if (!ok) {
   console.log('FAIL: one evening did not hold two wars cleanly');
   process.exitCode = 1;

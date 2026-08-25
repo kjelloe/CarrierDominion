@@ -36,6 +36,14 @@ await page.waitForTimeout(22000);
 await page.keyboard.press(' ');
 await page.waitForTimeout(400);
 
+// What the renderer already holds. This probe used to assert the scene held
+// EXACTLY the four guns it injects, which was true while a war began on a
+// bare ocean; the home island (two guns a side) and the neutral silos put
+// real batteries on the chart from tick zero, and fourteen drawn read as a
+// broken turret layer. What it always meant to check is that the layer
+// FOLLOWS the view, so it measures the four it adds.
+const before = await page.evaluate(() => Object.keys(window.__scene3d.turrets).length);
+
 const placed = await page.evaluate(() => {
   const view = window.__lastView;
   const own = view.carriers.find((c) => c.team === view.team && c.contact === 0);
@@ -84,8 +92,9 @@ await page.keyboard.press('c');
 await page.waitForTimeout(700);
 await page.screenshot({ path: join(SHOTS, 'defence-island-strategic.png') });
 
-console.log(`island #${placed.island} at ${placed.distanceMetres} m, ${drawn} batteries drawn`);
-if (drawn !== 4) {
+console.log(`island #${placed.island} at ${placed.distanceMetres} m,`
+  + ` ${before} batteries already drawn, ${drawn} after four were added`);
+if (drawn - before !== 4) {
   console.log('FAIL: the turret layer does not follow the view');
   process.exitCode = 1;
 }

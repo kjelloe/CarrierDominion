@@ -50,15 +50,24 @@ const guestView = await guest.evaluate(() => ({
 }));
 
 // The host changes the war; the guest must see it without touching anything.
-const optionRows = host.locator('.start-row.island-act');
-await optionRows.first().click();
+//
+// By NAME, not by position. This probe used to click "the first settable
+// row" and assert the islands had changed - which was true until the war
+// room gained rows above it (the start ladder went in at the top) and the
+// click began cycling somebody else's option. It failed for two days
+// looking exactly like a broken lobby, when the room was fine.
+const islandRow = host.locator('.start-row.island-act', { hasText: 'islands' }).first();
+await islandRow.click();
 await guest.waitForTimeout(500);
+// And read back what was chosen rather than assuming: the menu's default
+// island count is a ruling that has already moved once.
+const chosenIslands = Number((await islandRow.textContent()).replace(/[^0-9]/g, ''));
 const guestSaw = await guest.evaluate(
   () => [...document.querySelectorAll('.start-row')].map((n) => n.textContent).join(' | '),
 );
 
 // A word between them, which is the other half of a room.
-await host.fill('#lobby-say', 'seed is fine, going 16 islands');
+await host.fill('#lobby-say', `seed is fine, going ${chosenIslands} islands`);
 await host.press('#lobby-say', 'Enter');
 await guest.waitForTimeout(500);
 const heard = await guest.evaluate(() => document.getElementById('lobby-log').textContent);
@@ -89,13 +98,15 @@ const started = await Promise.all([host, guest].map(async (page) => {
 console.log(`room: ${seen.title}`);
 console.log(`the guest heard: ${JSON.stringify(heard)}`);
 console.log(`host sees ${seen.clickable} settable rows, guest sees ${guestView.clickable}`);
-const guestSawIt = /islands16/.test(guestSaw.replace(/\s/g, ''));
+const guestSawIt = new RegExp(`islands${chosenIslands}`).test(guestSaw.replace(/\s/g, ''));
 console.log(`guest saw the host's change: ${guestSawIt}`);
 console.log(`after start: ${JSON.stringify(started)}`);
 
-const ok = seen.clickable === 4 && guestView.clickable === 0 && guestSawIt
-  && /16 islands/.test(heard)
-  && started.every((s) => s.menuGone && s.tick > 5 && s.islands === 16);
+// The host can set the war and the guest cannot - whatever the room happens
+// to offer today. Pinning the exact number of rows is what went stale.
+const ok = seen.clickable > 0 && guestView.clickable === 0 && guestSawIt
+  && new RegExp(`${chosenIslands} islands`).test(heard)
+  && started.every((s) => s.menuGone && s.tick > 5 && s.islands === chosenIslands);
 if (!ok) {
   console.log('FAIL: the room did not become one war for both of them');
   process.exitCode = 1;

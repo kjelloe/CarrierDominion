@@ -53,8 +53,11 @@ check(await page.evaluate(
 ), 'DBG did not open the strip');
 await page.click('#debug-button');
 
-// 2. The clickable helm. The throttle bar is the 1988 speed scale: a click at
-// four fifths sets 80.
+// 2. The clickable helm. The throttle bar is the 1988 speed scale, and since
+// the astern gear went in (2026-08-24) it runs -25..100, not 0..100 - so the
+// fraction for a given setting is (throttle + 25) / 125, and four fifths of
+// the bar is 75. This probe went on asserting the old arithmetic and read as
+// a broken helm for a day.
 const panelBox = await page.evaluate(() => {
   const rect = document.getElementById('panel').getBoundingClientRect();
   return { left: rect.left, top: rect.top };
@@ -63,15 +66,31 @@ const helm = await page.evaluate(async () => {
   const m = await import('/client/render/instruments.js');
   return m.HELM;
 });
+const WANT_THROTTLE = 80;
+const wantFraction = (WANT_THROTTLE + 25) / 125;
 await page.mouse.click(
-  panelBox.left + helm.gaugeX + helm.gaugeW * 0.8,
+  panelBox.left + helm.gaugeX + helm.gaugeW * wantFraction,
   panelBox.top + helm.throttleY + helm.throttleH / 2,
 );
 await page.waitForTimeout(400);
 const throttle = await page.evaluate(
   () => window.__lastView.carriers.find((c) => c.contact === 0).throttle,
 );
-check(throttle === 80, `a click at four fifths of the scale set ${throttle}, not 80`);
+check(throttle === WANT_THROTTLE,
+  `a click at ${Math.round(wantFraction * 100)}% of the scale set ${throttle},`
+  + ` not ${WANT_THROTTLE}`);
+
+// And the astern end, which is the half of the scale the old arithmetic did
+// not know existed: hard left is full reverse.
+await page.mouse.click(
+  panelBox.left + helm.gaugeX + 1,
+  panelBox.top + helm.throttleY + helm.throttleH / 2,
+);
+await page.waitForTimeout(400);
+const astern = await page.evaluate(
+  () => window.__lastView.carriers.find((c) => c.contact === 0).throttle,
+);
+check(astern === -25, `the left end of the scale set ${astern}, not -25 (astern)`);
 
 // The rudder arrows act while held and centre up on release.
 const portX = panelBox.left + helm.gaugeX + helm.rudderW / 2;

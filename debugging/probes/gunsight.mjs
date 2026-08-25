@@ -35,11 +35,24 @@ await page.keyboard.press('n');
 await page.keyboard.press('t');
 await page.waitForTimeout(900);
 
+// The weapon selector, wherever it lives. It was a HUD row until the
+// round-four rulings moved it to the weapon group above the panel, at which
+// point this probe read null and died on the spot - a probe reporting a
+// broken gunsight when the gunsight was fine.
+const readWeapons = (target) => target.evaluate(() => {
+  const chips = [...document.querySelectorAll('#weapon-group .wep')];
+  const armed = chips.find((chip) => chip.classList.contains('on')) ?? chips[0];
+  return {
+    all: chips.map((chip) => chip.textContent.replace(/\s+/g, ' ').trim()).join(' | '),
+    armed: armed === undefined ? '' : armed.textContent.replace(/\s+/g, ' ').trim(),
+  };
+});
+
 const flying = await page.evaluate(() => ({
   sight: document.getElementById('sight').classList.contains('on'),
-  weapons: document.getElementById('hud-weapons').textContent,
   unit: document.getElementById('hud-unit').textContent,
 }));
+const weaponsBefore = await readWeapons(page);
 
 // Fire down the nose. A gun always fires - aiming is the player's problem -
 // so the round count must drop whether or not anything was in front of it.
@@ -63,13 +76,20 @@ const after = await page.evaluate(() => {
 // And the weapon-select key walks the 1988 loadout.
 await page.keyboard.press('v');
 await page.waitForTimeout(400);
-const switched = await page.evaluate(() => document.getElementById('hud-weapons').textContent);
+const weaponsAfter = await readWeapons(page);
 
 await page.screenshot({ path: join(SHOTS, 'gunsight.png') });
 console.log(`sight ${flying.sight}, rounds ${before} -> ${after}`);
-console.log(`weapons: ${flying.weapons}  ->  ${switched}`);
+console.log(`carrying: ${weaponsBefore.all}`);
+console.log(`armed: "${weaponsBefore.armed}"  -[V]->  "${weaponsAfter.armed}"`);
 if (!flying.sight || after >= before) {
   console.log('FAIL: no gunsight while piloting, or the trigger did nothing');
+  process.exitCode = 1;
+} else if (weaponsBefore.all === '') {
+  console.log('FAIL: a piloted Manta showed no weapons to select');
+  process.exitCode = 1;
+} else if (weaponsAfter.armed === weaponsBefore.armed) {
+  console.log('FAIL: V did not walk the loadout');
   process.exitCode = 1;
 }
 

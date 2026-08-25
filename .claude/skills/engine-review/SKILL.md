@@ -152,12 +152,30 @@ Look for these shapes first — every one produced a real bug:
   four executed a carrier in under a minute. When a fix lands in one
   branch, grep for every other branch that does the same kind of work.
 
+- **A probe that selects the UI by position.** `rows.nth(1)`, or "the first
+  settable row", is correct until a row is inserted above it - and then the
+  probe silently drives a different control and reports the feature it was
+  watching as broken. Three probes had drifted this way (the war room's
+  ladder row went in at the top; a HUD line moved to the instrument panel; a
+  throttle scale grew an astern half). Select by NAME, and read chosen values
+  BACK rather than hardcoding them - defaults move too.
+- **The thing no gate opens is the thing that breaks.** `client/panels/
+  island.js` used `islandName` without importing it, so the island board
+  threw for every player who clicked one of their own islands - for days.
+  The smoke gate fails on any console error and would have caught it
+  instantly, but nothing in the gate ever opened that panel. When a panel or
+  screen is added, add one line to the smoke gate that opens it.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the
   EMPTY PLAYER SEAT (`aiTeams: [1]`). "Team 0 dies without scratching team
   1" is a stationary unmanned ship, not an AI defect. Half a session went
   into that reading before the seat was checked.
+- **Run the probes before believing them.** They are not in `npm run gate`
+  (they open browsers and take minutes), so they rot. `npm run probes` runs
+  the lot; sweep it after any UI change, and read a failure as "either the
+  feature or the probe" until you have looked.
 - **A symptom fix that makes the metric WORSE is the tell.** Pushing spawns
   apart in worldgen moved two seeds of five and made one war end faster.
   That was the signal to stop and look for the real cause (a battery, not a

@@ -119,6 +119,38 @@ async function checkMode(browser, baseUrl, mode) {
     { timeout: 10000 },
   ).catch(() => problems.push(`[${mode}] taking the controls never took`));
 
+  // Every panel, opened once. The gate fails on any console error, so this
+  // is the cheapest possible guard against a board that throws the moment it
+  // is asked to draw: client/panels/island.js used `islandName` without
+  // importing it, and the island board came up titleless and choiceless for
+  // anyone who clicked one of their own islands. Nothing in the gate opened
+  // it, so nothing caught it. Hand back to the ship afterwards.
+  await page.keyboard.press('t');
+  for (const key of ['i', 'q', 'z', '?', 'i', 'q', 'z', '?']) {
+    await page.keyboard.press(key);
+    await page.waitForTimeout(120);
+  }
+  // And the island board, which has no key: it opens by clicking an island
+  // you hold, from the chart where they are all reachable.
+  await page.keyboard.press('c');
+  await page.waitForTimeout(300);
+  const boarded = await page.evaluate(() => {
+    const view = window.__lastView;
+    if (view === undefined) return 'no view';
+    const mine = view.islands.filter((island) => island.owner === view.team);
+    if (mine.length === 0) return '';  // a from-zero opening owns nothing yet
+    window.__openIsland(mine[0].id);
+    return '';
+  });
+  if (boarded !== '') problems.push(`[${mode}] island board: ${boarded}`);
+  await page.waitForTimeout(300);
+  const boardTitle = await page.evaluate(
+    () => document.getElementById('island-title')?.textContent ?? '',
+  );
+  if (boardTitle.trim() === '') {
+    problems.push(`[${mode}] the island board opened without a title`);
+  }
+
   const glLost = await page.evaluate(() => {
     const canvas = document.getElementById('view');
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');

@@ -88,7 +88,15 @@ dev-log honest. This is the procedure.
    why, and say whether the MAP itself changed (usually it did not).
 6. If it touches the UI, write or run a probe in `debugging/probes/` and look at
    the screenshot. Unit tests structurally cannot see a mirrored compass or a
-   panel row rebuilt under the pointer.
+   panel row rebuilt under the pointer. `npm run probes` runs the lot (add
+   `-- name` to narrow) — sweep it after any UI change, because probes are
+   not in the gate and rot quietly: three had drifted into driving the wrong
+   control before anyone noticed, while a fourth was correctly reporting a
+   panel that threw on open. Select DOM by name, never by index.
+7. A new panel or screen needs one line in `test/client_smoke.mjs` that
+   OPENS it. The gate fails on any console error, so that line is the whole
+   guard — and the island board threw for days precisely because nothing in
+   the gate ever opened it.
 
 ## The dev-log entry
 
