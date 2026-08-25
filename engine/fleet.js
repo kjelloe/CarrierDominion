@@ -5,7 +5,7 @@
 // tick, because the carrier it is chasing is itself under way - aiming once at
 // launch would send it to where the ship used to be.
 
-import { floorDiv, wrapAngle } from '../shared/fixed.js';
+import { floorDiv, mulDiv, wrapAngle } from '../shared/fixed.js';
 import { mulCos, mulSin } from '../shared/trig.js';
 import { worldHeightAt } from './heightmap.js';
 import {
@@ -80,8 +80,8 @@ function stepUnits(state) {
           continue;
         }
         const slot = decoySlot(state, unit);
-        const bam = wrapAngle(carrier2.heading + slot * 16384);
-        const station = state.params.decoyStation;
+        const bam = wrapAngle(carrier2.heading + patternBearing(carrier2.decoyPattern, slot));
+        const station = mulDiv(state.params.decoyStation, spreadPermilOf(carrier2), 1000);
         unit.x = carrier2.x + mulCos(station, bam);
         unit.y = carrier2.y + mulSin(station, bam);
         unit.z = 0;
@@ -266,6 +266,44 @@ function setDecoyScreen(state, carrier, out) {
   return moved;
 }
 
+// Where the screen sits (docs/10 gap 5, built 2026-08-26). The original had
+// a whole screen for this - a plan of the ship with the drones on it, and
+// buttons to move them - because WHERE the bait is decides what it baits.
+// Four patterns, ship-relative, one bearing per slot:
+//
+//   RING    round the hull, as it has always been
+//   AHEAD   a forward arc: bait between you and what you are steaming at
+//   ASTERN  the same behind, for a withdrawal
+//   FLANKS  two out each beam
+//
+// Degrees, converted to BAM at use: the table reads as a diagram this way.
+const PATTERN_RING = 0;
+const PATTERN_AHEAD = 1;
+const PATTERN_ASTERN = 2;
+const PATTERN_FLANKS = 3;
+const PATTERNS = [
+  [0, 90, 180, 270],
+  [-30, -10, 10, 30],
+  [150, 170, 190, 210],
+  [75, 105, 255, 285],
+];
+
+// How far out, in per-mil of the ruleset's station distance. Close bait is
+// harder for a seeker to tell from the ship; far bait pulls the round wider
+// of it. The player chooses.
+const SPREAD_TIGHT = 600;
+const SPREAD_WIDE = 1400;
+
+function patternBearing(pattern, slot) {
+  const row = PATTERNS[pattern] === undefined ? PATTERNS[PATTERN_RING] : PATTERNS[pattern];
+  const degrees = row[slot % row.length];
+  return wrapAngle(Math.round((degrees * 65536) / 360));
+}
+
+function spreadPermilOf(carrier) {
+  return carrier.decoySpread <= 0 ? 1000 : carrier.decoySpread;
+}
+
 // Which of the four stations this decoy holds: its rank among its ship's
 // own decoys, stable because unit ids are stable for the whole war.
 function decoySlot(state, unit) {
@@ -295,4 +333,15 @@ function stepDecoyScreens(state) {
   }
 }
 
-export { stepUnits, stepDecoyScreens, setDecoyScreen };
+export {
+  PATTERN_RING,
+  PATTERN_AHEAD,
+  PATTERN_ASTERN,
+  PATTERN_FLANKS,
+  SPREAD_TIGHT,
+  SPREAD_WIDE,
+  patternBearing,
+  setDecoyScreen,
+  stepDecoyScreens,
+  stepUnits,
+};

@@ -137,6 +137,9 @@ function copyCarrier(carrier) {
     weapon: carrier.weapon,
     aimKind: carrier.aimKind,
     aimId: carrier.aimId,
+    // Where the decoy screen sits (docs/10 gap 5): a pattern and how far out.
+    decoyPattern: carrier.decoyPattern,
+    decoySpread: carrier.decoySpread,
     cooldown: carrier.cooldown,
     heat: carrier.heat,
     heatAccum: carrier.heatAccum,
@@ -329,6 +332,8 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     // Pointer mode: what the player last clicked for the ship's laser.
     aimKind: -1,
     aimId: -1,
+    decoyPattern: 0,
+    decoySpread: 1000,
     cooldown: 0,
     heat: 0,
     heatAccum: 0,

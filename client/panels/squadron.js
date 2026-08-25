@@ -44,7 +44,23 @@ const PAGES = [
   { name: 'board', label: 'sq.board' },
   { name: 'outfit', label: 'sq.outfit' },
   { name: 'deck', label: 'sq.deck' },
+  // The defence drones (docs/10 gap 5): the original gave them a screen of
+  // their own on this same column, because WHERE the bait sits decides what
+  // it baits.
+  { name: 'screen', label: 'sq.screen' },
 ];
+
+// Decoy patterns, matching engine/fleet.js.
+const PATTERNS = ['sq.ring', 'sq.ahead', 'sq.astern', 'sq.flanks'];
+const PATTERN_DEGREES = [
+  [0, 90, 180, 270],
+  [-30, -10, 10, 30],
+  [150, 170, 190, 210],
+  [75, 105, 255, 285],
+];
+const SPREAD_TIGHT = 600;
+const SPREAD_NORMAL = 1000;
+const SPREAD_WIDE = 1400;
 
 // The island roles a pod can be typed for (ruled 2026-08-25).
 const POD_ROLES = ['sq.podResource', 'sq.podFactory', 'sq.podDefence'];
@@ -117,6 +133,19 @@ function complement(panel) {
   return out;
 }
 
+// The decoys' states, for the redraw signature: the plan has to notice one
+// of them being shot away.
+function decoyShape(panel) {
+  const view = panel.context.view();
+  if (view === undefined) return '';
+  let shape = '';
+  for (const unit of view.units) {
+    if (unit.team !== view.team || unit.kind !== 4) continue;
+    shape = `${shape}${unit.id}.${unit.state};`;
+  }
+  return shape;
+}
+
 function chosen(panel, hulls) {
   for (const unit of hulls) if (unit.id === panel.unitId) return unit;
   // Nothing chosen, or the choice is gone: take the first that is not.
@@ -140,20 +169,31 @@ function renderSquadronPanel(panel) {
       row.tab.classList.toggle('on', row.isOn(row.entry));
     }
   }
+  // The screen is the SHIP's, not a craft's: its page hides the craft rows
+  // rather than implying there is a Manta 3 screen.
+  const shipPage = panel.page === 'screen';
+  document.getElementById('squadron-kinds').style.display = shipPage ? 'none' : 'flex';
+  document.getElementById('squadron-craft').style.display = shipPage ? 'none' : 'flex';
   renderCraftRow(panel, hulls, pick);
 
-  const signature = `${panel.page}:${panel.kind}:${panel.unitId}:`
+  const own = panel.context.ownCarrier();
+  const screenShape = own === undefined
+    ? ''
+    : `${own.decoyPattern},${own.decoySpread},` + decoyShape(panel);
+  const signature = `${panel.page}:${panel.kind}:${panel.unitId}:${screenShape}:`
     + hulls.map((u) => `${u.id},${u.state},${u.deckTicks},${u.pod},${u.virus},`
       + `${u.podRole},${u.payloadGrams},${u.arms.map((a) => a.n).join('.')}`).join('|');
   if (signature === panel.signature) return;
   panel.signature = signature;
 
   panel.body.textContent = '';
-  if (pick === undefined) {
+  document.getElementById('squadron-note').textContent = t(shipPage ? 'sq.screenNote' : 'sq.note');
+  if (pick === undefined && !shipPage) {
     panel.body.append(line(t('sq.none')));
     return;
   }
-  if (panel.page === 'board') renderBoard(panel, hulls);
+  if (panel.page === 'screen') renderScreen(panel);
+  else if (panel.page === 'board') renderBoard(panel, hulls);
   else if (panel.page === 'outfit') renderOutfit(panel, pick);
   else renderDeck(panel, pick);
 }
@@ -244,6 +284,133 @@ function islandNamed(view, id) {
 function fuelPermilOf(unit) {
   if (unit.fuelCapacity <= 0) return 0;
   return Math.floor((unit.fuel * 1000) / unit.fuelCapacity);
+}
+
+// --- SCREEN: the defence drones and where they ride -------------------------
+
+function renderScreen(panel) {
+  const t = panel.context.t;
+  const view = panel.context.view();
+  const own = panel.context.ownCarrier();
+  if (view === undefined || own === undefined) {
+    panel.body.append(line(t('sq.none')));
+    return;
+  }
+  const decoys = view.units.filter((u) => u.team === view.team && u.kind === 4
+    && u.carrierId === own.id);
+  const out = decoys.filter((u) => u.state === ST_ACTIVE).length;
+  const stowed = decoys.filter((u) => u.state === ST_STOWED).length;
+  const lost = decoys.filter((u) => u.state === ST_LOST).length;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'sq-fit';
+
+  const left = document.createElement('div');
+  left.append(row(t('sq.dronesActive'), String(out)));
+  left.append(row(t('sq.dronesStowed'), String(stowed)));
+  left.append(row(t('sq.dronesLost'), String(lost)));
+  left.append(line(''));
+  left.append(action(panel, out > 0 ? t('sq.dockScreen') : t('sq.deployScreen'), stowed + out > 0,
+    () => {
+      panel.context.send({
+        type: out > 0 ? 'dock_decoys' : 'deploy_decoys', carrierId: panel.context.carrierId(),
+      });
+    }));
+  left.append(line(t(out > 0 ? 'sq.screenPrice' : 'sq.screenFree')));
+
+  left.append(line(''));
+  left.append(line(t('sq.pattern')));
+  const patterns = document.createElement('div');
+  for (let i = 0; i < PATTERNS.length; i++) {
+    const index = i;
+    const chip = action(panel, t(PATTERNS[i]), true, () => {
+      panel.context.send({
+        type: 'set_decoy_pattern',
+        carrierId: panel.context.carrierId(),
+        pattern: index,
+        spread: own.decoySpread,
+      });
+    });
+    if (own.decoyPattern === i) chip.classList.add('on');
+    patterns.append(chip);
+  }
+  left.append(patterns);
+
+  const spreads = document.createElement('div');
+  for (const [label, value] of [['sq.tight', SPREAD_TIGHT],
+    ['sq.normal', SPREAD_NORMAL], ['sq.wide', SPREAD_WIDE]]) {
+    const chip = action(panel, t(label), true, () => {
+      panel.context.send({
+        type: 'set_decoy_pattern',
+        carrierId: panel.context.carrierId(),
+        pattern: own.decoyPattern,
+        spread: value,
+      });
+    });
+    if (own.decoySpread === value) chip.classList.add('on');
+    spreads.append(chip);
+  }
+  left.append(spreads);
+
+  // The plan, as the original drew it: the ship in the middle, the drones
+  // where they will actually be.
+  const plan = document.createElement('div');
+  plan.className = 'sq-plan';
+  plan.append(line(t('sq.screenPlan')));
+  plan.append(planCanvas(own, decoys));
+  wrap.append(left, plan);
+  panel.body.append(wrap);
+}
+
+function planCanvas(own, decoys) {
+  const size = 150;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const draw = canvas.getContext('2d');
+  const ink = getComputedStyle(document.body).getPropertyValue('--hud-ink').trim() || '#e8b84b';
+  const dim = getComputedStyle(document.body).getPropertyValue('--hud-dim').trim() || '#7a6636';
+  const cx = size / 2;
+  const cy = size / 2;
+  // The ring is drawn to scale with the chosen spread, so the picture is the
+  // setting rather than an illustration of it.
+  const ring = (size / 2 - 12) * (own.decoySpread / SPREAD_WIDE);
+
+  draw.strokeStyle = dim;
+  draw.lineWidth = 1;
+  draw.beginPath();
+  draw.arc(cx, cy, size / 2 - 12, 0, Math.PI * 2);
+  draw.stroke();
+
+  // The hull, bow up.
+  draw.fillStyle = dim;
+  draw.beginPath();
+  draw.moveTo(cx, cy - 22);
+  draw.lineTo(cx + 8, cy - 6);
+  draw.lineTo(cx + 8, cy + 20);
+  draw.lineTo(cx - 8, cy + 20);
+  draw.lineTo(cx - 8, cy - 6);
+  draw.closePath();
+  draw.fill();
+
+  const degrees = PATTERN_DEGREES[own.decoyPattern] ?? PATTERN_DEGREES[0];
+  draw.font = '10px ui-monospace, monospace';
+  for (let i = 0; i < degrees.length; i++) {
+    // Screen angles run clockwise from up; the pattern table is in the same
+    // ship-relative degrees the engine uses.
+    const angle = (degrees[i] * Math.PI) / 180 - Math.PI / 2;
+    const x = cx + Math.cos(angle) * ring;
+    const y = cy + Math.sin(angle) * ring;
+    const afloat = decoys[i] !== undefined && decoys[i].state === ST_ACTIVE;
+    draw.strokeStyle = afloat ? ink : dim;
+    draw.fillStyle = afloat ? ink : dim;
+    draw.beginPath();
+    draw.arc(x, y, 4, 0, Math.PI * 2);
+    if (afloat) draw.fill();
+    else draw.stroke();
+    draw.fillText(String(i + 1), x + 6, y - 4);
+  }
+  return canvas;
 }
 
 // --- OUTFIT: the fitting screen ---------------------------------------------

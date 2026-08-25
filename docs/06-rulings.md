@@ -456,6 +456,26 @@ for a whole war. It now asks what an island should be GIVEN THE REST of the
 estate. The old code was safe only by accident - it planned an island once,
 when it had no role, so the loop could not close.
 
+## The last consoles (2026-08-26)
+
+Owner: build the turret console's TEMP gauge and orientation diagram, the
+drone placement, and the RESOURCES island counts. All three were the tail of
+docs/10 gap 5; with them the 1988 interface review is closed apart from two
+things left deliberately (the 2x2 quad camera view; craft selectors as icons
+rather than numbered chips).
+
+Two judgements inside the build, recorded because they are design and not
+plumbing:
+
+- **The gunnery dial reads the designated target, or the boresight.** Our
+  laser does not traverse mechanically, so there is no mount bearing to
+  draw and no slew to give a D-pad to. Reading the designation is what
+  "where the gun is pointing" honestly means here, and it gives the same
+  picture the original's diagram gave: a target abeam swings the line out.
+- **The decoy screen gained a pattern and a spread**, changeable while it is
+  out. The one-button deploy the owner ruled for is untouched; this is only
+  where the bait sits. The 25% speed price is untouched too.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

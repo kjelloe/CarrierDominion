@@ -36,7 +36,7 @@ function sectionsView(sections) {
   return out;
 }
 
-function ownCarrierView(carrier) {
+function ownCarrierView(carrier, state) {
   return {
     id: carrier.id,
     team: carrier.team,
@@ -61,6 +61,15 @@ function ownCarrierView(carrier) {
     routeAt: carrier.routeAt,
     heat: carrier.heat,
     overheated: carrier.overheated,
+    // What the heat is measured AGAINST, so the gunnery console can draw a
+    // TEMP gauge as the original did rather than a bare number.
+    heatMax: heatMaxOf(state, carrier),
+    // What the mount is pointed AT, so the gunnery console can draw it. Your
+    // own designation, so no fog question arises.
+    aimKind: carrier.aimKind,
+    aimId: carrier.aimId,
+    decoyPattern: carrier.decoyPattern,
+    decoySpread: carrier.decoySpread,
     ordnance: carrier.ordnance,
     ordnanceCapacity: carrier.ordnanceCapacity,
     materials: carrier.materials,
@@ -108,6 +117,11 @@ function contactView(carrier) {
     routeAt: 0,
     heat: -1,
     overheated: 0,
+    heatMax: 0,
+    aimKind: -1,
+    aimId: -1,
+    decoyPattern: 0,
+    decoySpread: 1000,
     ordnance: -1,
     ordnanceCapacity: -1,
     materials: -1,
@@ -133,6 +147,14 @@ function contactView(carrier) {
 
 // A course is a plan, so it is own-hulls-only: an enemy's route on your
 // chart would be the fog leak the networkHops one already was.
+// The heat ceiling of whatever this hull has selected. Zero for a weapon
+// that does not heat, which the gauge reads as "no such gauge".
+function heatMaxOf(state, holder) {
+  if (holder.weapon < 0) return 0;
+  const weapon = state.weapons[holder.weapon];
+  return weapon === undefined ? 0 : weapon.heatMax;
+}
+
 function routeView(route) {
   const out = [];
   for (let i = 0; i < route.length; i++) out.push({ x: route[i].x, y: route[i].y });
@@ -192,6 +214,7 @@ function ownUnitView(state, unit) {
     arms: armsView(unit.arms),
     heat: unit.heat,
     overheated: unit.overheated,
+    heatMax: heatMaxOf(state, unit),
     contact: 0,
   };
 }
@@ -231,6 +254,11 @@ function unitContactView(unit) {
     routeAt: 0,
     heat: -1,
     overheated: 0,
+    heatMax: 0,
+    aimKind: -1,
+    aimId: -1,
+    decoyPattern: 0,
+    decoySpread: 1000,
     contact: 1,
   };
 }
@@ -353,7 +381,7 @@ function buildView(state, team) {
   const carriers = [];
   for (let i = 0; i < state.carriers.length; i++) {
     const carrier = state.carriers[i];
-    if (carrier.team === team) carriers.push(ownCarrierView(carrier));
+    if (carrier.team === team) carriers.push(ownCarrierView(carrier, state));
     else if (detectedBy(state, team, carrier)) carriers.push(contactView(carrier));
   }
   const units = [];
@@ -532,7 +560,7 @@ function refereeIslandView(island) {
 function refereeView(state) {
   const carriers = [];
   for (let i = 0; i < state.carriers.length; i++) {
-    carriers.push(ownCarrierView(state.carriers[i]));
+    carriers.push(ownCarrierView(state.carriers[i], state));
   }
   const units = [];
   for (let i = 0; i < state.units.length; i++) {

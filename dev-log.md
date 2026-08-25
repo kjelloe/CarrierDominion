@@ -5,6 +5,50 @@ golden hash and why.
 
 ---
 
+## 2026-08-26 — The last three consoles: gunnery, the screen, resources
+
+The tail of docs/10 gap 5, and with it the 1988 interface review is closed
+apart from two things noted as deliberate (the 2x2 quad camera view, and
+craft selectors as icons rather than numbered chips).
+
+**GUNNERY.** In WEAPON view the right-hand instrument box stops being the
+ship's condition and becomes the gun's: an orientation dial with the hull in
+plan bow-up and the gun line swinging round it, a TEMP gauge against the
+weapon's own heat ceiling, and `LASER OPERATIVE` / `MOUNT OPERATIVE` in
+words. Heat has been in the engine since the 1988 weapon sets and had never
+once been on the glass - a player learned about overheating by the gun going
+quiet.
+
+The dial needed an honest answer to "where is the gun pointing". Ours does
+not traverse mechanically - it fires at what it is pointed at - so it reads
+the DESIGNATED target when there is one and the boresight otherwise, and
+there is no slew D-pad because there is no slew. A target abeam swings the
+line out to the beam, which is the picture the original's diagram gave.
+
+**THE SCREEN.** The defence drones get the fourth page of the squadron
+console, and it is the ship's page rather than a craft's, so it hides the
+craft rows. Four patterns - RING, AHEAD, ASTERN, FLANKS - and three spreads,
+with the counts out / aboard / lost and a plan drawn TO the chosen spread, so
+the picture is the setting rather than an illustration of it. Both are
+changeable while the screen is out: moving bait mid-engagement is the
+manoeuvre, not a setup step. The price is untouched and still ruled.
+
+**RESOURCES.** A second reading on the chart beside NETWORK: the archipelago
+by role, yours against theirs, the neutral count, the depot by name, and the
+sum of what your islands hold. Two goes at placing it - first under the left
+action column, then under the right - before it landed clear of both and
+below the top bar. A reading under a row of buttons is a reading nobody
+reads. MILESTONE has no counterpart: the original's campaign had one and our
+war does not.
+
+**Cost:** 508 tests (+6), smoke green, battery 5/5 unmoved. Both pins moved
+with --force for the two new carrier fields - state shape, and at the
+defaults no change in behaviour at all. New probe `consoles.mjs` drives all
+three. One small find on the way: `.sq-act.on` had no style, so a selected
+pattern chip looked exactly like an unselected one.
+
+---
+
 ## 2026-08-25 — The squadron console: outfitting, the deck, and typed pods
 
 Owner watched 83 screenshots of a PC/DOS playthrough back against our client

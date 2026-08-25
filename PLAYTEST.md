@@ -195,7 +195,25 @@ you rather each tap sent immediately?
 
 ---
 
-## A8 — The decoy screen and its price *(5 min)*
+## A8 — The last three consoles *(10 min — new)*
+
+1. **GUNNERY.** Tab to **WEAPON**. The right-hand instrument box is now the
+   gun's: a dial with your hull bow-up and the gun line on it, a **temp**
+   gauge, and `LASER OPERATIVE` / `MOUNT OPERATIVE`. Hold `F` down and watch
+   temp climb — the laser stops when it cooks, and now you can see it coming.
+   Designate a target off the beam and the gun line swings out to it.
+2. **RESOURCES.** Tab to **CHART**, press **RESOURCES**. The archipelago by
+   role, yours against theirs, your depot, and what your islands hold.
+3. **SCREEN.** `J`, then the **SCREEN** page. Deploy, then try **AHEAD** and
+   **FLANKS** and watch the plan. You can move the screen while it is out.
+
+**Tell me:** is the gunnery dial worth its space, or would you rather have
+the ship's condition there even at the gun? And do the drone patterns change
+anything you can feel, or is RING always right?
+
+---
+
+## A9 — The decoy screen and its price *(5 min)*
 
 1. Press `Y`. Four decoys ride out around the ship, and the SCREEN button
    lights.

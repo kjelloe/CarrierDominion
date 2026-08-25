@@ -155,20 +155,33 @@ set"*.
 We have single-target click-to-move for units, and a one-leg course
 autopilot for the carrier.
 
-## Gap 5 — Smaller things *(all still open)*
+## Gap 5 — Smaller things
 
-- **Craft selectors 1–4** as permanent icon buttons per squadron (we have
-  `N`, direct keys `5`–`8`, and chips).
-- **Turret console**: MAGNIFICATION ×1, a turret-orientation diagram, a
-  D-pad to slew, `LASER OPERATIVE / TURRET OPERATIVE`, a **TEMP** gauge.
-  We have the gunsight, weapon chips and scope zoom; heat exists in the
-  engine but is not a gauge.
-- **Defence-drone placement**: positions around the ship, `DRONES ACTIVE 4 /
-  IN STORAGE 23 / IN TRANSIT`, +/− and position presets. Ours is the
-  one-button version the owner ruled for.
-- **RESOURCES map mode**: counts by role (FACTORY 18 / RESOURCE 19 /
-  DEFENCE 19), STOCKPILE, MILESTONE, supply lines drawn between islands. We
-  have the NETWORK overlay but no counts.
+> **Closed**, 2026-08-26, except the 2×2 quad camera view and the craft
+> selectors as *icon* buttons (ours are numbered chips, which is the same
+> control in our idiom).
+
+- **Craft selectors 1–4** — *built* as the numbered chips at the top of the
+  squadron console, alongside `N` and the direct keys `5`–`8`.
+- **Turret console** — *built*. In WEAPON view the right-hand instrument box
+  becomes GUNNERY: the orientation dial (hull in plan bow-up, the gun line
+  swinging around it, the bearing under it), a **TEMP** gauge against the
+  weapon's own heat ceiling, and `LASER OPERATIVE` / `MOUNT OPERATIVE` in
+  plain words. Our laser does not slew mechanically — it fires at what it is
+  pointed at — so the dial reads the DESIGNATED target when there is one and
+  the boresight otherwise, which is what "where the gun is pointing" honestly
+  means here. No D-pad, for the same reason: there is no traverse to drive.
+- **Defence-drone placement** — *built*, as the SCREEN page of the squadron
+  console. Four patterns (RING / AHEAD / ASTERN / FLANKS), three spreads
+  (TIGHT / NORMAL / WIDE), the counts out / aboard / lost, and a plan of the
+  ship with the drones drawn where they will actually be. The screen can be
+  moved while it is out — that is the manoeuvre. Deploying is still the
+  one-button version the owner ruled for; this is only where the bait sits.
+- **RESOURCES map mode** — *built*, a second button on the chart beside
+  NETWORK. The archipelago by role, yours against theirs, the neutral count,
+  the depot by name, and the sum of what your own islands hold. The supply
+  lines were already the NETWORK overlay. MILESTONE has no counterpart here:
+  the original's campaign had one and our war does not.
 
 ## Deliberate deviations — NOT gaps
 

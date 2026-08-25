@@ -1528,7 +1528,25 @@ function drawPanel(deltaSeconds) {
     return;
   }
   window.__panelMode = 'ship';
+  // At the gun, the right box becomes the gunnery console (docs/10 gap 5).
+  const atTheGun = state.scene3d !== undefined && state.scene3d.gunsight === true;
+  const aimBam = gunBearing(own);
   drawInstruments(state.panel, state.view, own, {
+    gunnery: atTheGun ? 1 : 0,
+    gunTitle: state.t('panel.gunnery'),
+    aimBam: aimBam,
+    bearing: `${String(Math.round((aimBam * 360) / 65536)).padStart(3, '0')}°`,
+    temp: state.t('panel.temp'),
+    tempFigure: own === undefined || own.heatMax <= 0
+      ? ''
+      : `${Math.round((own.heat * 100) / own.heatMax)}%`,
+    overheated: state.t('panel.overheated'),
+    weaponState: own !== undefined && own.overheated === 1
+      ? state.t('panel.gunHot')
+      : state.t('panel.gunReady'),
+    mountState: own !== undefined && own.radar > 0
+      ? state.t('panel.mountReady')
+      : state.t('panel.mountOut'),
     helmTitle: state.t('panel.helm'),
     scopeTitle: state.t('panel.scope'),
     scopeRange: state.scopeRange * params.unitsPerMetre,
@@ -1561,6 +1579,28 @@ function drawPanel(deltaSeconds) {
     weapon: weaponName(state.t, holder),
     tally: holder === undefined ? '' : String(roundsOf(holder)),
   }, deltaSeconds, state.instrumentColours);
+}
+
+// Where the mount is looking, in engine BAM. The ship's laser does not slew
+// mechanically in our model - it fires at what it is pointed at - so the
+// honest bearing is the DESIGNATED target when there is one, and the
+// boresight otherwise. Drawn ship-relative on the console, which is why a
+// target abeam swings the line out to the beam exactly as the original's
+// turret diagram did.
+function gunBearing(own) {
+  if (own === undefined) return 0;
+  const view = state.view;
+  if (view !== undefined && own.aimKind >= 0 && own.aimId >= 0) {
+    const target = own.aimKind === 1
+      ? view.carriers.find((c) => c.id === own.aimId)
+      : view.units.find((u) => u.id === own.aimId);
+    if (target !== undefined) {
+      const bam = Math.atan2(target.y - own.y, target.x - own.x) * (65536 / (Math.PI * 2));
+      return ((Math.round(bam - own.heading) % 65536) + 65536) % 65536;
+    }
+  }
+  // No designation: down the boresight, which is astern in rear view.
+  return state.scene3d !== undefined && state.scene3d.rearView === true ? 32768 : 0;
 }
 
 // The gunsight: shown while flying, and marked when a seeker has something on
@@ -1704,11 +1744,20 @@ async function main() {
     send: (message) => state.transport.sendMessage(message),
   });
   state.chart = createChartPanel({
+    t: (key, vars) => state.t(key, vars),
     onPoint: (point) => handleWorldPoint(point),
     colours: () => state.instrumentColours,
     // Whose course to draw: the hull under the pointer, if one is selected.
     routeSubject: () => selectedUnit(),
   });
+  // RESOURCES (docs/10 gap 5), the original's own button on the same map.
+  const resBtn = document.getElementById('chart-resources');
+  resBtn.textContent = state.t('chart.resources');
+  resBtn.addEventListener('click', () => {
+    state.chart.resources = !state.chart.resources;
+    resBtn.classList.toggle('on', state.chart.resources);
+  });
+  attachTip(resBtn, state.t('tip.resources'));
   const netBtn = document.getElementById('chart-network');
   netBtn.textContent = state.t('chart.network');
   netBtn.addEventListener('click', () => {

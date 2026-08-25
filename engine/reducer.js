@@ -35,6 +35,7 @@ import {
   CMD_SET_POD_ROLE,
   CMD_ABORT_DECK,
   CMD_SET_ROUTE,
+  CMD_SET_DECOY_PATTERN,
   CMD_FIRE_HAMMERHEAD,
   CMD_DEPLOY_DECOYS,
   CMD_DOCK_DECOYS,
@@ -434,6 +435,16 @@ function applyRoute(next, command) {
   return next;
 }
 
+// Where the screen rides. Changeable at any time, screen out or not: moving
+// bait while it is out is exactly the manoeuvre the screen exists for.
+function applyDecoyPattern(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  carrier.decoyPattern = command.pattern;
+  carrier.decoySpread = command.spread;
+  return next;
+}
+
 // ABORT: back below decks, from anywhere in the cycle.
 function applyAbortDeck(next, command) {
   const unit = findUnit(next, command.unitId);
@@ -800,6 +811,7 @@ function apply(state, command) {
   if (type === CMD_LAUNCH_UNIT) return applyLaunch(next, command);
   if (type === CMD_ABORT_DECK) return applyAbortDeck(next, command);
   if (type === CMD_SET_ROUTE) return applyRoute(next, command);
+  if (type === CMD_SET_DECOY_PATTERN) return applyDecoyPattern(next, command);
   if (type === CMD_RECALL_UNIT) return applyRecall(next, command);
   if (type === CMD_ORDER_UNIT_MOVE) return applyUnitMove(next, command);
   if (type === CMD_ORDER_UNIT_ATTACK) return applyUnitAttack(next, command);

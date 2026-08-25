@@ -109,6 +109,27 @@ steers at `targetX/targetY`, and the route is only what happens on arrival.
 Reaching a mark takes the next leg silently; only the last one is an
 arrival. A course is a plan, so it is own-hulls-only in the view.
 
+### Where the decoy screen rides
+
+`engine/fleet.js`. The screen was all-or-nothing on a fixed ring; since
+2026-08-26 it has a **pattern** and a **spread**, because where the bait sits
+decides what it baits.
+
+| Pattern | Bearings, ship-relative |
+|---|---|
+| RING | 0° 90° 180° 270° — as it always was |
+| AHEAD | −30° −10° 10° 30°, between you and what you are steaming at |
+| ASTERN | 150° 170° 190° 210°, for a withdrawal |
+| FLANKS | 75° 105° 255° 285°, straddling each beam |
+
+Spread is a per-mil of the ruleset's station distance: TIGHT 600, NORMAL
+1000, WIDE 1400. Close bait is harder for a seeker to tell from the ship;
+far bait pulls the round wider of it.
+
+Both are changeable **while the screen is out** — moving bait mid-engagement
+is the manoeuvre, not a setup step. The price is unchanged and still ruled:
+three quarters speed while anything is out.
+
 ## Taking an island
 
 Two ways, and they answer different questions.

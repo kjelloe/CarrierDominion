@@ -26,6 +26,11 @@ function createChartPanel(ctx) {
     centreX: 0,
     centreY: 0,
     network: false,
+    // RESOURCES (docs/10 gap 5): the original's map had a second reading -
+    // the archipelago counted by role, the depot named, and what your own
+    // islands are holding. It answers "how is the war going" without
+    // reading every island board in turn.
+    resources: false,
     // PROG (ruled 2026-08-25): while it is lit, a tap on the chart is a LEG
     // of a course being laid rather than an order to sail there now. LAY
     // sends it; CLEAR throws it away.
@@ -47,6 +52,70 @@ function fitChart(panel, view) {
   panel.scale = size / Math.max(1, span - 60);
   panel.centreX = Math.floor(size / 2);
   panel.centreY = Math.floor(size / 2);
+}
+
+// The RESOURCES reading, drawn top-left over the chart: the archipelago by
+// role - yours, theirs and nobody's - the depot by name, and the sum of what
+// your own islands hold. The original showed the same three counts and its
+// STOCKPILE line; the stock totals are ours, because our islands each hold
+// their own and a player would otherwise add fifteen boards up by hand.
+function drawResources(panel, draw, colours, view, t) {
+  const mine = [0, 0, 0];
+  const theirs = [0, 0, 0];
+  let neutral = 0;
+  let fuel = 0;
+  let materials = 0;
+  let ordnance = 0;
+  for (const island of view.islands) {
+    if (island.owner < 0) {
+      neutral = neutral + 1;
+      continue;
+    }
+    const tally = island.owner === view.team ? mine : theirs;
+    if (island.role >= 0 && island.role <= 2) tally[island.role] = tally[island.role] + 1;
+    if (island.owner !== view.team) continue;
+    // Stock reads -1 on an island that is not yours; these all are.
+    if (island.stockFuel >= 0) fuel = fuel + island.stockFuel;
+    if (island.stockMaterials >= 0) materials = materials + island.stockMaterials;
+    if (island.stockOrdnance >= 0) ordnance = ordnance + island.stockOrdnance;
+  }
+  const depot = view.islands.find((island) => island.id === view.stockpileIsland);
+  const lines = [
+    `${t('chart.resource')}  ${mine[0]} / ${theirs[0]}`,
+    `${t('chart.factory')}  ${mine[1]} / ${theirs[1]}`,
+    `${t('chart.defence')}  ${mine[2]} / ${theirs[2]}`,
+    `${t('chart.neutral')}  ${neutral}`,
+    '',
+    `${t('chart.stockpile')}  ${depot === undefined ? '-' : islandName(depot)}`,
+    `${t('chart.ashoreFuel')}  ${fuel}`,
+    `${t('chart.ashoreMaterials')}  ${materials}`,
+    `${t('chart.ashoreOrdnance')}  ${ordnance}`,
+  ];
+
+  draw.save();
+  draw.font = '11px ui-monospace, monospace';
+  let width = 0;
+  for (const line of lines) width = Math.max(width, draw.measureText(line).width);
+  const boxW = width + 20;
+  const boxH = lines.length * 15 + 16;
+  // Clear of BOTH action columns - they hold the left and right edges, and a
+  // reading drawn under a row of buttons is a reading nobody reads.
+  const COLUMN = 92;
+  const boxX = panel.canvas.width - boxW - COLUMN;
+  // And below the top bar, which holds PAUSE and the tab row.
+  const boxY = 48;
+  draw.fillStyle = 'rgba(0, 0, 0, 0.78)';
+  draw.fillRect(boxX, boxY, boxW, boxH);
+  draw.strokeStyle = colours.dim;
+  draw.lineWidth = 1;
+  draw.strokeRect(boxX, boxY, boxW, boxH);
+  let y = boxY + 16;
+  for (const line of lines) {
+    draw.fillStyle = line.startsWith(t('chart.stockpile')) ? colours.warn : colours.ink;
+    draw.fillText(line, boxX + 10, y);
+    y = y + 15;
+  }
+  draw.restore();
 }
 
 // Whose course the chart is drawing: the selected hull's if it has one,
@@ -310,6 +379,8 @@ function renderChart(panel, view, teamColour) {
     draw.fillStyle = unit.contact === 1 ? colours.enemy : colours.self;
     draw.fillRect(at.x - 2, at.y - 2, 4, 4);
   }
+
+  if (panel.resources) drawResources(panel, draw, colours, view, panel.ctx.t);
 
   // A course of more than one leg, drawn and numbered as the original drew
   // it: the laid route in full, then the legs being programmed now.

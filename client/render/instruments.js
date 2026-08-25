@@ -228,6 +228,63 @@ function drawSchematic(ctx, box, carrier, colours) {
   }
 }
 
+// The gunnery console (docs/10 gap 5, built 2026-08-26): the original's
+// turret screen showed WHERE THE GUN IS POINTING on a plan of the ship, and
+// a TEMP gauge beside it, and said in words whether the mount and the weapon
+// were still working. Ours had the heat in the engine and nothing on the
+// glass - a player learned about overheating by the gun going quiet.
+//
+// The bearing is drawn ship-relative, as the original drew it: the hull
+// points up the box, and the gun line swings around it.
+function drawGunnery(ctx, box, own, aimBam, colours, readout) {
+  const cx = box.x + box.w / 2;
+  const cy = box.y + box.h / 2;
+  const radius = Math.min(box.w, box.h) / 2 - 14;
+
+  // The ring the gun traverses in, and its cardinal ticks.
+  ctx.strokeStyle = colours.dim;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, TAU);
+  ctx.stroke();
+  for (let i = 0; i < 4; i++) {
+    const angle = (i * TAU) / 4 - TAU / 4;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * (radius - 4), cy + Math.sin(angle) * (radius - 4));
+    ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+    ctx.stroke();
+  }
+
+  // The hull in plan, bow up: a lozenge, small, so the gun line reads.
+  ctx.fillStyle = colours.dim;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - radius * 0.55);
+  ctx.lineTo(cx + radius * 0.22, cy - radius * 0.15);
+  ctx.lineTo(cx + radius * 0.22, cy + radius * 0.5);
+  ctx.lineTo(cx - radius * 0.22, cy + radius * 0.5);
+  ctx.lineTo(cx - radius * 0.22, cy - radius * 0.15);
+  ctx.closePath();
+  ctx.fill();
+
+  // And the gun. Screen angles run clockwise from up, engine BAM runs
+  // counter-clockwise from +X, which is the conversion every other bearing
+  // drawing in this file makes too.
+  const angle = (aimBam / 65536) * TAU - TAU / 4;
+  ctx.strokeStyle = own.overheated === 1 ? colours.bad : colours.ink;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(angle) * (radius - 2), cy + Math.sin(angle) * (radius - 2));
+  ctx.stroke();
+  ctx.lineWidth = 1;
+
+  ctx.fillStyle = colours.dim;
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(readout.bearing, cx, box.y + box.h - 8);
+  ctx.textAlign = 'left';
+}
+
 function permilOf(value, capacity) {
   if (capacity <= 0) return 0;
   return Math.round((value * 1000) / capacity);
@@ -282,6 +339,15 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   ctx.fillText(readout.scopeLabel, scopeX + scopeSize - 10, pad + 18);
   ctx.textAlign = 'left';
 
+  // At the GUN, the right box is the gunnery console instead: where the
+  // mount is pointing, how hot it is, and whether it and the weapon still
+  // work (docs/10 gap 5). Everywhere else it is the ship's condition.
+  if (readout.gunnery === 1) {
+    drawGunneryBox(ctx, { x: rightX, y: pad, w: rightW, h: PANEL_HEIGHT - pad * 2 },
+      own, colours, readout);
+    return;
+  }
+
   // Condition: the ship in plan on the left, what it is carrying on the right.
   // Two columns rather than one, because a schematic stretched to the width of
   // the screen stops looking like a ship and starts looking like a bar chart.
@@ -315,6 +381,38 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   ctx.textAlign = 'right';
   ctx.fillStyle = colours.ink;
   ctx.fillText(readout.tally, barX + barW, pad + 136);
+  ctx.textAlign = 'left';
+}
+
+// The right-hand box at the gun: the orientation diagram, the TEMP gauge,
+// and the two lines of plain words the original put there - a mount that has
+// been shot away says so, rather than simply never firing.
+function drawGunneryBox(ctx, box, own, colours, readout) {
+  bezel(ctx, box.x, box.y, box.w, box.h, colours, readout.gunTitle);
+  const dialW = Math.min(150, Math.round(box.w * 0.34));
+  drawGunnery(ctx, { x: box.x + 12, y: box.y + 26, w: dialW, h: box.h - 40 },
+    own, readout.aimBam, colours, readout);
+
+  const textX = box.x + dialW + 30;
+  const barW = Math.max(110, box.w - dialW - 48);
+  // TEMP, as the original labelled it. A weapon that does not heat has no
+  // gauge rather than an empty one.
+  if (own.heatMax > 0) {
+    bar(ctx, textX, box.y + 44, barW, 12,
+      permilOf(own.heat, own.heatMax), colours, readout.temp,
+      own.overheated === 1 ? readout.overheated : readout.tempFigure);
+  }
+  bar(ctx, textX, box.y + 88, barW, 12, readout.flaresPermil, colours,
+    readout.flares, readout.flaresFigure);
+
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.fillStyle = own.overheated === 1 ? colours.bad : colours.ink;
+  ctx.fillText(readout.weaponState, textX, box.y + 126);
+  ctx.fillStyle = colours.ink;
+  ctx.fillText(readout.mountState, textX, box.y + 142);
+  ctx.fillStyle = colours.dim;
+  ctx.textAlign = 'right';
+  ctx.fillText(readout.tally, textX + barW, box.y + 126);
   ctx.textAlign = 'left';
 }
 

@@ -63,6 +63,9 @@ const CMD_ABORT_DECK = 'abort_deck';
 const CMD_SET_POD_ROLE = 'set_pod_role';
 // The Hammerhead: aimed at a POINT the Viewing Drone can see.
 const CMD_FIRE_HAMMERHEAD = 'fire_hammerhead';
+// Where the decoy screen sits (docs/10 gap 5): a pattern round the hull and
+// how far out it rides. The original had a whole screen for it.
+const CMD_SET_DECOY_PATTERN = 'set_decoy_pattern';
 // The decoy screen, one button (ruled 2026-08-25): all four out, all home.
 const CMD_DEPLOY_DECOYS = 'deploy_decoys';
 const CMD_DOCK_DECOYS = 'dock_decoys';
@@ -238,6 +241,14 @@ function validateCommand(command) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
     return '';
   }
+  if (type === CMD_SET_DECOY_PATTERN) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.pattern)) return 'pattern must be an integer';
+    if (command.pattern < 0 || command.pattern > 3) return 'no such pattern';
+    if (!isInt(command.spread)) return 'spread must be an integer';
+    if (command.spread < 200 || command.spread > 2000) return 'spread out of range';
+    return '';
+  }
   if (type === CMD_SET_ROUTE) {
     const hasUnit = isInt(command.unitId);
     const hasCarrier = isInt(command.carrierId);
@@ -361,6 +372,7 @@ export {
   CMD_SET_POD_ROLE,
   CMD_ABORT_DECK,
   CMD_SET_ROUTE,
+  CMD_SET_DECOY_PATTERN,
   CMD_FIRE_HAMMERHEAD,
   CMD_DEPLOY_DECOYS,
   CMD_DOCK_DECOYS,

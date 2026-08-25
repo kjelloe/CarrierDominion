@@ -196,6 +196,36 @@ three pages:
 The console never sets a state: every change goes out as a command and comes
 back in a view, so what it draws is always what the reducer did.
 
+### The gunnery console
+
+In WEAPON view the right-hand instrument box stops being the ship's
+condition and becomes the gun's (docs/10 gap 5, 2026-08-26): an orientation
+dial with the hull in plan bow-up and the gun line swinging round it, a
+**TEMP** gauge against the weapon's own heat ceiling, and two lines of plain
+words — `LASER OPERATIVE` / `MOUNT OPERATIVE` — because a mount that has been
+shot away should say so rather than simply never firing.
+
+The dial reads the **designated target** when there is one and the boresight
+otherwise. Our laser does not traverse mechanically, so that is what "where
+the gun is pointing" honestly means; there is no slew D-pad because there is
+no slew.
+
+### The SCREEN page
+
+The fourth page of the squadron console, and the ship's rather than a
+craft's — so it hides the craft rows rather than implying there is a Manta 3
+screen. Four patterns (RING / AHEAD / ASTERN / FLANKS), three spreads
+(TIGHT / NORMAL / WIDE), the counts out / aboard / lost, and a plan drawn to
+the chosen spread so the picture *is* the setting. The screen can be moved
+while it is out; that is the manoeuvre.
+
+### RESOURCES, on the chart
+
+A second reading beside NETWORK: the archipelago by role — yours against
+theirs — the neutral count, the depot by name, and the sum of what your own
+islands hold. Drawn clear of both action columns and below the top bar,
+because a reading under a row of buttons is a reading nobody reads.
+
 ### PROG and LAY, on the chart
 
 The 1988 map's own pair. While **PROG** is lit a tap on the chart adds a

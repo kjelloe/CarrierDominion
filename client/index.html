@@ -402,6 +402,7 @@
     }
     .sq-act:hover { border-color: var(--hud-ink); color: var(--hud-ink); }
     .sq-act.off { opacity: 0.35; cursor: default; }
+    .sq-act.on { color: var(--hud-ink); border-color: var(--hud-ink); background: rgba(255,255,255,0.06); }
     #squadron-note { margin-top: 8px; color: var(--hud-dim); }
     #stores-panel {
       position: fixed; top: 56px; left: 80px;
@@ -538,6 +539,7 @@
   <div id="chart-panel">
     <canvas id="chart-canvas"></canvas>
     <div id="chart-buttons">
+      <div id="chart-resources" class="chart-btn"></div>
       <div id="chart-prog" class="chart-btn"></div>
       <div id="chart-lay" class="chart-btn"></div>
       <div id="chart-network" class="chart-btn"></div>
