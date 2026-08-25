@@ -29,6 +29,7 @@ import {
   CMD_SET_COURSE,
   CMD_ORDER_UNIT_ESCORT,
   CMD_ORDER_UNIT_LAND,
+  CMD_SET_LOADOUT_PRESET,
   CMD_SET_SUPPLY_BIAS,
   CMD_SURRENDER,
   CMD_SET_REPAIR_PRIORITY,
@@ -162,6 +163,14 @@ function liftOff(unit) {
   unit.state = UNIT_ACTIVE;
   unit.landedIsland = -1;
   unit.throttle = 100;
+}
+
+function applyLoadoutPreset(next, command) {
+  const carrier = findCarrier(next, command.carrierId);
+  if (carrier === -1) return reject(next);
+  if (command.preset >= next.presets.length) return reject(next);
+  carrier.mantaPreset = command.preset;
+  return next;
 }
 
 function applyUnitLand(next, command) {
@@ -551,6 +560,7 @@ function apply(state, command) {
   if (type === CMD_SET_COURSE) return applyCourse(next, command);
   if (type === CMD_ORDER_UNIT_ESCORT) return applyUnitEscort(next, command);
   if (type === CMD_ORDER_UNIT_LAND) return applyUnitLand(next, command);
+  if (type === CMD_SET_LOADOUT_PRESET) return applyLoadoutPreset(next, command);
   if (type === CMD_SET_SUPPLY_BIAS) return applySupplyBias(next, command);
   if (type === CMD_LAUNCH_UNIT) return applyLaunch(next, command);
   if (type === CMD_RECALL_UNIT) return applyRecall(next, command);

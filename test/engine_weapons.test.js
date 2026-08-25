@@ -413,3 +413,55 @@ test('a cooling weapon becomes ready even when the trigger is never pulled', () 
   const cooler = state.units.find((u) => u.id === pair.a.id);
   assert.ok(cooler.cooldown < hot.cooldown, 'the rail never cooled');
 });
+
+// --- Launch loadout presets (ruled 2026-08-25) ---
+
+test('the scout preset arms light, and the store keeps the difference', () => {
+  let state = createInitialState(SEED, rules);
+  // Fly the ordnance out of a Manta, then recover under two presets.
+  state = apply(state, { type: 'set_loadout_preset', carrierId: 0, preset: 1 }); // scout
+  assert.equal(state.carriers[0].mantaPreset, 1);
+  const manta = state.units.find((u) => u.team === 0 && u.kind === 0);
+  state = apply(state, { type: 'launch_unit', carrierId: 0, kind: 0 });
+  const flyer = state.units.find((u) => u.id === manta.id);
+  for (const arm of flyer.arms) arm.n = 0; // came home empty
+  const ordnance = state.carriers[0].ordnance;
+  state = apply(state, { type: 'recall_unit', unitId: manta.id });
+  let ticks = 0;
+  while (ticks < 60000 && state.units.find((u) => u.id === manta.id).state !== 0) {
+    state = apply(state, { type: 'advance_tick' });
+    ticks += 1;
+  }
+  const scout = state.units.find((u) => u.id === manta.id);
+  const clusters = scout.arms[1].n;
+  const napalm = scout.arms[2].n;
+  const missiles = scout.arms[3].n;
+  assert.equal(clusters, 0, 'a scout carries no bombs');
+  assert.equal(napalm, 0);
+  assert.ok(missiles >= 1 && missiles < state.weapons[3].magazine,
+    'a scout keeps a token missile, not a full rack');
+  // The dent is mostly the laser (400 rounds at 1 ordnance each) plus one
+  // missile - the bombs a scout never carries stay in the store.
+  const dent = ordnance - state.carriers[0].ordnance;
+  assert.ok(dent > 0 && dent <= 460, 'a scout fit cost ' + dent + ' ordnance');
+  assert.doesNotThrow(() => canonicalize(state));
+});
+
+test('balanced is the old full fit, exactly', () => {
+  let state = createInitialState(SEED, rules);
+  const manta = state.units.find((u) => u.team === 0 && u.kind === 0);
+  state = apply(state, { type: 'launch_unit', carrierId: 0, kind: 0 });
+  const flyer = state.units.find((u) => u.id === manta.id);
+  for (const arm of flyer.arms) arm.n = 0;
+  state = apply(state, { type: 'recall_unit', unitId: manta.id });
+  let ticks = 0;
+  while (ticks < 60000 && state.units.find((u) => u.id === manta.id).state !== 0) {
+    state = apply(state, { type: 'advance_tick' });
+    ticks += 1;
+  }
+  const full = state.units.find((u) => u.id === manta.id);
+  for (let i = 0; i < full.arms.length; i++) {
+    assert.equal(full.arms[i].n, state.weapons[full.arms[i].w].magazine,
+      `arm ${i} not filled to the brim under BALANCED`);
+  }
+});

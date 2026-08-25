@@ -156,7 +156,7 @@ function createScene(canvas, preset, sizeMetres, style) {
     ? buildMirrorOcean(sizeMetres, style, scene.fog)
     : buildOcean(sizeMetres, preset, style);
   scene.add(ocean);
-  if (style.oceanGrid) scene.add(buildOceanGrid(sizeMetres));
+  if (style.oceanGrid) scene.add(buildOceanGrid(sizeMetres, style));
 
   const view3d = {
     scene: scene,
@@ -508,7 +508,7 @@ function resetWorld(view3d, sizeMetres) {
     ? buildMirrorOcean(sizeMetres, view3d.style, scene.fog)
     : buildOcean(sizeMetres, view3d.preset, view3d.style);
   scene.add(ocean);
-  if (view3d.style.oceanGrid) scene.add(buildOceanGrid(sizeMetres));
+  if (view3d.style.oceanGrid) scene.add(buildOceanGrid(sizeMetres, view3d.style));
   view3d.scene = scene;
   view3d.ocean = ocean;
   if (wantsPhysicalSky(view3d.preset, view3d.style)) addPhysicalSky(view3d);

@@ -362,18 +362,29 @@ function fireUnit(state, unit) {
 // ordnance store, not a refill from nowhere (ruling #17), and it works down the
 // loadout in order: partial rearms are normal, and a ship with an empty store
 // sends its aircraft back up as it is.
-function rearm(unit, weapons, carrier) {
+function rearm(unit, weapons, carrier, presets) {
   unit.cooldown = 0;
   unit.heat = 0;
   unit.heatAccum = 0;
   unit.overheated = 0;
+  // The launch preset (ruled 2026-08-25): a Manta's arms fill to the
+  // PRESET'S share of each magazine, not always the brim - a scout that
+  // carries no bombs costs the ordnance store nothing for bombs it will
+  // never drop. Other kinds, and a missing table, fill as always.
+  const row = unit.kind === KIND_MANTA && presets !== undefined && carrier.mantaPreset !== undefined
+    ? presets[carrier.mantaPreset]
+    : undefined;
   for (let i = 0; i < unit.arms.length; i++) {
     const entry = unit.arms[i];
     const weapon = weapons[entry.w];
-    const wanted = weapon.magazine - entry.n;
+    const cap = row === undefined || row[i] === undefined
+      ? weapon.magazine
+      : mulDiv(weapon.magazine, row[i], 1000);
+    let wanted = cap - entry.n;
+    if (wanted < 0) wanted = 0;
     if (wanted <= 0) continue;
     if (weapon.ordnancePerRound <= 0) {
-      entry.n = weapon.magazine;
+      entry.n = cap;
       continue;
     }
     const affordable = floorDiv(carrier.ordnance, weapon.ordnancePerRound);

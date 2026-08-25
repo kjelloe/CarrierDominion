@@ -25,6 +25,9 @@ const STYLES = {
     oceanShader: false,
     oceanColour: 0x0a2a4a,
     oceanGrid: true,
+    // Amber, ruled 2026-08-25: the instrument ink over the blue sea, as
+    // every Spectrum screenshot draws it. It was cyan until the owner chose.
+    oceanGridColour: 0xffb03a,
     // Retro is exempt from the physical sky and mirror water by ruling: a
     // Preetham atmosphere over a 1988 grid sea would be neither look.
     physicalSky: false,

@@ -27,13 +27,15 @@ const rules = loadRules();
 // HOME ISLAND (ruled: the Strategy game starts on a developed base) - the
 // first FORCED repin: the event stream legitimately drifted, two code-8
 // launches at tick 1, which are the two supply lighters sailing from the
-// new home depots. That is the ruling working, not a bug. The
+// new home depots. That is the ruling working, not a bug. Re-pinned again
+// the same day for the loadout presets (carrier.mantaPreset,
+// state.presets, the weapons.json table) - drift-free. The
 // MAP itself has not changed since
 // the first pin: islands, nodes and start positions are byte-identical
 // throughout (the ring-walk fix in the same slice touches only tables of
 // more than four teams, which no pin covers).
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = 'b247a9b8960f8453';
+const GOLDEN_WORLD_HASH = 'd2f137109de7f1dd';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

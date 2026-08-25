@@ -31,6 +31,19 @@ import { copyTurrets } from './turret.js';
 import { createIslands, startPositions, worldSizeMetres } from './worldgen.js';
 import { prepareActionStart, prepareHomeIslands } from './action_start.js';
 
+function presetsFrom(presetRules) {
+  const out = [];
+  const fills = presetRules === undefined ? [[1000, 1000, 1000, 1000]] : presetRules.fills;
+  for (let i = 0; i < fills.length; i++) out.push(fills[i].slice());
+  return out;
+}
+
+function copyPresets(presets) {
+  const out = [];
+  for (let i = 0; i < presets.length; i++) out.push(presets[i].slice());
+  return out;
+}
+
 const PHASE_RUNNING = 0;
 const PHASE_OVER = 1;
 
@@ -125,6 +138,7 @@ function copyCarrier(carrier) {
     upSpeed: carrier.upSpeed,
     upPd: carrier.upPd,
     upRadar: carrier.upRadar,
+    mantaPreset: carrier.mantaPreset,
     maxSpeedUpgraded: carrier.maxSpeedUpgraded,
     radarUpgraded: carrier.radarUpgraded,
     pdCooldownUpgraded: carrier.pdCooldownUpgraded,
@@ -221,6 +235,7 @@ function copyState(state) {
     },
     weapons: copyWeapons(state.weapons),
     loadouts: copyLoadouts(state.loadouts),
+    presets: copyPresets(state.presets),
     economy: copyEconomy(state.economy),
     teams: teams,
     carriers: carriers,
@@ -299,6 +314,9 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     upSpeed: 0,
     upPd: 0,
     upRadar: 0,
+    // The launch loadout preset for the air group (ruled 2026-08-25):
+    // 0 balanced, 1 scout, 2 bomber, 3 interceptor - data in weapons.json.
+    mantaPreset: 0,
     maxSpeedUpgraded: carrierRules.maxSpeedUpgradedUnitsPerTick,
     radarUpgraded: carrierRules.radarUpgradedRangeMetres * unitsPerMetre,
     pdCooldownUpgraded: carrierRules.pdUpgradedCooldownTicks,
@@ -455,6 +473,9 @@ function createInitialState(seed, rules) {
     },
     weapons: weapons,
     loadouts: loadouts,
+    // Launch loadout presets: fill permil per Manta arm, straight from
+    // data/weapons.json - the fitting screen's faithful-light middle.
+    presets: presetsFrom(rules.weapons.mantaPresets),
     economy: createEconomy(rules.economy),
     teams: teams,
     carriers: carriers,

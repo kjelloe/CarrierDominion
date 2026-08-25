@@ -222,5 +222,40 @@
     "turretMissile": [
       8
     ]
+  },
+  "mantaPresets": {
+    "comment": "Launch loadout presets (ruled 2026-08-25, the fitting screen's faithful-light middle): per-preset fill permil for the Manta's four arms [laser, cluster, napalm, missile]. BALANCED is the old full fit; the others bias the ordnance draw to the mission - a scout that carries no bombs costs the ship nothing when it never drops them.",
+    "names": [
+      "balanced",
+      "scout",
+      "bomber",
+      "interceptor"
+    ],
+    "fills": [
+      [
+        1000,
+        1000,
+        1000,
+        1000
+      ],
+      [
+        1000,
+        0,
+        0,
+        250
+      ],
+      [
+        1000,
+        1000,
+        1000,
+        500
+      ],
+      [
+        1000,
+        0,
+        0,
+        1000
+      ]
+    ]
   }
 }

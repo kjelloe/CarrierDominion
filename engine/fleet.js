@@ -109,7 +109,7 @@ function stepUnits(state) {
     if (outcome === FLIGHT_HOME || outcome === DRIVE_HOME) {
       const canLand = carrier !== -1 && hangarOpen(carrier);
       if (canLand && withinRecoveryRange(unit, carrier, state.params.recoverRange)) {
-        recoverUnit(unit, carrier, state.weapons);
+        recoverUnit(unit, carrier, state.weapons, state.presets);
         pushEvent(state.events, EVT_UNIT_RECOVERED, unit.id, unit.team, 0);
       }
     }

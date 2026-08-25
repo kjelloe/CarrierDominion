@@ -111,6 +111,14 @@ names it, the tooltip explains it. Between FIRE and POD sits the **weapon
 selector** — one button per weapon the selected hull carries, radio-style,
 with the live round count on each; `V` still cycles for the keyboard hand.
 
+Under the MANTA launch button rides the **LOADOUT cycler** (ruled
+2026-08-25): FULL / SCOUT / BOMBER / INTCPT — what the deck arms every next
+launch with, and what the ordnance store pays for. A scout carries no bombs
+and costs the store nothing for bombs it will never drop; presets are data
+(`weapons.json mantaPresets`), the fitting screen's faithful-light middle.
+And the retro sea grid is **amber** now — the instrument ink over the blue
+sea, as every Spectrum screenshot draws it.
+
 The buttons are **context-enabled** (ruling 2026-08-24): a button whose
 moment has not come is visible but plainly asleep — PILOT sleeps until NEXT
 has named a hull, POD and VIRUS until that hull is a Walrus, CLIMB and DIVE

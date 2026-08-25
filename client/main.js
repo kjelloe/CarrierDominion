@@ -751,6 +751,32 @@ function buildActionColumns(t) {
       attachTip(button, t(tipKey));
       root.append(button);
       actionButtons[key] = button;
+      // The loadout preset cycler rides under the MANTA launch button
+      // (ruled 2026-08-25): what the deck arms the next launch with.
+      if (key === '1' && id === 'actions-right') {
+        const preset = document.createElement('div');
+        preset.className = 'act';
+        preset.id = 'preset-chip';
+        const cap = document.createElement('span');
+        cap.className = 'k';
+        cap.textContent = t('preset.balanced');
+        const label2 = document.createElement('span');
+        label2.className = 'l';
+        label2.textContent = t('act.preset');
+        preset.append(cap, label2);
+        preset.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          if (state.view === undefined || state.carrierId < 0) return;
+          const own = ownCarrierOf(state.view);
+          const next = ((own?.mantaPreset ?? 0) + 1) % PRESET_KEYS.length;
+          state.transport.send({
+            type: 'set_loadout_preset', carrierId: state.carrierId, preset: next,
+          });
+        });
+        attachTip(preset, t('tip.preset'));
+        root.append(preset);
+        actionButtons.preset = preset;
+      }
       // The flying hand's vertical axis, for a screen with no arrow keys
       // (touch ruling 2026-08-23): two HELD buttons under TAKE CONTROLS,
       // wired like the keys they mirror - press noses over, release holds
@@ -820,6 +846,7 @@ function updateActionButtons() {
     f: alive || (chosen !== undefined && state.piloting),
     p: chosen !== undefined && chosen.kind === KIND_WALRUS,
     b: chosen !== undefined && chosen.kind === KIND_WALRUS,
+    preset: alive,
     climb: state.piloting && chosen !== undefined && chosen.kind === KIND_MANTA,
     dive: state.piloting && chosen !== undefined && chosen.kind === KIND_MANTA,
   };
@@ -1268,8 +1295,17 @@ function ownTeamColour() {
 // hulls that are out stand as chips - what exists, which one is named.
 const unitChips = { signature: '', chips: [] };
 
+const PRESET_KEYS = ['preset.balanced', 'preset.scout', 'preset.bomber', 'preset.interceptor'];
+
 function updateAlwaysOn() {
   if (state.view === undefined) return;
+  const shipNow = ownCarrierOf(state.view);
+  const presetChip = document.getElementById('preset-chip');
+  if (presetChip !== null && shipNow !== undefined) {
+    const cap = presetChip.querySelector('.k');
+    const want = state.t(PRESET_KEYS[shipNow.mantaPreset ?? 0]);
+    if (cap.textContent !== want) cap.textContent = want;
+  }
   document.getElementById('score-strip').textContent = describeScore(state.t, state.view);
   document.getElementById('pause-button').classList.toggle('on', state.speed === 0);
   const own = ownCarrierOf(state.view);

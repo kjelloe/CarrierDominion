@@ -325,5 +325,11 @@
   "tip.unitChip": "velg dette fartøyet - PILOT, HENT INN og ordrer gjelder det valgte",
   "hud.pause": "PAUSE",
   "log.nodeDestroyed": "kommandosenteret på {island} ble ødelagt - øya er ingens",
-  "unit.landed": "på stripa"
+  "unit.landed": "på stripa",
+  "preset.balanced": "FULL",
+  "preset.scout": "SPEIDER",
+  "preset.bomber": "BOMBER",
+  "preset.interceptor": "JAGER",
+  "act.preset": "UTRUSTNING",
+  "tip.preset": "utrustningen for hver Manta som sendes opp - det dekket monterer, betaler lageret for"
 }

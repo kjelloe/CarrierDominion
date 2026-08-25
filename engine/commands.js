@@ -38,6 +38,8 @@ const CMD_SET_SUPPLY_BIAS = 'set_supply_bias';
 const CMD_SURRENDER = 'surrender';
 // Land a Manta on a friendly island runway (manual coverage review, item 2).
 const CMD_ORDER_UNIT_LAND = 'order_unit_land';
+// The launch loadout preset (ruled 2026-08-25): scout / bomber / interceptor.
+const CMD_SET_LOADOUT_PRESET = 'set_loadout_preset';
 
 const THROTTLE_MIN = 0;
 const THROTTLE_MAX = 100;
@@ -158,6 +160,12 @@ function validateCommand(command) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
     return '';
   }
+  if (type === CMD_SET_LOADOUT_PRESET) {
+    if (!isInt(command.carrierId)) return 'carrierId must be an integer';
+    if (!isInt(command.preset)) return 'preset must be an integer';
+    if (command.preset < 0 || command.preset > 3) return 'no such preset';
+    return '';
+  }
   if (type === CMD_ORDER_UNIT_LAND) {
     if (!isInt(command.unitId)) return 'unitId must be an integer';
     if (!isInt(command.islandId)) return 'islandId must be an integer';
@@ -267,6 +275,7 @@ export {
   CMD_SET_SUPPLY_BIAS,
   CMD_SURRENDER,
   CMD_ORDER_UNIT_LAND,
+  CMD_SET_LOADOUT_PRESET,
   UNIT_COMMANDS,
   THROTTLE_MIN,
   THROTTLE_MAX,

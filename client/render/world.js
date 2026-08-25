@@ -240,7 +240,7 @@ function buildMirrorOcean(sizeMetres, style, fog) {
 // The 1988 sea was a grid running to a hard horizon. It is also the cheapest
 // possible sense of speed: without it, a flat colour gives the eye nothing to
 // measure motion against.
-function buildOceanGrid(sizeMetres) {
+function buildOceanGrid(sizeMetres, style) {
   // Fixed ~300 m spacing rather than a fixed division count: the map grows
   // with the island count, and a count would stretch the mesh until it stopped
   // reading as motion.
@@ -273,7 +273,7 @@ function buildOceanGrid(sizeMetres) {
   // Faded with range, or the far cells pile into a solid slab of blue along
   // the horizon - which is both ugly and a lie about how far you can see.
   const material = new THREE.ShaderMaterial({
-    uniforms: { uColour: { value: new THREE.Color(0x4fc3ff) } },
+    uniforms: { uColour: { value: new THREE.Color(style.oceanGridColour ?? 0x4fc3ff) } },
     vertexShader: `
       varying float vFade;
       void main() {

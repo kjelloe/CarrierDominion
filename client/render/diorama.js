@@ -125,7 +125,7 @@ function startDiorama(style) {
   };
   scene.add(buildIslandMesh(ISLE, stagePreset, style));
   scene.add(buildOcean(SEA_METRES, stagePreset, style));
-  if (style.oceanGrid) scene.add(buildOceanGrid(SEA_METRES));
+  if (style.oceanGrid) scene.add(buildOceanGrid(SEA_METRES, style));
 
   // The cast. Defences on the island's shoulders, the Walrus on the beach it
   // is storming, the carrier standing off with its bow toward the fight.

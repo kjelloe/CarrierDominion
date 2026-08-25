@@ -325,5 +325,11 @@
   "tip.unitChip": "name this hull - PILOT, RECALL and orders act on the named one",
   "hud.pause": "PAUSE",
   "log.nodeDestroyed": "the command centre on {island} was destroyed - the island is nobody's",
-  "unit.landed": "on the strip"
+  "unit.landed": "on the strip",
+  "preset.balanced": "FULL",
+  "preset.scout": "SCOUT",
+  "preset.bomber": "BOMBER",
+  "preset.interceptor": "INTCPT",
+  "act.preset": "LOADOUT",
+  "tip.preset": "the launch loadout for every Manta - what the deck arms, the store pays for"
 }

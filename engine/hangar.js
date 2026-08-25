@@ -118,7 +118,7 @@ function withinRecoveryRange(unit, carrier, recoverRangeUnits) {
 // Back in the hangar. Everything the unit takes aboard comes out of the ship's
 // own stores (ruling #3): fuel from the bunker, rounds from the ordnance store,
 // payloads from materials and ordnance. Short stores mean short issues.
-function recoverUnit(unit, carrier, weapons) {
+function recoverUnit(unit, carrier, weapons, presets) {
   unit.state = UNIT_STOWED;
   unit.order = ORDER_HOLD;
   unit.control = -1;
@@ -128,7 +128,7 @@ function recoverUnit(unit, carrier, weapons) {
   unit.climb = 0;
   unit.blocked = 0;
   refuelFromCarrier(unit, carrier);
-  rearm(unit, weapons, carrier);
+  rearm(unit, weapons, carrier, presets);
   provisionWalrus(unit, carrier);
   unit.x = carrier.x;
   unit.y = carrier.y;
