@@ -36,13 +36,14 @@ const rules = loadRules();
 // params) - drift-free, and for the ISLAND TEETH (a token silo on every
 // island, the Bat Cave's rebuild clock and stat row) - drift-free too: the
 // silos are on the map at tick zero but the fixture's 300 ticks never bring
-// anything into their reach. The
+// anything into their reach. Re-pinned once more for the comm-pod refit
+// (carrier.upComm, unit.commPod, the builds row) - drift-free. The
 // MAP itself has not changed since
 // the first pin: islands, nodes and start positions are byte-identical
 // throughout (the ring-walk fix in the same slice touches only tables of
 // more than four teams, which no pin covers).
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = 'beca19e79364565c';
+const GOLDEN_WORLD_HASH = '183106dd33891bb0';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

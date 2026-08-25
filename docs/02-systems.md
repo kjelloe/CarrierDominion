@@ -138,8 +138,12 @@ has SUNK has no signal source at all. The AI obeys the same leash: it
 recalls a drone past the fade line and declines errands beyond it. On the
 8-island sea the map is smaller than the leash, so nothing changes there;
 the leash is what shapes the 32- and 64-island oceans. `telemetryLossMetres:
-0` switches it off. (The original's Long-Range Communication Pod — one
-aircraft freed of the leash — is a natural future refit; noted, not built.)
+0` switches it off. The **Long-Range Communication Pod** is the original's one exception, and
+ours (ruled 2026-08-25): a fourth refit, built at a factory island like the
+others, fitted to ONE airframe — the lowest-id Manta of that hangar, which
+keeps it for the whole war because unit records are reused. That aircraft
+flies anywhere in the archipelago; every other drone still answers the
+leash. Its chip carries a ◎.
 
 ## Island runways
 

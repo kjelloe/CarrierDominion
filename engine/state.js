@@ -140,6 +140,7 @@ function copyCarrier(carrier) {
     upSpeed: carrier.upSpeed,
     upPd: carrier.upPd,
     upRadar: carrier.upRadar,
+    upComm: carrier.upComm,
     mantaPreset: carrier.mantaPreset,
     hammerRounds: carrier.hammerRounds,
     hammerCooldown: carrier.hammerCooldown,
@@ -330,6 +331,7 @@ function createCarrier(id, team, position, carrierRules, arms, unitsPerMetre) {
     upSpeed: 0,
     upPd: 0,
     upRadar: 0,
+    upComm: 0,
     // The launch loadout preset for the air group (ruled 2026-08-25):
     // 0 balanced, 1 scout, 2 bomber, 3 interceptor - data in weapons.json.
     mantaPreset: 0,

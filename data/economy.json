@@ -70,6 +70,13 @@
       "ticks": 4000,
       "max": 1,
       "comment": "The island runway (manual item 2): land, refuel, relaunch - island-hopping is the range game."
+    },
+    {
+      "key": "commPod",
+      "materials": 1400,
+      "ticks": 5200,
+      "max": 1,
+      "comment": "The Long-Range Communication Pod (ruled 2026-08-25): fitted to ONE Manta, which then flies anywhere in the archipelago - the original's single exception to the telemetry leash."
     }
   ],
   "factoryChassisOut": 1,

@@ -34,6 +34,9 @@ function telemetryState(state, unit) {
   // In the hangar or down on a runway the island's Command Centre holds the
   // aircraft (manual item 2) - no link to lose.
   if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return 0;
+  // The Long-Range Communication Pod (ruled 2026-08-25): the airframe that
+  // carries it flies anywhere in the archipelago, as the original's did.
+  if (unit.commPod === 1) return 0;
   const carrier = carrierById(state, unit.carrierId);
   if (carrier === -1 || carrier.hull <= 0) return 2;
   const range = dist2D(unit.x, unit.y, carrier.x, carrier.y);

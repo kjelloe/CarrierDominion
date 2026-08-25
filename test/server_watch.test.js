@@ -159,8 +159,11 @@ test('the server serves what the watchdog found', async () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
       body = await (await fetch(`http://127.0.0.1:${address.port}/watch`)).json();
     }
-    assert.ok(body.ticks > 0, 'the watchdog watched nothing');
-    assert.deepEqual(body.findings, [], `a live war reported ${JSON.stringify(body.findings)}`);
+    assert.ok(body.ticks > 0, `the watchdog watched nothing in ${body.ticks} ticks`);
+    // A finding here is not flakiness, it is NEWS: a live war tripped one of
+    // the watchdog's shapes. The message carries it either way.
+    assert.deepEqual(body.findings, [],
+      `a live war reported ${JSON.stringify(body.findings)} after ${body.ticks} ticks`);
     const health = await (await fetch(`http://127.0.0.1:${address.port}/healthz`)).json();
     assert.equal(health.watching, 0);
   } finally {

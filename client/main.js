@@ -1383,7 +1383,8 @@ function updateAlwaysOn() {
       const chip = document.createElement('div');
       chip.className = 'unit-chip';
       const letter = ['M', 'W', 'L', 'D', 'Y', 'I'][unit.kind] ?? '?';
-      chip.textContent = `${letter}${unit.id}${unit.state === 4 ? '\u2193' : ''}`;
+      const pod = unit.commPod === 1 ? '\u25CE' : ''; // the comm-pod airframe
+      chip.textContent = `${letter}${unit.id}${pod}${unit.state === 4 ? '\u2193' : ''}`;
       chip.addEventListener('pointerdown', (event) => {
         event.preventDefault();
         state.selectedUnitId = unit.id;

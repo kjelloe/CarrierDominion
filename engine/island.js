@@ -24,6 +24,7 @@ import { KIND_FACTORY, KIND_FORTRESS, KIND_RESOURCE } from './worldgen.js';
 import { clearTurretsOn, createTurret, loadoutForTurret, turretsOn } from './turret.js';
 import { applySectionEffects } from './damage.js';
 import { createArms } from './weapons.js';
+import { KIND_MANTA } from './units.js';
 
 const ROLE_NONE = -1;
 const ROLE_RESOURCE = 0;
@@ -42,6 +43,16 @@ const BUILD_UPGRADE_RADAR = 5;
 // The island runway (manual coverage review, item 2): a strip a Manta can
 // land on, refuel from the island's own stock, and relaunch from.
 const BUILD_RUNWAY = 6;
+// The Long-Range Communication Pod (ruled 2026-08-25): the fourth refit,
+// fitted to ONE Manta, which then flies free of the telemetry leash.
+const BUILD_UPGRADE_COMM = 7;
+
+// The refit family, which is NOT a contiguous range - 6 is the runway, an
+// island work. Every "is this a ship refit" test goes through here.
+function isRefit(what) {
+  return what === BUILD_UPGRADE_SPEED || what === BUILD_UPGRADE_PD
+    || what === BUILD_UPGRADE_RADAR || what === BUILD_UPGRADE_COMM;
+}
 
 // Which building each role is allowed to put up. A factory island cannot raise
 // turrets and a defence island cannot raise factories: that is the trade.
@@ -49,7 +60,7 @@ function roleAllows(role, what) {
   // Refits (3..5) are factory work; runways belong to Resource islands (the
   // original's Command Centres built them there) and to Defence islands
   // (the manual's "islands which are large enough").
-  const refit = what >= BUILD_UPGRADE_SPEED && what <= BUILD_UPGRADE_RADAR;
+  const refit = isRefit(what);
   if (role === ROLE_FACTORY) return what === BUILD_FACTORY || what === BUILD_WAREHOUSE || refit;
   if (role === ROLE_DEFENCE) return what === BUILD_TURRET || what === BUILD_RUNWAY;
   if (role === ROLE_RESOURCE) return what === BUILD_WAREHOUSE || what === BUILD_RUNWAY;
@@ -67,6 +78,7 @@ function carrierOfTeam(state, team) {
 function upgradeOwned(carrier, what) {
   if (what === BUILD_UPGRADE_SPEED) return carrier.upSpeed;
   if (what === BUILD_UPGRADE_PD) return carrier.upPd;
+  if (what === BUILD_UPGRADE_COMM) return carrier.upComm;
   return carrier.upRadar;
 }
 
@@ -154,7 +166,7 @@ function startBuild(state, island, what, economy) {
   if (!roleAllows(island.role, what)) return 0;
   const spec = economy.builds[what];
   if (spec === undefined) return 0;
-  if (what >= BUILD_UPGRADE_SPEED && what <= BUILD_UPGRADE_RADAR) {
+  if (isRefit(what)) {
     // An upgrade is manufactured: the island needs a working plant, and each
     // upgrade is bought once per ship.
     if (island.factories < 1) return 0;
@@ -198,8 +210,7 @@ function stepBuild(state) {
     // A finished upgrade is fitted to the SHIP: base values swap to the
     // upgraded ones and the section-damage derivation re-runs, so a damaged
     // engine room still degrades the upgraded speed the same way.
-    if (island.building >= BUILD_UPGRADE_SPEED
-      && island.building <= BUILD_UPGRADE_RADAR) applyUpgrade(state, island);
+    if (isRefit(island.building)) applyUpgrade(state, island);
     island.building = BUILD_NONE;
     island.buildTicks = 0;
   }
@@ -237,6 +248,17 @@ function applyUpgrade(state, island) {
   } else if (island.building === BUILD_UPGRADE_RADAR) {
     carrier.upRadar = 1;
     carrier.radarBase = carrier.radarUpgraded;
+  } else if (island.building === BUILD_UPGRADE_COMM) {
+    carrier.upComm = 1;
+    // The pod is fitted to an AIRFRAME, not to the ship: the lowest-id
+    // Manta of this hangar carries it, and keeps it - unit records are
+    // reused for a whole war, so a rebuilt hull flies with the same pod.
+    for (let i = 0; i < state.units.length; i++) {
+      const unit = state.units[i];
+      if (unit.carrierId !== carrier.id || unit.kind !== KIND_MANTA) continue;
+      unit.commPod = 1;
+      break;
+    }
   }
   applySectionEffects(carrier);
 }
@@ -269,6 +291,8 @@ export {
   BUILD_UPGRADE_PD,
   BUILD_UPGRADE_RADAR,
   BUILD_RUNWAY,
+  BUILD_UPGRADE_COMM,
+  isRefit,
   upgradeOwned,
   carrierOfTeam,
   roleAllows,

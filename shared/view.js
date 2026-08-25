@@ -70,6 +70,7 @@ function ownCarrierView(carrier) {
     upSpeed: carrier.upSpeed,
     upPd: carrier.upPd,
     upRadar: carrier.upRadar,
+    upComm: carrier.upComm,
     mantaPreset: carrier.mantaPreset,
     hammerRounds: carrier.hammerRounds,
     hammerCooldown: carrier.hammerCooldown,
@@ -113,6 +114,7 @@ function contactView(carrier) {
     upSpeed: 0,
     upPd: 0,
     upRadar: 0,
+    upComm: 0,
     mantaPreset: 0,
     hammerRounds: -1,
     hammerCooldown: -1,
@@ -129,6 +131,7 @@ function ownUnitView(state, unit) {
     // the engine's leash uses - the cockpit warning cannot disagree with
     // the verdict.
     telemetry: telemetryState(state, unit),
+    commPod: unit.commPod,
     id: unit.id,
     team: unit.team,
     kind: unit.kind,

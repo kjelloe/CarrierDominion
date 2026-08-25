@@ -138,7 +138,7 @@ function validateCommand(command) {
     if (!isInt(command.carrierId)) return 'carrierId must be an integer';
     if (!isInt(command.islandId)) return 'islandId must be an integer';
     if (!isInt(command.what)) return 'what must be an integer';
-    if (command.what < 0 || command.what > 6) return 'no such building';
+    if (command.what < 0 || command.what > 7) return 'no such building';
     return '';
   }
   if (type === CMD_SET_COURSE) {

@@ -342,5 +342,6 @@
   "act.decoys": "SCREEN",
   "tip.decoys": "the decoy screen: four drones ride out as bait for seekers - a quarter of your top speed while they do",
   "log.decoysOut": "decoy screen deployed",
-  "log.decoysIn": "decoy screen docked"
+  "log.decoysIn": "decoy screen docked",
+  "stores.upComm": "comm pod"
 }

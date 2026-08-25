@@ -19,6 +19,7 @@ const UPGRADES = [
   { what: 3, label: 'stores.upSpeed', flag: 'upSpeed' },
   { what: 4, label: 'stores.upPd', flag: 'upPd' },
   { what: 5, label: 'stores.upRadar', flag: 'upRadar' },
+  { what: 7, label: 'stores.upComm', flag: 'upComm' },
 ];
 
 const CATEGORIES = [

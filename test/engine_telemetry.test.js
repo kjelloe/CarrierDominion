@@ -90,3 +90,39 @@ test('the machine obeys the leash: a drone past fade is brought home', () => {
   const leashed = state.units.find((u) => u.id === unit.id);
   assert.equal(leashed.order, ORDER_RETURN, 'the machine flew its drone off the leash');
 });
+
+test('the comm pod frees ONE airframe from the leash, and only one', () => {
+  // The refit is built like any other, at a factory island with a plant.
+  const big = bigRules();
+  let state = createInitialState(SEED, big);
+  const yard = state.islands[0];
+  yard.owner = 0;
+  yard.role = 1; // ROLE_FACTORY
+  yard.factories = 1;
+  yard.stockMaterials = 9000;
+  state = apply(state, { type: 'build_on_island', carrierId: 0, islandId: 0, what: 7 });
+  assert.equal(state.islands[0].building, 7, 'the yard refused the pod');
+  for (let i = 0; i <= state.economy.builds[7].ticks; i++) state = apply(state, TICK);
+  assert.equal(state.carriers[0].upComm, 1, 'the pod never came aboard');
+
+  const podded = state.units.filter((u) => u.team === 0 && u.commPod === 1);
+  assert.equal(podded.length, 1, 'the pod was fitted to more than one airframe');
+  assert.equal(podded[0].kind, KIND_MANTA);
+
+  // Both fly out past the loss line: the podded one lives, the other does not.
+  const plain = state.units.find(
+    (u) => u.team === 0 && u.kind === KIND_MANTA && u.commPod !== 1,
+  );
+  for (const flyer of [podded[0], plain]) {
+    state = apply(state, { type: 'launch_unit', carrierId: 0, kind: KIND_MANTA });
+    const out = state.units.find((u) => u.id === flyer.id);
+    out.state = UNIT_ACTIVE;
+    out.x = state.carriers[0].x + state.params.telemetryLoss + 300000;
+    out.y = state.carriers[0].y;
+  }
+  state = apply(state, TICK);
+  assert.notEqual(state.units.find((u) => u.id === podded[0].id).state, UNIT_LOST,
+    'the comm pod did not hold the link');
+  assert.equal(state.units.find((u) => u.id === plain.id).state, UNIT_LOST,
+    'an unpodded Manta kept flying past the loss line');
+});

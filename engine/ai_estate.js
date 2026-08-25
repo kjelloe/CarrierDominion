@@ -19,6 +19,7 @@ import {
   BUILD_FACTORY,
   BUILD_TURRET,
   BUILD_UPGRADE_PD,
+  BUILD_UPGRADE_COMM,
   BUILD_UPGRADE_RADAR,
   BUILD_UPGRADE_SPEED,
   BUILD_WAREHOUSE,
@@ -110,7 +111,7 @@ function nextRefit(state, island, economy) {
   if (island.factories < 1) return -1;
   const carrier = carrierOfTeam(state, island.owner);
   if (carrier === -1 || carrier.hull <= 0) return -1;
-  for (const what of [BUILD_UPGRADE_SPEED, BUILD_UPGRADE_PD, BUILD_UPGRADE_RADAR]) {
+  for (const what of [BUILD_UPGRADE_SPEED, BUILD_UPGRADE_PD, BUILD_UPGRADE_RADAR, BUILD_UPGRADE_COMM]) {
     if (upgradeOwned(carrier, what) === 1) continue;
     let underway = 0;
     for (let i = 0; i < state.islands.length; i++) {

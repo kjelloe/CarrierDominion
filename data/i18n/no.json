@@ -342,5 +342,6 @@
   "act.decoys": "SKJERM",
   "tip.decoys": "narreskjermen: fire droner ute som agn for målsøkere - en firedel av toppfarten så lenge de er ute",
   "log.decoysOut": "narreskjerm ute",
-  "log.decoysIn": "narreskjerm inne"
+  "log.decoysIn": "narreskjerm inne",
+  "stores.upComm": "sambandspod"
 }
