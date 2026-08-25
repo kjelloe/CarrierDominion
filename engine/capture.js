@@ -14,7 +14,7 @@ import { markNetworkDirty } from './network.js';
 import { dist2D } from '../shared/fixed.js';
 import { EVT_ISLAND_CAPTURED, EVT_POD_DEPLOYED, EVT_POD_LOST, pushEvent } from './events.js';
 import { KIND_WALRUS, UNIT_ACTIVE } from './units.js';
-import { clearWorks } from './island.js';
+import { ROLE_NONE, clearWorks } from './island.js';
 
 // Returns '' when this unit may deploy on this island, otherwise the reason.
 function checkDeploy(unit, island, podRangeUnits) {
@@ -50,6 +50,12 @@ function deployPod(state, unit, island) {
   }
   island.podTeam = unit.team;
   island.podTicks = 0;
+  // The pod is TYPED (ruled 2026-08-25, from the 1988 fitting screen: the
+  // stores list reads POD - RESOURCE / FACTORY / DEFENCE). The role rides
+  // with the pod, so what an island is FOR is decided at the ship before the
+  // Walrus sails - though the island board may still re-role it afterwards,
+  // which is the one liberty we keep over the original.
+  island.podRole = unit.podRole;
   unit.pod = 0;
   pushEvent(state.events, EVT_POD_DEPLOYED, island.id, unit.team, unit.id);
 }
@@ -70,6 +76,10 @@ function stepCapture(state, podBuildTicks) {
     // you took the island FOR, but the previous owner's works are theirs: the
     // new owner starts from bare ground and decides what it is for.
     clearWorks(state, island);
+    // Except that the pod already said. A typed pod arrives with its role;
+    // the island board can still change it later.
+    island.role = island.podRole;
+    island.podRole = ROLE_NONE;
     pushEvent(state.events, EVT_ISLAND_CAPTURED, island.id, island.owner, 0);
   }
 }

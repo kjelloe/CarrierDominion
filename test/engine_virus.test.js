@@ -106,8 +106,49 @@ test('a pod takes the same island bare - that is the trade', () => {
   state = drive(state, state.params.podBuildTicks);
   const taken = state.islands[island.id];
   assert.equal(taken.owner, 0);
-  assert.equal(taken.role, -1, 'the pod inherited the previous owner plan');
   assert.equal(taken.factories, 0, 'the pod inherited the previous owner factories');
+  // Bare of WORKS, but not of purpose: the pod is typed (ruled 2026-08-25)
+  // and the role it carried is the role the island wakes up in.
+  assert.equal(taken.role, 0, 'a Resource pod raised something else');
+});
+
+test('the pod you load is the island you get', () => {
+  for (const role of [0, 1, 2]) {
+    let state = fresh();
+    const { island, walrus } = atTheirNode(state);
+    // Typed at the ship, before she sails - which is the whole point of the
+    // pod being typed. The vehicle here is already ashore, so the rack is
+    // set the way the hangar would have set it.
+    walrus.podRole = role;
+    state = apply(state, { type: 'deploy_pod', unitId: walrus.id, islandId: island.id });
+    state = drive(state, state.params.podBuildTicks);
+    assert.equal(state.islands[island.id].role, role,
+      `a pod loaded for role ${role} raised role ${state.islands[island.id].role}`);
+    // And the board may still change its mind afterwards - the one liberty
+    // we keep over the original.
+    state = apply(state, {
+      type: 'set_island_role', carrierId: 0, islandId: island.id, role: (role + 1) % 3,
+    });
+    assert.equal(state.islands[island.id].role, (role + 1) % 3,
+      'a typed pod welded the role shut');
+  }
+});
+
+test('a pod is typed at the ship, not on the beach', () => {
+  let state = fresh();
+  const { walrus } = atTheirNode(state);
+  const before = walrus.podRole;
+  state = apply(state, { type: 'set_pod_role', unitId: walrus.id, role: 2 });
+  const now = state.units.find((u) => u.id === walrus.id);
+  assert.equal(now.podRole, before, 'a Walrus ashore re-typed its own pod');
+
+  // In the hangar it is the player's to change.
+  const stowed = state.units.find((u) => u.team === 0 && u.kind === KIND_WALRUS
+    && u.state === 0);
+  if (stowed !== undefined) {
+    state = apply(state, { type: 'set_pod_role', unitId: stowed.id, role: 2 });
+    assert.equal(state.units.find((u) => u.id === stowed.id).podRole, 2);
+  }
 });
 
 test('a conversion takes longer than a pod, because the prize is bigger', () => {
@@ -163,7 +204,11 @@ test('a conversion in progress is visible from the sea, like a pod', () => {
   assert.doesNotThrow(() => canonicalize(state));
 });
 
-test('the hangar restocks the bomb along with the pod', () => {
+// The hangar restocks what the hull can LIFT (ruled 2026-08-25). A Walrus
+// that comes home empty is rearmed first, and its 600 kg of spare capacity
+// then buys the pod - the bomb has to wait for the player to land something
+// on the fitting screen.
+test('the hangar restocks the pod, and the bomb only if the weight is there', () => {
   let state = fresh();
   const carrier = state.carriers[0];
   const walrus = state.units.find((u) => u.team === 0 && u.kind === KIND_WALRUS);
@@ -175,8 +220,14 @@ test('the hangar restocks the bomb along with the pod', () => {
   walrus.y = carrier.y;
   state = apply(state, TICK);
   const back = state.units.find((u) => u.id === walrus.id);
-  assert.equal(back.pod, 1);
-  assert.equal(back.virus, 1);
+  assert.equal(back.pod, 1, 'the pod is standard complement');
+  assert.equal(back.virus, 0, 'a full hull cannot also lift the bomb');
+
+  // Land the mines on the fitting screen and the bomb goes aboard.
+  state = apply(state, { type: 'set_station', unitId: walrus.id, station: 1, rounds: 0 });
+  state = apply(state, { type: 'set_device', unitId: walrus.id, device: 1, fitted: 1 });
+  const armed = state.units.find((u) => u.id === walrus.id);
+  assert.equal(armed.virus, 1, 'the weight was there and the bomb still refused');
 });
 
 test('a second bomb on your own running conversion is refused, not wasted', () => {

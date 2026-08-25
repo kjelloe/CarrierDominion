@@ -22,7 +22,8 @@
       "heatMax": 1000,
       "heatCoolPer100Ticks": 260,
       "heatReadyPermil": 350,
-      "ordnancePerRound": 1
+      "ordnancePerRound": 1,
+      "weightGrams": 300
     },
     {
       "key": "mantaCluster",
@@ -44,7 +45,8 @@
       "heatMax": 0,
       "heatCoolPer100Ticks": 0,
       "heatReadyPermil": 0,
-      "ordnancePerRound": 14
+      "ordnancePerRound": 14,
+      "weightGrams": 45000
     },
     {
       "key": "mantaNapalm",
@@ -66,7 +68,8 @@
       "heatMax": 0,
       "heatCoolPer100Ticks": 0,
       "heatReadyPermil": 0,
-      "ordnancePerRound": 16
+      "ordnancePerRound": 16,
+      "weightGrams": 30000
     },
     {
       "key": "mantaMissile",
@@ -88,7 +91,8 @@
       "heatMax": 0,
       "heatCoolPer100Ticks": 0,
       "heatReadyPermil": 0,
-      "ordnancePerRound": 25
+      "ordnancePerRound": 25,
+      "weightGrams": 60000
     },
     {
       "key": "walrusCannon",
@@ -110,7 +114,8 @@
       "heatMax": 0,
       "heatCoolPer100Ticks": 0,
       "heatReadyPermil": 0,
-      "ordnancePerRound": 1
+      "ordnancePerRound": 1,
+      "weightGrams": 16000
     },
     {
       "key": "walrusMine",
@@ -132,7 +137,8 @@
       "heatMax": 0,
       "heatCoolPer100Ticks": 0,
       "heatReadyPermil": 0,
-      "ordnancePerRound": 30
+      "ordnancePerRound": 30,
+      "weightGrams": 110000
     },
     {
       "key": "carrierLaser",
@@ -154,7 +160,8 @@
       "heatMax": 1000,
       "heatCoolPer100Ticks": 320,
       "heatReadyPermil": 400,
-      "ordnancePerRound": 1
+      "ordnancePerRound": 1,
+      "weightGrams": 0
     },
     {
       "key": "turretLaser",
@@ -176,7 +183,8 @@
       "heatMax": 1000,
       "heatCoolPer100Ticks": 300,
       "heatReadyPermil": 350,
-      "ordnancePerRound": 1
+      "ordnancePerRound": 1,
+      "weightGrams": 0
     },
     {
       "key": "turretMissile",
@@ -198,7 +206,8 @@
       "heatMax": 0,
       "heatCoolPer100Ticks": 0,
       "heatReadyPermil": 0,
-      "ordnancePerRound": 25
+      "ordnancePerRound": 25,
+      "weightGrams": 0
     },
     {
       "key": "hammerhead",
@@ -220,7 +229,8 @@
       "heatMax": 0,
       "heatCoolPer100Ticks": 0,
       "heatReadyPermil": 0,
-      "ordnancePerRound": 40
+      "ordnancePerRound": 40,
+      "weightGrams": 0
     }
   ],
   "loadouts": {

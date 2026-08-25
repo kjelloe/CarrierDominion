@@ -11,6 +11,7 @@
 // laser. Flight and damage are in shots.js - this module stops at the trigger.
 
 import { floorDiv, mulDiv } from '../shared/fixed.js';
+import { roundsThatFit } from './payload.js';
 import { KIND_DRONE, KIND_MANTA, copyArms, unitEngageable } from './units.js';
 import { gunCooldown } from './damage.js';
 import { sweepTurrets } from './turret.js';
@@ -37,6 +38,10 @@ function weaponFrom(stats, unitsPerMetre) {
     damage: stats.damage,
     cooldown: stats.cooldownTicks,
     magazine: stats.magazine,
+    // What one round weighs, in grams (ruled 2026-08-25): the fitting
+    // screen's budget is a weight, so every store has one. Ship and island
+    // mounts weigh nothing - they are bolted to something that does not fly.
+    weightGrams: stats.weightGrams === undefined ? 0 : stats.weightGrams,
     speed: speed,
     turn: stats.turnRateBamPerTick,
     blast: stats.blastRadiusMetres * unitsPerMetre,
@@ -68,6 +73,7 @@ function copyWeapon(weapon) {
     damage: weapon.damage,
     cooldown: weapon.cooldown,
     magazine: weapon.magazine,
+    weightGrams: weapon.weightGrams,
     speed: weapon.speed,
     turn: weapon.turn,
     blast: weapon.blast,
@@ -387,6 +393,13 @@ function rearm(unit, weapons, carrier, presets) {
       : mulDiv(weapon.magazine, row[i], 1000);
     let wanted = cap - entry.n;
     if (wanted < 0) wanted = 0;
+    if (wanted <= 0) continue;
+    // And the budget (ruled 2026-08-25): a station fills to what the hull can
+    // still LIFT as well as to what the preset asked for. A full Manta fit is
+    // exactly its 750 kg, so this only bites on a hull already carrying
+    // something the preset did not put there.
+    const liftable = roundsThatFit(unit, weapons, i);
+    if (liftable < wanted) wanted = liftable;
     if (wanted <= 0) continue;
     if (weapon.ordnancePerRound <= 0) {
       entry.n = cap;

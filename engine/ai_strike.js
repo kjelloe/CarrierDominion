@@ -138,7 +138,7 @@ function huntGhost(state, brain, mark, flying, carrier) {
     if (carrier === -1) return;
     const ready = readyToLaunch(state, carrier.id, KIND_MANTA);
     if (ready === -1 || fuelPermil(ready) <= STRIKE_FUEL_PERMIL) return;
-    launchUnit(ready, carrier, state.params.deckHeight);
+    launchUnit(ready, carrier, state.params.deckHeight, state.weapons);
     pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
     scout = ready;
   }
@@ -307,7 +307,7 @@ function manageStrike(state, brain) {
     const ready = readyToLaunch(state, carrier.id, KIND_MANTA);
     if (ready === -1) break;
     if (fuelPermil(ready) <= STRIKE_FUEL_PERMIL) break;
-    launchUnit(ready, carrier, state.params.deckHeight);
+    launchUnit(ready, carrier, state.params.deckHeight, state.weapons);
     pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
     vectorTo(ready, target.x, target.y);
   }

@@ -145,7 +145,7 @@ function invade(state, brain, carrier) {
       brain.targetIsland = -1;
       return;
     }
-    launchUnit(ready, carrier, state.params.deckHeight);
+    launchUnit(ready, carrier, state.params.deckHeight, state.weapons);
     pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
     brain.walrusId = ready.id;
     walrus = ready;

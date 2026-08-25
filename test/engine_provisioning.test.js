@@ -11,6 +11,7 @@ import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { recoverUnit, provisionWalrus, readyToLaunch } from '../engine/hangar.js';
 import { replaceHull } from '../engine/repair.js';
+import { payloadGramsOf } from '../engine/payload.js';
 import { dispatchBoat, loadFromDepot } from '../engine/supply.js';
 import { roundsOf } from '../engine/weapons.js';
 import {
@@ -52,7 +53,11 @@ test('recovery refuels from the bunker, and a short bunker fills what it can', (
   assert.equal(carrier.fuel, 0);
 });
 
-test('a Walrus sails with a pod and buys its virus bomb from the ordnance store', () => {
+// Since the fitting screen (ruled 2026-08-25) a Walrus is not only limited
+// by what the stores hold but by what it can LIFT: guns and mines are
+// 1,400 kg of its 2,000, the pod is 400 and the bomb 300, so it goes ashore
+// with one capture device or the other and never both.
+test('a Walrus sails with a pod, and the bomb waits for weight it has not got', () => {
   const state = fresh();
   const carrier = state.carriers[0];
   const walrus = state.units.find((u) => u.team === 0 && u.kind === KIND_WALRUS);
@@ -60,12 +65,20 @@ test('a Walrus sails with a pod and buys its virus bomb from the ordnance store'
   assert.equal(walrus.virus, 0, 'a virus bomb should not be free shipyard equipment');
 
   const ordnanceBefore = carrier.ordnance;
-  provisionWalrus(walrus, carrier);
+  provisionWalrus(walrus, carrier, state.weapons);
+  assert.equal(walrus.virus, 0, 'a full hull took a bomb it cannot lift');
+  assert.equal(carrier.ordnance, ordnanceBefore, 'and was charged for it');
+
+  // Land the mines and the weight is there.
+  walrus.arms[1].n = 0;
+  provisionWalrus(walrus, carrier, state.weapons);
   assert.equal(walrus.virus, 1);
   assert.equal(carrier.ordnance, ordnanceBefore - carrier.virusOrdnance);
+  assert.ok(payloadGramsOf(walrus, state.weapons) <= walrus.payloadMaxGrams,
+    'the hull is over its own budget');
 
-  // Already carrying both: nothing more is charged.
-  provisionWalrus(walrus, carrier);
+  // Already carrying it: nothing more is charged.
+  provisionWalrus(walrus, carrier, state.weapons);
   assert.equal(carrier.ordnance, ordnanceBefore - carrier.virusOrdnance);
 });
 
@@ -83,9 +96,13 @@ test('a spent pod is replaced for materials, and an empty store issues nothing',
   assert.equal(walrus.pod, 0, 'a pod was issued from an empty store');
   assert.equal(walrus.virus, 0, 'a virus bomb was issued from an empty store');
 
+  // Weight is a separate refusal from an empty store, and this test is about
+  // the store: land the mines so both devices fit, and the only question
+  // left is whether the hold can pay.
+  walrus.arms[1].n = 0;
   carrier.materials = carrier.podMaterials;
   carrier.ordnance = carrier.virusOrdnance;
-  provisionWalrus(walrus, carrier);
+  provisionWalrus(walrus, carrier, state.weapons);
   assert.equal(walrus.pod, 1);
   assert.equal(walrus.virus, 1);
   assert.equal(carrier.materials, 0);

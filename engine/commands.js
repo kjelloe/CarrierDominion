@@ -40,6 +40,18 @@ const CMD_SURRENDER = 'surrender';
 const CMD_ORDER_UNIT_LAND = 'order_unit_land';
 // The launch loadout preset (ruled 2026-08-25): scout / bomber / interceptor.
 const CMD_SET_LOADOUT_PRESET = 'set_loadout_preset';
+// The fitting screen (ruled 2026-08-25, the full 1988 model): set ONE
+// station of ONE stowed hull to a round count, paid for out of the ship's
+// ordnance and bounded by the hull's payload weight. Fitting and unfitting
+// are the same command - a lower count than the station holds is a landing
+// of stores back into the hold.
+const CMD_SET_STATION = 'set_station';
+// The capture devices are payload too, so they are fitted the same way.
+const CMD_SET_DEVICE = 'set_device';
+// Which KIND of ACCB pod is aboard (ruled 2026-08-25): the 1988 stores list
+// reads POD - RESOURCE / FACTORY / DEFENCE, so the island's purpose is
+// chosen at the ship. The island board may still re-role it after capture.
+const CMD_SET_POD_ROLE = 'set_pod_role';
 // The Hammerhead: aimed at a POINT the Viewing Drone can see.
 const CMD_FIRE_HAMMERHEAD = 'fire_hammerhead';
 // The decoy screen, one button (ruled 2026-08-25): all four out, all home.
@@ -68,6 +80,9 @@ const UNIT_COMMANDS = [
   CMD_ORDER_UNIT_ATTACK,
   CMD_ORDER_UNIT_ESCORT,
   CMD_ORDER_UNIT_LAND,
+  CMD_SET_STATION,
+  CMD_SET_DEVICE,
+  CMD_SET_POD_ROLE,
 ];
 
 function isInt(value) {
@@ -187,6 +202,28 @@ function validateCommand(command) {
     if (!isInt(command.islandId)) return 'islandId must be an integer';
     return '';
   }
+  if (type === CMD_SET_STATION) {
+    if (!isInt(command.unitId)) return 'unitId must be an integer';
+    if (!isInt(command.station)) return 'station must be an integer';
+    if (command.station < 0) return 'no such station';
+    if (!isInt(command.rounds)) return 'rounds must be an integer';
+    if (command.rounds < 0) return 'rounds cannot be negative';
+    return '';
+  }
+  if (type === CMD_SET_DEVICE) {
+    if (!isInt(command.unitId)) return 'unitId must be an integer';
+    if (!isInt(command.device)) return 'device must be an integer';
+    if (command.device < 0 || command.device > 1) return 'no such device';
+    if (!isInt(command.fitted)) return 'fitted must be an integer';
+    if (command.fitted < 0 || command.fitted > 1) return 'fitted is 0 or 1';
+    return '';
+  }
+  if (type === CMD_SET_POD_ROLE) {
+    if (!isInt(command.unitId)) return 'unitId must be an integer';
+    if (!isInt(command.role)) return 'role must be an integer';
+    if (command.role < 0 || command.role > 2) return 'no such island role';
+    return '';
+  }
   if (type === CMD_SET_AI) {
     if (!isInt(command.team)) return 'team must be an integer';
     if (!isInt(command.active)) return 'active must be 0 or 1';
@@ -292,6 +329,9 @@ export {
   CMD_SURRENDER,
   CMD_ORDER_UNIT_LAND,
   CMD_SET_LOADOUT_PRESET,
+  CMD_SET_STATION,
+  CMD_SET_DEVICE,
+  CMD_SET_POD_ROLE,
   CMD_FIRE_HAMMERHEAD,
   CMD_DEPLOY_DECOYS,
   CMD_DOCK_DECOYS,

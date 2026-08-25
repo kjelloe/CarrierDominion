@@ -8,6 +8,7 @@
 import { dist2D } from '../shared/fixed.js';
 import { mulCos, mulSin } from '../shared/trig.js';
 import { rearm } from './weapons.js';
+import { deviceFits } from './payload.js';
 import { hangarOpen } from './damage.js';
 import {
   KIND_MANTA,
@@ -59,13 +60,21 @@ function refuelFromCarrier(unit, carrier) {
 // missing: the pod costs materials (it is a construction device), the virus
 // bomb costs ordnance (it is a munition). A store too short to pay issues
 // nothing, and the vehicle goes out without.
-function provisionWalrus(unit, carrier) {
+//
+// Since the fitting screen (ruled 2026-08-25) there is a second way to be
+// refused: WEIGHT. A Walrus loaded with guns and mines has 600 kg spare, the
+// pod is 400 and the bomb 300, so it carries one capture device or the other
+// and never both. Which one is the player's decision on the fitting screen;
+// this is only what the ship hands over when nobody has said.
+function provisionWalrus(unit, carrier, weapons) {
   if (unit.kind !== KIND_WALRUS) return unit;
-  if (unit.pod === 0 && carrier.materials >= carrier.podMaterials) {
+  if (unit.pod === 0 && carrier.materials >= carrier.podMaterials
+    && deviceFits(unit, weapons, unit.podGrams)) {
     carrier.materials = carrier.materials - carrier.podMaterials;
     unit.pod = 1;
   }
-  if (unit.virus === 0 && carrier.ordnance >= carrier.virusOrdnance) {
+  if (unit.virus === 0 && carrier.ordnance >= carrier.virusOrdnance
+    && deviceFits(unit, weapons, unit.virusGrams)) {
     carrier.ordnance = carrier.ordnance - carrier.virusOrdnance;
     unit.virus = 1;
   }
@@ -74,7 +83,7 @@ function provisionWalrus(unit, carrier) {
 
 // Puts the unit on the map ahead of its carrier. A Manta leaves the deck at
 // deck height and climbs; a Walrus enters the water abeam.
-function launchUnit(unit, carrier, deckHeightUnits) {
+function launchUnit(unit, carrier, deckHeightUnits, weapons) {
   const aheadX = mulCos(LAUNCH_AHEAD_UNITS, carrier.heading);
   const aheadY = mulSin(LAUNCH_AHEAD_UNITS, carrier.heading);
   unit.state = UNIT_ACTIVE;
@@ -105,7 +114,7 @@ function launchUnit(unit, carrier, deckHeightUnits) {
   // A payload the stores could not issue at recovery is issued now if they can
   // pay: what a Walrus carries out is decided at the ramp, not remembered from
   // its last trip.
-  provisionWalrus(unit, carrier);
+  provisionWalrus(unit, carrier, weapons);
   unit.targetX = unit.x;
   unit.targetY = unit.y;
   return unit;
@@ -136,7 +145,7 @@ function recoverUnit(unit, carrier, weapons, presets) {
   unit.blocked = 0;
   refuelFromCarrier(unit, carrier);
   rearm(unit, weapons, carrier, presets);
-  provisionWalrus(unit, carrier);
+  provisionWalrus(unit, carrier, weapons);
   unit.x = carrier.x;
   unit.y = carrier.y;
   unit.z = 0;

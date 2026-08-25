@@ -77,6 +77,10 @@ function copyIsland(island) {
     nodeY: island.nodeY,
     podTeam: island.podTeam,
     podTicks: island.podTicks,
+    // What the pod now building says the island will be FOR (ruled
+    // 2026-08-25): the 1988 stores list types its pods, so the role is
+    // chosen at the ship rather than after the flag goes up.
+    podRole: island.podRole,
     virusTeam: island.virusTeam,
     virusTicks: island.virusTicks,
     virusVictim: island.virusVictim,

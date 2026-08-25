@@ -50,7 +50,9 @@
     "virusOrdnance": 120,
     "radarUpgradedRangeMetres": 12000,
     "pdUpgradedCooldownTicks": 10,
-    "hammerheadRounds": 4
+    "hammerheadRounds": 4,
+    "podKg": 400,
+    "virusKg": 300
   },
   "manta": {
     "hull": 60,
@@ -65,7 +67,8 @@
     "fuelCapacity": 10000,
     "fuelBurnPer100Ticks": 80,
     "fuelBurnHoverPer100Ticks": 140,
-    "arriveRadiusMetres": 120
+    "arriveRadiusMetres": 120,
+    "payloadKg": 750
   },
   "walrus": {
     "hull": 120,
@@ -77,7 +80,8 @@
     "fuelCapacity": 10000,
     "fuelBurnPer100Ticks": 25,
     "maxClimbPermil": 500,
-    "arriveRadiusMetres": 40
+    "arriveRadiusMetres": 40,
+    "payloadKg": 2000
   },
   "lighter": {
     "comment": "The logistics boat. It never goes ashore - it stands off the beach and works cargo, which is also why it never meets a slope it cannot climb.",
@@ -129,6 +133,7 @@
     "leashMetres": 8000,
     "rebuildMaterials": 200,
     "rebuildTicks": 6000,
-    "perIsland": 2
+    "perIsland": 2,
+    "payloadKg": 750
   }
 }

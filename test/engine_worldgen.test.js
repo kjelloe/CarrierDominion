@@ -45,13 +45,22 @@ const rules = loadRules();
 // economy rates) - drift-free - and last for the START LADDER, where one
 // rule (startShape) replaced the actionStart and homeIslandStart pair;
 // drift-free, because the default shape is the one the pins were taken
-// under. The
-// MAP itself has not changed since
-// the first pin: islands, nodes and start positions are byte-identical
-// throughout (the ring-walk fix in the same slice touches only tables of
-// more than four teams, which no pin covers).
+// under.
+//
+// Moved again 2026-08-25 for the FITTING SCREEN (the full 1988 model, ruled
+// the same day): every hull gained a payload budget and every store a
+// weight, which is a state-shape change - and the budget bites at once, so
+// it is a gameplay change too. A Walrus leaves the shipyard with guns,
+// mines and the ACCB pod at 1,800 kg of its 2,000, and can no longer also
+// carry the 300 kg virus bomb it used to be handed for free. Moved once
+// more the same day for TYPED PODS: a Walrus's rack now names the island
+// role its pod will raise, and an island under construction remembers it.
+//
+// The MAP itself has not changed since the first pin: islands, nodes and
+// start positions are byte-identical throughout (the ring-walk fix touches
+// only tables of more than four teams, which no pin covers).
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = 'f1bac44dbb2ae998';
+const GOLDEN_WORLD_HASH = 'd9f492e245b9ca4a';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

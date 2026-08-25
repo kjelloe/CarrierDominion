@@ -44,6 +44,12 @@ const KIND_DECOY = 4;
 // island's droid aircraft. carrierId is -1: its home is landedIsland.
 const KIND_INTERCEPTOR = 5;
 
+// The payload budget, in grams. Absent means a hull that carries no stores:
+// the lighter carries cargo, which is a different book entirely.
+function payloadGramsFrom(stats) {
+  return stats.payloadKg === undefined ? 0 : stats.payloadKg * 1000;
+}
+
 function createManta(id, team, carrierId, rules, unitsPerMetre) {
   const stats = rules.units.manta;
   return {
@@ -62,6 +68,11 @@ function createManta(id, team, carrierId, rules, unitsPerMetre) {
     speed: 0,
     hp: stats.hull,
     maxHp: stats.hull,
+    // What it may carry, in grams (ruled 2026-08-25). See engine/payload.js.
+    payloadMaxGrams: payloadGramsFrom(stats),
+    podGrams: 0,
+    virusGrams: 0,
+    podRole: -1,
     fuel: stats.fuelCapacity,
     fuelAccum: 0,
     targetX: 0,
@@ -112,6 +123,7 @@ function createManta(id, team, carrierId, rules, unitsPerMetre) {
 
 function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
   const stats = rules.units.walrus;
+  const carrierStats = rules.units.carrier;
   return {
     id: id,
     team: team,
@@ -128,6 +140,14 @@ function createWalrus(id, team, carrierId, rules, unitsPerMetre) {
     speed: 0,
     hp: stats.hull,
     maxHp: stats.hull,
+    // What it may carry, in grams (ruled 2026-08-25). See engine/payload.js.
+    payloadMaxGrams: payloadGramsFrom(stats),
+    podGrams: carrierStats.podKg * 1000,
+    // Which kind of pod is aboard (ruled 2026-08-25): -1 none, otherwise the
+    // island role it will raise. A vehicle sails with a Resource pod by
+    // default, which is what an early war wants first.
+    podRole: 0,
+    virusGrams: carrierStats.virusKg * 1000,
     fuel: stats.fuelCapacity,
     fuelAccum: 0,
     targetX: 0,
@@ -198,6 +218,11 @@ function createLighter(id, team, carrierId, rules, unitsPerMetre) {
     speed: 0,
     hp: stats.hull,
     maxHp: stats.hull,
+    // What it may carry, in grams (ruled 2026-08-25). See engine/payload.js.
+    payloadMaxGrams: payloadGramsFrom(stats),
+    podGrams: 0,
+    virusGrams: 0,
+    podRole: -1,
     fuel: stats.fuelCapacity,
     fuelAccum: 0,
     targetX: 0,
@@ -265,6 +290,10 @@ function createDrone(id, team, carrierId, rules, unitsPerMetre) {
     speed: 0,
     hp: stats.hull,
     maxHp: stats.hull,
+    payloadMaxGrams: payloadGramsFrom(stats),
+    podGrams: 0,
+    virusGrams: 0,
+    podRole: -1,
     fuel: stats.enduranceTicks,
     fuelAccum: 0,
     targetX: 0,
@@ -328,6 +357,7 @@ function createInterceptor(id, team, homeIsland, rules, unitsPerMetre) {
     climbUnitsPerTick: stats.climbRateUnitsPerTick,
     fuelBurnHoverPer100Ticks: stats.fuelBurnPer100Ticks,
     radarRangeMetres: stats.radarRangeMetres,
+    payloadKg: stats.payloadKg,
     fuelCapacity: stats.fuelCapacity,
     fuelBurnPer100Ticks: stats.fuelBurnPer100Ticks,
     arriveRadiusMetres: stats.arriveRadiusMetres,
@@ -384,6 +414,10 @@ function copyUnit(unit) {
     speed: unit.speed,
     hp: unit.hp,
     maxHp: unit.maxHp,
+    payloadMaxGrams: unit.payloadMaxGrams,
+    podGrams: unit.podGrams,
+    podRole: unit.podRole,
+    virusGrams: unit.virusGrams,
     fuel: unit.fuel,
     fuelAccum: unit.fuelAccum,
     targetX: unit.targetX,

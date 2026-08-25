@@ -30,6 +30,9 @@ import {
   CMD_ORDER_UNIT_ESCORT,
   CMD_ORDER_UNIT_LAND,
   CMD_SET_LOADOUT_PRESET,
+  CMD_SET_STATION,
+  CMD_SET_DEVICE,
+  CMD_SET_POD_ROLE,
   CMD_FIRE_HAMMERHEAD,
   CMD_DEPLOY_DECOYS,
   CMD_DOCK_DECOYS,
@@ -80,11 +83,13 @@ import { fireUnit, selectWeapon, stepWeapons } from './weapons.js';
 import { launchShot } from './shots.js';
 import { launchUnit, orderReturn, readyToLaunch } from './hangar.js';
 import { dist2D, floorDiv } from '../shared/fixed.js';
+import { deviceFits, roundsThatFit } from './payload.js';
 import {
   KIND_DECOY,
   KIND_DRONE,
   KIND_LIGHTER,
   KIND_MANTA,
+  KIND_WALRUS,
   ORDER_ATTACK,
   ORDER_ESCORT,
   ORDER_LAND,
@@ -230,6 +235,97 @@ function applyLoadoutPreset(next, command) {
   return next;
 }
 
+// The fitting screen's + and - (ruled 2026-08-25). Stores move between the
+// ship's hold and one station of one hull, and the three things that can
+// refuse are the three the screen shows: the hull is not in the hangar, the
+// hold has not got them, or the hull cannot lift them.
+function applyStation(next, command) {
+  const unit = findUnit(next, command.unitId);
+  if (unit === -1) return reject(next);
+  // Outfitting happens in the hangar. A Manta over the sea does not grow a
+  // missile because somebody pressed a button on the ship.
+  if (unit.state !== UNIT_STOWED) return reject(next);
+  const carrier = findCarrier(next, unit.carrierId);
+  if (carrier === -1) return reject(next);
+  const entry = unit.arms[command.station];
+  if (entry === undefined) return reject(next);
+  const weapon = next.weapons[entry.w];
+  if (weapon === undefined) return reject(next);
+
+  let wanted = command.rounds;
+  if (wanted > weapon.magazine) wanted = weapon.magazine;
+  const change = wanted - entry.n;
+  if (change === 0) return next;
+
+  if (change < 0) {
+    // Landing stores back into the hold: the ordnance comes back, because
+    // nothing is conjured and nothing is thrown overboard either.
+    entry.n = wanted;
+    carrier.ordnance = carrier.ordnance + (-change) * weapon.ordnancePerRound;
+    return next;
+  }
+  const liftable = roundsThatFit(unit, next.weapons, command.station);
+  let rounds = change < liftable ? change : liftable;
+  if (weapon.ordnancePerRound > 0) {
+    const affordable = floorDiv(carrier.ordnance, weapon.ordnancePerRound);
+    if (affordable < rounds) rounds = affordable;
+  }
+  if (rounds <= 0) return reject(next);
+  carrier.ordnance = carrier.ordnance - rounds * weapon.ordnancePerRound;
+  entry.n = entry.n + rounds;
+  return next;
+}
+
+// The capture devices, fitted and unfitted by the same screen. A Walrus has
+// 600 kg spare with its guns full, the pod is 400 and the bomb 300, so this
+// is where the player chooses which one goes ashore.
+const DEVICE_POD = 0;
+
+function applyDevice(next, command) {
+  const unit = findUnit(next, command.unitId);
+  if (unit === -1 || unit.kind !== KIND_WALRUS) return reject(next);
+  if (unit.state !== UNIT_STOWED) return reject(next);
+  const carrier = findCarrier(next, unit.carrierId);
+  if (carrier === -1) return reject(next);
+  const pod = command.device === DEVICE_POD;
+  const had = pod ? unit.pod : unit.virus;
+  if (had === command.fitted) return next;
+
+  if (command.fitted === 0) {
+    if (pod) {
+      unit.pod = 0;
+      carrier.materials = carrier.materials + carrier.podMaterials;
+    } else {
+      unit.virus = 0;
+      carrier.ordnance = carrier.ordnance + carrier.virusOrdnance;
+    }
+    return next;
+  }
+  const grams = pod ? unit.podGrams : unit.virusGrams;
+  if (!deviceFits(unit, next.weapons, grams)) return reject(next);
+  if (pod) {
+    if (carrier.materials < carrier.podMaterials) return reject(next);
+    carrier.materials = carrier.materials - carrier.podMaterials;
+    unit.pod = 1;
+  } else {
+    if (carrier.ordnance < carrier.virusOrdnance) return reject(next);
+    carrier.ordnance = carrier.ordnance - carrier.virusOrdnance;
+    unit.virus = 1;
+  }
+  return next;
+}
+
+// Which pod is in the rack. Changeable while the vehicle is in the hangar,
+// which is where the fitting screen lives; a pod already ashore has made its
+// decision.
+function applyPodRole(next, command) {
+  const unit = findUnit(next, command.unitId);
+  if (unit === -1 || unit.kind !== KIND_WALRUS) return reject(next);
+  if (unit.state !== UNIT_STOWED) return reject(next);
+  unit.podRole = command.role;
+  return next;
+}
+
 function applyUnitLand(next, command) {
   const unit = findUnit(next, command.unitId);
   if (unit === -1 || unit.kind !== KIND_MANTA) return reject(next);
@@ -286,7 +382,7 @@ function applyLaunch(next, command) {
   if (carrier === -1) return reject(next);
   const unit = readyToLaunch(next, carrier.id, command.kind);
   if (unit === -1) return reject(next);
-  launchUnit(unit, carrier, next.params.deckHeight);
+  launchUnit(unit, carrier, next.params.deckHeight, next.weapons);
   pushEvent(next.events, EVT_UNIT_LAUNCHED, unit.id, unit.team, unit.kind);
   return next;
 }
@@ -634,6 +730,9 @@ function apply(state, command) {
   if (type === CMD_ORDER_UNIT_ESCORT) return applyUnitEscort(next, command);
   if (type === CMD_ORDER_UNIT_LAND) return applyUnitLand(next, command);
   if (type === CMD_SET_LOADOUT_PRESET) return applyLoadoutPreset(next, command);
+  if (type === CMD_SET_STATION) return applyStation(next, command);
+  if (type === CMD_SET_DEVICE) return applyDevice(next, command);
+  if (type === CMD_SET_POD_ROLE) return applyPodRole(next, command);
   if (type === CMD_FIRE_HAMMERHEAD) return applyFireHammerhead(next, command);
   if (type === CMD_DEPLOY_DECOYS) return applyDecoys(next, command, 1);
   if (type === CMD_DOCK_DECOYS) return applyDecoys(next, command, 0);

@@ -299,7 +299,7 @@ function stepSupply(state) {
         dispatchBoat(state, carrier, depot);
         continue;
       }
-      launchUnit(ready, carrier, state.params.deckHeight);
+      launchUnit(ready, carrier, state.params.deckHeight, state.weapons);
       pushEvent(state.events, EVT_UNIT_LAUNCHED, ready.id, ready.team, ready.kind);
       ready.order = ORDER_LOAD;
       unit = ready;

@@ -12,6 +12,7 @@
 import { teamHoldings } from '../engine/economy.js';
 import { covered, ghostsFor } from '../engine/contacts.js';
 import { telemetryState } from '../engine/telemetry.js';
+import { payloadGramsOf } from '../engine/payload.js';
 
 // What is in the magazines. A contact gets an empty list: how many missiles an
 // enemy has left is not something radar tells you.
@@ -145,6 +146,12 @@ function ownUnitView(state, unit) {
     speed: unit.speed,
     hp: unit.hp,
     maxHp: unit.maxHp,
+    // What the fitting screen needs to draw a budget (ruled 2026-08-25).
+    // Grams below the client, kilograms on it.
+    payloadGrams: payloadGramsOf(unit, state.weapons),
+    payloadMaxGrams: unit.payloadMaxGrams,
+    podGrams: unit.podGrams,
+    virusGrams: unit.virusGrams,
     ceiling: unit.ceiling,
     fuel: unit.fuel,
     fuelCapacity: unit.fuelCapacity,
