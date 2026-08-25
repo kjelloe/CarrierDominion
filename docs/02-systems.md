@@ -157,6 +157,21 @@ which is what makes island-hopping the answer to the leash — exactly the
 original's range game. A parked Manta is a target like any other, and an
 airfield captured with aircraft on it captures the aircraft.
 
+## The Hammerhead and the Viewing Drone
+
+The carrier's heavy surface arm (proposal 5, ruled 2026-08-25,
+player-only). `3` sends a **Viewing Drone** up — an aerostat, two aboard,
+that climbs to 600 m and drifts down over two minutes; by the kind rule it
+is AIR, so lasers and seekers can take the eye out, and it is exempt from
+the telemetry leash because it does not ride the relay, it *is* one. While
+it is up the **DRONE tab** stands on the camera row: straight down from
+the aerostat, north up, crosshair cursor, the console reading rounds and
+endurance — and **a click is the trigger**: a Hammerhead at the point,
+refused if the mark is outside the drone's 4 km picture or the missile's
+8 km reach, sixty damage in a sixty-metre blast, forty ordnance a round,
+four rounds aboard, a hundred ticks on the rail between launches. The AI
+does not use it — a human toy first, as ruled.
+
 ## The helm has an autopilot
 
 The original's map + PROG + A, collapsed to one click: with nothing selected,

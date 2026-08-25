@@ -195,6 +195,16 @@
       text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
     }
     body.menu #location { display: none; }
+    /* The drone console's readout, and the crosshair cursor that says a
+       click is a TRIGGER here. */
+    #drone-info {
+      position: fixed; bottom: 216px; left: 50%; transform: translateX(-50%);
+      z-index: 8; display: none; padding: 5px 14px;
+      border: 1px solid var(--hud-ink); background: var(--hud-panel);
+      color: var(--hud-ink); font: 12px/1.4 var(--hud-font); letter-spacing: 2px;
+    }
+    #drone-info.on { display: block; }
+    body.drone-mode #view { cursor: crosshair; }
     /* Touch (ruling 2026-08-23, basic pass - real devices still to judge):
        the browser must not scroll or pinch the bridge, a coarse pointer
        gets bigger targets, and a phone held upright gets the rotate card -
@@ -460,6 +470,7 @@
   <div id="msg-button">MSG</div>
   <div id="log-panel"><div id="log-title"></div><div id="log-body"></div></div>
   <div id="location"></div>
+  <div id="drone-info"></div>
   <div id="toast"></div>
   <div id="tip"></div>
   <div id="actions-left" class="actions"></div>

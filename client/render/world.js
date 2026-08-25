@@ -737,6 +737,31 @@ function buildTurret(teamColour, missile, detail) {
   return group;
 }
 
+// The Viewing Drone: a bright aerostat with a camera pod slung under it -
+// unmistakably NOT an aircraft, because what it is is a hanging eye.
+function buildDroneUnit(teamColour) {
+  const group = new THREE.Group();
+  const envelope = new THREE.Mesh(
+    new THREE.SphereGeometry(7, 8, 6),
+    new THREE.MeshLambertMaterial({ color: teamColour }),
+  );
+  envelope.scale.set(1, 0.8, 1);
+  group.add(envelope);
+  const pod = new THREE.Mesh(
+    new THREE.BoxGeometry(3, 2.5, 3),
+    new THREE.MeshLambertMaterial({ color: 0x2c3238 }),
+  );
+  pod.position.y = -7;
+  group.add(pod);
+  const lens = new THREE.Mesh(
+    new THREE.CylinderGeometry(1, 1.4, 1.4, 6),
+    new THREE.MeshBasicMaterial({ color: 0x9fd8ff }),
+  );
+  lens.position.y = -8.6;
+  group.add(lens);
+  return group;
+}
+
 // The selection marker (playtest ruling 2026-08-24): pressing NEXT has to
 // SHOW you what you now command. A ring with a pointer above it, unlit so it
 // reads as an overlay rather than an object, in the panel's own self colour.
@@ -845,6 +870,7 @@ export {
   buildTurret,
   buildSelectionMarker,
   buildRunway,
+  buildDroneUnit,
   buildCommandNode,
   updateCommandNode,
   NEUTRAL_NODE_COLOUR,

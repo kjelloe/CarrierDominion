@@ -331,5 +331,12 @@
   "preset.bomber": "BOMBER",
   "preset.interceptor": "INTCPT",
   "act.preset": "LOADOUT",
-  "tip.preset": "the launch loadout for every Manta - what the deck arms, the store pays for"
+  "tip.preset": "the launch loadout for every Manta - what the deck arms, the store pays for",
+  "camera.drone": "DRONE",
+  "act.drone": "EYE",
+  "tip.drone": "launch a Viewing Drone - the eye the Hammerhead aims through",
+  "status.hammerAway": "Hammerhead away - {rounds} on the rail",
+  "status.hammerRefused": "the battery is blind, reloading, or the mark is beyond reach",
+  "drone.info": "HAMMERHEAD {rounds} · EYE {seconds}s",
+  "help.drone": "3 launches the Viewing Drone - in DRONE view a click fires a Hammerhead at it"
 }

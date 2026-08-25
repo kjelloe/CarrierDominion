@@ -449,12 +449,23 @@ const CAMERA_MODES = [
   // camera - but it lives on the same tab row because it answers the same
   // question, "what am I looking at".
   { name: 'chart', label: 'camera.chart' },
+  // The DRONE view exists only while a Viewing Drone is up - the tab
+  // appears with the eye and leaves with it (proposal 5).
+  { name: 'drone', label: 'camera.drone' },
 ];
 const cameraTabs = {};
+
+function ownDroneUp() {
+  if (state.view === undefined) return undefined;
+  return state.view.units.find(
+    (unit) => unit.team === state.view.team && unit.kind === 3 && unit.state === 1,
+  );
+}
 
 function cameraMode() {
   if (state.chart !== undefined && state.chart.open) return 'chart';
   if (state.scene3d === undefined) return 'helm';
+  if (state.scene3d.droneView) return 'drone';
   if (state.scene3d.gunsight) return 'weapon';
   if (state.scene3d.strategic) return 'birdseye';
   return 'helm';
@@ -465,8 +476,10 @@ function setCameraMode(name) {
   if (scene === undefined) return;
   if (name === 'chart') {
     if (state.chart !== undefined && !state.chart.open) toggleChart(state.chart, state.view);
+    scene.droneView = false;
   } else {
     if (state.chart !== undefined && state.chart.open) toggleChart(state.chart, state.view);
+    scene.droneView = name === 'drone' && ownDroneUp() !== undefined;
     scene.gunsight = name === 'weapon';
     scene.strategic = name === 'birdseye';
   }
@@ -499,6 +512,11 @@ function updateCameraTabs() {
   // In WEAPON view the selector IS the console: the chips move to the
   // bottom centre, full size (the CSS reads this class).
   document.body.classList.toggle('weapon-mode', current === 'weapon');
+  document.body.classList.toggle('drone-mode', current === 'drone');
+  // The DRONE tab stands only while an eye is up.
+  if (cameraTabs.drone !== undefined) {
+    cameraTabs.drone.style.display = ownDroneUp() !== undefined ? '' : 'none';
+  }
 }
 
 // Three ways to look at a war: over the shoulder, down the gunsight, and the
@@ -507,6 +525,7 @@ function cycleCamera() {
   const scene = state.scene3d;
   // C walks the three WAYS OF SEEING; the chart steps aside first.
   if (state.chart !== undefined && state.chart.open) toggleChart(state.chart, state.view);
+  scene.droneView = false;
   if (!scene.gunsight && !scene.strategic) scene.gunsight = true;
   else if (scene.gunsight) { scene.gunsight = false; scene.strategic = true; }
   else scene.strategic = false;
@@ -716,6 +735,7 @@ const ACTIONS_LEFT = [
 ];
 const ACTIONS_RIGHT = [
   ['1', 'act.manta', 'tip.manta'], ['2', 'act.walrus', 'tip.walrus'],
+  ['3', 'act.drone', 'tip.drone'],
   ['n', 'act.next', 'tip.next'], ['t', 'act.controls', 'tip.controls'],
   ['u', 'act.escort', 'tip.escort'],
   ['r', 'act.recall', 'tip.recall'], ['f', 'act.fire', 'tip.fire'],
@@ -839,10 +859,11 @@ function updateActionButtons() {
     c: true, m: true,
     1: alive && stowed(KIND_MANTA),
     2: alive && stowed(KIND_WALRUS),
+    3: alive && stowed(3),
     n: afloatUnits().length > 0,
-    t: chosen !== undefined,
-    u: chosen !== undefined && chosen.kind !== 2, // the boat has a job
-    r: chosen !== undefined,
+    t: chosen !== undefined && chosen.kind !== 3, // an aerostat has no stick
+    u: chosen !== undefined && chosen.kind !== 2 && chosen.kind !== 3,
+    r: chosen !== undefined && chosen.kind !== 3, // the eye comes down on its own
     f: alive || (chosen !== undefined && state.piloting),
     p: chosen !== undefined && chosen.kind === KIND_WALRUS,
     b: chosen !== undefined && chosen.kind === KIND_WALRUS,
@@ -917,6 +938,7 @@ function bindInput(level) {
     else if (key === 'arrowdown') { held.down = true; sendClimb(-1); }
     else if (key === '1') launch(KIND_MANTA);
     else if (key === '2') launch(KIND_WALRUS);
+    else if (key === '3') launch(3); // the Viewing Drone
     // Direct hull select (the original's 1-4; ours are taken by the launch
     // keys, so the row above them serves): 5-8 name the Nth hull that is out.
     else if (key >= '5' && key <= '8') {
@@ -1009,6 +1031,15 @@ function bindInput(level) {
     const ndcY = -(event.clientY / window.innerHeight) * 2 + 1;
     const target = pickSea(state.scene3d, ndcX, ndcY);
     if (target === -1) return;
+    // In DRONE view a click IS the trigger: a Hammerhead at the point under
+    // the crosshair, nothing else (proposal 5 - the original's remote
+    // targeting screen).
+    if (cameraMode() === 'drone') {
+      state.transport.send({
+        type: 'fire_hammerhead', carrierId: state.carrierId, x: target.x, y: target.y,
+      });
+      return;
+    }
     handleWorldPoint(target);
   });
 }
@@ -1247,6 +1278,23 @@ function frame(nowMs) {
   // The marker follows the selection - hidden while piloting, when the
   // camera itself is the answer to "which one is mine".
   state.scene3d.selectedUnitId = state.piloting ? -1 : state.selectedUnitId;
+  const eyeUp = ownDroneUp();
+  state.scene3d.droneUnitId = eyeUp === undefined ? -1 : eyeUp.id;
+  if (state.scene3d.droneView && eyeUp === undefined) {
+    // The eye is gone: the picture goes with it.
+    state.scene3d.droneView = false;
+  }
+  const droneInfo = document.getElementById('drone-info');
+  if (eyeUp !== undefined && state.scene3d.droneView) {
+    const own = ownCarrierOf(state.view);
+    droneInfo.textContent = state.t('drone.info', {
+      rounds: own === undefined ? 0 : own.hammerRounds,
+      seconds: Math.max(0, Math.round(eyeUp.fuel / (state.view.params.tickHz || 20))),
+    });
+    droneInfo.classList.add('on');
+  } else {
+    droneInfo.classList.remove('on');
+  }
   renderView(state.scene3d, state.view, deltaSeconds, state.podBuildTicks);
   updateCameraTabs();
   updateActionButtons();
@@ -1322,7 +1370,7 @@ function updateAlwaysOn() {
     for (const unit of out) {
       const chip = document.createElement('div');
       chip.className = 'unit-chip';
-      const letter = unit.kind === KIND_MANTA ? 'M' : (unit.kind === KIND_WALRUS ? 'W' : 'L');
+      const letter = ['M', 'W', 'L', 'D'][unit.kind] ?? '?';
       chip.textContent = `${letter}${unit.id}${unit.state === 4 ? '\u2193' : ''}`;
       chip.addEventListener('pointerdown', (event) => {
         event.preventDefault();
@@ -1512,7 +1560,7 @@ function renderHelp(t) {
   const help = document.getElementById('help');
   help.textContent = '';
   const lines = ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.weapons', 'help.targeting', 'help.island',
-    'help.damage', 'help.scope', 'help.time', 'help.extras'];
+    'help.damage', 'help.scope', 'help.time', 'help.extras', 'help.drone'];
   for (const key of lines) {
     const line = document.createElement('div');
     line.textContent = t(key);

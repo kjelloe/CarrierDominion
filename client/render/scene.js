@@ -13,6 +13,7 @@ import {
   SUN_DIRECTION,
   buildCarrier,
   buildCommandNode,
+  buildDroneUnit,
   buildIslandMesh,
   buildLighter,
   buildManta,
@@ -175,6 +176,8 @@ function createScene(canvas, preset, sizeMetres, style) {
     strategic: false,
     gunsight: false,
     rearView: false,
+    droneView: false,
+    droneUnitId: -1,
     followUnitId: -1,
     selectedUnitId: -1,
     marker: null,
@@ -291,6 +294,7 @@ function syncUnits(view3d, view) {
       const detail = view3d.preset.modelDetail === true;
       if (unit.kind === 0) group = buildManta(colour, detail);
       else if (unit.kind === 2) group = buildLighter(colour, detail);
+      else if (unit.kind === 3) group = buildDroneUnit(colour);
       else group = buildWalrus(colour, detail);
       if (unit.contact === 1) dimForContact(group);
       view3d.units[unit.id] = group;
@@ -394,6 +398,18 @@ const GUNSIGHT_CARRIER_EYE_METRES = 24;
 
 function placeCamera(view3d, subject) {
   if (subject === undefined) return;
+  // The DRONE view (proposal 5): straight down from the aerostat, north up -
+  // the original's remote screen, and the picture the Hammerhead aims on.
+  if (view3d.droneView === true && view3d.droneUnitId !== -1) {
+    const eye = view3d.units[view3d.droneUnitId];
+    if (eye !== undefined) {
+      view3d.camera.up.set(0, 0, -1);
+      view3d.camera.position.set(eye.position.x, Math.max(60, eye.position.y), eye.position.z);
+      view3d.camera.lookAt(eye.position.x, 0, eye.position.z);
+      return;
+    }
+  }
+  view3d.camera.up.set(0, 1, 0);
   const x = toMetres(subject.x);
   const z = -toMetres(subject.y);
   const y = toMetres(subject.z);
@@ -525,6 +541,8 @@ function resetWorld(view3d, sizeMetres) {
   view3d.strategic = false;
   view3d.gunsight = false;
   view3d.rearView = false;
+  view3d.droneView = false;
+  view3d.droneUnitId = -1;
   return view3d;
 }
 

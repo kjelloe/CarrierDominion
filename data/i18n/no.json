@@ -331,5 +331,12 @@
   "preset.bomber": "BOMBER",
   "preset.interceptor": "JAGER",
   "act.preset": "UTRUSTNING",
-  "tip.preset": "utrustningen for hver Manta som sendes opp - det dekket monterer, betaler lageret for"
+  "tip.preset": "utrustningen for hver Manta som sendes opp - det dekket monterer, betaler lageret for",
+  "camera.drone": "DRONE",
+  "act.drone": "ØYE",
+  "tip.drone": "send opp en observasjonsdrone - øyet Hammerhead sikter gjennom",
+  "status.hammerAway": "Hammerhead avfyrt - {rounds} igjen på rampen",
+  "status.hammerRefused": "batteriet er blindt, lader, eller målet er utenfor rekkevidde",
+  "drone.info": "HAMMERHEAD {rounds} · ØYE {seconds}s",
+  "help.drone": "3 sender opp dronen - i DRONE-visning avfyrer et klikk en Hammerhead dit"
 }
