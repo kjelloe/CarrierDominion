@@ -9,7 +9,7 @@
     "turnRateBamPerTick": 24,
     "radarRangeMetres": 8000,
     "fuelCapacity": 100000,
-    "fuelBurnFullPer100Ticks": 90,
+    "fuelBurnFullPer100Ticks": 130,
     "fuelBurnIdlePer100Ticks": 8,
     "draughtMetres": 12,
     "lookaheadMetres": 250,

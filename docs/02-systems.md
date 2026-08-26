@@ -263,6 +263,22 @@ keeps it for the whole war because unit records are reused. That aircraft
 flies anywhere in the archipelago; every other drone still answers the
 leash. Its chip carries a ◎.
 
+## Endurance, and why the bunker matters
+
+A full bunker is 100,000 units of fuel and hard steaming costs 130 per 100
+ticks, so **the carrier has about an hour of full speed in her** (76,900
+ticks at 1x) against wars that run 25 to 70 minutes. Idling costs 8, so a
+ship that stops is a ship that keeps almost everything.
+
+That ratio is deliberate and it was measured rather than guessed (ruled
+2026-08-26, Q6b). At the old burn of 90 the bunker never fell below a fifth
+in any war we ran, which made ruling #3's whole fuel supply chain
+decorative: the lighter shuttled fuel that nothing ever needed. At 130 a
+typical war leaves the machine around 31%, a long one takes it into single
+figures, and nothing strands. Higher figures were tried and rejected - at
+150 a long war finishes on 1-3%, which is a knife edge for a human
+quartermaster even though the AI survives it.
+
 ## The weather, and what it costs you
 
 The sky is a **pure function of the seed and the tick** (`shared/weather.js`)

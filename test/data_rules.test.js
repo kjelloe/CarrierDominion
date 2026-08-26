@@ -37,7 +37,25 @@ const QUOTED = [
   ['deckRangeTicks', (r) => r.rules.deckRangeTicks, 60, 'docs/02 the deck cycle'],
   ['launchTicks', (r) => r.rules.launchTicks, 40, 'docs/02 the deck cycle'],
   ['dockTicks', (r) => r.rules.dockTicks, 60, 'docs/02 the deck cycle'],
+  // The endurance ratio (ruled 2026-08-26, Q6b): a full bunker is about an
+  // hour of hard steaming against wars of 25-70 minutes. Both halves of that
+  // sentence are numbers, so both are pinned.
+  ['carrier fuelCapacity', (r) => r.units.carrier.fuelCapacity, 100000, 'docs/02 endurance'],
+  ['carrier fuelBurnFull', (r) => r.units.carrier.fuelBurnFullPer100Ticks, 130, 'docs/02 endurance'],
+  ['carrier fuelBurnIdle', (r) => r.units.carrier.fuelBurnIdlePer100Ticks, 8, 'docs/02 endurance'],
 ];
+
+test('a full bunker is about an hour of hard steaming', () => {
+  // The ratio is the rule, not the two numbers: if someone raises capacity
+  // AND burn together the quoted figures above still pass, and this catches
+  // it. 60,000 to 95,000 ticks is 50 to 79 minutes at 1x.
+  const rules = loadRules();
+  const carrier = rules.units.carrier;
+  const ticks = Math.round((carrier.fuelCapacity * 100) / carrier.fuelBurnFullPer100Ticks);
+  assert.ok(ticks > 60000 && ticks < 95000,
+    `a full bunker is ${ticks} ticks of full speed (${Math.round(ticks / 1200)} min);`
+    + ' docs/02 says about an hour, against wars of 25-70 minutes');
+});
 
 test('every number the documents quote is the number in the data', () => {
   const rules = loadRules();
