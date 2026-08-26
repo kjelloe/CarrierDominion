@@ -252,6 +252,9 @@ function copyState(state) {
       recoverRange: state.params.recoverRange,
       // The deck cycle (ruled 2026-08-25), engine/deck.js.
       radarStormPermil: state.params.radarStormPermil,
+      seaStateSlowPermil: state.params.seaStateSlowPermil,
+      flightFloorCalm: state.params.flightFloorCalm,
+      flightFloorStorm: state.params.flightFloorStorm,
       deckRangeTicks: state.params.deckRangeTicks,
       launchTicks: state.params.launchTicks,
       dockTicks: state.params.dockTicks,
@@ -533,6 +536,12 @@ function createInitialState(seed, rules) {
       recoverRange: rules.units.carrier.recoverRangeMetres * unitsPerMetre,
       // What a radar set keeps in the worst storm (ruled 2026-08-26).
       radarStormPermil: base.radarStormPermil,
+      // What a surface craft keeps for speed in the worst sea, and how high
+      // the wavetops push a pilot's floor (ruled 2026-08-26, Q1b). The
+      // floors are in UNITS here, like every other distance in params.
+      seaStateSlowPermil: base.seaStateSlowPermil,
+      flightFloorCalm: base.flightFloorCalmMetres * unitsPerMetre,
+      flightFloorStorm: base.flightFloorStormMetres * unitsPerMetre,
       deckRangeTicks: base.deckRangeTicks,
       launchTicks: base.launchTicks,
       dockTicks: base.dockTicks,

@@ -440,5 +440,13 @@
   "sq.wide": "VIDT",
   "sq.screenPlan": "SKJERMEN",
   "sq.normal": "NORMAL",
-  "sq.screenNote": "Skjermen kan flyttes mens den er ute - det er selve manøveren."
+  "sq.screenNote": "Skjermen kan flyttes mens den er ute - det er selve manøveren.",
+  "sea.calm": "STILLE",
+  "sea.slight": "SMÅ BØLGER",
+  "sea.moderate": "MODERAT",
+  "sea.rough": "GROV SJØ",
+  "sea.high": "HØY SJØ",
+  "sea.gale": "STORM",
+  "hud.sea": "sjø",
+  "hud.radarLoss": "radar"
 }

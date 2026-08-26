@@ -440,5 +440,13 @@
   "sq.wide": "WIDE",
   "sq.screenPlan": "THE SCREEN",
   "sq.normal": "NORMAL",
-  "sq.screenNote": "The screen can be moved while it is out - that is the manoeuvre."
+  "sq.screenNote": "The screen can be moved while it is out - that is the manoeuvre.",
+  "sea.calm": "CALM",
+  "sea.slight": "SLIGHT",
+  "sea.moderate": "MODERATE",
+  "sea.rough": "ROUGH",
+  "sea.high": "HIGH",
+  "sea.gale": "GALE",
+  "hud.sea": "sea",
+  "hud.radarLoss": "radar"
 }

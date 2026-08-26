@@ -6,6 +6,7 @@
 // launch would send it to where the ship used to be.
 
 import { floorDiv, mulDiv, wrapAngle } from '../shared/fixed.js';
+import { flightFloorMetresFor, seaSpeedPermilFor, weatherAt } from '../shared/weather.js';
 import { mulCos, mulSin } from '../shared/trig.js';
 import { worldHeightAt } from './heightmap.js';
 import {
@@ -48,8 +49,26 @@ import {
 } from './units.js';
 import { designated } from './targeting.js';
 
+// The flight floor in UNITS. The rule is written in metres because that is
+// how a pilot thinks about it; everything below the client counts in units.
+function flightFloorUnits(state, weather) {
+  const metres = flightFloorMetresFor(
+    weather,
+    floorDiv(state.params.flightFloorCalm, state.params.unitsPerMetre),
+    floorDiv(state.params.flightFloorStorm, state.params.unitsPerMetre),
+  );
+  return metres * state.params.unitsPerMetre;
+}
+
 function stepUnits(state) {
   const sizeUnits = state.params.sizeUnits;
+  // The sea, once per tick rather than once per hull: the weather is a pure
+  // function of (seed, tick), so every unit in this tick is in the same
+  // water, and asking once is both cheaper and impossible to get
+  // inconsistent (ruled 2026-08-26, Q1b).
+  const weather = weatherAt(state.seed, state.tick);
+  const seaPermil = seaSpeedPermilFor(weather, state.params.seaStateSlowPermil);
+  const floorUnits = flightFloorUnits(state, weather);
   for (let i = 0; i < state.units.length; i++) {
     const unit = state.units[i];
     // A Manta down on a runway does not move; the island refuels it from
@@ -142,8 +161,8 @@ function stepUnits(state) {
     // A lighter uses the surface drive model, like a Walrus - it simply never
     // gets an order that would take it ashore.
     const outcome = unit.kind === KIND_MANTA || unit.kind === KIND_INTERCEPTOR
-      ? stepManta(unit, state.islands, sizeUnits)
-      : stepWalrus(unit, state.islands, sizeUnits);
+      ? stepManta(unit, state.islands, sizeUnits, floorUnits)
+      : stepWalrus(unit, state.islands, sizeUnits, seaPermil);
 
     if (outcome === FLIGHT_OUT_OF_FUEL || outcome === DRIVE_OUT_OF_FUEL) {
       pushEvent(state.events, EVT_UNIT_LOST, unit.id, unit.team, 0);

@@ -77,10 +77,15 @@ function agility(unit) {
   return scaled < 1 ? 1 : scaled;
 }
 
-function targetSpeedFor(unit, ashore) {
+function targetSpeedFor(unit, ashore, seaPermil) {
   // Damage slows the drive train in proportion (manual review, item 7).
   const sound = ashore === 1 ? unit.landSpeed : unit.maxSpeed;
-  const top = mulDiv(sound, damagePermil(unit), 1000);
+  let top = mulDiv(sound, damagePermil(unit), 1000);
+  // And a heavy sea slows anything punching through it (ruled 2026-08-26,
+  // Q1b) - AFLOAT only. A Walrus climbing a hillside does not care what the
+  // water is doing, and slowing it there would be classifying by the wrong
+  // axis.
+  if (ashore === 0) top = mulDiv(top, seaPermil, 1000);
   if (unit.control !== -1) return clampI(mulDiv(top, unit.throttle, 100), 0, top);
   if (unit.avoidTicks > 0) return top;
   return unit.order === ORDER_HOLD ? 0 : top;
@@ -98,14 +103,14 @@ function beginAvoidance(unit, islands, surfaceHere, sizeUnits) {
   unit.avoidTicks = AVOID_TICKS;
 }
 
-function stepWalrus(unit, islands, sizeUnits) {
+function stepWalrus(unit, islands, sizeUnits, seaPermil) {
   const heightHere = worldHeightAt(islands, unit.x, unit.y);
   const surfaceHere = heightHere > 0 ? heightHere : 0;
   const ashore = heightHere > 0 ? 1 : 0;
   if (unit.avoidTicks > 0) unit.avoidTicks = unit.avoidTicks - 1;
 
   unit.heading = steerWalrus(unit);
-  unit.speed = stepToward(unit.speed, targetSpeedFor(unit, ashore), unit.accel);
+  unit.speed = stepToward(unit.speed, targetSpeedFor(unit, ashore, seaPermil), unit.accel);
 
   let reportBlocked = 0;
   if (slopeAhead(unit, islands, surfaceHere, unit.heading, sizeUnits) > unit.maxClimbPermil) {

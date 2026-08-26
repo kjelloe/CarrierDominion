@@ -515,6 +515,52 @@ atmospheric, it is broken. The floor is in `shared/weather.js` (day never
 below ~180 per-mil) and it is asserted twice -- once in the arithmetic, once
 in the pixels (`debugging/probes/weather.mjs`).
 
+## The eight answers of 2026-08-26
+
+Asked with options and measured numbers; answered the same evening.
+
+**Weather reaches the small craft, and nothing else (Q1b).** A rough sea
+slows the Walrus and the lighter and lifts the Manta off the wavetops.
+Gunnery was offered and declined: it compounds with the radar rule, which
+already pulls fleets together, and a storm that makes your shots miss reads
+as the game cheating unless the cockpit explains itself. Sea state gives a
+reason to WAIT, which is the decision the radar rule does not add.
+
+**No rain or spray yet (Q2b).** The look is good enough to playtest.
+
+**Lightning blooms the scope (Q3b)** - a brief clutter return the player
+learns to read past. It is drawn UNDER real contacts, so a strike can never
+hide a real blip: the instrument gets weather, the player loses no
+information, and the AI is not disadvantaged by a thing it cannot see.
+
+**The squadron numbers stand (Q4a):** Manta 750 kg with a full four-station
+fit at exactly 750, Walrus 2000 kg, a five-second deck cycle, eight
+waypoints.
+
+**One tabbed console (Q5b).** The six panels - chart, damage, island, log,
+squadron, stores - fold into a single overlay with a tab strip. Each key
+still opens its own tab, so nothing anyone has learned stops working. This
+is closer to the 1988 screens and it stops the panel count growing forever.
+
+**The dead keys go, and fuel is made to bite (Q6a + Q6b).** `startFuel`,
+`startOrdnance` and `startMaterials` in `data/rules.json` were read by
+nothing and are deleted. Separately - and measured first - fuel and ordnance
+were shown never to bind: across three full AI-vs-AI wars the bunker never
+fell below a fifth and the magazine never below 57%, while materials sat
+near their 400 start against an 8,000 cap. Ruling #3 bought us a fuel supply
+chain that was decorative, so fuel is being given a real cost as its own
+measured slice.
+
+**The oversized engine modules stay as they are (Q7a).** Splitting churns
+the files the golden pins depend on for no behaviour change.
+
+One thing the deletion taught us, worth keeping: **deleting a key nothing
+reads still moves the golden pins**, because `state.rulesHash` hashes the
+whole ruleset so two LAN peers can prove they are playing the same game.
+That is the field working as intended, not a defect - but it means a pin
+move is not by itself evidence that the war changed. Proven here by hashing
+3,000 ticks with `rulesHash` blanked: identical, tick for tick.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

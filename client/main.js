@@ -1276,6 +1276,12 @@ function onSnapshot(message) {
   window.__lastView = message.view;
   // ?weather=<tick> holds the sky at one moment (a debug affordance, and
   // how the probes photograph a storm). Without it the sky follows the war.
+  //
+  // It overrides the RENDER, not the war: the engine is still at its own
+  // tick, so figures the simulation computed from the real weather - the
+  // carrier's `radarNow`, the boats' speed - stay as the war left them. A
+  // frozen storm therefore shows its sea state but not its radar loss, and
+  // that is correct rather than a bug worth chasing.
   if (state.weatherTick >= 0 && message.view !== undefined) {
     message.view.weather = weatherAt(message.view.seed, state.weatherTick);
   }
@@ -1509,6 +1515,7 @@ function drawPanel(deltaSeconds) {
       ? ''
       : `${(Math.round(dist2D(unit.x, unit.y, own.x, own.y) / params.unitsPerMetre / 100) / 10)} km`;
     drawFlightInstruments(state.panel, state.view, unit, {
+      conditions: conditionsLine(state, state.view === undefined ? undefined : state.view.own),
       helmTitle: state.t(flying ? 'panel.flight' : 'panel.drive'),
       scopeTitle: state.t('panel.scope'),
       scopeRange: state.scopeRange * params.unitsPerMetre,
@@ -1543,6 +1550,7 @@ function drawPanel(deltaSeconds) {
   const atTheGun = state.scene3d !== undefined && state.scene3d.gunsight === true;
   const aimBam = gunBearing(own);
   drawInstruments(state.panel, state.view, own, {
+    conditions: conditionsLine(state, own),
     gunnery: atTheGun ? 1 : 0,
     gunTitle: state.t('panel.gunnery'),
     aimBam: aimBam,
@@ -1598,6 +1606,31 @@ function drawPanel(deltaSeconds) {
 // boresight otherwise. Drawn ship-relative on the console, which is why a
 // target abeam swings the line out to the beam exactly as the original's
 // turret diagram did.
+// What the weather is costing the ship, in the two ways it can (rulings of
+// 2026-08-26): the sea that slows the boats, and the rain that shortens the
+// radar picture. Empty on a calm clear day, so the line only appears when it
+// has something to say.
+const SEA_WORDS = ['sea.calm', 'sea.slight', 'sea.moderate', 'sea.rough', 'sea.high', 'sea.gale'];
+
+function conditionsLine(state, own) {
+  const view = state.view;
+  if (view === undefined || view.weather === undefined) return '';
+  const sea = view.weather.windPermil;
+  const parts = [];
+  if (sea >= 150) {
+    const step = Math.min(SEA_WORDS.length - 1, Math.floor(sea / 175));
+    parts.push(`${state.t('hud.sea')} ${state.t(SEA_WORDS[step])}`);
+  }
+  // radarNow is what this set actually reaches right now; radar is what it
+  // reaches in fair weather. The player is told the loss, not the number,
+  // because the loss is the part that changes their mind.
+  if (own !== undefined && own.radar > 0 && own.radarNow >= 0 && own.radarNow < own.radar) {
+    const lost = Math.round(100 - (own.radarNow * 100) / own.radar);
+    if (lost >= 1) parts.push(`${state.t('hud.radarLoss')} -${lost}%`);
+  }
+  return parts.join('  ');
+}
+
 function gunBearing(own) {
   if (own === undefined) return 0;
   const view = state.view;

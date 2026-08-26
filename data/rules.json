@@ -4,9 +4,6 @@
   "msPerTick": 50,
   "unitsPerMetre": 256,
   "teamCount": 2,
-  "startFuel": 20000,
-  "startMaterials": 5000,
-  "startOrdnance": 2000,
   "aiCadenceTicks": 3,
   "podRangeMetres": 60,
   "podBuildTicks": 1200,
@@ -35,5 +32,8 @@
   "deckRangeTicks": 60,
   "launchTicks": 40,
   "dockTicks": 60,
-  "radarStormPermil": 700
+  "radarStormPermil": 700,
+  "seaStateSlowPermil": 650,
+  "flightFloorCalmMetres": 12,
+  "flightFloorStormMetres": 90
 }

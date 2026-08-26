@@ -87,8 +87,13 @@ function targetSpeedFor(unit) {
   return clampI(mulDiv(ceiling, unit.throttle, 100), unit.minSpeed, ceiling);
 }
 
-// How low a pilot may fly: wavetop height. Low enough to duck under a radar
-// horizon in spirit, high enough that the sea is scenery rather than a wall.
+// How low an aircraft may fly: wavetop height. Low enough to duck under a
+// radar horizon in spirit, high enough that the sea is scenery rather than a
+// wall. In calm water this is the rule's calm figure; in a gale the wavetops
+// come up to meet the pilot and the floor rises with them (ruled 2026-08-26,
+// Q1b), which is why the floor arrives as an argument rather than living
+// here as a constant. This is the calm-water figure, and the default for
+// callers that have no weather to hand (tests, mostly).
 const PILOT_FLOOR_UNITS = 12 * 256;
 
 // Where the nose should settle. The autopilot flies cruise; a PILOT flies the
@@ -96,7 +101,8 @@ const PILOT_FLOOR_UNITS = 12 * 256;
 // they have. Terrain always wins upward, whoever is flying: the no-crash
 // ruling holds for a pilot diving at a hillside too, and the contour probe
 // simply out-votes the stick until the rock is behind them.
-function targetAltitudeFor(unit, islands, sizeUnits) {
+function targetAltitudeFor(unit, islands, sizeUnits, floorUnits) {
+  const floor = floorUnits === undefined ? PILOT_FLOOR_UNITS : floorUnits;
   let ground = worldHeightAt(islands, unit.x, unit.y);
   const aheadX = clampI(unit.x + mulCos(TERRAIN_PROBE_UNITS, unit.heading), 0, sizeUnits);
   const aheadY = clampI(unit.y + mulSin(TERRAIN_PROBE_UNITS, unit.heading), 0, sizeUnits);
@@ -106,19 +112,24 @@ function targetAltitudeFor(unit, islands, sizeUnits) {
   let wanted = unit.cruiseAltitude;
   if (unit.control !== -1) {
     if (unit.climb > 0) wanted = unit.ceiling;
-    else if (unit.climb < 0) wanted = PILOT_FLOOR_UNITS;
+    else if (unit.climb < 0) wanted = floor;
     else wanted = unit.z;
   }
+  // The sea floor binds the AIRCRAFT, not the stick. The AI cruises far above
+  // it and is unaffected today, but if it ever learns to attack low the rule
+  // already covers it - a limit that binds only the human is a limit the
+  // human reads as the game cheating.
+  if (wanted < floor) wanted = floor;
   return clear > wanted ? clear : wanted;
 }
 
-function stepManta(unit, islands, sizeUnits) {
+function stepManta(unit, islands, sizeUnits, floorUnits) {
   unit.heading = steerManta(unit);
   unit.speed = stepToward(unit.speed, targetSpeedFor(unit), unit.accel);
 
   unit.x = clampI(unit.x + mulCos(unit.speed, unit.heading), 0, sizeUnits);
   unit.y = clampI(unit.y + mulSin(unit.speed, unit.heading), 0, sizeUnits);
-  unit.z = stepToward(unit.z, targetAltitudeFor(unit, islands, sizeUnits), unit.climbRate);
+  unit.z = stepToward(unit.z, targetAltitudeFor(unit, islands, sizeUnits, floorUnits), unit.climbRate);
 
   leakFuel(unit);
   if (burnUnitFuel(unit, unit.fuelBurn) === 1) {

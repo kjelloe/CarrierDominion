@@ -2,10 +2,9 @@
 // the numbers the docs quote, and keys nothing reads.
 //
 // Both were found by hand in the 2026-08-26 review. The numbers all agreed;
-// the dead keys did not - `startFuel` and `startOrdnance` sit in
-// data/rules.json looking live while the ship sails with a brim-full bunker
-// and hold, which is the opposite of what the comment beside `startMaterials`
-// says she does. Whether to wire them is a balance decision for the owner;
+// the dead keys did not - `startFuel`, `startOrdnance` and `startMaterials`
+// sat in data/rules.json looking live while the ship sailed with a brim-full
+// bunker and hold. The owner ruled them out on 2026-08-26 and they are gone;
 // what this file does is make sure the NEXT one gets noticed.
 
 import test from 'node:test';
@@ -55,11 +54,16 @@ const KNOWN_INERT = {
   'world.islandCountMax': 'the menu ladder is the real ceiling; this records it',
   'world.shorePlateauPermil': 'superseded by the coast warp, kept for the record',
   'world.islandKinds': 'the names behind the KIND_ constants, for readers',
-  'rules.startFuel': 'UNUSED and contradicted by the code: she sails brim-full'
-    + ' (2026-08-26 review, queued for the owner)',
-  'rules.startOrdnance': 'UNUSED and contradicted by the code: she sails brim-full'
-    + ' (2026-08-26 review, queued for the owner)',
 };
+
+// The dead-key check matches BARE key names against all the source, so it
+// cannot tell `rules.startMaterials` from `units.carrier.startMaterials` -
+// and that is exactly how a dead key hid for weeks: rules.startMaterials read
+// as live because units.json has a live key of the same name. Any name that
+// appears in more than one ruleset file has to be declared here with which
+// file actually owns it, so the collision is a decision rather than an
+// accident.
+const SHARED_NAMES = {};
 
 function everySource() {
   const out = [];
@@ -104,6 +108,43 @@ test('no ruleset key is dead without being declared dead', () => {
   assert.deepEqual(surprises, [],
     `ruleset keys nothing reads: ${surprises.join(', ')}.`
     + ' Wire them, delete them, or add them to KNOWN_INERT with the reason.');
+});
+
+test('no two ruleset files share a key name undeclared', () => {
+  const files = {
+    rules: 'data/rules.json',
+    world: 'data/world.json',
+    economy: 'data/economy.json',
+    units: 'data/units.json',
+    weapons: 'data/weapons.json',
+  };
+  const seen = {};
+  for (const [label, path] of Object.entries(files)) {
+    const walk = (node) => {
+      for (const key of Object.keys(node)) {
+        if (key === 'comment' || key === 'version') continue;
+        const value = node[key];
+        if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+          walk(value);
+          continue;
+        }
+        if (seen[key] === undefined) seen[key] = [];
+        if (!seen[key].includes(label)) seen[key].push(label);
+      }
+    };
+    walk(JSON.parse(readFileSync(join(ROOT, path), 'utf8')));
+  }
+  const collisions = [];
+  for (const key of Object.keys(seen)) {
+    if (seen[key].length < 2) continue;
+    if (SHARED_NAMES[key] !== undefined) continue;
+    collisions.push(`${key} (${seen[key].join(', ')})`);
+  }
+  assert.deepEqual(collisions, [],
+    `the same key name lives in two ruleset files: ${collisions.join('; ')}.`
+    + ' The dead-key check matches bare names and cannot tell them apart, so'
+    + ' one of them can die unnoticed. Rename one, or declare it in'
+    + ' SHARED_NAMES with which file owns it.');
 });
 
 test('every key declared inert really is inert', () => {

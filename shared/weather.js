@@ -157,6 +157,42 @@ function radarPermilFor(weather, worstPermil) {
   return 1000 - loss;
 }
 
+// How rough the water is, 0 glassy to 1000 a gale. The swell runs with the
+// wind and grows with it, so the wind IS the sea state - this function exists
+// so callers stop guessing which field to read.
+function seaStatePermil(weather) {
+  return weather.windPermil;
+}
+
+// What a rough sea does to anything on the surface (ruled 2026-08-26, Q1b):
+// a Walrus or a lighter punching into a swell makes less way. Returns a
+// per-mil multiplier on top speed, floored by the rule.
+//
+// It applies AFLOAT only. A Walrus is amphibious, and a heavy sea has no
+// opinion about a vehicle climbing a hillside - classifying by the wrong
+// axis here would slow it ashore too, which is the mistake docs/05 keeps a
+// whole failure class for.
+function seaSpeedPermilFor(weather, worstPermil) {
+  const worst = worstPermil === undefined ? 1000 : worstPermil;
+  const loss = Math.floor(seaStatePermil(weather) * (1000 - worst) / 1000);
+  return 1000 - loss;
+}
+
+// How low an aircraft may fly, in metres, given the sea. In calm water a
+// pilot may skim the wavetops; in a gale the wavetops come up to meet them,
+// so the floor rises. Both ends are rules.
+//
+// This is a floor on the AIRCRAFT, not on the stick: the AI cruises far above
+// it today and is unaffected, but if it ever learns to attack low the rule is
+// already there for it. A limit that only binds the human is a limit the
+// human experiences as unfairness.
+function flightFloorMetresFor(weather, calmMetres, stormMetres) {
+  const calm = calmMetres === undefined ? 12 : calmMetres;
+  const storm = stormMetres === undefined ? calm : stormMetres;
+  if (storm <= calm) return calm;
+  return calm + Math.floor((storm - calm) * seaStatePermil(weather) / 1000);
+}
+
 // Where the swell runs from, as a unit vector in per-mil - the renderer
 // aligns its waves to this and the engine does not care.
 function windVectorPermil(weather) {
@@ -168,5 +204,8 @@ export {
   FRONT_TICKS,
   weatherAt,
   radarPermilFor,
+  seaStatePermil,
+  seaSpeedPermilFor,
+  flightFloorMetresFor,
   windVectorPermil,
 };

@@ -342,6 +342,13 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   ctx.textAlign = 'right';
   ctx.fillText(readout.scopeLabel, scopeX + scopeSize - 10, pad + 18);
   ctx.textAlign = 'left';
+  // Conditions, under the scope where both weather effects are felt: the
+  // sea that is slowing the boats and the rain that is shortening this very
+  // picture. A rule the player cannot see is a rule they experience as the
+  // game cheating, so this line is part of the ruling, not decoration.
+  if (readout.conditions !== undefined && readout.conditions !== '') {
+    ctx.fillText(readout.conditions, scopeX + 10, pad + scopeSize - 8);
+  }
 
   // At the GUN, the right box is the gunnery console instead: where the
   // mount is pointing, how hot it is, and whether it and the weapon still
@@ -468,6 +475,11 @@ function drawFlightInstruments(panel, view, unit, readout, deltaSeconds, colours
   ctx.textAlign = 'right';
   ctx.fillText(readout.scopeLabel, scopeX + scopeSize - 10, pad + 18);
   ctx.textAlign = 'left';
+  // The same conditions line as the ship's scope: a pilot in a squall is
+  // being told why the picture is short and why the boats are late.
+  if (readout.conditions !== undefined && readout.conditions !== '') {
+    ctx.fillText(readout.conditions, scopeX + 10, pad + scopeSize - 8);
+  }
 
   // The craft: hull, altitude (a Manta) or the magazine (a Walrus), the
   // selected weapon with its tally, and the bearing home.
