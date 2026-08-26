@@ -13,6 +13,7 @@
 //   ?style=retro|modern|hybrid  art direction (see client/styles.js)
 
 import { fetchRules } from './rules.js';
+import { weatherAt } from '../shared/weather.js';
 import { createLocalTransport, createReplayTransport, createWsTransport } from './transport.js';
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
@@ -89,7 +90,12 @@ const UNIT_ACTIVE = 1;
 const UNIT_RETURNING = 2;
 const POD_RANGE_UNITS = 60 * 256; // matches data/rules.json podRangeMetres
 
+// Where the sky is read from. -1 means "wherever the war has got to", which
+// is every real game; a number freezes it for a screenshot.
+const WEATHER_PARAM = new URLSearchParams(window.location.search).get('weather');
+
 const state = {
+  weatherTick: WEATHER_PARAM === null ? -1 : Math.max(0, Number(WEATHER_PARAM) | 0),
   view: undefined,
   stateHash: '',
   carrierId: -1,
@@ -1268,6 +1274,11 @@ function onSnapshot(message) {
   // The last view, for probes. It is the same object the renderer is about to
   // draw, so a probe that asserts on it is asserting on what is on screen.
   window.__lastView = message.view;
+  // ?weather=<tick> holds the sky at one moment (a debug affordance, and
+  // how the probes photograph a storm). Without it the sky follows the war.
+  if (state.weatherTick >= 0 && message.view !== undefined) {
+    message.view.weather = weatherAt(message.view.seed, state.weatherTick);
+  }
   state.stateHash = message.stateHash ?? '';
   const own = ownCarrierOf(message.view);
   if (own !== undefined) {

@@ -251,6 +251,7 @@ function copyState(state) {
       deckHeight: state.params.deckHeight,
       recoverRange: state.params.recoverRange,
       // The deck cycle (ruled 2026-08-25), engine/deck.js.
+      radarStormPermil: state.params.radarStormPermil,
       deckRangeTicks: state.params.deckRangeTicks,
       launchTicks: state.params.launchTicks,
       dockTicks: state.params.dockTicks,
@@ -530,6 +531,8 @@ function createInitialState(seed, rules) {
       tickHz: base.tickHz,
       deckHeight: rules.units.carrier.deckHeightMetres * unitsPerMetre,
       recoverRange: rules.units.carrier.recoverRangeMetres * unitsPerMetre,
+      // What a radar set keeps in the worst storm (ruled 2026-08-26).
+      radarStormPermil: base.radarStormPermil,
       deckRangeTicks: base.deckRangeTicks,
       launchTicks: base.launchTicks,
       dockTicks: base.dockTicks,

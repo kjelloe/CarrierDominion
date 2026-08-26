@@ -10,7 +10,9 @@
 
 import { dist2D, floorDiv, mulDiv } from '../shared/fixed.js';
 import { atan2B, mulCos, mulSin } from '../shared/trig.js';
-import { CONTACT_CARRIER, remembered } from './contacts.js';
+import { CONTACT_CARRIER, remembered,
+  sensorReach,
+} from './contacts.js';
 import { EVT_SUPPLY_RUN, pushEvent } from './events.js';
 import { orderReturn, readyToLaunch } from './hangar.js';
 import { beginLaunch } from './deck.js';
@@ -43,18 +45,20 @@ const FALLBACK_WEAPON = 0;
 const STRIKE_FUEL_PERMIL = 400;
 
 // Anything a team's own hulls can see. Deliberately the same rule the fog
-// filter uses - the AI must not learn anything a player would not.
+// filter uses - the AI must not learn anything a player would not, and since
+// 2026-08-26 that includes the weather: a storm shortens the machine's
+// picture exactly as much as it shortens yours.
 function spotted(state, team, x, y) {
   for (let i = 0; i < state.carriers.length; i++) {
     const sensor = state.carriers[i];
     if (sensor.team !== team || sensor.hull <= 0) continue;
-    if (dist2D(sensor.x, sensor.y, x, y) <= sensor.radar) return true;
+    if (dist2D(sensor.x, sensor.y, x, y) <= sensorReach(state, sensor)) return true;
   }
   for (let i = 0; i < state.units.length; i++) {
     const sensor = state.units[i];
     if (sensor.team !== team) continue;
     if (sensor.state !== UNIT_ACTIVE && sensor.state !== UNIT_RETURNING) continue;
-    if (dist2D(sensor.x, sensor.y, x, y) <= sensor.radar) return true;
+    if (dist2D(sensor.x, sensor.y, x, y) <= sensorReach(state, sensor)) return true;
   }
   return false;
 }

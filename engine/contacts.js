@@ -18,11 +18,27 @@
 //   unitKind  the hull kind for units, -1 for carriers
 //   tick      when it was last actually seen
 
-import { distSq2D } from '../shared/fixed.js';
+import { distSq2D, mulDiv } from '../shared/fixed.js';
+import { radarPermilFor, weatherAt } from '../shared/weather.js';
 import { UNIT_ACTIVE, UNIT_RETURNING, unitEngageable } from './units.js';
 
 const CONTACT_UNIT = 0;
 const CONTACT_CARRIER = 1;
+
+// How far a set actually reaches THIS TICK. Weather is the one thing that
+// changes it (ruled 2026-08-26, "wire one effect now"): heavy weather is sea
+// clutter and rain in the beam, so a storm shortens the picture. It does not
+// blind you - the floor is a rule, and it is high on purpose.
+//
+// Every sensor in the engine goes through here, so the fog, the ghosts and
+// the machine's own eyes all agree about how far anyone can see. The weather
+// itself is a pure function of (seed, tick) and is stored nowhere.
+function sensorReach(state, sensor) {
+  if (sensor.radar <= 0) return 0;
+  const weather = weatherAt(state.seed, state.tick);
+  const permil = radarPermilFor(weather, state.params.radarStormPermil);
+  return mulDiv(sensor.radar, permil, 1000);
+}
 
 // The one sensor rule: every hull a team owns is a radar, carriers furthest.
 // A sunk carrier senses nothing - its mast is underwater - which the fog
@@ -31,13 +47,15 @@ function covered(state, team, x, y) {
   for (let i = 0; i < state.carriers.length; i++) {
     const sensor = state.carriers[i];
     if (sensor.team !== team || sensor.hull <= 0) continue;
-    if (distSq2D(sensor.x, sensor.y, x, y) <= sensor.radar * sensor.radar) return true;
+    const reach = sensorReach(state, sensor);
+    if (distSq2D(sensor.x, sensor.y, x, y) <= reach * reach) return true;
   }
   for (let i = 0; i < state.units.length; i++) {
     const sensor = state.units[i];
     if (sensor.team !== team) continue;
     if (sensor.state !== UNIT_ACTIVE && sensor.state !== UNIT_RETURNING) continue;
-    if (distSq2D(sensor.x, sensor.y, x, y) <= sensor.radar * sensor.radar) return true;
+    const reach = sensorReach(state, sensor);
+    if (distSq2D(sensor.x, sensor.y, x, y) <= reach * reach) return true;
   }
   return false;
 }
@@ -54,14 +72,14 @@ function coveredWell(state, team, x, y) {
   for (let i = 0; i < state.carriers.length; i++) {
     const sensor = state.carriers[i];
     if (sensor.team !== team || sensor.hull <= 0) continue;
-    const reach = sensor.radar - DISPROVE_MARGIN_UNITS;
+    const reach = sensorReach(state, sensor) - DISPROVE_MARGIN_UNITS;
     if (reach > 0 && distSq2D(sensor.x, sensor.y, x, y) <= reach * reach) return true;
   }
   for (let i = 0; i < state.units.length; i++) {
     const sensor = state.units[i];
     if (sensor.team !== team) continue;
     if (sensor.state !== UNIT_ACTIVE && sensor.state !== UNIT_RETURNING) continue;
-    const reach = sensor.radar - DISPROVE_MARGIN_UNITS;
+    const reach = sensorReach(state, sensor) - DISPROVE_MARGIN_UNITS;
     if (reach > 0 && distSq2D(sensor.x, sensor.y, x, y) <= reach * reach) return true;
   }
   return false;
@@ -165,6 +183,7 @@ export {
   DISPROVE_MARGIN_UNITS,
   covered,
   coveredWell,
+  sensorReach,
   copyContacts,
   remembered,
   stepContacts,

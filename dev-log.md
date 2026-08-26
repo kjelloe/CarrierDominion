@@ -5,6 +5,84 @@ golden hash and why.
 
 ---
 
+## 2026-08-26 — Weather, and the one thing it is allowed to touch
+
+Owner's ask: a more lifelike ocean, wind-aligned waves, weather that tells a
+story from near-white cloud to a grey-dark-blue storm with lightning, a sun
+that crosses and casts shadows with no complete darkness -- render-only at
+first, High tier only.
+
+**The design decision is that the sky is a pure function of the war.**
+`weatherAt(seed, tick)` returns sun, day, wind, cloud, storm and this tick's
+lightning as integers, out of nothing but the seed and the tick, and is
+stored nowhere. Every client in a LAN game and every replay sees the same sky
+at the same moment with nothing crossing the wire; the state hash cannot
+carry it; and because it is pure and cheap the *engine* may read it too. That
+last one is what turns weather from a screensaver into a rule, so it went
+into the Luau-portable subset from the first line.
+
+**One effect is wired, per the ruling: heavy weather shortens radar**,
+floored at 700 per-mil. Everything else -- swell, cloud, lightning, colour,
+exposure -- is cosmetic and gated on High + modern.
+
+That one effect earned its place. The battery moved on two of five seeds, and
+seed 777001 moved a long way: a 192,713-tick war won on island count became a
+26,203-tick war decided by sinking, and its worst quiet spell fell from
+30,689 ticks to 8,769. I checked it was really the radar rule by setting the
+floor to 1000 and re-running -- the old numbers came straight back, to the
+tick. The mechanism makes sense: shorter radar in weather pulls both fleets
+closer before either can shoot, so a squall turns a standoff into a knife
+fight. Seed 31337 lengthened slightly (50,536 -> 54,186); the other three did
+not move at all.
+
+**Three days of graphics lessons in one slice**, all recorded in docs/07 as
+lessons 8-11:
+
+- A **flat cloud plane cannot work** for a chase camera -- it is past the far
+  plane at every angle that matters. It became a sky shell that projects each
+  fragment's view ray onto a virtual deck. And the shader has to handle an eye
+  *above* the deck too, or the strategic view gets a brown dome overhead.
+- **The horizon must agree with itself.** Sky, cloud, fog and sea all meet at
+  the sea line, and any one of them fading to nothing there opens a bright
+  strip exactly where the eye rests.
+- **A storm has no lit side.** This one took three passes. Applying the sun's
+  warmth first and the storm's grey second leaves a squall at dawn reading
+  brown, at any weight I tried; the storm has to take the haze, the cloud's
+  lit face, the water colour *and* the sun glitter together. Measured, the
+  storm sky went 134,128,127 -> 113,108,108 across those passes, and the sea
+  61,60,61 -> 41,39,40.
+
+**And one that was entirely my own fault**, worth writing down because it
+cost the most: I spent a long session convinced the cloud material was broken
+-- `side: 0`, `transparent: false`, nothing drawn -- when a leftover debug
+script of mine was replacing the material before every measurement. I was
+inspecting my own scaffolding. Remove the scaffolding *before* trusting the
+instrument.
+
+**The new probe measures rather than photographs.** `debugging/probes/weather.mjs`
+finds five moods by condition (not by hardcoded tick -- that is what made
+three older probes stale), freezes each with `?weather=`, and reads the
+average colour of a sky band and a sea band out of the frame buffer in the
+same JS turn as the render, per lesson 7. A shader that silently does nothing
+still produces a beautiful screenshot; only the numbers catch it. The
+assertion I care most about is the dullest: all five moods must render
+*different* skies, which is what would catch the whole path being switched
+off.
+
+Two assertions carry the owner's ask directly: night must be far darker than
+day but never below a steerable floor, and the storm sky must not be warm.
+
+**What moved:** the golden pins moved together for the radar rule (a ruled
+gameplay change), 540 tests pass, smoke is clean, and the battery is
+re-measured above. `radarStormPermil` joins `data/rules.json`.
+
+**Deliberately not done:** wind does not push hulls, storms do not affect
+flight or gunnery, and there is no rain, spray or wet-deck effect. The ask
+was render-first with one effect wired; the rest are rulings the owner has
+not made yet.
+
+---
+
 ## 2026-08-26 — Review, part two: the checks that would have caught it
 
 Where the first review slice fixed behaviour, this one mostly builds the

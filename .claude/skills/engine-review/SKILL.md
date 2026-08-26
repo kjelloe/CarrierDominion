@@ -220,6 +220,16 @@ Look for these shapes first — every one produced a real bug:
   replay to the same hash. Six had never been tried, one of them the first
   to carry an array.
 
+- **A "purely cosmetic" system that the engine is allowed to read.** The
+  weather is derived, stored nowhere and mostly scenery - and one line of it
+  (radar reach in a storm) moved two of five battery seeds, one of them from
+  a 192k-tick island win to a 26k sinking. Anything the engine reads is
+  gameplay no matter which directory it lives in: measure it, and pin it.
+- **A colour applied in the wrong order.** The sun's warmth was applied
+  first and the storm's grey second, so a squall at dawn came out brown at
+  every weight tried. When two influences fight over one value, ask which
+  one is supposed to WIN, and check the loser is not simply applied later.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the
@@ -230,6 +240,15 @@ Look for these shapes first — every one produced a real bug:
   (they open browsers and take minutes), so they rot. `npm run probes` runs
   the lot; sweep it after any UI change, and read a failure as "either the
   feature or the probe" until you have looked.
+- **Remove your own scaffolding before trusting the instrument.** Most of a
+  session went into a cloud shader that reported `side: 0, transparent:
+  false` and drew nothing. The shader was fine; a leftover debug script of
+  mine replaced the material before every measurement. When a measurement is
+  impossible, suspect the measuring rig before the thing measured.
+- **Prove the cause by putting it back.** The battery moved and the radar
+  rule was the obvious suspect. Setting its floor to 1000 and re-running
+  brought the old numbers back to the tick, which is the difference between
+  a suspicion and a finding - and it costs one run.
 - **A symptom fix that makes the metric WORSE is the tell.** Pushing spawns
   apart in worldgen moved two seeds of five and made one war end faster.
   That was the signal to stop and look for the real cause (a battery, not a

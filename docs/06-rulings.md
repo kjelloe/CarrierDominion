@@ -476,6 +476,45 @@ plumbing:
   out. The one-button deploy the owner ruled for is untouched; this is only
   where the bait sits. The 25% speed price is untouched too.
 
+## The weather (2026-08-26)
+
+Owner: a more lifelike ocean with waves like the reference scene, wind
+aligned with the waves, larger and smaller seas so the weather tells a
+story, clouds from few and near-white through many and grey to a full
+grey-dark-blue storm with lightning, and a day-night cycle with the sun
+crossing and casting shadows -- **no complete darkness** -- "purely render at
+first", and only on the modern / High setting.
+
+Four decisions came out of building it.
+
+**The sky is derived, never stored.** `weatherAt(seed, tick)` is a pure
+integer function. Nothing about the weather is in the state, so it cannot
+desync a LAN war, cannot move a golden pin, and costs nothing on the wire --
+and *because* it is pure and cheap, the engine may read it as freely as the
+renderer, with no chance of the two disagreeing. Every alternative we
+considered (weather in the state, weather on the wire, weather rolled by the
+client) loses at least one of those.
+
+**A day is thirty minutes at 1x**, fronts about every twenty. Chosen so a war
+of ordinary length sees several dawns rather than one endless afternoon.
+Time compression speeds the sky with everything else; it is the same clock.
+
+**One effect is wired, and it is radar.** The owner's ask was render-only,
+and asked for one effect to be wired now. Radar range is the right one: it
+changes where you have to be, which is the decision the game is made of,
+without ever taking the picture away from the player. The floor
+(`radarStormPermil`, 700) matters more than the curve -- a storm must cost
+reach, not sight. It measured well: seed 777001 went from a 192,000-tick
+grind won on island count to a 26,000-tick sinking, worst lull 30,689 -> 8,769.
+Everything else the weather does -- swell, cloud, lightning, the sun -- is
+cosmetic and gated on High + modern, per #13.
+
+**Night never goes fully dark.** The owner asked for it and it is also the
+right rule: a game that cannot be played for eight minutes an hour is not
+atmospheric, it is broken. The floor is in `shared/weather.js` (day never
+below ~180 per-mil) and it is asserted twice -- once in the arithmetic, once
+in the pixels (`debugging/probes/weather.mjs`).
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on
@@ -486,5 +525,8 @@ plumbing:
 - Nothing may hard-code two teams, and a rule that only matters at three
   teams still has to be right (from #9 — the virus `virusVictim` rule is the
   worked example).
+- The weather is a pure function of (seed, tick), stored nowhere, and the
+  only thing it changes in the simulation is radar reach (from the
+  2026-08-26 ruling).
 - After the war ends, **nothing new is decided** — enforced in the reducer,
   not just described.

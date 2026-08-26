@@ -112,15 +112,29 @@ The lobby bug is the clearest case for having them at all — every socket test
 passed, because socket tests write raw JSON and the bug was in how the *client*
 wrapped its messages. Two real browsers found it immediately.
 
-Current probes: `ai_trace`, `chart_and_chips`, `combat_shot`, `damage_board`, `flavour_pack`, `graphics_shots`, `hammer_drone`, `gunsight`,
-`island_board`, `lobby`, `rejoin`, `replay_view`, `scope_zoom`, `splash_shot`, `start_menu`, `touch_controls`,
-`playtest_round1`, `playtest_round2`, `playtest_round3`, `playtest_round4`, `second_war`, `strategic_probe`, `style_shots`, `turret_shot`,
-`war_over`, `war_trace`, `watch_run`. `graphics_shots` also asserts the
-phase-2 pixel contract machine-checkably (docs/07 §3): mirror water, a blue
+Current probes (the list is generated from the directory - three probes went
+stale here before anyone noticed):
+
+`ai_trace`, `chart_and_chips`, `combat_shot`, `consoles`, `damage_board`,
+`flavour_pack`, `graphics_shots`, `gunsight`, `hammer_drone`, `island_board`,
+`late_war`, `lobby`, `playtest_round1`, `playtest_round2`, `playtest_round3`,
+`playtest_round4`, `rejoin`, `replay_view`, `scope_zoom`, `second_war`,
+`splash_shot`, `squadron`, `start_menu`, `strategic_probe`, `style_shots`,
+`touch_controls`, `turret_shot`, `war_over`, `war_trace`, `watch_run`,
+`weather`.
+
+`graphics_shots` asserts the phase-2 pixel contract machine-checkably (docs/07 §3): mirror water, a blue
 zenith measured looking UP - the chase camera only ever sees the Preetham
 horizon band - and non-flat near water. `war_over` photographs states a live war takes hours to reach -
 the ending screen, a scope full of ghosts - by pausing the solo war and
-swapping in a doctored view through the `__debugView` hook.
+swapping in a doctored view through the `__debugView` hook. `weather` is the
+newest of the measuring kind (2026-08-26): it finds five moods by CONDITION
+rather than by hardcoded tick, freezes each with `?weather=<tick>`, and reads
+the average colour of a sky band and a sea band out of the frame buffer in
+the same JS turn as the render. A shader that silently does nothing still
+takes a beautiful screenshot; the assertion that would catch the whole
+weather path being switched off is the dullest one - that all five moods
+render DIFFERENT skies.
 
 ### What the watchdog trips on
 

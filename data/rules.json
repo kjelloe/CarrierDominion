@@ -34,5 +34,6 @@
   "startShape": 0,
   "deckRangeTicks": 60,
   "launchTicks": 40,
-  "dockTicks": 60
+  "dockTicks": 60,
+  "radarStormPermil": 700
 }

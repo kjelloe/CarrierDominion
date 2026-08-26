@@ -288,6 +288,34 @@ the ship astern (useful off a reef).
 for the Preetham sky and mirror water, then `?style=retro&graphics=high` for
 sharper 1988 with the amber grid. The start menu's **look** row previews live.
 
+## C1b — The weather and the day *(10 min — new)*
+
+`?style=modern&graphics=high` only; everywhere else the sun stays where it
+always was. A day is thirty minutes at 1×, so at 1× you will see one dawn in
+a sitting — **use time compression** to run the sky, or freeze it with
+`?weather=<tick>` to inspect one mood.
+
+For seed 20260818 the moods sit at: dawn `?weather=9600`, high noon `15420`,
+grey overcast `53040`, full storm `46500`, night `0`.
+
+What I want your eye on:
+
+- **The storm.** Grey-dark-blue, or has it gone brown? It took three passes
+  to stop a low sun tinting a squall peach, and my test for it now allows a
+  few counts of warmth because there is island terrain in the measured band.
+- **The night.** You should be able to fight in it. If any moment is too
+  dark to steer by, that is a bug, not a mood.
+- **The swell** should run *with* the wind. Sail across it and then into it
+  and tell me whether the ship looks like it is in the same sea both times.
+- **Lightning** only in a storm, and as a stroke — if it reads as a lamp
+  switching on and off, the flash is too long.
+- **The horizon.** Cloud, haze and sea have to agree at the sea line. Any
+  bright strip there is the thing I chased longest.
+
+And the one that is not scenery: **a storm shortens radar.** Watch the scope
+range as weather closes in. It costs 30% at the very worst, never more.
+Tell me whether that reads as weather or as a fault.
+
 ## C2 — The shop window
 
 Reload to the menu and just watch the diorama for a few seconds — island

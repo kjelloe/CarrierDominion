@@ -10,9 +10,10 @@
 // then only as a contact - position and heading, no fuel, no hull, no orders.
 
 import { teamHoldings } from '../engine/economy.js';
-import { covered, ghostsFor } from '../engine/contacts.js';
+import { covered, ghostsFor, sensorReach } from '../engine/contacts.js';
 import { telemetryState } from '../engine/telemetry.js';
 import { payloadGramsOf } from '../engine/payload.js';
+import { weatherAt } from './weather.js';
 import { deckProgressPermil } from '../engine/deck.js';
 
 // What is in the magazines. A contact gets an empty list: how many missiles an
@@ -55,6 +56,9 @@ function ownCarrierView(carrier, state) {
     supplyRun: carrier.supplyRun,
     maxSpeed: carrier.maxSpeed,
     radar: carrier.radar,
+    // What the set actually reaches this tick: the weather shortens it
+    // (ruled 2026-08-26) and the scope should not lie about the picture.
+    radarNow: sensorReach(state, carrier),
     weapon: carrier.weapon,
     arms: armsView(carrier.arms),
     route: routeView(carrier.route),
@@ -125,6 +129,7 @@ function contactView(carrier) {
     ordnance: -1,
     ordnanceCapacity: -1,
     chassis: -1,
+    radarNow: -1,
     materials: -1,
     materialsCapacity: -1,
     flareCooldown: -1,
@@ -518,6 +523,11 @@ function buildView(state, team) {
     // is a result and a result has a scoreboard.
     scores: scoreboard(state),
     events: events,
+    // The sky, as a pure function of (seed, tick) - carried in the view so
+    // the renderer never has to know the seed, and so a replay's weather is
+    // the weather the war was fought in. It is stored nowhere in the state,
+    // which is why it cannot move the hash.
+    weather: weatherAt(state.seed, state.tick),
   };
 }
 
@@ -624,6 +634,10 @@ function refereeView(state) {
     islands: islands,
     scores: scores,
     events: events,
+    // The sky, as a pure function of (seed, tick) - carried in the view so
+    // the renderer never has to know the seed, and so a replay's weather is
+    // the weather the war was fought in. It is stored nowhere in the state.
+    weather: weatherAt(state.seed, state.tick),
   };
 }
 

@@ -133,6 +133,91 @@ at High has NO MirrorShader and a night zenith (B−R < 20). Plus the phase-1
 clause: no tier may change a style's ocean material class. Models pass
 (higher-detail hulls at High) still rides after, as its own slice.
 
+## 3b. Phase 3 — weather and the day (landed 2026-08-26)
+
+Owner's ask: a more lifelike ocean with wind-aligned waves; weather that
+tells a story, from a few near-white clouds through grey overcast to a
+grey-dark-blue storm with lightning; a sun that crosses and casts shadows,
+with **no complete darkness**; High tier / modern style only.
+
+**The sky is a pure function of the war.** `shared/weather.js` answers
+`weatherAt(seed, tick)` — sun bearing and elevation, day, wind bearing and
+strength, cloud, storm, and this tick's lightning — in integers, per-mil, out
+of nothing but the seed and the tick. It is stored **nowhere**. That single
+property buys everything else:
+
+- every client in a LAN game and every replay of every war sees the same sky
+  at the same moment, with not one byte crossing the wire;
+- the state hash cannot carry the weather, so a squall can never desync a
+  war or move a golden pin;
+- and because it is cheap and pure, the **engine** may read it too, which is
+  what makes weather a rule rather than a screensaver.
+
+It lives in the Luau-portable subset (docs/01) and `test/engine_subset.test.js`
+enforces that, because the engine reads it.
+
+A day is **30 minutes** at 1× (36,000 ticks); fronts run on a ~20-minute
+period under a much slower swing, so a war has a *mood* that fronts move
+through rather than a sequence of unrelated squalls. Time compression speeds
+the sky up with everything else — it is the same clock.
+
+**What is wired to the simulation: one thing.** Heavy weather is sea clutter
+and rain in the beam, so it **shortens the radar picture**, floored by
+`radarStormPermil` (700 — a set keeps 70% of its reach in the worst storm).
+It shortens the picture; it does not blind you. Every sensor in the war goes
+through `sensorReach()` in `engine/contacts.js`, the AI's `spotted()`
+included, so the AI never sees further than the player through the same rain.
+
+Everything else — colour, cloud, swell, lightning, exposure — is cosmetic and
+gated on High + modern, exactly like phases 1 and 2.
+
+**The renderer**, three files:
+
+- `client/render/skystate.js` turns the integers into light: sun vector,
+  light and fog colour, sun/hemi intensity, exposure, turbidity, fog reach.
+  Phase 2's lesson 3 pays off here at last — exposure *decreases* as the sun
+  rises, and now the sun actually moves, so the curve is real rather than
+  collapsed to one number.
+- `client/render/weathersky.js` draws the cloud deck and the near-field
+  swell. The deck is a **sky shell**, not a plane: each fragment projects its
+  view ray onto a virtual deck 2.2 km up and samples fBm noise there. A flat
+  plane was the first attempt and it is wrong — from a chase camera the plane
+  is past the far plane at every angle that matters. The swell is four
+  Gerstner components (139/71/37/17 m), all aligned to the wind, on a 1500 m
+  patch that rides under the eye and fades at its rim.
+- `client/render/scene.js` applies it per frame, re-baking the PMREM
+  environment only when the sun has actually moved (`ENV_REBAKE_COSINE`), and
+  tints the mirror water — ripple scale and distortion with the wind, water
+  colour and sun glitter with the sky.
+
+**Lessons this phase, on top of §3's seven:**
+
+8. **A flat cloud plane cannot work for a chase camera.** Project the view
+   ray onto a virtual deck from a sky shell instead — and write the shader
+   for an eye that may be *above* the deck too, or the strategic view gets a
+   brown dome overhead.
+9. **The horizon must agree with itself.** Sky, cloud, fog and sea all meet
+   at the sea line; any one of them fading to nothing there opens a bright
+   strip exactly where the eye rests. The cloud's horizon fade now ends in
+   the *fog colour* rather than in transparency.
+10. **A storm has no lit side.** Applying the sun's warmth first and the
+    storm's grey second — at any sane weight — leaves a squall at dawn
+    reading brown. The storm has to take the colour, and take it hard: the
+    haze, the cloud's lit face, the water colour and the sun glitter all go
+    grey-blue together, or the sea stays the warmest thing in the frame.
+11. **Remove your own debug scaffolding before you measure.** A leftover
+    experiment that replaced the cloud material before every measurement cost
+    most of a debugging session chasing a shader that was fine.
+
+**Landed checks** (`debugging/probes/weather.mjs`): five moods are found by
+*condition* (not by hardcoded tick), photographed, and **measured** — the
+average colour of a sky band and a sea band, read in the same JS turn as the
+render (lesson 7). The storm sky must be darker than noon by ≥ 20 luma and
+must not be warm; night must be much darker than day but must **never** fall
+below a steerable floor; dawn must be warm; and all five must render
+*different* skies, which is the assertion that would catch the whole weather
+path being switched off.
+
 ## 4. Low (deferred) — the real mobile pass
 
 When it is time: `powerPreference: 'low-power'`, resolution scaling below

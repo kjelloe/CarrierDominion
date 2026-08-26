@@ -263,6 +263,30 @@ keeps it for the whole war because unit records are reused. That aircraft
 flies anywhere in the archipelago; every other drone still answers the
 leash. Its chip carries a ◎.
 
+## The weather, and what it costs you
+
+The sky is a **pure function of the seed and the tick** (`shared/weather.js`)
+and is stored nowhere: the same war has the same sky on every screen and in
+every replay, and the state hash never carries a byte of it. A day is thirty
+minutes at 1x, weather fronts run about every twenty minutes under a slower
+swing, and each war has its own prevailing wind that turns slowly and never
+spins.
+
+Almost all of it is scenery, and scenery is High-tier only. **One thing is
+real**: heavy weather is sea clutter and rain in the beam, so it shortens the
+radar picture. Every set in the war -- yours, the AI's, an island's -- loses
+the same fraction, floored at `radarStormPermil` (700: a set keeps 70% of its
+reach in the worst storm on the map). It shortens the picture; it never
+blinds you, because a blind carrier is not a harder game, it is a stopped
+one.
+
+What that does to a war is worth knowing before you sail into one. A storm
+pulls both fleets closer before either can shoot, so a squall turns a
+standoff into a knife fight. In the battery it converted seed 777001 from a
+192,000-tick attrition grind won on island count into a 26,000-tick war
+decided by sinking, and cut that seed's worst quiet spell from 30,689 ticks
+to 8,769. Weather is a reason to move.
+
 ## Island runways
 
 Resource and Defence islands can build a **runway** (`build_on_island` kind

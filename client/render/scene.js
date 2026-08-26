@@ -7,6 +7,8 @@
 
 import * as THREE from 'three';
 import { Sky } from '../vendor/Sky.js';
+import { skyStateOf, sunDirection } from './skystate.js';
+import { buildClouds, buildSwell, updateClouds, updateSwell } from './weathersky.js';
 import { forwardFromHeading, headingToYaw, toMetres } from './coords.js';
 import {
   NEUTRAL_NODE_COLOUR,
@@ -100,10 +102,12 @@ function addPhysicalSky(view3d) {
   view3d.scene.environment = view3d.envTarget.texture;
   // add() reparents the dome out of the throwaway PMREM scene.
   view3d.scene.add(sky);
+  view3d.skyDome = sky;
 }
 
 function createLights(scene, preset, sizeMetres, style) {
-  scene.add(new THREE.HemisphereLight(0xbcd8f0, 0x35506a, style.hemiIntensity));
+  const hemi = new THREE.HemisphereLight(0xbcd8f0, 0x35506a, style.hemiIntensity);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff2df, style.sunIntensity);
   // Aim the sun at the middle of the map, not at the scene origin: the origin
   // is the map's south-west CORNER, so a default-target sun lights the sea and
@@ -132,7 +136,7 @@ function createLights(scene, preset, sizeMetres, style) {
   fill.position.set(-sizeMetres * 0.4, sizeMetres * 0.3, sizeMetres * 0.6);
   fill.target = centre;
   scene.add(fill);
-  return sun;
+  return { sun: sun, hemi: hemi };
 }
 
 function createScene(canvas, preset, sizeMetres, style) {
@@ -151,7 +155,7 @@ function createScene(canvas, preset, sizeMetres, style) {
   );
 
   const renderer = createRenderer(canvas, preset, style);
-  createLights(scene, preset, sizeMetres, style);
+  const lights = createLights(scene, preset, sizeMetres, style);
 
   // The fog exists by here, which buildMirrorOcean depends on (lesson 2).
   const ocean = wantsMirrorWater(preset, style)
@@ -184,10 +188,29 @@ function createScene(canvas, preset, sizeMetres, style) {
     marker: null,
     elapsed: 0,
     envTarget: null,
+    // The weather's handles (owner's ask, 2026-08-26). All null on tiers
+    // that do not have a physical sky, and applyWeather returns early there.
+    sizeMetres: sizeMetres,
+    sun: lights.sun,
+    hemi: lights.hemi,
+    skyDome: null,
+    clouds: null,
+    swell: null,
+    sunDir: new THREE.Vector3(0.4, 0.6, 0.35).normalize(),
+    envSunDir: new THREE.Vector3(0, -1, 0),
+    fogDensityBase: fogDensity,
     raycaster: new THREE.Raycaster(),
     seaPlane: new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
   };
-  if (wantsPhysicalSky(preset, style)) addPhysicalSky(view3d);
+  if (wantsPhysicalSky(preset, style)) {
+    addPhysicalSky(view3d);
+    // Weather scenery rides with the physical sky, on the same gate: it is
+    // the High-tier, modern-look pass and nothing else ever sees it.
+    view3d.clouds = buildClouds(sizeMetres);
+    scene.add(view3d.clouds);
+    view3d.swell = buildSwell(preset);
+    scene.add(view3d.swell);
+  }
   return view3d;
 }
 
@@ -494,6 +517,8 @@ function syncMarker(view3d, view) {
 
 function renderView(view3d, view, deltaSeconds, podBuildTicks) {
   view3d.elapsed += deltaSeconds;
+  // The sky first: everything else is lit by whatever it decides.
+  applyWeather(view3d, view, deltaSeconds);
   syncIslands(view3d, view);
   syncNodes(view3d, view, podBuildTicks);
   syncCarriers(view3d, view);
@@ -508,7 +533,125 @@ function renderView(view3d, view, deltaSeconds, podBuildTicks) {
     if (uniforms.uTime !== undefined) uniforms.uTime.value = view3d.elapsed;
     if (uniforms.time !== undefined) uniforms.time.value = view3d.elapsed;
   }
+  syncSea(view3d, view);
   view3d.renderer.render(view3d.scene, view3d.camera);
+}
+
+// How far the sun may move before the sky is worth baking again. PMREM is
+// expensive (docs/07 lesson 4) and the environment map is a low-frequency
+// thing - a couple of degrees of sun makes no visible difference to it, and
+// baking every frame costs more than the whole rest of the scene.
+const ENV_REBAKE_COSINE = 0.9995;
+
+// One frame of weather (owner's ask, 2026-08-26). The war says what the sky
+// is; this puts it on the screen. High tier and a physical-sky style only -
+// everywhere else the sun stays where it always was, because a fixed sun is
+// exactly what those tiers were tuned around.
+function applyWeather(view3d, view, deltaSeconds) {
+  const weather = view === undefined ? undefined : view.weather;
+  if (weather === undefined) return;
+  if (!wantsPhysicalSky(view3d.preset, view3d.style)) return;
+
+  const sky = skyStateOf(weather);
+  sunDirection(weather, view3d.sunDir);
+
+  // The light itself.
+  if (view3d.sun !== undefined && view3d.sun !== null) {
+    const reach = view3d.sizeMetres * 0.9;
+    view3d.sun.position.set(
+      view3d.sizeMetres / 2 + view3d.sunDir.x * reach,
+      Math.max(view3d.sizeMetres * 0.05, view3d.sunDir.y * reach),
+      -view3d.sizeMetres / 2 + view3d.sunDir.z * reach,
+    );
+    view3d.sun.color.copy(sky.lightColour);
+    view3d.sun.intensity = sky.sunIntensity;
+  }
+  if (view3d.hemi !== undefined && view3d.hemi !== null) {
+    view3d.hemi.intensity = sky.hemiIntensity;
+  }
+  view3d.renderer.toneMappingExposure = sky.exposure;
+  if (view3d.scene.fog !== null && view3d.scene.fog !== undefined) {
+    view3d.scene.fog.color.copy(sky.fogColour);
+    if (view3d.scene.fog.density !== undefined) {
+      view3d.scene.fog.density = view3d.fogDensityBase / Math.max(0.2, sky.fogFar);
+    }
+  }
+
+  // The dome, and the image-based light baked from it.
+  if (view3d.skyDome !== null && view3d.skyDome !== undefined) {
+    const uniforms = view3d.skyDome.material.uniforms;
+    uniforms.sunPosition.value.copy(view3d.sunDir);
+    uniforms.turbidity.value = sky.turbidity;
+    if (view3d.sunDir.dot(view3d.envSunDir) < ENV_REBAKE_COSINE) {
+      view3d.envSunDir.copy(view3d.sunDir);
+      rebakeEnvironment(view3d);
+    }
+  }
+  if (view3d.clouds !== null && view3d.clouds !== undefined) {
+    updateClouds(view3d, weather, sky, deltaSeconds);
+  }
+}
+
+// Re-bake the sky into an environment map. Behind the dirty flag above, and
+// it disposes the target it replaces - two of these a second with no dispose
+// is how a scene runs out of texture memory in a long war.
+function rebakeEnvironment(view3d) {
+  const pmrem = new THREE.PMREMGenerator(view3d.renderer);
+  const skyScene = new THREE.Scene();
+  const dome = view3d.skyDome;
+  const parent = dome.parent;
+  skyScene.add(dome);
+  const target = pmrem.fromScene(skyScene);
+  pmrem.dispose();
+  if (view3d.envTarget !== null) view3d.envTarget.dispose();
+  view3d.envTarget = target;
+  view3d.scene.environment = target.texture;
+  if (parent !== null && parent !== undefined) parent.add(dome);
+  else view3d.scene.add(dome);
+}
+
+// The colour a sea goes when the weather has its way with it: a cold
+// grey-blue, deliberately darker than any style's fair-weather ocean.
+const STORM_SEA = new THREE.Color(0x1b2530);
+
+// The sea, as the weather leaves it. The mirror water's ripples grow and
+// steepen with the wind; our own shader sea gets the same treatment through
+// its own uniforms; and the near-field swell patch rides under the eye.
+function syncSea(view3d, view) {
+  const weather = view === undefined ? undefined : view.weather;
+  if (weather === undefined) return;
+  const uniforms = view3d.ocean.material.uniforms;
+  if (uniforms !== undefined && uniforms.distortionScale !== undefined) {
+    // The vendored mirror water. `size` is the ripple scale and
+    // `distortionScale` how hard they bend the reflection - a calm sea is
+    // large and lazy, a gale is small and violent.
+    const wind = weather.windPermil / 1000;
+    uniforms.size.value = 3 + wind * 9;
+    uniforms.distortionScale.value = 1.8 + wind * 5.5;
+    if (uniforms.sunDirection !== undefined) {
+      uniforms.sunDirection.value.copy(view3d.sunDir);
+    }
+    // The sea takes its colour from the sky above it. Without this the water
+    // kept its fair-weather blue and its white sun glitter through a squall,
+    // and a storm at dawn came out brown: the sea was the brightest, warmest
+    // thing in the frame, which is the one thing a storm sea is not.
+    const sky = skyStateOf(weather);
+    if (uniforms.waterColor !== undefined) {
+      uniforms.waterColor.value.set(view3d.style.oceanColour);
+      uniforms.waterColor.value.lerp(STORM_SEA, sky.storm * 0.75 + sky.cloud * 0.2);
+      uniforms.waterColor.value.multiplyScalar(0.35 + 0.65 * sky.day);
+    }
+    if (uniforms.sunColor !== undefined) {
+      uniforms.sunColor.value.copy(sky.lightColour);
+      uniforms.sunColor.value.multiplyScalar(1 - sky.storm * 0.6);
+    }
+  }
+  if (uniforms !== undefined && uniforms.uSunDir !== undefined) {
+    uniforms.uSunDir.value.copy(view3d.sunDir);
+  }
+  if (view3d.swell !== null && view3d.swell !== undefined) {
+    updateSwell(view3d, weather, skyStateOf(weather));
+  }
 }
 
 // A NEW war on the same page: same renderer, same camera, fresh world. The
