@@ -39,18 +39,31 @@ const MOODS = [
   ['overcast', (w) => w.cloudPermil > 600 && w.stormPermil < 200 && w.sunHeightPermil > 300],
   ['storm', (w) => w.stormPermil > 700 && w.sunHeightPermil > 200],
   ['night', (w) => w.sunHeightPermil < -150],
+  // The stroke itself. Lightning lasts seven ticks, so this is the one mood
+  // that has to be caught rather than found - hence the tick-by-tick scan
+  // below rather than the every-60 stride.
+  ['lightning', (w) => w.flashPermil > 700],
 ];
 
 const problems = [];
 const found = [];
 for (const [name, test] of MOODS) {
   let at = -1;
-  for (let tick = 0; tick < 400000; tick += 60) {
+  const stride = name === 'lightning' ? 1 : 60;
+  for (let tick = 0; tick < 400000; tick += stride) {
     if (test(weatherAt(SEED, tick))) { at = tick; break; }
   }
   if (at === -1) problems.push(`no ${name} in 400,000 ticks of seed ${SEED}`);
   else found.push([name, at]);
 }
+// The control for the lightning check: the tick BEFORE the stroke. Every
+// other field of the weather is identical there - same storm, same cloud,
+// same wind, same sun - so any difference in the scope is the stroke and
+// nothing else. Comparing the strike against a different mood would pass
+// whether or not the clutter drew at all, which is worse than no test.
+const struck = found.find(([name]) => name === 'lightning');
+if (struck !== undefined) found.push(['nostroke', struck[1] - 1]);
+
 console.log(`moods: ${found.map(([n, t]) => `${n}@${t}`).join(' ')}`);
 
 const app = createApp({ seed: SEED, rules: loadRules() });
@@ -109,6 +122,10 @@ for (const [name, tick] of found) {
     + ` | sky ${sky.r},${sky.g},${sky.b} | sea ${sea.r},${sea.g},${sea.b}`,
   );
 
+  // The scope box, for the lightning check below. It sits in the instrument
+  // panel along the bottom of the screen.
+  shot[name].scope = await page.evaluate(BAND_READER, [0.76, 0.96]);
+
   // And the pull-back, where there is sky in frame rather than a horizon.
   await page.keyboard.press('c');
   await page.keyboard.press('c');
@@ -157,6 +174,20 @@ if (shot.overcast !== undefined && shot.noon !== undefined) {
   check(lum(shot.overcast.sky) < lum(shot.noon.sky),
     'an overcast sky is as bright as a clear one');
 }
+if (shot.lightning !== undefined && shot.nostroke !== undefined) {
+  check(shot.lightning.w.flashPermil > 700,
+    'the lightning mood was photographed without a stroke in it');
+  check(shot.nostroke.w.flashPermil === 0,
+    'the control tick has a stroke in it too - pick another');
+  // Same storm, same cloud, same wind, same sun: the stroke is the only
+  // difference, so the scope must be BRIGHTER with it than without.
+  const lit = lum(shot.lightning.scope);
+  const dark = lum(shot.nostroke.scope);
+  check(lit > dark,
+    `the scope reads ${lit} with a strike and ${dark} without`
+    + ' - the clutter is not reaching the instrument');
+}
+
 // Five distinct pictures, not one picture five times: this is the assertion
 // that would catch the whole weather path being switched off.
 const seen = {};
@@ -171,5 +202,5 @@ if (problems.length > 0) {
   console.log('FAIL: the weather is not reaching the picture');
   process.exitCode = 1;
 } else {
-  console.log('five skies photographed and measured');
+  console.log(`${found.length} skies photographed and measured`);
 }

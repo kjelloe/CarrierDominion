@@ -165,6 +165,54 @@ function drawHeadingMark(ctx, cx, cy, radius, headingBam, colours) {
 // can detect. Zooming out never reveals more than the fog allows, because the
 // view it is drawing has already been filtered: a wider scope shows more empty
 // sea and more of the chart, and exactly as many contacts.
+
+// A strike blooms the scope (ruled 2026-08-26, Q3b). Lightning throws a wall
+// of return into the set for a fraction of a second, and the player learns to
+// read past it.
+//
+// Two rules keep it honest. It is drawn UNDER everything real - islands,
+// ghosts, course, contacts all paint over it - so a strike can never hide a
+// blip the player was entitled to see. And it is derived from (seed, tick),
+// which every seat in the war already agrees on, so two players in one storm
+// see the same clutter and nobody is being shown private noise.
+function clutterHash(seed, n) {
+  let h = (seed * 374761393 + n * 668265263) % 2147483647;
+  if (h < 0) h += 2147483647;
+  h = (h ^ Math.floor(h / 8192)) % 2147483647;
+  return (h * 1274126177) % 2147483647;
+}
+
+function drawStormClutter(ctx, view, cx, cy, radius, colours) {
+  const weather = view === undefined ? undefined : view.weather;
+  if (weather === undefined) return;
+  const flash = weather.flashPermil;
+  if (flash <= 0) return;
+
+  // The bloom is brightest on the first tick of the stroke and gone by the
+  // last, which is the same curve the sky uses.
+  const strength = flash / 1000;
+  const arcs = 5 + Math.round(strength * 7);
+  const seed = view.seed === undefined ? 0 : view.seed;
+  // One slot per stroke rather than per tick: the clutter must SIT there and
+  // fade, not re-scatter every frame like television snow.
+  const slot = Math.floor(view.tick / 8);
+
+  ctx.save();
+  ctx.globalAlpha = 0.10 + strength * 0.30;
+  ctx.strokeStyle = colours.grid;
+  for (let i = 0; i < arcs; i++) {
+    const h = clutterHash(seed + i * 7919, slot);
+    const bearing = ((h % 65536) / 65536) * TAU;
+    const distance = (0.18 + ((Math.floor(h / 65536) % 1000) / 1000) * 0.78) * radius;
+    const spread = 0.10 + ((Math.floor(h / 131072) % 400) / 1000);
+    ctx.lineWidth = 1 + strength * 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, distance, bearing - spread, bearing + spread);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawRadar(ctx, view, own, box, seconds, colours, range) {
   const cx = box.x + box.size / 2;
   const cy = box.y + box.size / 2;
@@ -178,6 +226,8 @@ function drawRadar(ctx, view, own, box, seconds, colours, range) {
   ctx.fill();
   ctx.clip();
   drawSweep(ctx, cx, cy, radius, seconds, colours);
+  // Under everything real, deliberately.
+  drawStormClutter(ctx, view, cx, cy, radius, colours);
   drawIslands(ctx, view, own, cx, cy, radius, scale, colours);
   drawGhosts(ctx, view, own, cx, cy, radius, scale, colours);
   drawCourse(ctx, own, cx, cy, radius, scale, colours);
@@ -188,8 +238,12 @@ function drawRadar(ctx, view, own, box, seconds, colours, range) {
   drawHeadingMark(ctx, cx, cy, radius, own.heading, colours);
   // A ring the ship cannot see past, drawn only when the scope is set wider
   // than the radar: past it the scope is a chart, not a sensor.
-  if (own.radar > 0 && own.radar < range) {
-    ring(ctx, cx, cy, own.radar * scale, colours.grid, 1);
+  // The ring is what this set reaches NOW, weather and all - `radarNow` when
+  // the view carries it, the fair-weather figure otherwise. Drawing the fair
+  // figure in a storm would draw a promise the set cannot keep.
+  const reach = own.radarNow !== undefined && own.radarNow >= 0 ? own.radarNow : own.radar;
+  if (reach > 0 && reach < range) {
+    ring(ctx, cx, cy, reach * scale, colours.grid, 1);
   }
   return { cx: cx, cy: cy, radius: radius, rangeUnits: range };
 }
