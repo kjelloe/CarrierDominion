@@ -41,3 +41,8 @@ __pycache__/
 
 # archives never belong in the repo
 **/*.zip
+
+# Reviews from the architect ally, written into the checkout by the review
+# tool. Owner-local like dev-questions.md: the findings become rulings and
+# dev-log entries, the raw report stays out of the history.
+reviews/
