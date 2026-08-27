@@ -11,7 +11,7 @@ name is what somebody reads at 2 a.m. when it goes red.
 npm test      the unit and integration suite (five hundred-odd tests), node --test
 npm run smoke a real Chromium boots the client and plays a little
 npm run gate  both, in that order
-npm run probes every probe in debugging/probes, one after another (~13 min)
+npm run probes every probe in debugging/probes, one after another (~50-85 min)
 ```
 
 Nothing lands unless the gate is green. The one thing to know about the order:
@@ -129,6 +129,14 @@ is **not** there to make the sweep look green: every probe that only passes on
 the second attempt is listed by name under a FLAKY heading at the end, every
 run, because flakiness is a defect to fix rather than a pass to bank. The exit
 code counts only probes that failed **twice**.
+
+**The sweep is not a quick check any more.** It was ~13 minutes when it was
+28 probes; a measured full run on 2026-08-27 took 5,128 seconds. `weather` is
+the heaviest single probe by a wide margin - seven page loads of the High
+tier, which is exactly the software-rasterised path that makes everything
+slow - and it sorts last, so it runs when the machine is at its most loaded.
+Use `npm run probes -- <name>` while working and keep the full sweep for
+before a hand-over.
 
 Run a probe at the cheapest graphics tier that still tests what it is for.
 `second_war` ran at `graphics=medium`, which headless Chromium rasterises in

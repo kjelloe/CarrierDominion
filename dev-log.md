@@ -7,6 +7,9 @@ golden hash and why.
 
 ## 2026-08-27 — The sweep retries once, and says so
 
+*(Then the first full run with the retry in place found one more thing, which
+is recorded at the end of this entry.)*
+
 Owner's ruling, after the flakiness above: `npm run probes` retries a failed
 probe once and reports `ok (2nd try - FLAKY)`.
 
@@ -21,6 +24,26 @@ look like three broken features.
 Verified with two throwaway probes: one that fails then passes, one that
 always fails. The first is reported flaky and named; the second fails twice
 and sets the exit code.
+
+**And then the first full run with it caught a probe the retry could not
+save: my own.** `weather` failed TWICE - a page load timing out at 30
+seconds. It passes perfectly alone, and it is the heaviest probe in the suite
+by a wide margin: seven loads of the High tier, the one path headless
+Chromium rasterises in software. It also sorts last, so it runs when the
+machine is most loaded, and the retry ran immediately afterwards with the box
+still busy.
+
+That is the honest limit of a retry: it fixes contention that has passed, not
+a probe that is simply too heavy. The fix is the probe. It now navigates ONE
+page seven times instead of opening seven, and waits 90 seconds rather than
+20 for the first tick - which is precisely what `graphics_shots.mjs` already
+did, with a comment saying why ("Patience, not a lighter scene"). I wrote a
+High-tier probe without the patience this repo had already learned High-tier
+probes need.
+
+One number worth recording while it is fresh: **a full sweep is now 5,128
+seconds**, not the ~13 minutes docs/05 claimed. Use `npm run probes -- <name>`
+while working; keep the full sweep for a hand-over.
 
 ---
 

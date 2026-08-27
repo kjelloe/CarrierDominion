@@ -90,21 +90,33 @@ const BAND_READER = ([top, bottom]) => {
   return { r: Math.round(r / n), g: Math.round(g / n), b: Math.round(b / n) };
 };
 
+// ONE page, navigated seven times, rather than seven pages. This probe is
+// the heaviest in the suite - seven loads of the High tier, which headless
+// Chromium rasterises in software - and it sorts last, so it runs when the
+// machine is at its most loaded. Seven browser contexts on top of that was
+// the difference between passing alone and timing out in a full sweep.
 const shot = {};
-for (const [name, tick] of found) {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-  page.on('pageerror', (error) => problems.push(`[${name}] PAGEERROR ${error.message}`));
-  page.on('console', (message) => {
-    if (message.type() === 'error') problems.push(`[${name}] CONSOLE ${message.text()}`);
-  });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+let mood = '';
+page.on('pageerror', (error) => problems.push(`[${mood}] PAGEERROR ${error.message}`));
+page.on('console', (message) => {
+  if (message.type() === 'error') problems.push(`[${mood}] CONSOLE ${message.text()}`);
+});
 
+for (const [name, tick] of found) {
+  mood = name;
   await page.goto(
     `http://127.0.0.1:${address.port}/?mode=solo&style=modern&graphics=high&weather=${tick}`,
     { waitUntil: 'load' },
   );
+  // Patience, not a lighter scene - the same lesson graphics_shots.mjs
+  // records. What a 4070 does per frame, SwiftShader does per breakfast, and
+  // a 20-second wait here was a probe that passed alone and failed in a
+  // sweep, which is the worst of both.
   await page.waitForFunction(
     () => Number(document.getElementById('hud-tick')?.textContent) > 5,
-    { timeout: 20000 },
+    undefined,
+    { timeout: 90000 },
   );
   // Let the swell settle and the environment map bake at the new sun.
   await page.waitForTimeout(1800);
@@ -131,8 +143,8 @@ for (const [name, tick] of found) {
   await page.keyboard.press('c');
   await page.waitForTimeout(900);
   await page.screenshot({ path: join(SHOTS, `weather-${name}-wide.png`) });
-  await page.close();
 }
+await page.close();
 
 await browser.close();
 await app.close();

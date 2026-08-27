@@ -266,6 +266,14 @@ Look for these shapes first — every one produced a real bug:
   EMPTY PLAYER SEAT (`aiTeams: [1]`). "Team 0 dies without scratching team
   1" is a stationary unmanned ship, not an AI defect. Half a session went
   into that reading before the seat was checked.
+- **A heavy probe is a flaky probe, and a retry will not save it.** The
+  weather probe loaded SEVEN High-tier pages and waited 20 s for the first
+  tick. It passed alone every time and failed twice in a full sweep, because
+  it sorts last and High is the software-rasterised path. `graphics_shots`
+  had already learned this and waits 90 s with a comment saying why
+  ("Patience, not a lighter scene") - the lesson existed and the new probe
+  did not inherit it. Reuse ONE page rather than opening N, and give any
+  High-tier wait the patience the existing High-tier probe uses.
 - **A headless browser doing software rendering is not a clock.** A probe
   reported the LAN room taking 4-16 seconds to reopen and it was written up
   as a UX defect - twice, the second time with three timings behind it. The
