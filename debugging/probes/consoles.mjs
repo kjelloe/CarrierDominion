@@ -11,7 +11,7 @@
 //
 //   node debugging/probes/consoles.mjs
 
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -106,6 +106,64 @@ if (!ok) {
   process.exitCode = 1;
 }
 
+
+// --- the controls audit (playtest 2026-08-28, item 4) ------------------------
+//
+// "Verify that all actions that have a keyboard key assigned also exist as a
+// clickable entity on screen." Four did not: Y put the decoy screen out, O
+// looked astern, ] worked the scope and , / . proposed a clock - all
+// keyboard-only, so a player who never opened the key list could not reach
+// them. Y was the worst: a whole ruled feature whose button label had been
+// sitting unused in both language files.
+//
+// The key list is read from the SOURCE rather than from a hook in the client,
+// so it cannot drift: add a key to the handler and this notices on the next
+// run whether you gave it a button.
+const KEYS_WITHOUT_BUTTONS = {
+  w: 'the throttle scale on the helm IS the control - click it',
+  s: 'the throttle scale on the helm IS the control',
+  a: 'the rudder buttons on the helm',
+  d: 'the rudder buttons on the helm',
+  arrowleft: 'the rudder buttons',
+  arrowright: 'the rudder buttons',
+  arrowup: 'the CLIMB button, and right-drag',
+  arrowdown: 'the DIVE button, and right-drag',
+  '[': 'SCOPE steps out and wraps round; one button covers the ring',
+  v: 'the weapon selector is the row of buttons V cycles',
+  h: 'the ? button',
+  i: 'the SIGNALS tab on the console bar',
+  q: 'the STORES tab',
+  j: 'the SQUADRON tab',
+  z: 'the DAMAGE tab',
+  escape: 'surrender is deliberately keyboard-only, and deliberately twice',
+  tab: 'chat opens on its own in a LAN game',
+  g: 'the graphics tier is a setting, not a war action',
+  ' ': 'the PAUSE button',
+  c: 'the camera tabs',
+  t: 'the PILOT button',
+  1: 'the MANTA button', 2: 'the WALRUS button', 3: 'the EYE button',
+};
+
+const source = readFileSync(join(HERE, '..', '..', 'client', 'main.js'), 'utf8');
+const answered = [];
+for (const match of source.matchAll(/key === '([^']+)'/g)) {
+  if (!answered.includes(match[1])) answered.push(match[1]);
+}
+const clickable = await page.$$eval('.act .k, .console-tab .k, .cam-tab',
+  (nodes) => nodes.map((n) => n.textContent.trim().toLowerCase()));
+const unreachable = [];
+for (const key of answered) {
+  if (clickable.includes(key)) continue;
+  if (KEYS_WITHOUT_BUTTONS[key] !== undefined) continue;
+  unreachable.push(key);
+}
+console.log(`controls: ${answered.length} keys answered, ${clickable.length} clickable captions`);
+if (unreachable.length > 0) {
+  console.log(`FAIL: keys a mouse cannot reach: ${unreachable.map((k) => `"${k}"`).join(' ')}`);
+  process.exitCode = 1;
+}
+
 await browser.close();
 await app.close();
 console.log('gunnery, resources and the screen photographed');
+

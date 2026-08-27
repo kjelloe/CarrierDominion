@@ -752,6 +752,9 @@ function showConsole(name) {
   shell.classList.add('open');
   shell.classList.toggle('chart', name === 'chart');
   renderConsoleTabs();
+  // PROG's label names whose course it will lay, so it has to follow the
+  // selection rather than only chart clicks. Cheap: it writes only on change.
+  if (state.updateChartButtons !== undefined) state.updateChartButtons();
 }
 
 function showConsoleNone() {
@@ -876,11 +879,19 @@ function attachTip(element, text) {
 // on the right, one button per key in the legend. A button DISPATCHES its
 // key, so the two input paths cannot drift - whatever H does, the button
 // labelled H does, forever.
+// Every key that DOES something must also be a thing you can click (playtest
+// 2026-08-28). Four were keyboard-only: Y put the decoy screen out - a whole
+// ruled feature whose label had been sitting unused in both language files -
+// O looked astern, [ and ] worked the scope, and , and . proposed a clock.
+// A player who never reads the key list could not reach any of them.
 const ACTIONS_LEFT = [
   ['x', 'act.stop', 'tip.stop'], ['e', 'act.flares', 'tip.flares'],
+  ['y', 'act.decoys', 'tip.decoys'],
   ['l', 'act.supply', 'tip.supply'], ['k', 'act.depot', 'tip.depot'],
   ['q', 'act.stores', 'tip.stores'], ['j', 'act.squadron', 'tip.squadron'],
   ['z', 'act.damage', 'tip.damage'], ['c', 'act.camera', 'tip.camera'],
+  ['o', 'act.rear', 'tip.rear'], [']', 'act.scope', 'tip.scope'],
+  [',', 'act.slower', 'tip.slower'], ['.', 'act.faster', 'tip.faster'],
   ['m', 'act.sound', 'tip.sound'],
 ];
 const ACTIONS_RIGHT = [
@@ -1007,6 +1018,7 @@ function updateActionButtons() {
   const enabled = {
     x: alive, e: alive, l: alive, k: alive, q: alive, z: alive,
     y: alive,
+    o: true, ']': true, ',': true, '.': true,
     c: true, m: true,
     1: alive && stowed(KIND_MANTA),
     2: alive && stowed(KIND_WALRUS),
@@ -1180,6 +1192,55 @@ function bindInput(level) {
     }
   });
   window.addEventListener('blur', () => sendRudder(0));
+
+  // The stick, for a hand that is already on the mouse (playtest 2026-08-28).
+  // Hold the RIGHT button over the view while piloting and drag: up noses
+  // down, down pulls up, exactly like the arrow keys it mirrors, and letting
+  // go levels off the way releasing the key does. The arrows and the
+  // CLIMB/DIVE buttons are unchanged - this is a third way to the same
+  // command, for the hand that is already steering.
+  //
+  // Only for a craft that HAS a vertical axis. A Walrus has no stick, and a
+  // drag that silently does nothing is worse than no drag at all.
+  const stick = { held: false, fromY: 0 };
+  const STICK_DEADZONE = 18;
+
+  function stickCraft() {
+    if (!state.piloting) return undefined;
+    const unit = selectedUnit();
+    if (unit === undefined || unit.kind !== KIND_MANTA) return undefined;
+    return unit;
+  }
+
+  document.getElementById('view').addEventListener('contextmenu', (event) => {
+    // Right-dragging the sky must not raise the browser's menu on top of it.
+    if (state.piloting) event.preventDefault();
+  });
+
+  window.addEventListener('pointerdown', (event) => {
+    if (event.button !== 2 || event.target !== document.getElementById('view')) return;
+    if (stickCraft() === undefined) return;
+    event.preventDefault();
+    stick.held = true;
+    stick.fromY = event.clientY;
+  });
+
+  window.addEventListener('pointermove', (event) => {
+    if (!stick.held) return;
+    const moved = event.clientY - stick.fromY;
+    if (moved < -STICK_DEADZONE) sendClimb(1);
+    else if (moved > STICK_DEADZONE) sendClimb(-1);
+    else sendClimb(0);
+  });
+
+  const releaseStick = () => {
+    if (!stick.held) return;
+    stick.held = false;
+    sendClimb(0);
+  };
+  window.addEventListener('pointerup', releaseStick);
+  window.addEventListener('pointercancel', releaseStick);
+  window.addEventListener('blur', releaseStick);
 
   // Click an enemy to attack it, the empty sea to move there. The click is
   // resolved to a point on the water first; whether anything hostile is
@@ -1510,6 +1571,10 @@ function frame(nowMs) {
   renderStoresPanel(state.stores);
   renderSquadronPanel(state.squadron);
   renderSignals();
+  // The console's tab bar is always on screen now (playtest 2026-08-28), so
+  // it is kept current every frame rather than only when the console opens.
+  // It rebuilds only when something it shows has actually changed.
+  renderConsoleTabs();
   updateLocation();
   updateAlwaysOn();
   renderChart(state.chart, state.view, ownTeamColour());
@@ -2017,8 +2082,24 @@ async function main() {
     updateChartButtons();
   });
   attachTip(layBtn, state.t('tip.lay'));
+  // PROG says WHOSE course it is laying (playtest 2026-08-28). The button
+  // routes to the selected craft if there is one and to the ship otherwise,
+  // which is right - but it never said so, so a player with nothing selected
+  // laid four waypoints, watched the carrier take them, and reasonably
+  // concluded that plotting a course for a Manta did not work. The subject
+  // is now on the button itself, where the decision is made.
+  function progSubject() {
+    const unit = selectedUnit();
+    if (unit === undefined) return state.t('chart.ship');
+    const letter = ['M', 'W', 'L', 'D', 'Y', 'I'][unit.kind] ?? '?';
+    return `${letter}${unit.id}`;
+  }
+
   function updateChartButtons() {
     layBtn.classList.toggle('off', state.chart.legs.length === 0);
+    const who = progSubject();
+    const wanted = state.t('chart.progFor', { who: who });
+    if (progBtn.textContent !== wanted) progBtn.textContent = wanted;
   }
   state.updateChartButtons = updateChartButtons;
   updateChartButtons();

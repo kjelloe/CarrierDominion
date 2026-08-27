@@ -50,11 +50,23 @@
     #toast.on { opacity: 1; }
     /* The 1988 icon columns: every action in the key list, clickable, with
        the key it mirrors printed on the button - the UI teaches the keyboard. */
+    /* The action columns WRAP (playtest 2026-08-28). The right-hand column
+       held 622px of buttons in 448px of screen and simply cut the last three
+       off the bottom - FIRE, POD and VIRUS, which is to say the most
+       important button in the game was below the fold and the player could
+       not find it. Hiding the asleep ones was not available: the 2026-08-24
+       ruling says a button whose moment has not come stays visible at a
+       third opacity, and that ruling is right - it is how you learn what the
+       ship can do. So the column becomes two columns when it is full.
+       `right: 10px` anchors the right-hand one, so its second column grows
+       inward, away from the screen edge. */
     .actions {
       position: fixed; top: 56px; bottom: 216px; z-index: 7;
-      display: flex; flex-direction: column; gap: 6px;
+      display: flex; flex-direction: column; flex-wrap: wrap; gap: 6px;
+      align-content: flex-start;
       user-select: none;
     }
+    #actions-right.actions { align-content: flex-end; }
     /* Centered by auto margins, NOT justify-content: center - a centered
        flex column that overflows its box overflows in BOTH directions and
        scroll cannot reach the top (a landscape phone found this: the launch
@@ -80,10 +92,21 @@
     /* The camera tabs (playtest ruling 2026-08-24): the original's interface
        always SAID which console you were at. Three clickable tabs, top
        centre, the lit one is where you are; C still cycles. */
-    #camera-tabs {
-      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 2px; z-index: 8; user-select: none;
+    /* Playtest 2026-08-28: BOTH bars live along the top now. The console's
+       tabs sit on the left, where the eye starts, and the camera tabs move
+       off centre to sit beside them. Before this the console's tabs only
+       existed once the console was already open, which meant the six screens
+       behind them were invisible until you knew a key that opened one. */
+    /* Both bars are laid out by ONE flex row rather than by two hardcoded
+       offsets. The first attempt pinned the camera tabs at a fixed left
+       margin and they overlapped the console's tabs by 75px - and would have
+       overlapped worse in Norwegian, where every label is longer. */
+    #top-bar {
+      position: fixed; top: 10px; left: 76px; z-index: 13;
+      display: flex; gap: 18px; align-items: flex-start; user-select: none;
+      flex-wrap: wrap; max-width: calc(100vw - 200px);
     }
+    #camera-tabs { display: flex; gap: 2px; }
     .cam-tab {
       padding: 5px 16px; cursor: pointer; text-align: center;
       border: 1px solid var(--hud-dim); background: var(--hud-panel);
@@ -159,8 +182,9 @@
       /* z-index 8 puts the console with the rest of the HUD chrome and,
          crucially, BELOW the ending screen at 9. At 12 an open console
          floated over the war-over result, which is the one screen nothing
-         may cover. */
-      position: fixed; top: 52px; left: 76px; z-index: 8; display: none;
+         may cover. Its tab strip is a separate fixed bar along the top; this
+         is only the body that opens under it. */
+      position: fixed; top: 40px; left: 76px; z-index: 8; display: none;
       width: 620px; max-width: calc(100vw - 96px);
       max-height: calc(100vh - 250px);
       background: var(--hud-panel); border: 1px solid var(--hud-dim);
@@ -168,14 +192,14 @@
       font: 12px/1.6 var(--hud-font);
     }
     #console.open { display: flex; flex-direction: column; }
-    #console-tabs {
-      display: flex; gap: 4px; flex: 0 0 auto;
-      padding: 8px 10px; border-bottom: 1px solid var(--hud-dim);
-    }
+    /* The strip is FIXED at the top left and always on screen, whether the
+       console is open or shut - it is the menu bar for the six screens, so
+       hiding it inside the thing it opens was backwards. */
+    #console-tabs { display: flex; gap: 2px; }
     .console-tab {
-      padding: 4px 10px; cursor: pointer; user-select: none;
-      border: 1px solid transparent; color: var(--hud-dim);
-      font: 11px/1.4 var(--hud-font); letter-spacing: 2px;
+      padding: 5px 9px; cursor: pointer; user-select: none;
+      border: 1px solid var(--hud-dim); background: var(--hud-panel);
+      color: var(--hud-dim); font: 11px/1.3 var(--hud-font); letter-spacing: 1px;
     }
     .console-tab:hover { color: var(--hud-ink); }
     /* A tab with nothing to show - the island board before an island has been
@@ -216,12 +240,6 @@
        centring: the top-centre column already belongs to the camera tabs
        (HELM / WEAPON / BIRDSEYE / CHART) and centring the strip put it
        straight over them, swallowing their clicks. */
-    #console.chart #console-tabs {
-      pointer-events: auto; position: fixed; top: 52px; left: 76px;
-      z-index: 14; border-bottom: none;
-      background: var(--hud-panel); border: 1px solid var(--hud-dim);
-      border-radius: 6px;
-    }
     #console.chart #console-body { padding: 0; overflow: visible; }
     #console.chart #chart-panel { pointer-events: auto; }
     /* And the chart's own button row drops below the strip. */
@@ -604,7 +622,6 @@
   <div id="tip"></div>
   <div id="actions-left" class="actions"></div>
   <div id="actions-right" class="actions"></div>
-  <div id="camera-tabs"></div>
   <div id="pause-button"></div>
   <div id="auto-chip">A</div>
   <div id="score-strip"></div>
@@ -624,8 +641,14 @@
        The panels keep their ids and their `.open` class - the tab strip sets
        exactly one of them open - so every panel module and every probe reads
        the same as before. -->
-  <div id="console">
+  <!-- One top row, two bars: the console's six screens on the left where
+       the eye starts, the camera tabs beside them. Laid out by flex so a
+       longer label - or a longer language - cannot make them collide. -->
+  <div id="top-bar">
     <div id="console-tabs"></div>
+    <div id="camera-tabs"></div>
+  </div>
+  <div id="console">
     <div id="console-body">
   <div id="squadron-panel">
     <div id="squadron-title"></div>

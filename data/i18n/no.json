@@ -457,5 +457,15 @@
   "console.noIsland": "ingen øy valgt",
   "status.fuelLow": "DRIVSTOFF {percent}% - kall inn lekteren",
   "status.fuelCritical": "DRIVSTOFF {percent}% - bunkeren er nesten tom",
-  "help.console": "J skvadron - Q kvartermester - Z skade - I signaler - ett konsoll med faner"
+  "help.console": "J skvadron - Q kvartermester - Z skade - I signaler - ett konsoll med faner",
+  "act.rear": "AKTER",
+  "tip.rear": "Se aktenfor fra broen.",
+  "act.scope": "SKOP",
+  "tip.scope": "Trapp skopets rekkevidde utover, og rundt igjen.",
+  "act.slower": "SAKTERE",
+  "tip.slower": "Foreslå saktere klokke. På LAN må bordet være enig.",
+  "act.faster": "RASKERE",
+  "tip.faster": "Foreslå raskere klokke. På LAN må bordet være enig.",
+  "chart.progFor": "PROG {who}",
+  "chart.ship": "SKIP"
 }

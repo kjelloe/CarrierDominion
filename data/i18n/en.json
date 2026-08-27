@@ -457,5 +457,15 @@
   "console.noIsland": "no island chosen",
   "status.fuelLow": "FUEL {percent}% - call the lighter",
   "status.fuelCritical": "FUEL {percent}% - the bunker is nearly dry",
-  "help.console": "J squadron - Q quartermaster - Z damage - I signals - one console, tabbed"
+  "help.console": "J squadron - Q quartermaster - Z damage - I signals - one console, tabbed",
+  "act.rear": "REAR",
+  "tip.rear": "Look astern from the bridge.",
+  "act.scope": "SCOPE",
+  "tip.scope": "Step the scope's range out, and round again.",
+  "act.slower": "SLOWER",
+  "tip.slower": "Propose a slower clock. On a LAN the table must agree.",
+  "act.faster": "FASTER",
+  "tip.faster": "Propose a faster clock. On a LAN the table must agree.",
+  "chart.progFor": "PROG {who}",
+  "chart.ship": "SHIP"
 }
