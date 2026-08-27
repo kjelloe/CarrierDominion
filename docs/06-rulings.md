@@ -579,6 +579,68 @@ Three things worth keeping, none of which were the point of any ruling:
   chain was fine and the detector's threshold was five per-mil against
   deliveries of four.
 
+## The architect's review (2026-08-27)
+
+Twelve findings from an outside review, all verified against the code before
+being acted on; none were false. R-001 to R-009 built, R-006 on a ruling.
+
+**A rejected command must change nothing.** `reject()` pushes the rejection
+event and returns the state it was handed - it does not roll anything back -
+so three orders that called `liftOff` before their last check lifted a parked
+Manta off a runway and *then* refused the order. Ordering is the whole fix:
+mutate only after nothing can still say no.
+
+**Route legs are bounded like every other coordinate.** `set_route` was the
+one order that would steer at a point outside the world, because the
+validator has no state and therefore no `sizeUnits`, and nobody had put the
+upper bound in the reducer. The watchdog noticed, once per tick, forever.
+
+**What the guns can reach, the scope must show.** The fog listed unit states
+by number and left out `UNIT_LANDED`, which `unitEngageable` explicitly
+includes - "a runway is a place to refuel, not a sanctuary". The AI reads
+state directly and could shoot enemy aircraft parked on a runway that the
+player was never shown. The filter now asks `unitEngageable` rather than
+repeating a list, so the two cannot drift apart again; the referee sees
+everything that is not in a hangar, which is a wider set on purpose.
+
+**A resumed war keeps its war room.** It was built only when nothing was
+resumed, so with `RESUME=auto` - the service setting - the hosted box had no
+room after any restart, and the table could finish their war but never start
+another. The room now opens in `running` and inherits the options the war was
+actually being played with.
+
+**An engine fault stops the war, not the server** (ruled: seats stay
+connected). The clock pump had no `try/catch`, and `shared/fixed.js` throws on
+purpose, so one arithmetic edge would have killed the process - taking the
+shutdown save with it. It now halts, saves, tells the table and reports on
+`/healthz`. Two things that only appeared once it was measured: the callback
+must refuse on its own account, because `stopClock` does not stop the ticks
+already due (the first version halted four times); and when the STATE is what
+broke, the ordinary save cannot be written at all, so the command log is
+written beside it as `<save>.halted` - not auto-resumable, because an empty
+hash cannot be verified and resume refusing a mismatch is a guard worth
+keeping.
+
+**A commander back late gets their ship back** (owner's ruling). The sweep
+released the hold when the grace window ran out, so the token named nothing
+and a late arrival was handed the lowest free seat - a different carrier,
+their name discarded, the machine still flying theirs. The hold is kept now;
+the AI is a caretaker, not a claimant. A seat it is merely minding still reads
+as free to a NEWCOMER, or a war would leak a carrier every time somebody left
+for good.
+
+Also: the autosave test drives the clock instead of sleeping; the panel
+publishes where it drew the scope so the weather probe stops re-deriving it
+from copied layout constants; and the permission allow-list lost `git push *`,
+`git fetch *`, `sed *`, `node *` and `cd *` - `git push *` permitted pushing
+to `main`, which the working agreement forbids, and `git fetch *` is
+prohibited outright.
+
+**Not done, and why:** R-010 (documentation drift), R-011 (`set_route` is the
+only order that refuses a landed Manta) and R-012 (crypto session tokens, a
+stricter URL parser) were outside the batch asked for. All three are small and
+still open.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

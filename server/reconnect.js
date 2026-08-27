@@ -54,10 +54,15 @@ function reclaim(holder, token) {
     const record = holder.held[i];
     if (record.token !== token) continue;
     holder.held.splice(i, 1);
-    // An expired hold is still honoured if the seat has not been taken by
-    // anybody since: the grace window exists to stop a race, not to punish
-    // somebody whose train went into a tunnel.
-    if (record.untilMs < now && record.aiTaken === 1) return -1;
+    // An expired hold is still honoured. The grace window exists to stop a
+    // race between two people arriving at once, not to punish somebody whose
+    // train went into a tunnel - and the machine that took the wheel while
+    // they were gone is a caretaker, not a claimant (owner's ruling
+    // 2026-08-27: they should get their ship back).
+    //
+    // `aiTaken` is therefore no longer a refusal; it is the flag that tells
+    // the caller to hand the AI's seat back. Only a seat a HUMAN has since
+    // taken is gone, and that human's claim removes the hold outright.
     return record;
   }
   return -1;
@@ -65,12 +70,23 @@ function reclaim(holder, token) {
 
 // Is this seat spoken for? A live seat and a held one both block a newcomer
 // from taking the team, or a reconnecting player would find a stranger in it.
+// Is this seat spoken for, as far as a NEWCOMER is concerned?
+//
+// A hold whose grace window has run out and whose carrier the AI has taken is
+// spoken for only by its absent commander: it still answers to their token
+// (see `reclaim`), but a new arrival may sit down at it, and doing so retires
+// the hold. Without this the seat would be reserved forever for somebody who
+// may never come back, and a war would leak a carrier every time a player
+// left for good (owner's ruling 2026-08-27, review R-006).
 function isHeld(holder, team) {
   for (let i = 0; i < holder.held.length; i++) {
-    if (holder.held[i].team === team) return true;
+    const record = holder.held[i];
+    if (record.team !== team) continue;
+    return record.aiTaken !== 1;
   }
   return false;
 }
+
 
 // Holds whose window has run out and which have not yet been handed over.
 // Returns them; the caller decides what "handed over" means, which here is

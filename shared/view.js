@@ -13,6 +13,7 @@ import { teamHoldings } from '../engine/economy.js';
 import { covered, ghostsFor, sensorReach } from '../engine/contacts.js';
 import { telemetryState } from '../engine/telemetry.js';
 import { payloadGramsOf } from '../engine/payload.js';
+import { UNIT_LOST, UNIT_STOWED, unitEngageable } from '../engine/units.js';
 import { weatherAt } from './weather.js';
 import { deckProgressPermil } from '../engine/deck.js';
 
@@ -404,8 +405,19 @@ function buildView(state, team) {
     const unit = state.units[i];
     if (unit.team === team) {
       units.push(ownUnitView(state, unit));
-    } else if (unit.state === 1 || unit.state === 2) {
-      // A stowed enemy unit is inside a hangar and cannot be seen at all.
+    } else if (unitEngageable(unit) === true) {
+      // WHAT THE ENGINE WILL LET YOU SHOOT, YOU MUST BE ABLE TO SEE. The test
+      // used to be `state === 1 || state === 2`, which quietly left out
+      // UNIT_LANDED - while `unitEngageable` in engine/units.js explicitly
+      // includes it, with a comment saying a Manta parked on a runway "is a
+      // target like any other, a runway is a place to refuel, not a
+      // sanctuary". The AI reads the state directly and could shoot them; the
+      // player could not see them. The fog was handing the machine a
+      // sanctuary the rules deny (review R-003).
+      //
+      // Keying off `unitEngageable` rather than repeating a list of states
+      // means the two can never drift apart again: add a state the guns can
+      // reach and the scope gains it in the same edit.
       if (detectedBy(state, team, unit)) units.push(unitContactView(unit));
     }
   }
@@ -584,8 +596,13 @@ function refereeView(state) {
   }
   const units = [];
   for (let i = 0; i < state.units.length; i++) {
-    if (state.units[i].state === 1 || state.units[i].state === 2) {
-      units.push(ownUnitView(state, state.units[i]));
+    const unit = state.units[i];
+    // The referee sees EVERY hull that is out (docs/03), which is a wider set
+    // than the guns can reach: an aircraft in the recovery envelope is on the
+    // map and an observer should watch it come aboard, even though it cannot
+    // be shot there. Only the hangar and the dead are hidden.
+    if (unit.state !== UNIT_STOWED && unit.state !== UNIT_LOST) {
+      units.push(ownUnitView(state, unit));
     }
   }
   const shots = [];

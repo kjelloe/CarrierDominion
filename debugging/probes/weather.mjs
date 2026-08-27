@@ -108,13 +108,17 @@ const BAND_READER = ([top, bottom]) => {
 const SCOPE_READER = () => {
   const canvas = document.getElementById('panel');
   const ctx = canvas.getContext('2d');
-  // The scope box's geometry, from client/render/instruments.js: pad 10,
-  // helm width 250, so the box starts at 2*pad + 250 and is as tall as the
-  // panel less its padding. Sampled well inside, to miss the bezel.
-  const pad = 10;
-  const x = pad * 2 + 250 + 16;
-  const size = canvas.height - pad * 2 - 32;
-  const data = ctx.getImageData(x, pad + 16, size, size).data;
+  // The panel publishes where it drew the scope (client/render/instruments.js).
+  // Re-deriving it here from "pad 10, helm width 250" was the review's R-008
+  // and our own failure class: a re-layout would move the sample window onto
+  // another instrument and this check would go green on the wrong pixels.
+  const box = window.__scopeBox;
+  if (box === undefined) return { r: -1, g: -1, b: -1 };
+  // Inset, to sample the face rather than the bezel.
+  const inset = Math.round(box.size * 0.12);
+  const data = ctx.getImageData(
+    box.x + inset, box.y + inset, box.size - inset * 2, box.size - inset * 2,
+  ).data;
   let r = 0; let g = 0; let b = 0;
   for (let i = 0; i < data.length; i += 4) { r += data[i]; g += data[i + 1]; b += data[i + 2]; }
   const n = data.length / 4;
@@ -214,6 +218,8 @@ if (shot.overcast !== undefined && shot.noon !== undefined) {
     'an overcast sky is as bright as a clear one');
 }
 if (shot.lightning !== undefined && shot.nostroke !== undefined) {
+  check(shot.lightning.scope.r >= 0,
+    'the panel never published a scope box - __scopeBox is missing');
   check(shot.lightning.w.flashPermil > 700,
     'the lightning mood was photographed without a stroke in it');
   check(shot.nostroke.w.flashPermil === 0,

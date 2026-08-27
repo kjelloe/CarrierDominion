@@ -260,6 +260,23 @@ Look for these shapes first — every one produced a real bug:
   reachable only by someone who had read docs/04. When adding a screen, add
   it to the list the player can actually see, not only to the documentation.
 
+- **A rejection that is not a no-op.** `reject(next)` pushes the event and
+  returns the state it was handed - it rolls NOTHING back - so any mutation
+  before the last check survives the refusal. Three orders called `liftOff`
+  first and refused second, and a player watched a parked aircraft take off
+  from an order the interface said was refused. For every early mutation ask:
+  can anything after this line still say no?
+- **A rule stated twice, in two files, by hand.** The fog listed unit states
+  by number; `unitEngageable` listed them by name. They disagreed about
+  UNIT_LANDED, and since the AI reads state and the player reads the view,
+  the disagreement favoured the AI. Where two places must agree about a set,
+  one should ASK the other rather than repeat it.
+- **A validator that cannot see the world.** `validateCommand` has no state
+  and therefore no `sizeUnits`, so bounds checks belong in the reducer. Only
+  `set_route` forgot, and the watchdog reported it forever instead of the
+  command being refused. When a check needs state, the validator is the wrong
+  place and its absence there is not evidence it exists elsewhere.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the
@@ -298,6 +315,12 @@ Look for these shapes first — every one produced a real bug:
   until an unrelated change made the two readings identical. For any overlay
   drawn on its own canvas, read THAT canvas; and prefer a margin over "these
   two numbers differ", which rounding noise can satisfy.
+- **Verify an outside reviewer, then trust them.** Twelve findings arrived
+  from an architect ally; every one was checked against the code first, on the
+  principle that another agent can be wrong. All twelve were right and two
+  were sharper than written. Checking cost minutes and made acting on them
+  safe - and it found the two follow-on defects that the findings themselves
+  did not mention.
 - **Run the probes before believing them.** They are not in `npm run gate`
   (they open browsers and take minutes), so they rot. `npm run probes` runs
   the lot; sweep it after any UI change, and read a failure as "either the

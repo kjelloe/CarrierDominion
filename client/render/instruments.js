@@ -300,6 +300,19 @@ function createInstruments(canvas) {
 
 // One frame of the whole panel. `readout` carries the few strings the panel
 // shows as text - they are already translated; this module does no wording.
+// Where the scope actually IS, published for anything that has to measure it.
+//
+// The weather probe was reading the scope by re-deriving its geometry from
+// "pad 10, helm width 250" copied out of this file - which is the failure
+// class the review skill names as "a probe that selects the UI by position":
+// the next re-layout silently moves the sample window onto a different
+// instrument and the check goes green measuring the wrong pixels (review
+// R-008). Now the panel says where it drew the thing.
+function publishScopeBox(box) {
+  if (typeof window === 'undefined') return;
+  window.__scopeBox = { x: box.x, y: box.y, size: box.size };
+}
+
 function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   const canvas = panel.canvas;
   const width = window.innerWidth;
@@ -335,8 +348,9 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   // Scope.
   const scopeX = pad * 2 + helmW;
   bezel(ctx, scopeX, pad, scopeSize, scopeSize, colours, readout.scopeTitle);
-  drawRadar(ctx, view, own, { x: scopeX + 8, y: pad + 8, size: scopeSize - 16 },
-    panel.elapsed, colours, readout.scopeRange);
+  const scopeBoxOwn = { x: scopeX + 8, y: pad + 8, size: scopeSize - 16 };
+  publishScopeBox(scopeBoxOwn);
+  drawRadar(ctx, view, own, scopeBoxOwn, panel.elapsed, colours, readout.scopeRange);
   ctx.fillStyle = colours.dim;
   ctx.font = '10px ui-monospace, monospace';
   ctx.textAlign = 'right';
@@ -468,8 +482,9 @@ function drawFlightInstruments(panel, view, unit, readout, deltaSeconds, colours
   // where YOU are, which is what a cockpit scope is for.
   const scopeX = pad * 2 + helmW;
   bezel(ctx, scopeX, pad, scopeSize, scopeSize, colours, readout.scopeTitle);
-  drawRadar(ctx, view, unit, { x: scopeX + 8, y: pad + 8, size: scopeSize - 16 },
-    panel.elapsed, colours, readout.scopeRange);
+  const scopeBoxUnit = { x: scopeX + 8, y: pad + 8, size: scopeSize - 16 };
+  publishScopeBox(scopeBoxUnit);
+  drawRadar(ctx, view, unit, scopeBoxUnit, panel.elapsed, colours, readout.scopeRange);
   ctx.fillStyle = colours.dim;
   ctx.font = '10px ui-monospace, monospace';
   ctx.textAlign = 'right';

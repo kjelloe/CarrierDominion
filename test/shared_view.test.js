@@ -5,7 +5,10 @@ import { loadRules } from '../server/rules.js';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { createSnapshot } from '../engine/snapshot.js';
-import { buildView } from '../shared/view.js';
+import { buildView, refereeView } from '../shared/view.js';
+import {
+  UNIT_ACTIVE, UNIT_DOCKING, UNIT_LANDED, UNIT_STOWED, unitEngageable,
+} from '../engine/units.js';
 import { canonicalize } from '../shared/statehash.js';
 import { EVT_THROTTLE_SET } from '../engine/events.js';
 
@@ -273,4 +276,63 @@ test('an island reads the same shape whoever holds it, and to the referee', asyn
     Object.keys(view.carriers.find((c) => c.team === 0)).sort(),
     'the referee carrier view has drifted from the seat view',
   );
+});
+
+// --- what the guns can reach, the scope must show (review R-003) ---
+//
+// The contact filter used to name states by number - `state === 1 || state
+// === 2` - and so left out UNIT_LANDED, which `unitEngageable` explicitly
+// INCLUDES ("a runway is a place to refuel, not a sanctuary"). The AI reads
+// the state directly, so it could shoot enemy aircraft parked on a runway
+// that the player was never shown. The fog was handing the machine a
+// sanctuary the rules deny.
+
+test('an enemy hull the guns can reach is a hull the scope shows', () => {
+  const state = createInitialState(SEED, rules);
+  const mine = state.carriers.find((c) => c.team === 0);
+  const enemy = state.units.find((u) => u.team === 1);
+  assert.notEqual(enemy, undefined, 'no enemy unit to hide');
+
+  // Park it right alongside, so detection is never the reason it is missing.
+  enemy.x = mine.x + 200 * state.params.unitsPerMetre;
+  enemy.y = mine.y;
+  enemy.z = 0;
+  enemy.hp = enemy.maxHp;
+
+  for (const situation of [UNIT_ACTIVE, UNIT_LANDED]) {
+    enemy.state = situation;
+    assert.equal(unitEngageable(enemy), true,
+      `state ${situation} must be engageable for this test to mean anything`);
+    const view = buildView(state, 0);
+    const seen = view.units.find((u) => u.id === enemy.id && u.contact === 1);
+    assert.notEqual(seen, undefined,
+      `an enemy unit in state ${situation} can be shot but does not appear on the scope`);
+  }
+
+  // And the other way: what the guns cannot reach is not promised.
+  enemy.state = UNIT_STOWED;
+  assert.equal(unitEngageable(enemy), false);
+  const hidden = buildView(state, 0);
+  assert.equal(hidden.units.find((u) => u.id === enemy.id && u.contact === 1), undefined,
+    'a stowed enemy unit is inside a hangar and must not appear');
+  // UNIT_DOCKING is neither engageable nor shown - consistent, and the
+  // consistency is the point.
+  enemy.state = UNIT_DOCKING;
+  assert.equal(unitEngageable(enemy), false);
+});
+
+test('the referee sees every hull that is out, including the ones nobody can shoot', () => {
+  const state = createInitialState(SEED, rules);
+  const unit = state.units[0];
+  unit.hp = unit.maxHp;
+
+  for (const situation of [UNIT_LANDED, UNIT_DOCKING]) {
+    unit.state = situation;
+    const view = refereeView(state);
+    assert.notEqual(view.units.find((u) => u.id === unit.id), undefined,
+      `the referee cannot see a hull in state ${situation}, and the referee sees everything`);
+  }
+  unit.state = UNIT_STOWED;
+  assert.equal(refereeView(state).units.find((u) => u.id === unit.id), undefined,
+    'a hull in the hangar is not on the map');
 });

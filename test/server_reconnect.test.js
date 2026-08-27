@@ -91,12 +91,48 @@ test('a late player is still let back in if nobody took the seat', () => {
   assert.equal(back.team, 0);
 });
 
-test('once the machine has it, the token is no longer good', () => {
+// Owner's ruling 2026-08-27 (review R-006): **they should get their ship
+// back.** This test used to assert the opposite - that once the AI had the
+// carrier the token was spent - and that rule had a defect hiding behind it:
+// the sweep RELEASED the hold, so `reclaim` could not find the token at all
+// and a late commander was handed the lowest free seat instead, with someone
+// else's carrier and their own name discarded.
+//
+// The machine is a caretaker, not a claimant.
+test('a commander back late gets their own carrier back off the machine', () => {
   const h = holder();
   const record = holdSeat(h, { team: 0, name: 'A' });
   h.clock.now += GRACE_MS + 1;
   for (const found of expired(h)) found.aiTaken = 1;
-  assert.equal(reclaim(h, record.token), -1);
+  const back = reclaim(h, record.token);
+  assert.notEqual(back, -1, 'the token no longer opened the seat it named');
+  assert.equal(back.team, 0, 'they were given somebody else\'s carrier');
+  assert.equal(back.name, 'A', 'they came back as a stranger');
+});
+
+test('a seat the machine is minding is still open to a newcomer', () => {
+  // The other half of the ruling: a hold that is only being kept for an
+  // absent commander must not reserve the seat forever, or a war leaks a
+  // carrier every time somebody leaves for good.
+  const h = holder();
+  holdSeat(h, { team: 0, name: 'A' });
+  assert.equal(isHeld(h, 0), true, 'a fresh hold is a hold');
+  h.clock.now += GRACE_MS + 1;
+  for (const found of expired(h)) found.aiTaken = 1;
+  assert.equal(isHeld(h, 0), false, 'the machine kept a newcomer out of an empty seat');
+});
+
+test('a hold the machine has taken is swept once, not every tick', () => {
+  // `expired` must stop reporting a record the caretaker already has, or the
+  // server enqueues set_ai for the same team on every single tick forever.
+  const h = holder();
+  holdSeat(h, { team: 0, name: 'A' });
+  h.clock.now += GRACE_MS + 1;
+  const first = expired(h);
+  assert.equal(first.length, 1);
+  for (const found of first) found.aiTaken = 1;
+  const second = expired(h);
+  assert.equal(second.length, 0, 'the same expired hold was reported twice');
 });
 
 // --- and the same thing over a real socket -------------------------------

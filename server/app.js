@@ -40,7 +40,7 @@ import {
   setReady,
 } from './lobby.js';
 import { createHolder, expired, holdSeat, isHeld, reclaim, release } from './reconnect.js';
-import { resumeGame, saveGame, writeSave } from './save.js';
+import { resumeGame, saveGame, saveLogOnly, writeSave } from './save.js';
 import { createWatch, watchReport, watchTick } from './watch.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -88,6 +88,9 @@ function createApp(options) {
       ? options.resume.options
       : 0,
     seats: [],
+    // Why the clock stopped, if it did. '' while all is well; /healthz
+    // reports it so a watching operator sees a halt rather than a silence.
+    halted: '',
     startedAtMs: Date.now(),
     httpServer: 0,
     wss: 0,
@@ -100,7 +103,16 @@ function createApp(options) {
       options.nowFn ?? (() => Date.now()),
       options.tokenFn ?? (() => Math.random().toString(36).slice(2, 12)),
     ),
-    lobby: options.lobby === true && resumedGame === -1
+    // A war room whenever the server is asked for one - INCLUDING after a
+    // resume (review R-004). It used to be built only when `resumedGame ===
+    // -1`, so a resumed war had `app.lobby === 0` and `reopenRoom` answered
+    // "there is no war room" for the rest of the process's life. Since
+    // RESUME=auto is the service setting (server/index.js), that was the
+    // hosted box's state after every restart: a table could finish the war
+    // they were in and then had no way to start another without someone
+    // restarting the server by hand, which is the exact opposite of the
+    // docs/03 promise that one join code hands friends a whole evening.
+    lobby: options.lobby === true
       ? createLobby(options.bootId ?? `${seed}-${Date.now()}`, {
         seed: seed,
         islands: rules.world.islandCount,
@@ -112,6 +124,25 @@ function createApp(options) {
     // table; a lobbyless server takes the boot option, on by default.
     observersDefault: options.observers === 0 ? 0 : 1,
   };
+
+  // A resumed war is already under way, so its room opens in `running` - not
+  // in `lobby`, which is what `inLobby()` reads to decide whether the clock
+  // should tick. Getting this wrong would be worse than the bug it fixes: the
+  // resumed war would sit in a war room and never advance a tick.
+  //
+  // The room also inherits the options the war was actually started with, so
+  // when the table takes the room back after finishing it, the dials read
+  // what they were playing rather than the server's defaults.
+  if (resumedGame !== -1 && app.lobby !== 0) {
+    app.lobby.status = 'running';
+    if (app.savedOptions !== 0 && app.savedOptions !== undefined) {
+      const saved = app.savedOptions;
+      const keys = Object.keys(app.lobby.options);
+      for (let i = 0; i < keys.length; i++) {
+        if (saved[keys[i]] !== undefined) app.lobby.options[keys[i]] = saved[keys[i]];
+      }
+    }
+  }
 
   function inLobby() {
     return app.lobby !== 0 && app.lobby.status === 'lobby';
@@ -126,9 +157,12 @@ function createApp(options) {
   // Nothing to save while the room is still arguing about what to fight.
   app.saveNow = function saveNow() {
     if (app.savePath === 0 || inLobby()) return 0;
-    const wrote = saveGame(app.game, app.seed, app.savedOptions);
+    // `saveGame` is inside the try as well as the write. It walks the state,
+    // and the state is exactly what may be broken when this matters most -
+    // the halt path calls saveNow precisely because something threw. An
+    // autosave that throws on the way out took the shutdown with it.
     try {
-      writeSave(app.savePath, wrote);
+      writeSave(app.savePath, saveGame(app.game, app.seed, app.savedOptions));
     } catch (error) {
       process.stderr.write(`autosave failed: ${error.message}\n`);
       return 0;
@@ -184,10 +218,20 @@ function createApp(options) {
 
   // A seat handed to the machine when its grace window runs out, so the other
   // side is fighting somebody rather than an anchored ship.
+  // The machine takes the wheel when the grace window runs out - but the HOLD
+  // IS KEPT (owner's ruling 2026-08-27, review R-006). It used to be released
+  // here, which deleted the record, so `reclaim` could never find the token
+  // again and a commander back from a long walk was handed `claimTeam()`'s
+  // lowest free seat: a different carrier, their name discarded, and the AI
+  // still flying their ship.
+  //
+  // Keeping the record means the token still names the seat. The AI is a
+  // caretaker, not a claimant: it holds the carrier until its commander comes
+  // back for it, and only a NEW player taking the team retires the hold.
   function sweepHeldSeats() {
     for (const record of expired(app.holder)) {
+      if (record.aiTaken === 1) continue;
       record.aiTaken = 1;
-      release(app.holder, record.team);
       if (app.lobby === 0 || app.lobby.status !== 'lobby') {
         enqueueCommand(app.game, { type: 'set_ai', team: record.team, active: 1 });
       }
@@ -219,10 +263,18 @@ function createApp(options) {
     }
   }
 
+  // The table is told, rather than left watching a frozen tick counter.
+  function broadcastHalt() {
+    for (const seat of app.seats) {
+      send(seat.socket, { type: 'halted', reason: app.halted });
+    }
+  }
+
   app.health = function health() {
     const snapshot = latestSnapshot(app.game);
     return {
-      ok: true,
+      ok: app.halted === '',
+      halted: app.halted,
       game: 'carrier-dominion',
       tick: app.game.state.tick,
       seed: app.seed,
@@ -288,6 +340,10 @@ function createApp(options) {
       socket.close();
       return;
     }
+    // A newcomer sitting down at a seat the AI was minding retires that hold:
+    // the absent commander's token stops opening it, because somebody is
+    // actually flying it now.
+    if (returning === -1 && claimed !== -1) release(app.holder, claimed);
     const seat = returning === -1
       ? { socket: socket, team: claimed, vote: NO_VOTE, token: app.holder.tokenFn() }
       : {
@@ -567,13 +623,59 @@ function createApp(options) {
   // of a war they never agreed to, and pressing START looks like it worked
   // because there was already a war on screen.
   app.clock = createClock(rules.rules.msPerTick, () => {
+    // Once halted, stay halted. `stopClock` clears the interval but `pump`
+    // will still issue the ticks that were already DUE in the call that
+    // faulted - measured: one injected fault halted four times in a row,
+    // each one re-running the failing tick and re-writing the save. The
+    // callback has to refuse on its own account.
+    if (app.halted !== '') return;
     if (inLobby()) return;
-    sweepHeldSeats();
-    const startedMs = app.watch === 0 ? 0 : performance.now();
-    const snapshot = stepGame(app.game);
-    if (app.watch !== 0) watchTick(app.watch, app.game.state, performance.now() - startedMs);
-    broadcast(snapshot);
-    maybeAutosave();
+    // The engine THROWS on purpose - `shared/fixed.js` raises RangeError from
+    // assertExact, isqrt, divFixed and mulDiv, and the hashing walk raises on
+    // a dirty state. Those are the exact faults the watchdog exists to catch,
+    // and an unhandled one inside a setInterval kills the process: the
+    // SIGINT/SIGTERM shutdown never runs, so the final save never happens and
+    // the last thirty seconds of the command log go with it. One arithmetic
+    // edge on the 64-island map would have ended the evening for every seat
+    // (review R-005).
+    //
+    // So: stop the clock, save the state as it was BEFORE the failed tick -
+    // `apply` copies before it mutates, so app.game.state is still the last
+    // good one - and record why, for /healthz. Do not try to keep ticking; a
+    // war that has thrown once will throw again, faster than anyone can read
+    // the log.
+    try {
+      sweepHeldSeats();
+      const startedMs = app.watch === 0 ? 0 : performance.now();
+      const snapshot = stepGame(app.game);
+      if (app.watch !== 0) watchTick(app.watch, app.game.state, performance.now() - startedMs);
+      broadcast(snapshot);
+      maybeAutosave();
+    } catch (error) {
+      app.halted = `tick ${app.game.state.tick}: ${error.message}`;
+      stopClock(app.clock);
+      let wrote = app.saveNow();
+      // If the ordinary save fails, the STATE is what broke - `saveGame`
+      // hashes it - and the command log is still perfectly good. Write the
+      // log beside the save so the evening is recoverable by hand. It is not
+      // auto-resumable: an empty hash cannot be verified, and resume refusing
+      // a mismatch is a guard worth keeping.
+      let rescue = '';
+      if (wrote === 0 && app.savePath !== 0) {
+        rescue = `${app.savePath}.halted`;
+        try {
+          writeSave(rescue, saveLogOnly(app.game, app.seed, app.savedOptions));
+          wrote = 2;
+        } catch (again) {
+          rescue = `could not be written (${again.message})`;
+        }
+      }
+      const fate = wrote === 1 ? 'saved'
+        : (wrote === 2 ? `NOT saved; the command log is in ${rescue}` : 'NOT saved');
+      process.stderr.write(`HALTED at ${app.halted}\n${error.stack ?? ''}\n`
+        + `the war is ${fate}; seats stay connected\n`);
+      broadcastHalt();
+    }
   }, app.speed);
 
   app.listen = function listen(port, host) {

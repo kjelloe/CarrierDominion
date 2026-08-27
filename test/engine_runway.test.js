@@ -129,3 +129,62 @@ test('an enemy strip refuses the approach, and losing the island costs the parke
   assert.equal(state.units.find((u) => u.id === manta.id).state, UNIT_LOST,
     'a captured airfield should capture what sits on it');
 });
+
+// --- a refused order must leave the hull exactly as it found it (R-001) ---
+//
+// `reject(next)` pushes the rejection event and returns the state it was
+// handed - it does not roll anything back. So an order that mutated before it
+// checked mutated for good, and three of them did: move, attack and escort
+// all called `liftOff` first and only then ran the test that could refuse.
+// The visible bug was a parked Manta taking off and flying its previous order
+// while the interface said the order was refused.
+
+function parkedManta(seed) {
+  let state = createInitialState(seed, rules);
+  const island = withRunway(state, nearestIslandId(state), 0);
+  const manta = state.units.find((u) => u.team === 0 && u.kind === KIND_MANTA);
+  state = apply(state, { type: 'launch_unit', carrierId: 0, kind: KIND_MANTA });
+  state = apply(state, { type: 'order_unit_land', unitId: manta.id, islandId: island.id });
+  let ticks = 0;
+  while (ticks < 120000 && state.units.find((u) => u.id === manta.id).state !== UNIT_LANDED) {
+    state = apply(state, TICK);
+    ticks += 1;
+  }
+  assert.equal(state.units.find((u) => u.id === manta.id).state, UNIT_LANDED,
+    'the Manta never got down, so this test proves nothing');
+  return { state: state, id: manta.id, islandId: island.id };
+}
+
+test('a refused move leaves a parked Manta parked', () => {
+  const { state, id, islandId } = parkedManta(SEED);
+  const off = state.params.sizeUnits + 1;
+  const after = apply(state, { type: 'order_unit_move', unitId: id, x: off, y: 0 });
+  const unit = after.units.find((u) => u.id === id);
+  assert.equal(unit.state, UNIT_LANDED, 'a refused move took the aircraft off the runway');
+  assert.equal(unit.landedIsland, islandId, 'a refused move forgot which island it was on');
+});
+
+test('a refused attack leaves a parked Manta parked', () => {
+  const { state, id, islandId } = parkedManta(SEED);
+  // A unit id nothing owns: the classic stale click on a contact that has
+  // just gone.
+  const after = apply(state, {
+    type: 'order_unit_attack', unitId: id, targetKind: 0, targetId: 9999,
+  });
+  const unit = after.units.find((u) => u.id === id);
+  assert.equal(unit.state, UNIT_LANDED, 'a refused attack took the aircraft off the runway');
+  assert.equal(unit.landedIsland, islandId, 'a refused attack forgot which island it was on');
+});
+
+test('a refused escort leaves the lighter alone', () => {
+  // The escort refusal is the lighter's, and the boat is never landed - but
+  // the same ordering bug applied, so the guard belongs here too.
+  let state = createInitialState(SEED, rules);
+  state = apply(state, { type: 'launch_supply', carrierId: 0 });
+  const boat = state.units.find((u) => u.team === 0 && u.kind === 2);
+  assert.notEqual(boat, undefined, 'no lighter afloat to refuse');
+  const before = boat.order;
+  const after = apply(state, { type: 'order_unit_escort', unitId: boat.id });
+  const now = after.units.find((u) => u.id === boat.id);
+  assert.equal(now.order, before, 'a refused escort changed the boat\'s orders');
+});

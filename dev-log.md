@@ -5,6 +5,66 @@ golden hash and why.
 
 ---
 
+## 2026-08-27 — The architect's twelve, nine of them built
+
+An outside review landed twelve findings. I checked every one against the
+code before touching anything, on the principle that another reviewer can be
+wrong - **none were**. That is worth recording on its own: twelve for twelve,
+no false positives, and two were sharper than written.
+
+**R-003 was the one I would not have found.** The fog listed unit states by
+number and left out `UNIT_LANDED`. Meanwhile `unitEngageable` in
+engine/units.js explicitly INCLUDES it, with a comment saying a Manta on a
+runway "is a target like any other, a runway is a place to refuel, not a
+sanctuary". The AI reads state directly; the player reads the view. So the
+machine could shoot parked aircraft the player was never shown - the fog was
+handing the AI a sanctuary the rules deny, and only to the AI. The fix is not
+to add state 4 to a list but to ask `unitEngageable` itself, so the two can
+never disagree again.
+
+**R-001 was worse than "sloppy ordering".** `reject()` returns the state it
+was handed; it rolls nothing back. So `liftOff` before a check meant a refused
+order still took a parked Manta off the runway - and the interface said the
+order was refused. Ordering is the fix, and the lesson is about `reject`, not
+about those three functions.
+
+**R-005 needed two things the finding did not mention**, and both only showed
+up when it was measured. `stopClock` does not stop the ticks already DUE in
+the pump that faulted, so the first version halted four times in a row, each
+re-running the failing tick; the callback has to refuse on its own account.
+And when the STATE is what broke, `saveGame` cannot write at all, because it
+hashes the state - so the thing R-005 exists to protect, the command log, was
+lost anyway. It now writes `<save>.halted` with the log and no hash:
+recoverable by hand, deliberately not auto-resumable, because an empty hash
+cannot be verified and resume refusing a mismatch is a guard I did not want to
+weaken.
+
+**R-006 came with a ruling** (owner: they should get their ship back). The
+sweep released the hold at the end of the grace window, so `reclaim` could
+never find the token and a late commander got the lowest free seat with their
+name discarded. Keeping the hold fixes that, but it opens a second hole
+immediately: a kept hold would reserve the seat forever for someone who may
+never return. So `isHeld` now answers "spoken for?" differently for a
+newcomer than for the absent commander - the AI is a caretaker, not a
+claimant. One test asserted the old rule outright and was rewritten to the new
+one.
+
+**R-008 was a hit on code I wrote hours earlier**: the weather probe read the
+scope by re-deriving "pad 10, helm width 250" from the panel source - our own
+failure class, "a probe that selects the UI by position". The panel publishes
+`__scopeBox` now. Verified the way the reviewer suggested: change `pad` to 22,
+run the probe, watch it follow the scope.
+
+**R-009 was under-counted.** The allow-list also carried `Bash(git fetch *)`,
+which the working agreement prohibits outright, and `Bash(cd *)`. Gone, along
+with `git push *` (which permitted pushing to `main`), `sed *` and `node *`.
+
+565 tests, smoke clean, battery unchanged - these are refusal paths and the AI
+does not walk them. R-010, R-011 and R-012 were outside the batch and are
+still open.
+
+---
+
 ## 2026-08-27 — A sea that is a spectrum, and cloud that has shape
 
 Owner, after watching it run: the ocean should look alive like the reference

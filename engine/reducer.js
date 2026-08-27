@@ -370,8 +370,8 @@ function applyUnitEscort(next, command) {
   if (unit === -1) return reject(next);
   if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
     && unit.state !== UNIT_LANDED) return reject(next);
-  liftOff(unit);
   if (unit.kind === KIND_LIGHTER) return reject(next); // the boat has a job
+  liftOff(unit);  // only once the hull is one that may escort (review R-001)
   unit.state = UNIT_ACTIVE;
   unit.order = ORDER_ESCORT;
   unit.control = -1;
@@ -410,6 +410,19 @@ function applyLaunch(next, command) {
 // PROG, from the 1988 map: lay a course of up to eight legs for a unit or
 // for the ship. An empty list is CLEAR. The first leg becomes the thing the
 // existing movement code was already steering at, so nothing else changes.
+// Every leg inside the world. `validateCommand` cannot do this - it has no
+// state and therefore no `sizeUnits` - so it checks only that a coordinate is
+// a non-negative integer, and the upper bound has to be here. Without it
+// `set_route` was the one order that would steer a hull off the map, while
+// `set_course` and `order_unit_move` both refused (review R-002); the
+// watchdog then reported it on every tick for the rest of the war.
+function routeOffMap(points, sizeUnits) {
+  for (let i = 0; i < points.length; i++) {
+    if (points[i] > sizeUnits) return 1;
+  }
+  return 0;
+}
+
 function applyRoute(next, command) {
   const points = command.points;
   if (command.unitId !== undefined) {
@@ -420,6 +433,7 @@ function applyRoute(next, command) {
       clearRoute(unit);
       return next;
     }
+    if (routeOffMap(points, next.params.sizeUnits) === 1) return reject(next);
     setRoute(unit, points);
     const leg = legOf(unit);
     unit.targetX = leg.x;
@@ -440,6 +454,7 @@ function applyRoute(next, command) {
     pushEvent(next.events, EVT_COURSE, carrier.id, 0, 0);
     return next;
   }
+  if (routeOffMap(points, next.params.sizeUnits) === 1) return reject(next);
   setRoute(carrier, points);
   const leg = legOf(carrier);
   carrier.courseX = leg.x;
@@ -482,8 +497,15 @@ function applyUnitMove(next, command) {
   if (unit === -1) return reject(next);
   if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
     && unit.state !== UNIT_LANDED) return reject(next);
-  liftOff(unit);
   if (command.x > next.params.sizeUnits || command.y > next.params.sizeUnits) return reject(next);
+  // liftOff AFTER the last check that can refuse (review R-001). `reject`
+  // returns the state it was handed, mutations and all - it does not roll
+  // anything back - so anything done before a refusal is done for good. A
+  // player who clicked past the chart margin watched a parked Manta take off
+  // and fly its previous order while the interface said the order was
+  // refused, which is the opposite of the docs/01 contract that a rejected
+  // command is a no-op.
+  liftOff(unit);
   unit.state = UNIT_ACTIVE;
   unit.order = ORDER_MOVE;
   unit.control = -1;
@@ -501,9 +523,9 @@ function applyUnitAttack(next, command) {
   if (unit === -1) return reject(next);
   if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
     && unit.state !== UNIT_LANDED) return reject(next);
-  liftOff(unit);
   const target = designated(next, command.targetKind, command.targetId);
   if (target === -1) return reject(next);
+  liftOff(unit);  // only once the target is known to exist (review R-001)
   unit.state = UNIT_ACTIVE;
   unit.order = ORDER_ATTACK;
   unit.control = -1;

@@ -148,3 +148,46 @@ test('a course is a plan, so it is not on the enemy chart', async () => {
     assert.equal(seen.route.length, 0, 'the enemy can read our course off their chart');
   }
 });
+
+// --- a leg off the map is refused, like every other coordinate (R-002) ---
+//
+// `validateCommand` cannot do this: it has no state, so it has no sizeUnits,
+// and it checks only that a coordinate is a non-negative integer. That left
+// `set_route` as the ONE order that would steer at a point outside the world
+// while `set_course` and `order_unit_move` both refused - and the watchdog,
+// which docs/05 calls "the tripwire for a leg that arrived another way", was
+// the only thing that noticed, once per tick for the rest of the war.
+
+test('a carrier route beyond the map edge is refused', () => {
+  const state = fresh();
+  const off = state.params.sizeUnits + 1;
+  const next = apply(state, { type: 'set_route', carrierId: 0, points: [off, 0] });
+  const carrier = next.carriers.find((c) => c.id === 0);
+  assert.equal(carrier.route.length, 0, 'an off-map leg was laid anyway');
+  assert.equal(carrier.courseX, -1, 'an off-map leg became a course');
+});
+
+test('a unit route beyond the map edge is refused', () => {
+  const start = fresh();
+  const { state, id } = airborne(start);
+  const off = state.params.sizeUnits + 1;
+  const before = state.units.find((u) => u.id === id);
+  const wasX = before.targetX;
+  // A legal first leg and an illegal second: the whole route goes, not just
+  // the bad leg, because half a course is not what the player asked for.
+  const next = apply(state, {
+    type: 'set_route', unitId: id, points: [before.x, before.y, off, 0],
+  });
+  const unit = next.units.find((u) => u.id === id);
+  assert.equal(unit.route.length, 0, 'an off-map leg was laid anyway');
+  assert.equal(unit.targetX, wasX, 'a refused route still moved the aim point');
+});
+
+test('a route that fits the map is still accepted', () => {
+  // The bound must not be off by one against the far edge.
+  const state = fresh();
+  const edge = state.params.sizeUnits;
+  const next = apply(state, { type: 'set_route', carrierId: 0, points: [edge, edge] });
+  const carrier = next.carriers.find((c) => c.id === 0);
+  assert.equal(carrier.route.length, 1, 'a leg exactly on the edge was refused');
+});

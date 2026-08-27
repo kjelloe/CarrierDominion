@@ -35,6 +35,25 @@ function saveGame(game, seed, options) {
   };
 }
 
+// The same save with the state hash left blank, for the one case where the
+// STATE is what broke: an engine fault mid-tick means `hashState` throws, so
+// the ordinary save cannot be written at all - and the command log, which is
+// the actual save format, is perfectly fine. Writing it beside the real save
+// keeps the evening recoverable by hand.
+//
+// It is deliberately NOT resumable without a human: an empty hash cannot be
+// verified, and resume refusing on a mismatch is a guard worth keeping.
+function saveLogOnly(game, seed, options) {
+  return {
+    version: SAVE_VERSION,
+    seed: seed,
+    options: options,
+    tick: game.state.tick,
+    stateHash: '',
+    commandLog: game.commandLog,
+  };
+}
+
 // Rebuild the exact state by replaying the log. Returns the state, or -1 with
 // a reason via the `problem` out-parameter object.
 function replayWar(saved, rules, problem) {
@@ -90,4 +109,6 @@ function readSave(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
-export { SAVE_VERSION, saveGame, replayWar, resumeGame, writeSave, readSave };
+export {
+  SAVE_VERSION, saveGame, saveLogOnly, replayWar, resumeGame, writeSave, readSave,
+};
