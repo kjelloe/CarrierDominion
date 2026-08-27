@@ -303,6 +303,12 @@ putting it back how it was.
 - **ISLAND** is dimmed until you have clicked one of your islands. Click one,
   go to another tab, come back - it should still be showing that island.
 - Anything that used to be one keypress and is now two is a defect. Tell me.
+- Press `?`. The key list now names `J`, `Q`, `Z` and `I` — until this pass it
+  mentioned only `Z`, so two of the biggest screens in the game were
+  undiscoverable. Check nothing else is missing from it.
+- End a war with the console open (`ESC` `ESC` surrenders). The ending screen
+  must cover it completely; the console floated over the result before this
+  pass.
 
 ## C1b — The weather and the day *(10 min — new)*
 
@@ -342,6 +348,11 @@ I want to know whether those read as weather or as faults. And separately:
 wars of 25 to 70 minutes, where before you could steam flat out for a whole
 war and finish with a fifth left. Tell me whether you ever had to think about
 it, and whether thinking about it was interesting or just annoying.
+
+The ship calls for the lighter at **25%** and again at **10%**. Tell me
+whether those marks come early enough to act on, or whether the first one
+should be higher — the engine's own fuel event only fires at empty, which is
+long past useful.
 
 ## C2 — The shop window
 

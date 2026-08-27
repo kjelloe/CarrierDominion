@@ -279,6 +279,13 @@ figures, and nothing strands. Higher figures were tried and rejected - at
 150 a long war finishes on 1-3%, which is a knife edge for a human
 quartermaster even though the AI survives it.
 
+The ship says so on the way down. At **25%** and again at **10%** the status
+line calls for the lighter, once per threshold, re-arming if a delivery lifts
+the bunker back through the mark. The engine's only fuel event fires at ZERO,
+which is far too late to act on — a cost the player discovers by running dry
+is not a decision, it is an ambush. The warning is client-side and touches no
+rule.
+
 ## The weather, and what it costs you
 
 The sky is a **pure function of the seed and the tick** (`shared/weather.js`)

@@ -156,7 +156,11 @@
        `position: fixed` placement each had when it was its own overlay; that
        is neutralised here in one rule rather than by editing six. */
     #console {
-      position: fixed; top: 52px; left: 76px; z-index: 12; display: none;
+      /* z-index 8 puts the console with the rest of the HUD chrome and,
+         crucially, BELOW the ending screen at 9. At 12 an open console
+         floated over the war-over result, which is the one screen nothing
+         may cover. */
+      position: fixed; top: 52px; left: 76px; z-index: 8; display: none;
       width: 620px; max-width: calc(100vw - 96px);
       max-height: calc(100vh - 250px);
       background: var(--hud-panel); border: 1px solid var(--hud-dim);

@@ -89,7 +89,6 @@
   "damage.title": "DAMAGE CONTROL",
   "damage.legend": "click a section to change repair priority - Z closes",
   "damage.stores": "materials {materials}/{capacity}",
-  "help.damage": "Z damage control board",
   "hud.score": "score",
   "score.uncapped": "no cap",
   "score.toCap": "{score} / {cap}",
@@ -455,5 +454,8 @@
   "console.island": "ISLAND",
   "console.chart": "CHART",
   "console.log": "SIGNALS",
-  "console.noIsland": "no island chosen"
+  "console.noIsland": "no island chosen",
+  "status.fuelLow": "FUEL {percent}% - call the lighter",
+  "status.fuelCritical": "FUEL {percent}% - the bunker is nearly dry",
+  "help.console": "J squadron - Q quartermaster - Z damage - I signals - one console, tabbed"
 }

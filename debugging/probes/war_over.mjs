@@ -52,6 +52,41 @@ await page.screenshot({
   clip: { x: 260, y: 524, width: 210, height: 196 },
 });
 
+// Fuel bites since 2026-08-27 (ruling Q6b), and the only fuel EVENT in the
+// engine fires at zero - which is after the decision. The ship warns on the
+// way down instead, at 25% and 10%. Drive the bunker down through both marks
+// through the debug view and read the status line back.
+const fuelWarnings = [];
+for (const permil of [240, 90]) {
+  await page.evaluate((want) => {
+    const view = window.__lastView;
+    const own = view.carriers.find((c) => c.team === view.team && c.contact === 0);
+    own.fuel = Math.floor((own.fuelCapacity * want) / 1000);
+    window.__debugView(view);
+  }, permil);
+  await page.waitForTimeout(400);
+  fuelWarnings.push(String(await page.textContent('#hud-status')).trim());
+}
+console.log(`fuel warnings: ${fuelWarnings.map((w) => `"${w}"`).join(' then ')}`);
+if (!/FUEL|DRIVSTOFF/.test(fuelWarnings[0]) || !/FUEL|DRIVSTOFF/.test(fuelWarnings[1])) {
+  console.log('FAIL: the bunker ran down through both marks in silence');
+  process.exitCode = 1;
+}
+if (fuelWarnings[0] === fuelWarnings[1]) {
+  console.log('FAIL: both marks said the same thing - the second is not a sharper warning');
+  process.exitCode = 1;
+}
+
+// Open the console first: the ending screen is the one thing nothing may
+// cover, and folding six panels into one shell (ruled 2026-08-26, Q5b) gave
+// the group a single z-index that beat the war-over screen's. A console left
+// floating over the result is the exact regression this guards.
+await page.keyboard.press('j');
+await page.waitForTimeout(300);
+const consoleWasOpen = await page.evaluate(
+  () => document.getElementById('console').classList.contains('open'),
+);
+
 // The war ends, won by sinking, and the screen says so.
 await page.evaluate(() => {
   const view = window.__lastView;
@@ -63,6 +98,32 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(500);
 await page.screenshot({ path: join(SHOTS, 'war-over.png') });
+
+const consoleAfter = await page.evaluate(() => {
+  const shell = document.getElementById('console');
+  const over = document.getElementById('warover-panel');
+  return {
+    open: shell.classList.contains('open'),
+    // Layering, not just the class: a console that stays open BELOW the
+    // ending screen is fine; one that paints over it is not.
+    shellZ: Number(getComputedStyle(shell).zIndex),
+    overZ: Number(getComputedStyle(over).zIndex),
+  };
+});
+console.log(`console at the whistle: was open ${consoleWasOpen},`
+  + ` still open ${consoleAfter.open}, z ${consoleAfter.shellZ} vs ending screen ${consoleAfter.overZ}`);
+if (!consoleWasOpen) {
+  console.log('FAIL: J did not open the console, so this proves nothing');
+  process.exitCode = 1;
+}
+if (consoleAfter.open) {
+  console.log('FAIL: the console stayed open over the ending screen');
+  process.exitCode = 1;
+}
+if (consoleAfter.shellZ >= consoleAfter.overZ) {
+  console.log('FAIL: the console can paint over the ending screen');
+  process.exitCode = 1;
+}
 
 const title = await page.textContent('#warover-title');
 const body = await page.textContent('#warover-body');

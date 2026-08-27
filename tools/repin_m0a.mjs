@@ -32,6 +32,23 @@ function eventsDiffer(oldSteps, newSteps) {
   return '';
 }
 
+// The question every repin asks: did the WAR change, or only the ruleset
+// stamp? A knob added or renamed in data/*.json moves every hash without
+// moving a single ship, because state.rulesHash is part of the state on
+// purpose - two LAN peers must be able to prove they hold the same rules.
+function behaviourDiffers(oldSteps, newSteps) {
+  if (!oldSteps || oldSteps.length !== newSteps.length) return 'step count changed';
+  for (let i = 0; i < newSteps.length; i++) {
+    // Pins written before this field existed simply cannot answer; say so
+    // rather than reporting a reassuring "none".
+    if (oldSteps[i].behaviour === undefined) return 'unknown (the pin predates the behaviour hash)';
+    if (oldSteps[i].behaviour !== newSteps[i].behaviour) {
+      return `first at tick ${newSteps[i].tick}: ${oldSteps[i].behaviour} -> ${newSteps[i].behaviour}`;
+    }
+  }
+  return '';
+}
+
 function hashesDiffer(oldSteps, newSteps) {
   if (!oldSteps || oldSteps.length !== newSteps.length) return 'step count changed';
   for (let i = 0; i < newSteps.length; i++) {
@@ -55,6 +72,17 @@ if (!existsSync(PIN)) {
 const existing = JSON.parse(readFileSync(PIN, 'utf8'));
 const hashDrift = hashesDiffer(existing.steps, fresh.steps);
 const eventDrift = eventsDiffer(existing.steps, fresh.steps);
+const behaviourDrift = behaviourDiffers(existing.steps, fresh.steps);
+
+// A pin written before the behaviour hash existed is not "unchanged", it is
+// incomplete: it cannot answer the question the tool now asks. Refresh it in
+// place - no hash moves, so there is nothing to explain or force.
+const pinLacksBehaviour = existing.steps.length > 0 && existing.steps[0].behaviour === undefined;
+if (hashDrift === '' && eventDrift === '' && pinLacksBehaviour && !checkOnly) {
+  writeFileSync(PIN, JSON.stringify(fresh, null, 2) + '\n');
+  process.stdout.write(`fixture unchanged; added the behaviour hash to ${fresh.steps.length} ticks\n`);
+  process.exit(0);
+}
 
 if (hashDrift === '' && eventDrift === '') {
   process.stdout.write('fixture unchanged\n');
@@ -62,6 +90,7 @@ if (hashDrift === '' && eventDrift === '') {
 }
 
 process.stdout.write(`hash drift: ${hashDrift || 'none'}\n`);
+process.stdout.write(`behaviour drift: ${behaviourDrift || 'none - the ruleset stamp moved, the war did not'}\n`);
 process.stdout.write(`event drift: ${eventDrift || 'none'}\n`);
 
 if (checkOnly) process.exit(1);

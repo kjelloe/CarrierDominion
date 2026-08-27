@@ -168,3 +168,40 @@ One seeded xorshift32 in `shared/prng.js`, its state inside the game state.
 Worldgen consumes it; the war does not. There is no other source of chance in
 the engine — the AI, combat and the economy are all deterministic functions of
 the state.
+
+## Derived state: the weather
+
+`shared/weather.js` answers `weatherAt(seed, tick)` — sun, day, wind, cloud,
+storm and this tick's lightning, all integers — and **it is stored nowhere**.
+It is not in the state, not in the command log, and not on the wire.
+
+That is a deliberate third category alongside "state" and "commands", and it
+is worth understanding before adding anything else to it:
+
+- Because it is derived from the seed and the tick, every client in a LAN
+  game and every replay of every war computes the same sky at the same
+  moment, with nothing transmitted and nothing to desync.
+- Because it is not stored, `hashState` cannot carry it, so weather can never
+  move a golden pin or make two peers disagree.
+- And because it is pure and cheap, **the engine may read it**, which is what
+  turns weather from decoration into a rule. It does: radar reach in heavy
+  weather (`engine/contacts.js`), and surface speed and the flight floor in a
+  rough sea (`engine/drive.js`, `engine/flight.js`).
+
+It therefore lives inside the Luau-portable subset like any other engine
+dependency, and `test/engine_subset.test.js` holds it there.
+
+The rule that keeps all of this true is narrow and absolute: **the engine may
+ask the weather about its own seed and its own tick, and about nothing else.**
+The moment a caller passes anything a player or a client can influence, the
+sky stops being derived and becomes an undeclared input — every seat sees a
+different war and the hashes diverge with no obvious culprit.
+`test/engine_weather_seam.test.js` reads every `weatherAt(` call in `engine/`
+and fails on any that is not exactly `weatherAt(state.seed, state.tick)`.
+
+The client's `?weather=<tick>` freeze is a RENDER debug affordance only: it
+rewrites the client's own copy of the view. Figures the simulation already
+computed from the real weather — the carrier's `radarNow`, the boats' speed —
+stay as the war left them, so a frozen storm shows its sea state but not its
+radar loss. That is correct, not a bug, and it is the one thing about the
+override worth remembering before chasing it.

@@ -32,8 +32,10 @@ each added after the promise had already been broken once:
 |---|---|
 | `engine_subset.test.js` | Use `class`, `this`, `Map`, `Set`, exceptions, `async` or any array METHOD anywhere in `engine/` or `shared/` — the Luau-portable subset (docs/01). It reads the sources. Three files throw on purpose and are named exemptions; nothing else is. |
 | `engine_cosmetic.test.js` | Let the art style or the clock speed reach the ruleset from either fold, or ship a menu value that produces a war the canonical walk rejects. "Style is data" (ruling #13) had been a standing constraint with nothing behind it. |
-| `data_rules.test.js` | Move a number the documents quote without moving the document, or leave a ruleset key that nothing reads — the sweep found `startFuel` and `startOrdnance` sitting there looking live. Inert keys are declared, with the reason. |
+| `data_rules.test.js` | Move a number the documents quote without moving the document, or leave a ruleset key that nothing reads — the sweep found `startFuel` and `startOrdnance` sitting there looking live (deleted 2026-08-26). Inert keys are declared, with the reason. It also refuses two ruleset files sharing a key NAME, because the dead-key check matches bare names and could not tell `rules.startMaterials` from the live `units.carrier.startMaterials` — which is exactly how that one hid. And it pins the endurance RATIO, not just the two numbers, so raising capacity and burn together cannot slip past. |
 | `engine_authority_sweep.test.js` | Add a command without a probe saying who may issue it. |
+| `engine_weather_seam.test.js` | Ask the weather about anything except the war's own seed and tick. It reads every `weatherAt(` call in `engine/` and fails on any that is not exactly `weatherAt(state.seed, state.tick)` — the moment one takes a value a client can influence, the sky stops being derived and every seat sees a different war. It also holds the client's `?weather=` override out of `engine/`, `shared/` and `server/`, and asserts the golden pin still carries a behaviour hash per step. |
+| `engine_seastate.test.js` | Slow a Walrus that is ashore (a heavy sea has no opinion about a hillside), or let the storm flight floor bind the pilot's stick rather than the aircraft — a limit that binds only the human is one the human reads as the game cheating. |
 
 Two more guard the fog rather than a rule: `shared_view.test.js` asserts an
 enemy record carries exactly the same KEYS as one of your own — a field on
@@ -54,6 +56,24 @@ field added, a value widened. A hash change with different events means the war
 plays differently, and that is not something to wave through by running a tool.
 That distinction is also why `shared/statehash.js` offers `trajectoryHash()`
 (state minus events) and `behaviorHash()` (state minus the ruleset stamp).
+
+**`behaviorHash` is now wired to the job it was written for** (2026-08-27).
+Every pinned step carries two hashes, and the repin tool reports them
+separately:
+
+```
+hash drift:      first at tick 1: 822ace53… -> d339fcde…
+behaviour drift: none - the ruleset stamp moved, the war did not
+event drift:     none
+```
+
+That top line moves whenever ANY key in `data/*.json` is added, renamed or
+deleted, because `state.rulesHash` hashes the whole ruleset on purpose — two
+LAN peers must be able to prove they hold the same rules. So a pin move is
+not, by itself, evidence that the war changed. Before this the tool could not
+say which had happened and the answer got hand-rolled in a scratch script,
+twice, by someone who had forgotten `behaviorHash` was already written and
+tested. A function with tests and no callers is not finished.
 
 ## The hashing walk is also a linter
 

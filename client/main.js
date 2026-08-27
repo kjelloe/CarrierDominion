@@ -123,6 +123,8 @@ const state = {
   sound: createSound(),
   signals: [],
   signalsOpen: false,
+  // Which low-fuel marks have already been announced (see warnOnFuel).
+  fuelWarned: {},
   surrenderArmedMs: 0,
   lastTelemetry: 0,
   buildCosts: [0, 0, 0],
@@ -1511,6 +1513,13 @@ function frame(nowMs) {
   updateLocation();
   updateAlwaysOn();
   renderChart(state.chart, state.view, ownTeamColour());
+  // The ending screen is the one thing nothing may cover, and there is
+  // nothing left to manage once the war is over (docs/06: after the war ends
+  // nothing new is decided). Shut the console on the tick the phase flips.
+  if (state.view !== undefined && state.view.phase !== 0
+    && document.getElementById('console').classList.contains('open')) {
+    showConsoleNone();
+  }
   updateWaroverPanel(state.warover, state.view);
   updateWeaponGroup();
   updateSight();
@@ -1678,6 +1687,7 @@ function drawPanel(deltaSeconds) {
     return;
   }
   window.__panelMode = 'ship';
+  warnOnFuel(own);
   // At the gun, the right box becomes the gunnery console (docs/10 gap 5).
   const atTheGun = state.scene3d !== undefined && state.scene3d.gunsight === true;
   const aimBam = gunBearing(own);
@@ -1743,6 +1753,34 @@ function drawPanel(deltaSeconds) {
 // radar picture. Empty on a calm clear day, so the line only appears when it
 // has something to say.
 const SEA_WORDS = ['sea.calm', 'sea.slight', 'sea.moderate', 'sea.rough', 'sea.high', 'sea.gale'];
+
+// Fuel became a real constraint on 2026-08-27 (ruling Q6b: a full bunker is
+// about an hour of hard steaming, where before you could cross a whole war
+// flat out and finish with a fifth left). A cost the player only discovers by
+// running dry is not a decision, it is an ambush - and the engine's only fuel
+// event fires at ZERO, which is far too late to act on.
+//
+// So the ship says so on the way down, once per threshold crossed. Rising back
+// through a mark re-arms it, because a lighter's delivery is exactly the news
+// that makes the next warning worth hearing.
+const FUEL_MARKS = [
+  { permil: 250, key: 'status.fuelLow' },
+  { permil: 100, key: 'status.fuelCritical' },
+];
+
+function warnOnFuel(own) {
+  if (own === undefined || own.fuelCapacity <= 0) return;
+  const permil = Math.floor((own.fuel * 1000) / own.fuelCapacity);
+  for (const mark of FUEL_MARKS) {
+    const below = permil <= mark.permil;
+    if (below && state.fuelWarned[mark.permil] !== 1) {
+      state.fuelWarned[mark.permil] = 1;
+      setHud(state.hud, 'status', state.t(mark.key, { percent: Math.round(permil / 10) }));
+    } else if (!below) {
+      state.fuelWarned[mark.permil] = 0;
+    }
+  }
+}
 
 function conditionsLine(state, own) {
   const view = state.view;
@@ -1824,8 +1862,12 @@ function hasLock(unit) {
 function renderHelp(t) {
   const help = document.getElementById('help');
   help.textContent = '';
+  // `help.console` replaces the lone `help.damage` line: the list named Z and
+  // never mentioned J or Q at all, so the squadron console and the
+  // quartermaster - two of the biggest screens in the game - were reachable
+  // only by someone who had read the docs.
   const lines = ['help.helm', 'help.units', 'help.orders', 'help.supply', 'help.weapons', 'help.targeting', 'help.island',
-    'help.damage', 'help.scope', 'help.time', 'help.extras', 'help.drone'];
+    'help.console', 'help.scope', 'help.time', 'help.extras', 'help.drone'];
   for (const key of lines) {
     const line = document.createElement('div');
     line.textContent = t(key);

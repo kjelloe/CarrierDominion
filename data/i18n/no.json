@@ -89,7 +89,6 @@
   "damage.title": "SKADEKONTROLL",
   "damage.legend": "klikk en seksjon for å endre prioritet - Z lukker",
   "damage.stores": "materialer {materials}/{capacity}",
-  "help.damage": "Z skadekontrollpanel",
   "hud.score": "poeng",
   "score.uncapped": "ingen grense",
   "score.toCap": "{score} / {cap}",
@@ -455,5 +454,8 @@
   "console.island": "ØY",
   "console.chart": "KART",
   "console.log": "SIGNALER",
-  "console.noIsland": "ingen øy valgt"
+  "console.noIsland": "ingen øy valgt",
+  "status.fuelLow": "DRIVSTOFF {percent}% - kall inn lekteren",
+  "status.fuelCritical": "DRIVSTOFF {percent}% - bunkeren er nesten tom",
+  "help.console": "J skvadron - Q kvartermester - Z skade - I signaler - ett konsoll med faner"
 }

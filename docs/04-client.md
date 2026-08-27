@@ -376,6 +376,11 @@ to make noise before then.
 | `Q` | the console at the quartermaster: island stocks, depot, bias |
 | `J` | the console at the squadron: the board, the fitting screen, the deck |
 | `I` | the console at signals |
+
+The in-game list behind `?` names all four of those now. Until 2026-08-27 it
+mentioned only `Z`, so the squadron console and the quartermaster — two of the
+largest screens in the game — were reachable only by a player who had read
+this file.
 | `U` | escort: the selected unit takes station on the carrier |
 | click sea, nothing selected | lay a course - the ship sails there itself |
 | `C` | camera: chase / gunsight / map |

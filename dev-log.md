@@ -5,6 +5,68 @@ golden hash and why.
 
 ---
 
+## 2026-08-27 — Reviewing the day's own work
+
+A review pass over the five slices, looking for what they left behind. Six
+things, in the order they matter.
+
+**The console floated over the ending screen.** Six panels folded into one
+shell means the group now has ONE z-index, and at 12 it beat the war-over
+screen at 9 - so an open console sat on top of the result. Only `#log-panel`
+had that bug before; grouping generalised it to all six. The shell is now at
+8, with the rest of the HUD chrome, and the console shuts itself on the tick
+the phase flips, because there is nothing left to manage.
+
+**Fuel bites, and nothing said so.** The only fuel event in the engine fires
+at ZERO, which is after the decision rather than before it. A cost the player
+discovers by running dry is an ambush, not a choice. The ship now calls for
+the lighter at 25% and again at 10%, once per mark, re-arming if a delivery
+lifts the bunker back through it. Client-side, so no rule and no pin.
+
+**`behaviorHash` had no callers.** It has existed for weeks with a comment
+saying "when a golden hash moves, compare this", and a passing test, and
+nothing used it - including `tools/repin_m0a.mjs`, whose entire job is that
+question. I hand-rolled the comparison in a scratch script this session
+without noticing, which is the tell. Every pinned step now carries a
+behaviour hash and the tool reports it separately:
+
+    hash drift:      first at tick 1: 822ace53… -> d339fcde…
+    behaviour drift: none - the ruleset stamp moved, the war did not
+
+Proven both ways before landing: adding an inert knob moves the hash alone;
+changing `radarStormPermil` moves both. A function with tests and no callers
+is not finished.
+
+**The key list never mentioned J or Q.** The list behind `?` named `Z` and
+stopped. The squadron console and the quartermaster - two of the largest
+screens in the game - were reachable only by a player who had read docs/04.
+One line now covers all four, and the retired `help.damage` string is gone
+from both catalogues.
+
+**docs/01 never mentioned the weather.** The simulation contract described
+state, commands, hashing and randomness, and said nothing about the third
+category the weather introduced: derived, stored nowhere, and read by the
+engine. It now has a section, including the rule that keeps it honest - the
+engine may ask the weather about its own seed and its own tick and nothing
+else - and `test/engine_weather_seam.test.js` enforces exactly that by
+reading every call site. Verified by breaking it on purpose: the tripwire
+trips.
+
+**Two things I checked and did NOT find**, worth recording so the next review
+does not re-check them. The Viewing Drone and the decoys never reach
+`stepWalrus` - both have their own branches that `continue` first - so the
+sea-state slowing lands only on the Walrus and the lighter, which is the
+classification the ruling wanted. And landing is gated on horizontal distance
+rather than altitude, so the storm flight floor cannot strand an aircraft
+that is trying to come home.
+
+**Left alone deliberately:** `flightFloorUnits` converts units to metres and
+back to call a rule written in metres, which is ugly and correct; and the AI
+does not model slower boats in a heavy sea, which is benign because it
+re-plans every few ticks rather than committing to an estimate.
+
+---
+
 ## 2026-08-27 — The eight answers, built
 
 The owner answered all eight open questions in one line each. Five needed

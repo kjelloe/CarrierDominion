@@ -241,6 +241,25 @@ Look for these shapes first — every one produced a real bug:
   close wiped the subject on the way to displaying it. Ask of every teardown:
   does this discard state the next open will need?
 
+- **A tool built for the question, wired to nothing.** `behaviorHash` had
+  existed for weeks, with a comment saying "when a golden hash moves, compare
+  this", a passing test, and NO callers - so every repin got hand-checked and
+  the answer was twice re-derived in a scratch script. Before writing a helper
+  to answer a recurring question, grep for one; before finishing a helper,
+  wire it to the thing that asks.
+- **A new stacking context over a screen that must stay on top.** Folding six
+  panels into one shell gave the group a single `z-index`, and at 12 it beat
+  the war-over screen at 9 - so an open console floated over the result. When
+  elements are grouped under a new parent, their layering is now the PARENT'S
+  and has to be re-checked against everything it must not cover.
+- **A cost with no warning.** Fuel was made to bite without anything telling
+  the player it was biting; the only fuel event fires at zero, which is after
+  the decision. When a resource is made scarce, ask what says so, and when.
+- **The affordance nobody documented.** The in-game key list named `Z` and
+  never mentioned `J` or `Q` - two of the largest screens - so they were
+  reachable only by someone who had read docs/04. When adding a screen, add
+  it to the list the player can actually see, not only to the documentation.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the
