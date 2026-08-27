@@ -1,4 +1,4 @@
-# Playtest script — 2026-08-25
+# Playtest script — 2026-08-25, extended 2026-08-27
 
 Everything below changed since your round-four session. The **A steps** are
 the ones I cannot judge for you and that would spoil the game if they are
@@ -228,6 +228,28 @@ anything you can feel, or is RING always right?
 
 ---
 
+## A10 — The console, and the keys you already know *(10 min — new)*
+
+The six panels are now one overlay with a tab strip: SQUADRON, STORES,
+DAMAGE, ISLAND, CHART, SIGNALS. Your keys are unchanged - `J` `Q` `Z` `I`
+each bring up their own tab - with one difference worth feeling: they are a
+**radio** now, so pressing the same key twice closes the console rather than
+putting it back how it was.
+
+- Walk all six tabs and tell me whether one overlay is better than six. This
+  is the change I am least sure of.
+- **The chart** takes the whole screen on its tab, with only the tab strip
+  floating over it. Does the strip get in the way of the map?
+- **ISLAND** is dimmed until you have clicked one of your islands. Click one,
+  go to another tab, come back - it should still be showing that island.
+- Anything that used to be one keypress and is now two is a defect. Tell me.
+- Press `?`. The key list now names `J`, `Q`, `Z` and `I` — until this pass it
+  mentioned only `Z`, so two of the biggest screens in the game were
+  undiscoverable. Check nothing else is missing from it.
+- End a war with the console open (`ESC` `ESC` surrenders). The ending screen
+  must cover it completely; the console floated over the result before this
+  pass.
+
 ## B1 — The chart screen *(5 min)*
 
 Open **CHART**. Drag to pan, wheel to zoom, FIT to reframe. Click open water
@@ -287,28 +309,6 @@ the ship astern (useful off a reef).
 `G` cycles graphics tiers. On your 4070, try `?style=modern&graphics=high`
 for the Preetham sky and mirror water, then `?style=retro&graphics=high` for
 sharper 1988 with the amber grid. The start menu's **look** row previews live.
-
-## A10 — The console, and the keys you already know *(10 min — new)*
-
-The six panels are now one overlay with a tab strip: SQUADRON, STORES,
-DAMAGE, ISLAND, CHART, SIGNALS. Your keys are unchanged - `J` `Q` `Z` `I`
-each bring up their own tab - with one difference worth feeling: they are a
-**radio** now, so pressing the same key twice closes the console rather than
-putting it back how it was.
-
-- Walk all six tabs and tell me whether one overlay is better than six. This
-  is the change I am least sure of.
-- **The chart** takes the whole screen on its tab, with only the tab strip
-  floating over it. Does the strip get in the way of the map?
-- **ISLAND** is dimmed until you have clicked one of your islands. Click one,
-  go to another tab, come back - it should still be showing that island.
-- Anything that used to be one keypress and is now two is a defect. Tell me.
-- Press `?`. The key list now names `J`, `Q`, `Z` and `I` — until this pass it
-  mentioned only `Z`, so two of the biggest screens in the game were
-  undiscoverable. Check nothing else is missing from it.
-- End a war with the console open (`ESC` `ESC` surrenders). The ending screen
-  must cover it completely; the console floated over the result before this
-  pass.
 
 ## C1b — The weather and the day *(10 min — new)*
 
@@ -384,6 +384,15 @@ simpler shape.
 4. **Is the late war (A5) the late-game test bench you asked for?** The
    90%-of-the-islands bar and how close the carriers start are both one
    number each.
+6. **Is one tabbed console (A10) better than six panels?** This is the
+   change I am least sure of, and the one that most affects how the game
+   feels to operate rather than how it plays.
+7. **Does fuel biting (C1b) make you think, or just make you wait?** The
+   burn is one number and the two warning marks are two more. If the
+   answer is "wait", the honest fix is to put it back.
+8. **Does the weather read as weather, or as the game cheating?** A storm
+   shortens radar and slows the boats. Both are meant to be reasons to
+   change your mind, not taxes.
 
 Everything in A is tuned by one or two numbers. Say the word and I move
 them.
