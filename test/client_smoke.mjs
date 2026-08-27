@@ -167,15 +167,31 @@ async function checkMode(browser, baseUrl, mode) {
   // anyone who clicked one of their own islands. Nothing in the gate opened
   // it, so nothing caught it. Hand back to the ship afterwards.
   await page.keyboard.press('t');
-  for (const key of ['i', 'q', 'z', 'j', '?', 'i', 'q', 'z', 'j', '?']) {
+  // One key per tab, once each. Since the console became a tab strip (ruled
+  // 2026-08-26, Q5b) these keys are a RADIO rather than six toggles: each one
+  // shows its tab and hides the rest, so pressing a key twice closes the
+  // console rather than returning it to where it was.
+  for (const key of ['i', 'q', 'z', 'j', '?']) {
     await page.keyboard.press(key);
     await page.waitForTimeout(120);
   }
+  await page.keyboard.press('?');
+  await page.waitForTimeout(120);
+
   // And every PAGE of the squadron console, which is four screens behind one
-  // key: a page that throws when it draws is invisible to a gate that only
-  // opens the panel. J again to leave it as we found it.
-  await page.keyboard.press('j');
-  await page.waitForTimeout(150);
+  // tab: a page that throws when it draws is invisible to a gate that only
+  // opens the panel. Ask for the tab rather than assuming which way the key
+  // will flip it.
+  const squadronShowing = () => page.evaluate(
+    () => document.getElementById('squadron-panel').classList.contains('open'),
+  );
+  if (!await squadronShowing()) {
+    await page.keyboard.press('j');
+    await page.waitForTimeout(150);
+  }
+  if (!await squadronShowing()) {
+    problems.push(`[${mode}] J did not bring up the squadron tab`);
+  }
   for (const page4 of ['BOARD', 'OUTFIT', 'DECK', 'SCREEN']) {
     const tab = page.locator('#squadron-pages .sq-tab', { hasText: page4 });
     if (await tab.count() > 0) {
@@ -185,8 +201,11 @@ async function checkMode(browser, baseUrl, mode) {
       problems.push(`[${mode}] the squadron console has no ${page4} page`);
     }
   }
-  await page.keyboard.press('j');
-  await page.waitForTimeout(120);
+  // Leave the console shut.
+  if (await squadronShowing()) {
+    await page.keyboard.press('j');
+    await page.waitForTimeout(120);
+  }
   // And the island board, which has no key: it opens by clicking an island
   // you hold, from the chart where they are all reachable.
   await page.keyboard.press('c');

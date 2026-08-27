@@ -14,22 +14,41 @@ import { chromium } from 'playwright';
 
 import { createApp } from '../../server/app.js';
 import { loadRules } from '../../server/rules.js';
+import { weatherAt } from '../../shared/weather.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SHOTS = join(HERE, '..', 'shots');
 mkdirSync(SHOTS, { recursive: true });
 
-const app = createApp({ seed: 20260818, rules: loadRules() });
+const SEED = 20260818;
+let NOON_TICK = 0;
+for (let tick = 0; tick < 400000; tick += 30) {
+  const w = weatherAt(SEED, tick);
+  if (w.sunHeightPermil > 700 && w.cloudPermil < 250 && w.stormPermil === 0) {
+    NOON_TICK = tick;
+    break;
+  }
+}
+
+const app = createApp({ seed: SEED, rules: loadRules() });
 const address = await app.listen(0, '127.0.0.1');
 const browser = await chromium.launch();
 
-// Same seed, same tick window, same camera: only the tier (and one style)
-// varies, so any difference in the pictures is the tier's doing.
+// Same seed, same tick window, same camera, and - since 2026-08-26 - the same
+// SKY: only the tier (and one style) varies, so any difference in the pictures
+// is the tier's doing.
+//
+// The weather made this probe non-deterministic overnight. It asserts a blue
+// zenith, which was a fact about the pipeline while the sun was nailed at 49
+// degrees and is a fact about the WEATHER now that the sun crosses. Freezing
+// the sky at a clear noon puts the question back to the one this probe is
+// actually asking. NOON_TICK is found rather than hardcoded, so re-tuning the
+// day cannot quietly turn this into a test of a cloudy afternoon.
 async function shoot(name, query) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   page.on('pageerror', (error) => console.log(`[${name}] PAGEERROR`, error.message));
   await page.goto(
-    `http://127.0.0.1:${address.port}/?mode=solo&${query}`,
+    `http://127.0.0.1:${address.port}/?mode=solo&weather=${NOON_TICK}&${query}`,
     { waitUntil: 'load' },
   );
   // Headless SwiftShader rasterises the High tier in software; what a 4070

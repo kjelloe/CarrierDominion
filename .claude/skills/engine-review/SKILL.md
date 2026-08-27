@@ -230,6 +230,17 @@ Look for these shapes first — every one produced a real bug:
   every weight tried. When two influences fight over one value, ask which
   one is supposed to WIN, and check the loser is not simply applied later.
 
+- **A gate that encodes the old model.** The smoke pressed each panel key
+  TWICE, which returns six independent toggles to where they started and
+  closes a radio-group console. The gate was right about the old design and
+  silently wrong about the new one - when a UI's model changes, grep the
+  gates for assumptions about how it behaves, not just for its selectors.
+- **A close that forgets.** `openIslandPanel(undefined)` both hid the board
+  and cleared which island it was showing. Harmless while the panel was its
+  own overlay; the moment a console closed every tab before opening one, the
+  close wiped the subject on the way to displaying it. Ask of every teardown:
+  does this discard state the next open will need?
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

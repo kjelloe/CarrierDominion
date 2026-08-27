@@ -500,10 +500,10 @@ function setCameraMode(name) {
   const scene = state.scene3d;
   if (scene === undefined) return;
   if (name === 'chart') {
-    if (state.chart !== undefined && !state.chart.open) toggleChart(state.chart, state.view);
+    if (state.chart !== undefined && !state.chart.open) showConsole('chart');
     scene.droneView = false;
   } else {
-    if (state.chart !== undefined && state.chart.open) toggleChart(state.chart, state.view);
+    if (state.chart !== undefined && state.chart.open) showConsoleNone();
     scene.droneView = name === 'drone' && ownDroneUp() !== undefined;
     scene.gunsight = name === 'weapon';
     scene.strategic = name === 'birdseye';
@@ -549,7 +549,7 @@ function updateCameraTabs() {
 function cycleCamera() {
   const scene = state.scene3d;
   // C walks the three WAYS OF SEEING; the chart steps aside first.
-  if (state.chart !== undefined && state.chart.open) toggleChart(state.chart, state.view);
+  if (state.chart !== undefined && state.chart.open) showConsoleNone();
   scene.droneView = false;
   if (!scene.gunsight && !scene.strategic) scene.gunsight = true;
   else if (scene.gunsight) { scene.gunsight = false; scene.strategic = true; }
@@ -665,6 +665,129 @@ function collectSignals(view) {
   }
   if (state.signals.length > SIGNALS_KEPT) {
     state.signals.splice(0, state.signals.length - SIGNALS_KEPT);
+  }
+}
+
+
+// --- the console (ruled 2026-08-26, Q5b) -----------------------------------
+//
+// Six overlays with six keys became one overlay with a tab strip. The panels
+// themselves are untouched: each still owns its element, its `.open` class
+// and its own toggle, and this only decides WHICH of them is open at a time.
+// That is why every panel module and every probe still reads the same.
+//
+// Each panel's key still works and still means what it meant - pressing it
+// selects that tab, and pressing it again closes the console - so nobody has
+// to relearn anything.
+const CONSOLE_TABS = [
+  { name: 'squadron', key: 'J', label: 'console.squadron' },
+  { name: 'stores', key: 'Q', label: 'console.stores' },
+  { name: 'damage', key: 'Z', label: 'console.damage' },
+  { name: 'island', key: '', label: 'console.island' },
+  { name: 'chart', key: '', label: 'console.chart' },
+  { name: 'log', key: 'I', label: 'console.log' },
+];
+
+// Whether a tab's panel is currently showing, and how to make it show or not.
+// Routed through each panel's OWN toggle so the panel's internal `open` flag
+// never drifts from the class on its element - a second source of truth here
+// is how a panel ends up rendering into a box nobody can see.
+function consolePanelOpen(name) {
+  const root = document.getElementById(`${name}-panel`);
+  return root !== null && root.classList.contains('open');
+}
+
+function setConsolePanel(name, wanted) {
+  if (consolePanelOpen(name) === wanted) return;
+  if (name === 'squadron') flipSquadronPanel(state.squadron);
+  else if (name === 'stores') flipStoresPanel(state.stores);
+  else if (name === 'damage') toggleDamagePanel(state.damage);
+  else if (name === 'chart') toggleChart(state.chart, state.view);
+  else if (name === 'log') toggleSignals();
+  else if (name === 'island') {
+    // The island board is the one tab that needs a subject. Opening it with
+    // nothing chosen would show an empty box, so the tab simply does not
+    // open until the player has picked an island off the sea or the chart.
+    //
+    // Closing it only HIDES it: openIslandPanel(undefined) also forgets which
+    // island it was showing, and showConsole closes every tab before opening
+    // one - so routing the close through there wiped the subject on the way
+    // to displaying it.
+    if (wanted) openIslandPanel(state.island, islandById(state.island.islandId));
+    else document.getElementById('island-panel').classList.remove('open');
+  }
+}
+
+function islandById(islandId) {
+  if (islandId === undefined || islandId < 0) return undefined;
+  if (state.view === undefined) return undefined;
+  for (const island of state.view.islands) {
+    if (island.id === islandId) return island;
+  }
+  return undefined;
+}
+
+function consoleTabAvailable(name) {
+  if (name !== 'island') return true;
+  return islandById(state.island.islandId) !== undefined;
+}
+
+// Show the console at one tab. Passing the tab that is already showing closes
+// the console, which is what a key that used to be a toggle should still do.
+function showConsole(name) {
+  const shell = document.getElementById('console');
+  if (shell === null) return;
+  // A tab with nothing to show does NOTHING - it must not close the console
+  // out from under whatever the player was actually reading. Checked before
+  // anything is torn down, for exactly that reason.
+  if (!consoleTabAvailable(name)) return;
+  if (shell.classList.contains('open') && consolePanelOpen(name)) {
+    showConsoleNone();
+    return;
+  }
+  for (const tab of CONSOLE_TABS) setConsolePanel(tab.name, false);
+  setConsolePanel(name, true);
+  shell.classList.add('open');
+  shell.classList.toggle('chart', name === 'chart');
+  renderConsoleTabs();
+}
+
+function showConsoleNone() {
+  const shell = document.getElementById('console');
+  if (shell === null) return;
+  for (const tab of CONSOLE_TABS) setConsolePanel(tab.name, false);
+  shell.classList.remove('open', 'chart');
+  renderConsoleTabs();
+}
+
+function renderConsoleTabs() {
+  const strip = document.getElementById('console-tabs');
+  if (strip === null) return;
+  let signature = '';
+  for (const tab of CONSOLE_TABS) {
+    signature += `${tab.name}${consolePanelOpen(tab.name) ? '1' : '0'}`
+      + `${consoleTabAvailable(tab.name) ? 'y' : 'n'}`;
+  }
+  if (strip.__signature === signature) return;
+  strip.__signature = signature;
+  strip.textContent = '';
+  for (const tab of CONSOLE_TABS) {
+    const node = document.createElement('div');
+    node.className = 'console-tab';
+    if (consolePanelOpen(tab.name)) node.classList.add('on');
+    if (!consoleTabAvailable(tab.name)) node.classList.add('off');
+    node.textContent = state.t(tab.label);
+    if (tab.key !== '') {
+      const key = document.createElement('span');
+      key.className = 'k';
+      key.textContent = tab.key;
+      node.append(key);
+    }
+    node.addEventListener('pointerdown', (event) => {
+      event.stopPropagation();
+      showConsole(tab.name);
+    });
+    strip.append(node);
   }
 }
 
@@ -986,7 +1109,7 @@ function bindInput(level) {
         if (state.piloting) state.scene3d.followUnitId = chosen.id;
       }
     }
-    else if (key === 'i') toggleSignals();
+    else if (key === 'i') showConsole('log');
     else if (key === 'o') {
       state.scene3d.rearView = state.scene3d.rearView !== true;
       setHud(state.hud, 'status', state.t('status.rearView', {
@@ -1011,16 +1134,16 @@ function bindInput(level) {
     else if (key === 'n') cycleSelection();
     else if (key === 'r') recallSelected();
     else if (key === 'u') orderEscort();
-    else if (key === 'q') flipStoresPanel(state.stores);
+    else if (key === 'q') showConsole('stores');
     // J for the squadron console (ruled 2026-08-25): the 1988 Manta and
     // Walrus screens, where hulls are outfitted, launched and recovered.
-    else if (key === 'j') flipSquadronPanel(state.squadron);
+    else if (key === 'j') showConsole('squadron');
     else if (key === 't') togglePiloting();
     else if (key === 'p') deployPod();
     else if (key === 'b') deployVirus();
     else if (key === 'f') fireSelected();
     else if (key === 'e') fireFlares();
-    else if (key === 'z') toggleDamagePanel(state.damage);
+    else if (key === 'z') showConsole('damage');
     else if (key === 'v') cycleWeapon();
     else if (key === 'h') toggleHelp();
     else if (key === '[') zoomScope(1);
@@ -1102,8 +1225,17 @@ function handleWorldPoint(target) {
       setHud(state.hud, 'status', state.t('status.landing', { island: islandName(island) }));
       return;
     }
-    // An island you hold opens its board; anything else closes it.
+    // An island you hold opens its board; anything else dismisses it. Both go
+    // through the console so the tab strip agrees with what is showing.
+    //
+    // "Dismisses it" means the ISLAND tab and nothing else. Closing the whole
+    // console here shut the CHART the moment the player clicked open water on
+    // it - which is the click that lays a course, so the map closed under
+    // every course the player laid.
+    const wasIsland = consolePanelOpen('island');
     openIslandPanel(state.island, island);
+    if (island !== undefined) showConsole('island');
+    else if (wasIsland) showConsoleNone();
     if (island !== undefined) return;
   }
   if (enemy !== undefined) {
@@ -1719,7 +1851,7 @@ async function main() {
   renderHelp(state.t);
   document.getElementById('help-button').addEventListener('click', toggleHelp);
   document.getElementById('debug-button').addEventListener('click', toggleDebug);
-  document.getElementById('msg-button').addEventListener('click', toggleSignals);
+  document.getElementById('msg-button').addEventListener('click', () => showConsole('log'));
   document.getElementById('log-title').textContent = state.t('log.title');
   attachTip(document.getElementById('msg-button'), state.t('tip.log'));
   buildActionColumns(state.t);
@@ -1910,6 +2042,7 @@ async function main() {
       ? undefined
       : state.view.islands.find((i) => i.id === islandId);
     openIslandPanel(state.island, island);
+    if (island !== undefined) showConsole('island');
   };
   // Render probes reach the scene graph through this; nothing in the game uses
   // it, and it holds no state the client does not already own.

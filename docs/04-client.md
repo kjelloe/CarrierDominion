@@ -155,6 +155,36 @@ lying about how much it knows.
 the ship with each section shaded by health, and a click cycling that section's
 repair priority between High, Medium and Low.
 
+## The console
+
+Six overlays with six keys became **one overlay with a tab strip** (ruled
+2026-08-26, Q5b): SQUADRON, STORES, DAMAGE, ISLAND, CHART, SIGNALS. One thing
+to open, one place to look, and a panel count that stops growing every time a
+screen is added.
+
+The panels themselves were not rewritten. Each still owns its element, its
+`.open` class and its own toggle; `#console` only decides which one is open at
+a time, routing every change through the panel's own toggle so the panel's
+internal `open` flag can never drift from the class on its element. That is
+also why every panel module and every probe reads exactly as it did before.
+
+Three details that are the design rather than the plumbing:
+
+- **The keys still work and still mean what they meant.** `J` shows the
+  squadron tab, `Q` stores, `Z` damage, `I` signals. They are now a RADIO
+  rather than six toggles, so pressing a key twice closes the console instead
+  of returning it to where it was - which is a behaviour change the smoke gate
+  had encoded and had to be told about.
+- **The chart keeps the whole screen.** It is a full-screen map and always
+  was; on its tab the console gives up its box and keeps only the tab strip.
+  Folding a map into a 620px column would have obeyed the letter of the ruling
+  and lost the thing the ruling was for.
+- **The island tab needs a subject**, so it is dimmed until an island has been
+  chosen off the sea or the chart. Closing it only hides it - the board
+  remembers which island it was showing, because the console closes every tab
+  before opening one and a close that forgets would wipe the subject on the
+  way to displaying it.
+
 ## Panels
 
 `client/panels/` holds the screens that are lists rather than instruments:
@@ -340,11 +370,12 @@ to make noise before then.
 | `F` `V` | fire / cycle weapon |
 | `E` | flares |
 | `P` `B` | deploy the ACCB pod / the virus bomb |
-| `Z` | damage board |
+| `Z` | the console at the damage board |
 | `[` `]` | scope range |
 | `M` `K` `L` | sound / nominate depot / supply run |
-| `Q` | the quartermaster: island stocks, the depot, production bias |
-| `J` | the squadron console: the board, the fitting screen, the deck |
+| `Q` | the console at the quartermaster: island stocks, depot, bias |
+| `J` | the console at the squadron: the board, the fitting screen, the deck |
+| `I` | the console at signals |
 | `U` | escort: the selected unit takes station on the carrier |
 | click sea, nothing selected | lay a course - the ship sails there itself |
 | `C` | camera: chase / gunsight / map |

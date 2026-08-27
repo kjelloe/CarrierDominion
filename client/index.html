@@ -152,6 +152,76 @@
     .unit-chip.on { color: var(--hud-panel); background: var(--hud-ink); border-color: var(--hud-ink); }
     /* The CHART: the original's map screen, full-viewport above the world,
        under the panels. */
+    /* The console shell (ruled 2026-08-26, Q5b). The panels inside kept the
+       `position: fixed` placement each had when it was its own overlay; that
+       is neutralised here in one rule rather than by editing six. */
+    #console {
+      position: fixed; top: 52px; left: 76px; z-index: 12; display: none;
+      width: 620px; max-width: calc(100vw - 96px);
+      max-height: calc(100vh - 250px);
+      background: var(--hud-panel); border: 1px solid var(--hud-dim);
+      border-radius: 6px; color: var(--hud-ink);
+      font: 12px/1.6 var(--hud-font);
+    }
+    #console.open { display: flex; flex-direction: column; }
+    #console-tabs {
+      display: flex; gap: 4px; flex: 0 0 auto;
+      padding: 8px 10px; border-bottom: 1px solid var(--hud-dim);
+    }
+    .console-tab {
+      padding: 4px 10px; cursor: pointer; user-select: none;
+      border: 1px solid transparent; color: var(--hud-dim);
+      font: 11px/1.4 var(--hud-font); letter-spacing: 2px;
+    }
+    .console-tab:hover { color: var(--hud-ink); }
+    /* A tab with nothing to show - the island board before an island has been
+       chosen - is dimmed rather than hidden, so the console's shape does not
+       change under the pointer. */
+    .console-tab.off { opacity: 0.35; cursor: default; }
+    .console-tab.off:hover { color: var(--hud-dim); }
+    .console-tab.on {
+      color: var(--hud-panel); background: var(--hud-ink); border-color: var(--hud-ink);
+    }
+    .console-tab .k {
+      color: inherit; opacity: 0.55; margin-left: 6px; letter-spacing: 0;
+    }
+    #console-body { padding: 10px 14px 14px 14px; overflow: auto; flex: 1 1 auto; }
+    #console-body > div {
+      position: static; inset: auto; transform: none;
+      width: auto; min-width: 0; max-width: none; max-height: none;
+      background: none; border: none; border-radius: 0; padding: 0;
+      overflow: visible;
+    }
+    /* The chart is a full-screen map and always was. On its tab the console
+       gives up its box and lets the map fill the screen, keeping only the tab
+       strip - folding a map into a 620px column would obey the letter of the
+       ruling and lose the thing the ruling was for. */
+    /* On the chart tab the shell stops being a box AT ALL - static, sizeless,
+       and its body `display: contents` - so the map's own fixed canvas and
+       buttons position and STACK exactly as they did when the chart was a
+       top-level overlay. Leaving the shell fixed at z-index 12 made it a
+       stacking context, which lifted the full-screen canvas above the camera
+       tabs and swallowed every click on them. */
+    #console.open.chart {
+      display: block; position: static;
+      width: auto; height: 0; max-width: none; max-height: none;
+      background: none; border: none; border-radius: 0;
+    }
+    #console.chart #console-body { display: contents; }
+    /* The strip keeps the console's own corner on the chart tab rather than
+       centring: the top-centre column already belongs to the camera tabs
+       (HELM / WEAPON / BIRDSEYE / CHART) and centring the strip put it
+       straight over them, swallowing their clicks. */
+    #console.chart #console-tabs {
+      pointer-events: auto; position: fixed; top: 52px; left: 76px;
+      z-index: 14; border-bottom: none;
+      background: var(--hud-panel); border: 1px solid var(--hud-dim);
+      border-radius: 6px;
+    }
+    #console.chart #console-body { padding: 0; overflow: visible; }
+    #console.chart #chart-panel { pointer-events: auto; }
+    /* And the chart's own button row drops below the strip. */
+    #console.chart #chart-buttons { top: 96px; }
     #chart-panel { display: none; }
     #chart-panel.open { display: block; }
     #chart-canvas {
@@ -524,7 +594,6 @@
   <div id="hud" class="hidden"></div>
   <div id="debug-button">DBG</div>
   <div id="msg-button">MSG</div>
-  <div id="log-panel"><div id="log-title"></div><div id="log-body"></div></div>
   <div id="location"></div>
   <div id="drone-info"></div>
   <div id="toast"></div>
@@ -536,17 +605,6 @@
   <div id="auto-chip">A</div>
   <div id="score-strip"></div>
   <div id="unit-chips"></div>
-  <div id="chart-panel">
-    <canvas id="chart-canvas"></canvas>
-    <div id="chart-buttons">
-      <div id="chart-resources" class="chart-btn"></div>
-      <div id="chart-prog" class="chart-btn"></div>
-      <div id="chart-lay" class="chart-btn"></div>
-      <div id="chart-network" class="chart-btn"></div>
-      <div id="chart-clear" class="chart-btn"></div>
-      <div id="chart-fit" class="chart-btn"></div>
-    </div>
-  </div>
   <div id="rotate-gate"></div>
   <!-- The legend is rendered from the language catalogue by main.js, and
        hides behind the ? button until asked for. -->
@@ -554,13 +612,17 @@
   <div id="help-button">?</div>
   <div id="title-card"></div>
   <div id="sight"><span class="bar h"></span><span class="bar v"></span><span class="ring"></span></div>
-  <div id="damage-panel">
-    <div id="damage-title"></div>
-    <canvas id="damage-view"></canvas>
-    <div id="damage-list"></div>
-    <div id="damage-stores"></div>
-    <div id="damage-legend"></div>
-  </div>
+  <!-- The console (ruled 2026-08-26, Q5b). Six overlays with six keys became
+       one overlay with a tab strip: one thing to open, one place to look, and
+       a panel count that stops growing. Each key still opens its own tab, so
+       nothing anyone has already learned stops working.
+
+       The panels keep their ids and their `.open` class - the tab strip sets
+       exactly one of them open - so every panel module and every probe reads
+       the same as before. -->
+  <div id="console">
+    <div id="console-tabs"></div>
+    <div id="console-body">
   <div id="squadron-panel">
     <div id="squadron-title"></div>
     <div id="squadron-kinds"></div>
@@ -576,10 +638,31 @@
     <div id="stores-body"></div>
     <div id="stores-note"></div>
   </div>
+  <div id="damage-panel">
+    <div id="damage-title"></div>
+    <canvas id="damage-view"></canvas>
+    <div id="damage-list"></div>
+    <div id="damage-stores"></div>
+    <div id="damage-legend"></div>
+  </div>
   <div id="island-panel">
     <div id="island-title"></div>
     <div id="island-body"></div>
     <div id="island-note"></div>
+  </div>
+  <div id="chart-panel">
+    <canvas id="chart-canvas"></canvas>
+    <div id="chart-buttons">
+      <div id="chart-resources" class="chart-btn"></div>
+      <div id="chart-prog" class="chart-btn"></div>
+      <div id="chart-lay" class="chart-btn"></div>
+      <div id="chart-network" class="chart-btn"></div>
+      <div id="chart-clear" class="chart-btn"></div>
+      <div id="chart-fit" class="chart-btn"></div>
+    </div>
+  </div>
+  <div id="log-panel"><div id="log-title"></div><div id="log-body"></div></div>
+    </div>
   </div>
   <div id="warover-panel">
     <div>

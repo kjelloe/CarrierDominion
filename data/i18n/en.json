@@ -448,5 +448,12 @@
   "sea.high": "HIGH",
   "sea.gale": "GALE",
   "hud.sea": "sea",
-  "hud.radarLoss": "radar"
+  "hud.radarLoss": "radar",
+  "console.squadron": "SQUADRON",
+  "console.stores": "STORES",
+  "console.damage": "DAMAGE",
+  "console.island": "ISLAND",
+  "console.chart": "CHART",
+  "console.log": "SIGNALS",
+  "console.noIsland": "no island chosen"
 }

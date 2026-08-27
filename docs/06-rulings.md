@@ -561,6 +561,24 @@ That is the field working as intended, not a defect - but it means a pin
 move is not by itself evidence that the war changed. Proven here by hashing
 3,000 ticks with `rulesHash` blanked: identical, tick for tick.
 
+### What building the eight taught us
+
+Three things worth keeping, none of which were the point of any ruling:
+
+- **The battery cannot choose every number.** Three of the five seeds do not
+  move at any sea-state or fuel-burn setting; the other two swing chaotically
+  (777001 reads 26k / 82k / 205k / 48k ticks across four sea-state values,
+  not monotonic anywhere). When the instrument cannot separate two candidates,
+  say so and choose on design grounds - do not spend an evening tuning against
+  noise and call the result measured.
+- **A pin move is not evidence the war changed.** `state.rulesHash` hashes the
+  whole ruleset on purpose, so deleting a key nothing reads still moves both
+  pins. Hash the trajectory with `rulesHash` blanked to tell the two apart.
+- **When a measurement reads zero, suspect the meter.** A fuel sweep reported
+  no refuellings at any burn rate, which read as a dead supply chain; the
+  chain was fine and the detector's threshold was five per-mil against
+  deliveries of four.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

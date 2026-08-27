@@ -448,5 +448,12 @@
   "sea.high": "HØY SJØ",
   "sea.gale": "STORM",
   "hud.sea": "sjø",
-  "hud.radarLoss": "radar"
+  "hud.radarLoss": "radar",
+  "console.squadron": "SKVADRON",
+  "console.stores": "LAGER",
+  "console.damage": "SKADE",
+  "console.island": "ØY",
+  "console.chart": "KART",
+  "console.log": "SIGNALER",
+  "console.noIsland": "ingen øy valgt"
 }

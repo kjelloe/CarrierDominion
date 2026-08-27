@@ -5,6 +5,113 @@ golden hash and why.
 
 ---
 
+## 2026-08-27 — The eight answers, built
+
+The owner answered all eight open questions in one line each. Five needed
+building; three were decisions not to.
+
+**Sea state reaches the small craft (Q1b).** A heavy sea slows anything on the
+surface and lifts an aircraft off the wavetops. Two things the tests hold
+down. It applies AFLOAT only - a Walrus is amphibious and a heavy sea has no
+opinion about a vehicle climbing a hillside, which would be classifying by the
+wrong axis. And the flight floor binds the AIRCRAFT rather than the stick: the
+AI cruises at 400 m and is untouched today, but a limit that binds only the
+human is one the human reads as the game cheating.
+
+Measured, and the measurement was the interesting part. The flight floor moves
+the battery not at all, exactly as predicted. The speed rule is the whole
+change - and seed 777001 turns out to be **chaotic rather than sensitive**:
+26k ticks with the rule off, 82k at 650, 205k at 750, 48k at 850, not
+monotonic anywhere. Three of the five seeds do not move at any setting. So the
+battery genuinely cannot choose this number, which is worth knowing before
+spending an evening tuning against it. 650 was chosen on feel.
+
+**Fuel bites (Q6b).** At the old burn of 90 the bunker never fell below a
+fifth in any war we ran, so ruling #3's whole fuel supply chain was
+decorative. Burn is now 130: about an hour of hard steaming in a full bunker,
+against wars of 25 to 70 minutes. 150 was tried and rejected - it leaves a
+long war finishing on 1-3%, survivable for the machine and a knife edge for a
+human quartermaster, who is who the rule is for.
+
+The false trail here is worth recording. The first sweep reported ZERO
+refuellings at every burn rate, which read as a dead supply chain. It was a
+dead INSTRUMENT: deliveries arrive as ~400-fuel lumps against a 100,000
+bunker - four per-mil - and my detector only counted jumps above five per-mil.
+Instrumenting the flow showed 59,210 fuel delivered over a long war. Measure
+the flow, not the feature; and when the flow reads zero, suspect the meter.
+
+**A strike blooms the scope (Q3b).** Drawn under everything real, so a strike
+can never hide a blip the player was entitled to see, and derived from (seed,
+tick) so two players in one storm see the same noise. While in there, the
+scope's range ring now draws `radarNow` rather than the fair-weather figure -
+drawing the fair figure in a storm draws a promise the set cannot keep.
+
+The probe's first version compared the strike against the storm mood, which is
+a different scene entirely: it would have passed whether or not the clutter
+ever drew. It now photographs tick 41719 as well as 41720 - same storm, cloud,
+wind and sun, the stroke the only difference. A test that cannot fail is worse
+than no test, because it reports confidence.
+
+**One tabbed console (Q5b).** Six overlays with six keys became one overlay
+with a tab strip. The panels were not rewritten: each still owns its element,
+its `.open` class and its own toggle, and the console only decides which is
+open, routing through each panel's own toggle so its internal flag cannot
+drift from its class. Two judgements inside it: the chart keeps the whole
+screen on its tab, because folding a map into a 620px column obeys the letter
+of the ruling and loses what the ruling was for; and the island tab remembers
+its subject across a close, because the console shuts every tab before opening
+one and a forgetful close wiped the island on the way to showing it.
+
+The smoke gate had the old model baked in - it pressed each panel key twice
+expecting to return to where it started, which is right for six toggles and
+wrong for a radio. Updated to ask the console what is showing rather than
+assume which way a key will flip it.
+
+**The probe sweep paid for itself three times over on this slice.** None of
+these were visible to the tests or to the smoke gate:
+
+- **Clicking open water closed the whole console.** That is the click that
+  lays a course on the chart, so the map shut under every course the player
+  laid. A sea-click now dismisses the ISLAND tab and nothing else.
+- **The chart tab's floating strip sat on the camera-tab bar**, swallowing
+  every click on HELM / WEAPON / BIRDSEYE. It keeps the console's own corner
+  instead, and the chart's button row drops below it.
+- **Moving the chart canvas inside `#console` made it a stacking context.**
+  At z-index 12 the full-screen map painted over the whole HUD. On the chart
+  tab the shell is now static and sizeless, with `display: contents` on its
+  body, so the map stacks exactly as it did as a top-level overlay.
+
+And a fourth from the WEATHER work, which only a full sweep would have
+connected: `graphics_shots` asserts a blue zenith, which was a fact about the
+pipeline while the sun was nailed at 49 degrees and became a fact about the
+weather the moment the sun started crossing. It now freezes the sky at a
+clear noon, found by condition rather than hardcoded.
+
+**On the sweep's own reliability.** 29/31 in the clean run, but all 31 pass
+when run individually: `playtest_round2` and `playtest_round3` fail only
+under thirty-one back-to-back browser launches (the second by outright
+SIGKILL). `second_war` is flaky for a real reason - see dev-questions §36 -
+and it is worth saying plainly that three flaky probes cost the sweep most of
+its authority, because a sweep you have to re-run to believe is one you stop
+reading.
+
+**The dead keys go (Q6a).** `startFuel`, `startOrdnance` and `startMaterials`
+were read by nothing. Deleting them moved the golden pins, which surprised me
+until I looked: `state.rulesHash` hashes the whole ruleset so two LAN peers can
+prove they hold the same game. That is the field working. Proven by hashing
+3,000 ticks with `rulesHash` blanked - identical, tick for tick - so a pin move
+is not by itself evidence that the war changed.
+
+The dead-key test grew the check that would have caught `rules.startMaterials`,
+which hid because `units.json` has a live key of the same name and the check
+matches bare names.
+
+**Not built, by ruling:** no rain or spray yet (Q2b); the squadron numbers
+stand as they are (Q4a); the six oversized engine modules stay (Q7a), because
+splitting churns the files the pins depend on for no behaviour change.
+
+---
+
 ## 2026-08-26 — Weather, and the one thing it is allowed to touch
 
 Owner's ask: a more lifelike ocean, wind-aligned waves, weather that tells a

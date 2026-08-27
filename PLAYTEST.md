@@ -288,6 +288,22 @@ the ship astern (useful off a reef).
 for the Preetham sky and mirror water, then `?style=retro&graphics=high` for
 sharper 1988 with the amber grid. The start menu's **look** row previews live.
 
+## A10 — The console, and the keys you already know *(10 min — new)*
+
+The six panels are now one overlay with a tab strip: SQUADRON, STORES,
+DAMAGE, ISLAND, CHART, SIGNALS. Your keys are unchanged - `J` `Q` `Z` `I`
+each bring up their own tab - with one difference worth feeling: they are a
+**radio** now, so pressing the same key twice closes the console rather than
+putting it back how it was.
+
+- Walk all six tabs and tell me whether one overlay is better than six. This
+  is the change I am least sure of.
+- **The chart** takes the whole screen on its tab, with only the tab strip
+  floating over it. Does the strip get in the way of the map?
+- **ISLAND** is dimmed until you have clicked one of your islands. Click one,
+  go to another tab, come back - it should still be showing that island.
+- Anything that used to be one keypress and is now two is a defect. Tell me.
+
 ## C1b — The weather and the day *(10 min — new)*
 
 `?style=modern&graphics=high` only; everywhere else the sun stays where it
@@ -312,9 +328,20 @@ What I want your eye on:
 - **The horizon.** Cloud, haze and sea have to agree at the sea line. Any
   bright strip there is the thing I chased longest.
 
-And the one that is not scenery: **a storm shortens radar.** Watch the scope
-range as weather closes in. It costs 30% at the very worst, never more.
-Tell me whether that reads as weather or as a fault.
+And the parts that are not scenery. **A storm shortens radar** - watch the
+ring on the scope, which now draws what the set actually reaches rather than
+its fair-weather figure. **A heavy sea slows the boats**: the Walrus and the
+lighter lose up to a third afloat, and the Walrus gets it all back the moment
+it is ashore. **A gale lifts you off the wavetops** - full forward stick in a
+Manta will not take you as low as it does in calm water. The scope's bottom
+line names the sea state and the radar loss, so all of it should be legible
+without guessing.
+
+I want to know whether those read as weather or as faults. And separately:
+**fuel now bites.** A full bunker is about an hour of hard steaming against
+wars of 25 to 70 minutes, where before you could steam flat out for a whole
+war and finish with a fifth left. Tell me whether you ever had to think about
+it, and whether thinking about it was interesting or just annoying.
 
 ## C2 — The shop window
 
