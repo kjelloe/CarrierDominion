@@ -274,6 +274,13 @@ Look for these shapes first — every one produced a real bug:
   ("Patience, not a lighter scene") - the lesson existed and the new probe
   did not inherit it. Reuse ONE page rather than opening N, and give any
   High-tier wait the patience the existing High-tier probe uses.
+- **Guessing at a rendering number instead of printing it.** A storm sky kept
+  reading brown; the weight pulling it toward slate was raised by eye three
+  times, to no effect, because the number was never the problem - three.js
+  lerps colour in LINEAR space, where a bright warm colour dominates far
+  longer than its hex suggests. One `console.log` of the actual uniform found
+  it immediately. When a colour, a size or a rate "won't move", print the
+  value the shader is really getting before touching the constant again.
 - **A headless browser doing software rendering is not a clock.** A probe
   reported the LAN room taking 4-16 seconds to reopen and it was written up
   as a UX defect - twice, the second time with three timings behind it. The
@@ -284,6 +291,13 @@ Look for these shapes first — every one produced a real bug:
   probe at the cheapest tier that still tests what it is for. Two milliseconds
   is not a faster four seconds - that size of gap means the instrument is in
   the measurement.
+- **A pixel check that samples the wrong surface.** The lightning-on-the-scope
+  test read a band of the 3D frame at the instrument panel's height instead of
+  the panel's own 2D canvas, and passed because a flash brightens the whole
+  scene - it was measuring the sea and reporting on the radar. It survived
+  until an unrelated change made the two readings identical. For any overlay
+  drawn on its own canvas, read THAT canvas; and prefer a margin over "these
+  two numbers differ", which rounding noise can satisfy.
 - **Run the probes before believing them.** They are not in `npm run gate`
   (they open browsers and take minutes), so they rot. `npm run probes` runs
   the lot; sweep it after any UI change, and read a failure as "either the

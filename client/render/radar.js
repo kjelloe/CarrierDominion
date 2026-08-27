@@ -191,21 +191,28 @@ function drawStormClutter(ctx, view, cx, cy, radius, colours) {
   // The bloom is brightest on the first tick of the stroke and gone by the
   // last, which is the same curve the sky uses.
   const strength = flash / 1000;
-  const arcs = 5 + Math.round(strength * 7);
+  const arcs = 9 + Math.round(strength * 11);
   const seed = view.seed === undefined ? 0 : view.seed;
   // One slot per stroke rather than per tick: the clutter must SIT there and
   // fade, not re-scatter every frame like television snow.
   const slot = Math.floor(view.tick / 8);
 
   ctx.save();
-  ctx.globalAlpha = 0.10 + strength * 0.30;
+  // A wash across the whole face first - a strike lifts the noise floor of
+  // the set, it does not only paint arcs - then the returns themselves.
+  ctx.globalAlpha = 0.05 + strength * 0.12;
+  ctx.fillStyle = colours.grid;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, TAU);
+  ctx.fill();
+  ctx.globalAlpha = 0.16 + strength * 0.40;
   ctx.strokeStyle = colours.grid;
   for (let i = 0; i < arcs; i++) {
     const h = clutterHash(seed + i * 7919, slot);
     const bearing = ((h % 65536) / 65536) * TAU;
     const distance = (0.18 + ((Math.floor(h / 65536) % 1000) / 1000) * 0.78) * radius;
     const spread = 0.10 + ((Math.floor(h / 131072) % 400) / 1000);
-    ctx.lineWidth = 1 + strength * 2;
+    ctx.lineWidth = 1.5 + strength * 2.5;
     ctx.beginPath();
     ctx.arc(cx, cy, distance, bearing - spread, bearing + spread);
     ctx.stroke();

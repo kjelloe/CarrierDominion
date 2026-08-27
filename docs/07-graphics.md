@@ -218,6 +218,80 @@ below a steerable floor; dawn must be warm; and all five must render
 *different* skies, which is the assertion that would catch the whole weather
 path being switched off.
 
+## 3c. Phase 3b — a sea that is a spectrum, and cloud that has shape (2026-08-27)
+
+Owner, after seeing it run: the ocean should look alive like the reference
+scene, the cloud should look realistic, and the modern tier "had the same
+uniform ocean waves". All three were fair.
+
+**The sea was four waves, and now it is a spectrum.** The first swell ran four
+Gerstner components all within a few degrees of the wind. That is corduroy:
+parallel ridges of one size, marching. It is now twelve components, and the
+part that matters is not the count but the **directional spread** — long swell
+runs with the wind because it was raised somewhere else by a wind that has
+been blowing a while, and short chop fans out to either side. So the spread
+grows with frequency: the 210 m swell sits within ~7° of the wind, the 4.5 m
+chop as much as 80° off it. Crossing wave trains are what make water look
+alive rather than combed. Wavelengths are geometric and jittered so no two
+share a factor, and amplitude follows wavelength^0.75 so the long waves carry
+the shape and the short ones only texture it.
+
+The reference scene reached the same conclusion from the other end — its
+normal map is 26 waves in mixed directions. Ours is that idea in geometry.
+
+Two more things the sea needed:
+
+- **Ripple in the fragment.** At 256 segments across 1500 m the vertices are
+  six metres apart, so everything shorter than a six-metre wave — which is all
+  of the glitter — has to live in the normal, or the water between crests is a
+  mirror-smooth facet that reads as plastic.
+- **Whitecaps on the WAVE, not the ripple.** Keying foam to the perturbed
+  normal made every centimetre of chop a breaking crest and turned a gale
+  white — brighter than the same sea at noon. Real whitecaps are sparse, on
+  the steep faces of the big waves only.
+
+**Cloud was a smear, and now it has shape.** A four-octave value fBm at one
+low frequency looks exactly like what it is: airbrushed blobs. Three changes,
+which are the three things any convincing procedural cloud does — **domain
+warping** (sampling the noise at a position displaced by other noise, which is
+what turns blobs into curling, torn, wind-sheared forms and is much the
+biggest of the three), more octaves at a frequency where they are visible, and
+**light from a direction**: sampling density a short step toward the sun gives
+the bright rim where the deck thins into the light, for one extra sample.
+
+**Three defects found on the way, all of them ours:**
+
+1. **The swell and the mirror sea had drifted apart.** The mirror was being
+   tinted by the weather while the patch kept a hardcoded blue, so the seam
+   where the patch fades out showed as a tone step in the middle of the
+   picture. One `seaColourFor()` now feeds both. Anything that colours the sea
+   has to colour all of it.
+2. **The cloud shell was being reflected from the wrong place.** The mirror
+   water renders the scene from a mirrored camera, and the shell RIDES THE EYE
+   — so what it put on the water was not a reflection but a smear that moved
+   with the ship, showing as pale mottled patches that grew with cover. It is
+   excluded from that pass now, by wrapping `onBeforeRender` rather than
+   editing the vendored file.
+3. **Excluding it then made the storm sea brighter than noon**, because the
+   water was left reflecting the bright Preetham dome — and at the grazing
+   angles that fill most of the frame the reflection is ALL of the colour;
+   `waterColor` has no say there whatsoever. The fix is to darken the dome
+   itself in heavy weather via **rayleigh**, which lesson 3 already told us is
+   the brightness lever. That is right anyway: the sky behind the cloud should
+   be dark, not bright with dark cloud pasted over it.
+
+**Lesson 12, and it is the one worth carrying:** *three.js interpolates
+colours in LINEAR space.* Colour management converts every
+`new THREE.Color(hex)` into the linear working space, and a bright warm colour
+is far brighter there than its hex suggests — so a linear blend keeps its
+warmth long after the weight "looks" nearly complete. A dawn peach lerped 94%
+of the way to a cold slate still came out `#5a4e51`, a warm brown, which is
+why a squall kept reading brown however hard the weight was pushed. **Three
+rounds of raising the number by eye achieved nothing; printing the uniform
+found it immediately.** The fix is a curve, not a bigger number —
+`stormWeight()` raises storm to the 0.45 power, so 0.9 pulls at 0.95 and the
+last few per cent, which are the ones that change the hue, actually arrive.
+
 ## 4. Low (deferred) — the real mobile pass
 
 When it is time: `powerPreference: 'low-power'`, resolution scaling below

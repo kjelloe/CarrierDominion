@@ -28,6 +28,9 @@ import * as THREE from '../vendor/three.module.min.js';
 // CLOUD_HEIGHT, so the cloud converges at the horizon the way cloud does,
 // at every elevation, with no far plane to fall off.
 const CLOUD_HEIGHT = 2200;
+
+// How dark a storm's cloud base is allowed to get. Slate, not soot.
+const STORM_CLOUD_FLOOR = new THREE.Color(0x424b59);
 const SHELL_RADIUS = 8000;
 
 const CLOUD_VERTEX = `
@@ -40,8 +43,20 @@ const CLOUD_VERTEX = `
   }
 `;
 
-// Value noise and a four-octave fBm. Cheap, and it costs one texture fetch
-// fewer than a noise texture would.
+// Cloud is SHAPE, not a smear. The first version was a four-octave value
+// fBm sampled at one low frequency, and it looked exactly like that: soft
+// airbrushed blobs with no edge, no billow and no inside. Three things fix
+// it, and they are the three things every convincing procedural cloud does.
+//
+//   1. DOMAIN WARPING. Sampling the noise at a position that has itself been
+//      displaced by noise is what turns round blobs into curling, torn,
+//      wind-sheared shapes. It is the single biggest difference here.
+//   2. MORE OCTAVES, and a base frequency high enough that the fine ones are
+//      visible rather than smeared across ten kilometres of deck.
+//   3. LIGHT FROM A DIRECTION. A cloud lit flatly is a stain. Sampling the
+//      density a short way TOWARD THE SUN and comparing gives the bright rim
+//      where the deck thins into the light - the silver lining - for the cost
+//      of one extra sample, plus a forward-scatter glow near the sun itself.
 const CLOUD_FRAGMENT = `
   precision highp float;
   uniform float uTime;
@@ -52,6 +67,7 @@ const CLOUD_FRAGMENT = `
   uniform vec3 uLight;
   uniform vec3 uDark;
   uniform vec3 uHaze;
+  uniform vec3 uSunDir;
   varying vec3 vRay;
 
   float hash(vec2 p) {
@@ -64,15 +80,26 @@ const CLOUD_FRAGMENT = `
     return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
                mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
   }
-  float fbm(vec2 p) {
+  // Three octaves for the warp field - it only needs to be lumpy, not
+  // detailed - and five for the cloud itself.
+  float fbm3(vec2 p) {
     float v = 0.0;
     float a = 0.5;
-    for (int i = 0; i < 4; i++) {
-      v += a * noise(p);
-      p = p * 2.03;
-      a *= 0.5;
-    }
+    for (int i = 0; i < 3; i++) { v += a * noise(p); p = p * 2.07; a *= 0.5; }
     return v;
+  }
+  float fbm5(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.03; a *= 0.5; }
+    return v;
+  }
+  float density(vec2 p) {
+    // The warp. Two decorrelated fbm fields displace the sample point; the
+    // offsets are the usual arbitrary large constants, there to keep the two
+    // fields from being the same field.
+    vec2 q = vec2(fbm3(p + vec2(1.7, 9.2)), fbm3(p + vec2(8.3, 2.8)));
+    return fbm5(p + q * 1.35);
   }
 
   void main() {
@@ -94,21 +121,35 @@ const CLOUD_FRAGMENT = `
     t = min(t, 90000.0);
     vec2 at = dir.xz * t;
 
-    vec2 p = at * 0.00035 + uDrift * uTime * 0.006;
-    float n = fbm(p);
+    vec2 p = at * 0.00062 + uDrift * uTime * 0.006;
+    float n = density(p);
     // Coverage is a threshold on the noise, so "a few light clouds" and "an
     // overcast that has made its mind up" are the same field at two cuts.
     // The floor stops short of total: a deck with no break in it is
     // indistinguishable from a grey backdrop, and the breaks are what tell
     // you it is cloud at all.
-    float edge = mix(0.74, 0.30, uCover);
-    float mask = smoothstep(edge, edge + 0.16, n);
+    float edge = mix(0.72, 0.28, uCover);
+    float mask = smoothstep(edge, edge + 0.10, n);
     if (mask <= 0.002) discard;
 
     // Thicker cloud is darker cloud, and a storm drags the whole deck toward
     // the grey-blue the owner asked for.
-    float thick = smoothstep(edge, edge + 0.30, n);
+    float thick = smoothstep(edge, edge + 0.26, n);
     vec3 colour = mix(uLight, uDark, thick * (0.35 + 0.65 * uStorm));
+
+    // The silver lining: density a short step TOWARD the sun. Where the deck
+    // thins in that direction the light is coming through, and that edge is
+    // most of what makes cloud read as three-dimensional rather than painted.
+    vec2 toSun = normalize(uSunDir.xz + vec2(0.0001, 0.0));
+    float ahead = density(p + toSun * 0.055);
+    // A storm still has structure - it is a dark sky, not an absent one - so
+    // the rim is dimmed rather than switched off.
+    float rim = clamp((n - ahead) * 2.6, 0.0, 1.0) * (1.0 - uStorm * 0.35);
+    colour += uLight * rim * 0.55 * mask;
+    // And forward scatter: the deck glows where the sun is behind it.
+    float facing = max(0.0, dot(dir, normalize(uSunDir)));
+    colour += uLight * pow(facing, 7.0) * (1.0 - thick * 0.7) * 0.45;
+
     // A stroke lights the deck from inside.
     colour += vec3(0.85, 0.88, 1.0) * uFlash * (0.35 + 0.65 * thick);
 
@@ -125,9 +166,6 @@ const CLOUD_FRAGMENT = `
     // storm that hides which side holds which island is a storm that costs
     // the player the war for a picture.
     float above = step(0.0, cameraPosition.y - ${CLOUD_HEIGHT.toFixed(1)});
-    // Heavy weather closes the horizon in: the alpha floor rises with the
-    // cover, so an overcast reaches the sea line instead of stopping short
-    // of it.
     // In the middle of a squall the deck is solid. Leaving the mask alone
     // let ~20% of the Preetham dome through, and a low sun behind a storm is
     // the brightest thing in the sky - so a storm read as a warm pale band
@@ -151,6 +189,7 @@ function buildClouds(sizeMetres) {
       uLight: { value: new THREE.Color(0xfdfbf6) },
       uDark: { value: new THREE.Color(0x39434f) },
       uHaze: { value: new THREE.Color(0x9fb3c4) },
+      uSunDir: { value: new THREE.Vector3(0.4, 0.6, 0.35) },
     },
     vertexShader: CLOUD_VERTEX,
     fragmentShader: CLOUD_FRAGMENT,
@@ -185,10 +224,17 @@ function updateClouds(view3d, weather, sky, deltaSeconds) {
   // Except in a storm, where there is no lit side: a squall's cloud base is
   // grey all the way through. Without this the near-white "lit" colour was
   // the brightest thing in a storm frame and the whole sky read warm.
-  uniforms.uLight.value.lerp(sky.fogColour, sky.storm * 0.8);
-  uniforms.uDark.value.copy(sky.fogColour).multiplyScalar(0.75);
+  uniforms.uLight.value.lerp(sky.fogColour, sky.storm * 0.78);
+  // The dark side of the cloud, with a FLOOR. Straight fog colour times 0.75
+  // in a storm - where the fog itself is nearly black - gave a squall an
+  // unreadable black ceiling: no shape, no billow, nothing to look at. A
+  // storm sky is dark, not absent, so the darkest cloud is lifted toward a
+  // slate grey as the storm builds.
+  uniforms.uDark.value.copy(sky.fogColour).multiplyScalar(0.95);
+  uniforms.uDark.value.lerp(STORM_CLOUD_FLOOR, sky.storm * 0.7);
   // The haze at the sea line IS the fog, so the whole horizon agrees.
   uniforms.uHaze.value.copy(sky.fogColour);
+  uniforms.uSunDir.value.copy(view3d.sunDir);
   // The shell rides the eye, so the view ray in the vertex shader is exact
   // and the cloud never has an edge to come round.
   view3d.clouds.position.copy(view3d.camera.position);
@@ -199,46 +245,114 @@ function updateClouds(view3d, weather, sky, deltaSeconds) {
 
 const SWELL_SPAN = 1500;
 
-// Gerstner waves: the crests sharpen and the troughs broaden as the sea gets
-// up, which is what a sine sheet can never do and what makes a heavy sea
-// look heavy. Four components, all running with the wind, at wavelengths
-// that do not share a factor so the pattern does not repeat under the eye.
+// A SEA IS A SPECTRUM, not a few waves. The first version ran four Gerstner
+// components all within a few degrees of the wind, and it read exactly as
+// that is: corduroy. Parallel ridges of one size, marching. The owner's word
+// for it was "uniform", which is the right word.
+//
+// What a real sea has, and what this now has:
+//
+//   * MANY components (twelve), at wavelengths spaced geometrically from a
+//     210 m swell down to 4.5 m chop, each jittered so no two share a factor
+//     and the pattern never closes.
+//   * DIRECTIONAL SPREAD. This is the part that was missing. Long swell runs
+//     with the wind because it was raised by a wind that has been blowing a
+//     while somewhere else; the short chop fans out to either side. So the
+//     spread grows with frequency: the 210 m swell sits within ~7 degrees of
+//     the wind, the 4.5 m chop as much as 80 degrees off it. Crossing wave
+//     trains are what make water look alive rather than combed.
+//   * An AMPLITUDE SPECTRUM. Height goes as wavelength^0.75, so the long
+//     waves carry the shape of the sea and the short ones only texture it.
+//
+// The reference scene reached the same conclusion from the other end: its
+// normal map is a sum of 26 waves in mixed directions (suntest/qwen38,
+// createWaterNormalsTexture). Ours is the same idea in geometry.
+const SWELL_WAVES = 12;
+const SWELL_LONGEST = 210;
+const SWELL_SHORTEST = 4.5;
+const SWELL_SEED = 20260827;
+
+// Built once, on the CPU, deterministically - two machines must draw the same
+// sea for a screenshot to be worth comparing.
+function buildWaveSpectrum() {
+  let s = SWELL_SEED >>> 0;
+  const rand = () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+  const waves = [];
+  let total = 0;
+  for (let i = 0; i < SWELL_WAVES; i++) {
+    const t = i / (SWELL_WAVES - 1);
+    // Geometric spacing, jittered: neighbouring wavelengths in a harmonic
+    // ratio beat against each other and the beat is visible as a repeat.
+    const wavelength = SWELL_LONGEST
+      * Math.pow(SWELL_SHORTEST / SWELL_LONGEST, t)
+      * (0.85 + rand() * 0.3);
+    // Spread grows with frequency (see above): swell hugs the wind, chop fans.
+    const spread = (0.08 + 0.92 * t) * (Math.PI / 2);
+    const angle = (rand() * 2 - 1) * spread;
+    const amp = Math.pow(wavelength / SWELL_LONGEST, 0.75);
+    total += amp;
+    waves.push({ angle: angle, wavelength: wavelength, amp: amp, phase: rand() * Math.PI * 2 });
+  }
+  // Normalise so uHeight means the height of the SEA, not of one wave.
+  const packed = [];
+  const phases = [];
+  for (const wave of waves) {
+    packed.push(new THREE.Vector4(
+      Math.cos(wave.angle),
+      Math.sin(wave.angle),
+      wave.wavelength,
+      wave.amp / total,
+    ));
+    phases.push(wave.phase);
+  }
+  return { packed: packed, phases: phases };
+}
+
 const SWELL_VERTEX = `
   uniform float uTime;
   uniform vec2 uWind;
   uniform float uHeight;
   uniform float uChop;
+  // rotation cos, rotation sin, wavelength, amplitude share.
+  uniform vec4 uWave[${SWELL_WAVES}];
+  uniform float uPhase[${SWELL_WAVES}];
   varying vec3 vWorld;
   varying vec3 vNormal2;
   varying float vFade;
-
-  void gerstner(vec2 dir, float wavelength, float amp, float steep,
-                vec2 pos, float t, inout vec3 offset, inout vec3 normal) {
-    float k = 6.28318530718 / wavelength;
-    float c = sqrt(9.81 / k);
-    vec2 d = normalize(dir);
-    float f = k * (dot(d, pos) - c * t);
-    float a = amp;
-    float q = steep / (k * a * 4.0);
-    offset.x += q * a * d.x * cos(f);
-    offset.z += q * a * d.y * cos(f);
-    offset.y += a * sin(f);
-    float wa = k * a;
-    normal.x -= d.x * wa * cos(f);
-    normal.z -= d.y * wa * cos(f);
-    normal.y -= q * wa * sin(f);
-  }
 
   void main() {
     vec4 world = modelMatrix * vec4(position, 1.0);
     vec2 pos = world.xz;
     vec3 offset = vec3(0.0);
     vec3 normal = vec3(0.0, 1.0, 0.0);
-    float h = uHeight;
-    gerstner(uWind,             139.0, h * 1.00, uChop, pos, uTime, offset, normal);
-    gerstner(uWind + vec2( 0.35, 0.0), 71.0, h * 0.55, uChop, pos, uTime, offset, normal);
-    gerstner(uWind + vec2(-0.30, 0.2), 37.0, h * 0.28, uChop, pos, uTime, offset, normal);
-    gerstner(uWind + vec2( 0.15,-0.4), 17.0, h * 0.12, uChop, pos, uTime, offset, normal);
+    vec2 wind = normalize(uWind);
+
+    for (int i = 0; i < ${SWELL_WAVES}; i++) {
+      vec4 w = uWave[i];
+      // Each component's direction is its own fixed angle FROM THE WIND, so
+      // the whole sea swings together as the wind turns instead of the
+      // spectrum re-rolling.
+      vec2 d = vec2(wind.x * w.x - wind.y * w.y, wind.x * w.y + wind.y * w.x);
+      float k = 6.28318530718 / w.z;
+      float c = sqrt(9.81 / k);
+      float a = uHeight * w.w;
+      float f = k * (dot(d, pos) - c * uTime) + uPhase[i];
+      // Gerstner Q, shared across the whole spectrum so the crests sharpen
+      // without the surface ever folding through itself.
+      float q = uChop / (k * a * float(${SWELL_WAVES}));
+      float cf = cos(f);
+      float sf = sin(f);
+      offset.x += q * a * d.x * cf;
+      offset.z += q * a * d.y * cf;
+      offset.y += a * sf;
+      float wa = k * a;
+      normal.x -= d.x * wa * cf;
+      normal.z -= d.y * wa * cf;
+      normal.y -= q * wa * sf;
+    }
 
     // Fade the patch out at its rim so it meets the flat mirror sea without
     // a visible step. This is the whole reason the trick works.
@@ -260,12 +374,48 @@ const SWELL_FRAGMENT = `
   uniform vec3 uSunDir;
   uniform vec3 uSunColour;
   uniform float uStorm;
+  uniform float uWindStrength;
+  uniform float uTime;
+  uniform vec2 uWind;
   varying vec3 vWorld;
   varying vec3 vNormal2;
   varying float vFade;
 
+  float rhash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+  float rnoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(rhash(i), rhash(i + vec2(1.0, 0.0)), u.x),
+               mix(rhash(i + vec2(0.0, 1.0)), rhash(i + vec2(1.0, 1.0)), u.x), u.y);
+  }
+
+  // The ripple the GEOMETRY cannot carry. At 256 segments across 1500 m the
+  // vertices are six metres apart, so everything shorter than a six-metre
+  // wave - which is all of the glitter - has to live in the normal. Without
+  // it the sea between crests is a mirror-smooth facet and reads as plastic.
+  vec3 ripple(vec2 pos, float t) {
+    vec2 drift = normalize(uWind) * t;
+    float e = 0.35;
+    vec2 q = pos * 0.55 - drift * 1.1;
+    float h1 = rnoise(q);
+    float hx = rnoise(q + vec2(e, 0.0));
+    float hy = rnoise(q + vec2(0.0, e));
+    vec2 q2 = pos * 1.9 + drift * 0.7;
+    float h2 = rnoise(q2);
+    float hx2 = rnoise(q2 + vec2(e, 0.0));
+    float hy2 = rnoise(q2 + vec2(0.0, e));
+    // Strength rides the wind: glassy water is glassy.
+    float amp = 0.06 + 0.26 * uWindStrength;
+    return vec3(-( (hx - h1) + 0.5 * (hx2 - h2) ) * amp,
+                 0.0,
+                -( (hy - h1) + 0.5 * (hy2 - h2) ) * amp);
+  }
+
   void main() {
-    vec3 n = normalize(vNormal2);
+    vec3 n = normalize(vNormal2 + ripple(vWorld.xz, uTime) * vFade);
     vec3 eye = normalize(cameraPosition - vWorld);
     float fres = pow(1.0 - max(0.0, dot(n, eye)), 4.0);
     vec3 colour = mix(uDeep, uSky, clamp(fres * 0.9, 0.0, 1.0));
@@ -277,8 +427,20 @@ const SWELL_FRAGMENT = `
     // Sun glint, and white water on the steep faces when it blows.
     float spec = pow(max(0.0, dot(reflect(-uSunDir, n), eye)), 90.0);
     colour += uSunColour * spec * 0.9;
-    float crest = smoothstep(0.55, 0.95, 1.0 - n.y);
-    colour = mix(colour, vec3(0.92, 0.95, 0.98), crest * uStorm * 0.7);
+    // Whitecaps break on STEEPNESS, and steepness comes from wind long before
+    // it comes from a storm - keying them to uStorm alone left a fresh breeze
+    // looking like a millpond right up until the squall arrived.
+    //
+    // But the test is on the WAVE, not on the ripple. Using the perturbed
+    // normal meant every centimetre of fine chop counted as a breaking crest
+    // and a gale turned the whole sea white - brighter than noon, which is
+    // the one thing a storm sea is not. Real whitecaps are sparse: a fraction
+    // of the surface even in a gale, on the steep faces of the big waves
+    // only.
+    vec3 waveNormal = normalize(vNormal2);
+    float steep = smoothstep(0.62, 0.95, 1.0 - waveNormal.y);
+    float foam = steep * smoothstep(0.35, 0.95, uWindStrength);
+    colour = mix(colour, vec3(0.92, 0.95, 0.98), clamp(foam * (0.45 + 0.4 * uStorm), 0.0, 0.6));
     // Alpha carries the rim fade, so the mirror sea shows through at the
     // edge rather than the patch ending in a line.
     gl_FragColor = vec4(colour, vFade);
@@ -286,6 +448,7 @@ const SWELL_FRAGMENT = `
 `;
 
 function buildSwell(preset) {
+  const spectrum = buildWaveSpectrum();
   const segments = preset.oceanSegments >= 256 ? 256 : 128;
   const geometry = new THREE.PlaneGeometry(SWELL_SPAN, SWELL_SPAN, segments, segments);
   const material = new THREE.ShaderMaterial({
@@ -294,11 +457,14 @@ function buildSwell(preset) {
       uWind: { value: new THREE.Vector2(1, 0) },
       uHeight: { value: 0.3 },
       uChop: { value: 0.4 },
+      uWave: { value: spectrum.packed },
+      uPhase: { value: spectrum.phases },
       uDeep: { value: new THREE.Color(0x0b2a3a) },
       uSky: { value: new THREE.Color(0x9fc4dd) },
       uSunDir: { value: new THREE.Vector3(0.4, 0.6, 0.35) },
       uSunColour: { value: new THREE.Color(0xfff2df) },
       uStorm: { value: 0 },
+      uWindStrength: { value: 0 },
     },
     vertexShader: SWELL_VERTEX,
     fragmentShader: SWELL_FRAGMENT,
@@ -320,7 +486,7 @@ function swellHeightOf(weather) {
   return 0.25 + (weather.windPermil / 1000) * 3.75;
 }
 
-function updateSwell(view3d, weather, sky) {
+function updateSwell(view3d, weather, sky, seaColour) {
   const swell = view3d.swell;
   if (swell === null || swell === undefined) return;
   const uniforms = swell.material.uniforms;
@@ -330,9 +496,13 @@ function updateSwell(view3d, weather, sky) {
   uniforms.uHeight.value = swellHeightOf(weather);
   uniforms.uChop.value = 0.25 + (weather.windPermil / 1000) * 0.6;
   uniforms.uStorm.value = sky.storm;
+  uniforms.uWindStrength.value = weather.windPermil / 1000;
   uniforms.uSunDir.value.copy(view3d.sunDir);
   uniforms.uSunColour.value.copy(sky.lightColour);
   uniforms.uSky.value.copy(sky.fogColour);
+  // The same water the mirror plane is drawing (scene.js seaColourFor), or
+  // the seam where this patch fades out shows as a tone step.
+  if (seaColour !== undefined) uniforms.uDeep.value.copy(seaColour);
   // Under the eye, snapped to a coarse grid so the patch does not shimmer
   // as it slides: the waves are computed in WORLD space, so moving the mesh
   // does not move the water.

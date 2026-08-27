@@ -95,6 +95,32 @@ const BAND_READER = ([top, bottom]) => {
 // Chromium rasterises in software - and it sorts last, so it runs when the
 // machine is at its most loaded. Seven browser contexts on top of that was
 // the difference between passing alone and timing out in a full sweep.
+// The scope lives on the INSTRUMENT PANEL, which is a 2D canvas drawn over
+// the WebGL view - so it must be read from that canvas, not from the frame
+// buffer. The first version of this check sampled a band of the 3D scene at
+// the panel's height and "passed" because a lightning flash brightens the
+// whole scene: it was measuring the sea and reporting on the radar. It only
+// came apart when cloud reflections were removed from the water and the two
+// readings collapsed to the same number.
+//
+// A 2D canvas keeps its contents, so unlike BAND_READER this needs no
+// same-turn trick.
+const SCOPE_READER = () => {
+  const canvas = document.getElementById('panel');
+  const ctx = canvas.getContext('2d');
+  // The scope box's geometry, from client/render/instruments.js: pad 10,
+  // helm width 250, so the box starts at 2*pad + 250 and is as tall as the
+  // panel less its padding. Sampled well inside, to miss the bezel.
+  const pad = 10;
+  const x = pad * 2 + 250 + 16;
+  const size = canvas.height - pad * 2 - 32;
+  const data = ctx.getImageData(x, pad + 16, size, size).data;
+  let r = 0; let g = 0; let b = 0;
+  for (let i = 0; i < data.length; i += 4) { r += data[i]; g += data[i + 1]; b += data[i + 2]; }
+  const n = data.length / 4;
+  return { r: Math.round(r / n), g: Math.round(g / n), b: Math.round(b / n) };
+};
+
 const shot = {};
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 let mood = '';
@@ -134,9 +160,10 @@ for (const [name, tick] of found) {
     + ` | sky ${sky.r},${sky.g},${sky.b} | sea ${sea.r},${sea.g},${sea.b}`,
   );
 
-  // The scope box, for the lightning check below. It sits in the instrument
-  // panel along the bottom of the screen.
-  shot[name].scope = await page.evaluate(BAND_READER, [0.76, 0.96]);
+  // The scope box, for the lightning check below.
+  shot[name].scope = await page.evaluate(SCOPE_READER);
+  const sc = shot[name].scope;
+  console.log(`${' '.repeat(9)} scope ${sc.r},${sc.g},${sc.b}`);
 
   // And the pull-back, where there is sky in frame rather than a horizon.
   await page.keyboard.press('c');
@@ -195,9 +222,12 @@ if (shot.lightning !== undefined && shot.nostroke !== undefined) {
   // difference, so the scope must be BRIGHTER with it than without.
   const lit = lum(shot.lightning.scope);
   const dark = lum(shot.nostroke.scope);
-  check(lit > dark,
+  // A margin, not merely "different". At one count of luminance the check
+  // passed on rounding noise, which is indistinguishable from passing on the
+  // feature - and a stroke the player cannot see is not a stroke.
+  check(lit > dark + 3,
     `the scope reads ${lit} with a strike and ${dark} without`
-    + ' - the clutter is not reaching the instrument');
+    + ' - the clutter is not reaching the instrument, or is too faint to see');
 }
 
 // Five distinct pictures, not one picture five times: this is the assertion

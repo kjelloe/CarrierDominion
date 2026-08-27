@@ -210,6 +210,7 @@ function createScene(canvas, preset, sizeMetres, style) {
     scene.add(view3d.clouds);
     view3d.swell = buildSwell(preset);
     scene.add(view3d.swell);
+    keepCloudsOutOfReflections(view3d, ocean);
   }
   return view3d;
 }
@@ -582,6 +583,17 @@ function applyWeather(view3d, view, deltaSeconds) {
     const uniforms = view3d.skyDome.material.uniforms;
     uniforms.sunPosition.value.copy(view3d.sunDir);
     uniforms.turbidity.value = sky.turbidity;
+    // The sky BEHIND the cloud has to darken too, and rayleigh is the lever:
+    // docs/07 lesson 3 records that raising it makes the sky brighter, so
+    // lowering it is how a storm gets a dark sky rather than a bright one
+    // with dark cloud pasted over it.
+    //
+    // This also fixes the sea. The mirror water reflects the dome, and at the
+    // grazing angles that fill most of the frame the reflection is ALL of the
+    // colour - `waterColor` has no say there at all. So a bright dome meant a
+    // bright sea in a squall, brighter than the same sea at noon, and no
+    // amount of tinting the water could touch it.
+    uniforms.rayleigh.value = 2.0 * (1 - 0.78 * sky.storm) * (1 - 0.25 * sky.cloud);
     if (view3d.sunDir.dot(view3d.envSunDir) < ENV_REBAKE_COSINE) {
       view3d.envSunDir.copy(view3d.sunDir);
       rebakeEnvironment(view3d);
@@ -617,9 +629,50 @@ const STORM_SEA = new THREE.Color(0x1b2530);
 // The sea, as the weather leaves it. The mirror water's ripples grow and
 // steepen with the wind; our own shader sea gets the same treatment through
 // its own uniforms; and the near-field swell patch rides under the eye.
+// The mirror water renders the whole scene from a mirrored camera to build
+// its reflection. The cloud shell must not be in that pass: it RIDES THE EYE
+// (that is what makes a shell work at all), so from a mirrored camera it is
+// in the wrong place entirely, and what it puts on the water is not a cloud
+// reflection but a smear that moves with the ship. It showed up as pale
+// mottled patches that grew with cover, which reads as "the sea has weird
+// bald spots".
+//
+// Water.js already hides ITSELF for that pass with `scope.visible = false`;
+// this does the same for the shell by wrapping the hook rather than editing
+// the vendored file. The Preetham dome still reflects, so the sea keeps a
+// sky in it - just the sky's colour rather than a cloud in the wrong place.
+function keepCloudsOutOfReflections(view3d, ocean) {
+  const original = ocean.onBeforeRender;
+  if (typeof original !== 'function') return;
+  ocean.onBeforeRender = function wrapped(renderer, scene, camera) {
+    const clouds = view3d.clouds;
+    const wasVisible = clouds === null || clouds === undefined ? false : clouds.visible;
+    if (clouds !== null && clouds !== undefined) clouds.visible = false;
+    original.call(this, renderer, scene, camera);
+    if (clouds !== null && clouds !== undefined) clouds.visible = wasVisible;
+  };
+}
+
+// The one sea colour, computed once and given to BOTH surfaces. The swell
+// patch and the mirror plane are different materials drawing the same water,
+// and while the mirror was being tinted by the weather the patch kept a
+// hardcoded blue - so the seam where the patch fades out became visible as a
+// tone step in the middle of the picture, worse the heavier the weather.
+// Anything that colours the sea has to colour all of it.
+function seaColourFor(view3d, sky, out) {
+  out.set(view3d.style.oceanColour);
+  out.lerp(STORM_SEA, sky.storm * 0.75 + sky.cloud * 0.2);
+  out.multiplyScalar(0.35 + 0.65 * sky.day);
+  return out;
+}
+
+const SEA_SCRATCH = new THREE.Color();
+
 function syncSea(view3d, view) {
   const weather = view === undefined ? undefined : view.weather;
   if (weather === undefined) return;
+  const sky = skyStateOf(weather);
+  const seaColour = seaColourFor(view3d, sky, SEA_SCRATCH);
   const uniforms = view3d.ocean.material.uniforms;
   if (uniforms !== undefined && uniforms.distortionScale !== undefined) {
     // The vendored mirror water. `size` is the ripple scale and
@@ -635,11 +688,8 @@ function syncSea(view3d, view) {
     // kept its fair-weather blue and its white sun glitter through a squall,
     // and a storm at dawn came out brown: the sea was the brightest, warmest
     // thing in the frame, which is the one thing a storm sea is not.
-    const sky = skyStateOf(weather);
     if (uniforms.waterColor !== undefined) {
-      uniforms.waterColor.value.set(view3d.style.oceanColour);
-      uniforms.waterColor.value.lerp(STORM_SEA, sky.storm * 0.75 + sky.cloud * 0.2);
-      uniforms.waterColor.value.multiplyScalar(0.35 + 0.65 * sky.day);
+      uniforms.waterColor.value.copy(seaColour);
     }
     if (uniforms.sunColor !== undefined) {
       uniforms.sunColor.value.copy(sky.lightColour);
@@ -650,7 +700,7 @@ function syncSea(view3d, view) {
     uniforms.uSunDir.value.copy(view3d.sunDir);
   }
   if (view3d.swell !== null && view3d.swell !== undefined) {
-    updateSwell(view3d, weather, skyStateOf(weather));
+    updateSwell(view3d, weather, sky, seaColour);
   }
 }
 
@@ -673,7 +723,16 @@ function resetWorld(view3d, sizeMetres) {
   if (view3d.style.oceanGrid) scene.add(buildOceanGrid(sizeMetres, view3d.style));
   view3d.scene = scene;
   view3d.ocean = ocean;
-  if (wantsPhysicalSky(view3d.preset, view3d.style)) addPhysicalSky(view3d);
+  if (wantsPhysicalSky(view3d.preset, view3d.style)) {
+    addPhysicalSky(view3d);
+    // A NEW war brings a new ocean object, so the reflection hook has to be
+    // put back on it - the old one went out with the old graph.
+    if (view3d.clouds !== null && view3d.clouds !== undefined) {
+      scene.add(view3d.clouds);
+      keepCloudsOutOfReflections(view3d, ocean);
+    }
+    if (view3d.swell !== null && view3d.swell !== undefined) scene.add(view3d.swell);
+  }
   view3d.islands = {};
   view3d.nodes = {};
   view3d.runways = {};

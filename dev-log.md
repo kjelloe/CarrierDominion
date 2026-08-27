@@ -5,6 +5,82 @@ golden hash and why.
 
 ---
 
+## 2026-08-27 — A sea that is a spectrum, and cloud that has shape
+
+Owner, after watching it run: the ocean should look alive like the reference
+scene, the cloud should look realistic, and the modern tier "had the same
+uniform ocean waves". All three fair.
+
+**The waves were uniform because there were four of them, all pointing the
+same way.** Four Gerstner components within a few degrees of the wind is
+corduroy - parallel ridges of one size, marching. Twelve now, but the count is
+not the fix: the DIRECTIONAL SPREAD is. Long swell runs with the wind because
+some other wind raised it days ago somewhere else; short chop fans out. So
+spread grows with frequency - the 210 m swell within 7 degrees of the wind,
+the 4.5 m chop up to 80 degrees off it. Crossing wave trains are the whole
+difference between water and a combed carpet.
+
+The reference scene got there from the other end: 26 waves in mixed directions
+baked into a normal map. Same idea, ours in geometry.
+
+Two more the sea needed: ripple detail in the FRAGMENT, because at six metres
+between vertices every wave shorter than that - which is all the glitter - has
+to live in the normal or the surface reads as plastic; and whitecaps keyed to
+the WAVE normal rather than the ripple-perturbed one, because the first
+version made every centimetre of chop a breaking crest and turned a gale
+whiter than noon.
+
+**Cloud was a smear.** A four-octave value fBm at one low frequency looks
+exactly like what it is. Domain warping is the big one - sampling noise at a
+position displaced by other noise turns blobs into curling, torn, sheared
+forms - plus more octaves at a frequency where they show, and light from a
+direction: one extra density sample toward the sun gives the silver lining
+where the deck thins into the light.
+
+**Three defects surfaced on the way, all ours.** The swell patch and the
+mirror sea had drifted apart - the mirror was being tinted by the weather
+while the patch kept a hardcoded blue, so the seam showed as a tone step in
+the middle of the frame; one `seaColourFor()` feeds both now. The cloud shell
+was being reflected by the water from the wrong place, because it rides the
+eye and the reflection renders from a mirrored camera - pale mottled patches
+that moved with the ship. And excluding it then made the storm sea brighter
+than noon, because the water was left reflecting the bright Preetham dome:
+at grazing angles, which fill most of the frame, the reflection is ALL of the
+colour and `waterColor` has no say at all. Darkening the dome with rayleigh
+fixed it, and is right anyway - the sky behind cloud should be dark, not
+bright with dark cloud pasted over it.
+
+**And the lesson, which cost the most and is worth the most: three.js
+interpolates colour in LINEAR space.** Colour management converts every
+`new THREE.Color(hex)` to the linear working space, where a bright warm
+colour is much brighter than its hex suggests - so a linear blend keeps its
+warmth long after the weight looks nearly complete. A dawn peach lerped 94% of
+the way to cold slate came out `#5a4e51`: brown. I raised that weight by eye
+three times and it barely moved, because the number was never the problem.
+**Printing the uniform found it in one run.** The fix is a curve rather than a
+bigger number - storm to the 0.45 power, so 0.9 pulls at 0.95 and the last few
+per cent, which are the ones that change the hue, actually arrive.
+
+That is the second time in two days that guessing at a rendering number wasted
+more effort than measuring it would have. Both are now in docs/07 (lesson 12)
+and the review skill.
+
+**Also fixed, and it was a test lying to me:** the lightning-on-the-scope check
+was sampling a band of the 3D scene at the panel's height rather than the
+panel's own 2D canvas, and "passed" because a flash brightens the whole scene.
+It was measuring the sea and reporting on the radar. It only came apart when
+cloud reflections left the water and the two readings collapsed to the same
+number. It now reads the instrument canvas, demands a real margin rather than
+any difference at all, and was verified by switching the clutter off and
+watching it fail.
+
+Measured after: water variance in `graphics_shots` went 429 -> 2164, storm sea
+97,104,112 against noon 117,116,115 (darker AND blue-dominant, where it had
+been brighter than noon), storm sky uniforms `#3e404b` / `#2e343e` where they
+had been the brown `#5a4e51`.
+
+---
+
 ## 2026-08-27 — The sweep retries once, and says so
 
 *(Then the first full run with the retry in place found one more thing, which

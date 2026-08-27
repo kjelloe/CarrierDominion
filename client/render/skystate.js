@@ -39,6 +39,27 @@ function clamp01(value) {
   return value;
 }
 
+// How hard the storm pulls a colour, given how stormy it is.
+//
+// This curve exists because of a non-obvious fact about three.js, and it cost
+// three rounds of guessing to find: **Color.lerp interpolates in LINEAR
+// space**, not in sRGB. Colour management converts every `new THREE.Color(hex)`
+// into the linear working space, and a bright warm colour is far brighter
+// there than its hex suggests - so a linear blend keeps the warmth long after
+// the weight "looks" nearly complete.
+//
+// Concretely: a dawn peach lerped 94% of the way to a cold slate still came
+// out #5a4e51, a warm brown, which is why a squall kept reading brown however
+// hard the weight was pushed. Measuring the uniform said so immediately; three
+// rounds of raising the weight by eye had not.
+//
+// The fix is the curve, not a bigger number. Raising storm to a fractional
+// power reaches deep weights early: a storm of 0.9 pulls at 0.95 rather than
+// 0.85, and the last few per cent are the ones that actually change the hue.
+function stormWeight(storm) {
+  return Math.pow(clamp01(storm), 0.45);
+}
+
 // 0 at night, 1 in broad day, smooth across the horizon - the curve every
 // other curve here is keyed on, as in the reference scene.
 function dayFactor(weather) {
@@ -68,17 +89,15 @@ function skyStateOf(weather) {
   const light = NIGHT_LIGHT.clone();
   if (day > 0) light.lerp(DAWN_LIGHT, clamp01(day * 2));
   if (day > 0.5) light.lerp(NOON_LIGHT, clamp01((day - 0.5) * 2));
-  light.lerp(STORM_LIGHT, storm * 0.8);
+  light.lerp(STORM_LIGHT, stormWeight(storm) * 0.9);
 
   const fog = NIGHT_FOG.clone();
   if (day > 0) fog.lerp(DAWN_FOG, clamp01(day * 2));
   if (day > 0.5) fog.lerp(NOON_FOG, clamp01((day - 0.5) * 2));
-  // The storm takes the colour, and takes it hard. At 0.85 a squall at dawn
-  // was still peach: the low sun's warmth is applied first and a weak lerp
-  // never overcame it, so a "grey-dark-blue stormy" sky read as brown.
-  fog.lerp(STORM_FOG, storm * 0.94);
+  // The storm takes the colour, and takes it hard.
+  fog.lerp(STORM_FOG, stormWeight(storm));
   // Cloud alone cools the air even without a storm behind it.
-  fog.lerp(STORM_FOG, cloud * 0.35);
+  fog.lerp(STORM_FOG, cloud * 0.4);
 
   // A flash lights the whole sky for a few ticks, which is most of what
   // sells lightning without drawing a bolt at all.
@@ -97,7 +116,12 @@ function skyStateOf(weather) {
     hemiIntensity: (0.25 + 0.5 * day) * (1 - storm * 0.35) + flash * 0.8,
     // Exposure DECREASES as the sun rises (docs/07 lesson 3), and a storm
     // pulls it down further so the grey reads as heavy rather than as fog.
-    exposure: (0.5 - 0.2 * day) * (1 - storm * 0.25),
+    // The storm's exposure penalty is deliberately SMALL. At 0.25 a squall
+    // came out as a black ceiling with no shape in it, which is not what a
+    // storm looks like - a storm sky is dark and busy, and losing the busy
+    // half loses the weather. The darkness comes from the colours; the
+    // exposure only tips it.
+    exposure: (0.5 - 0.2 * day) * (1 - storm * 0.12),
     // Haze: more at dawn, much more in weather.
     turbidity: 2 + 8 * (1 - day) + 14 * cloud,
     // Fog closes in with the weather. A clear day sees the whole
