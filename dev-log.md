@@ -5,6 +5,48 @@ golden hash and why.
 
 ---
 
+## 2026-08-27 — The LAN room was never slow
+
+Asked to fix "the LAN room takes 4 to 16 seconds to come back". There was
+nothing to fix: I had measured the wrong thing, twice, and reported it both
+times.
+
+The reopen round trip with **no browser at all** - raw socket, `lobby_reopen`
+in, the `lobby` message back - is **2 ms**, three runs out of three. No defect
+in `reopenRoom`, the transport, or the client's handling of it. `saveNow()`
+was never a suspect either: it returns immediately when there is no save path,
+which is the probe's case.
+
+The seconds were the renderer. `second_war` ran at `graphics=medium`, and
+headless Chromium rasterises Medium and High in software. The page was janky
+enough that Playwright's `click()` took 2.4 to 5.8 seconds just to consider
+the button actionable - the server had already flipped to lobby *during* the
+click - and the redraw took seconds more. Split across the two halves:
+
+    click returned 2426ms | server flipped 1942ms | panel open 4080ms
+    click returned 5806ms | server flipped 4739ms | panel open 12202ms
+
+At `graphics=low`: 1.0 to 1.7 s end to end, and five passes out of five where
+it had been two in three. Low is also simply correct for this probe, which is
+about the war's lifecycle - end a war, take the room back, sail again - and
+about pixels not at all.
+
+**How the wrong answer survived two rounds.** The first report ("broken") came
+from one failing run plus a snapshot 2.5 seconds after the click. The second
+("4 to 16 seconds") came from timing the probe three times - real numbers,
+wrong subject, and the numbers made it feel measured. What broke it open was
+asking the same question a different way: run the path with the UI taken out.
+Two milliseconds is not a slower version of four seconds, it is a different
+system, and that gap is the tell that the instrument is in the measurement.
+
+The rule that comes out of it, now in the review skill: **a headless browser
+doing software rendering is not a clock.** When a UI probe says a feature is
+slow, measure the path without the UI before believing it - and run every
+probe at the cheapest tier that still tests what it is for, or it is timing
+the renderer on every run whatever it thinks it is timing.
+
+---
+
 ## 2026-08-27 — Reviewing the day's own work
 
 A review pass over the five slices, looking for what they left behind. Six
@@ -152,10 +194,9 @@ clear noon, found by condition rather than hardcoded.
 **On the sweep's own reliability.** 29/31 in the clean run, but all 31 pass
 when run individually: `playtest_round2` and `playtest_round3` fail only
 under thirty-one back-to-back browser launches (the second by outright
-SIGKILL). `second_war` is flaky for a real reason - see dev-questions §36 -
-and it is worth saying plainly that three flaky probes cost the sweep most of
-its authority, because a sweep you have to re-run to believe is one you stop
-reading.
+SIGKILL). `second_war` was flaky too - see the entry above for what that
+turned out to be. Three flaky probes cost the sweep most of its authority,
+because a sweep you have to re-run to believe is one you stop reading.
 
 **The dead keys go (Q6a).** `startFuel`, `startOrdnance` and `startMaterials`
 were read by nothing. Deleting them moved the golden pins, which surprised me

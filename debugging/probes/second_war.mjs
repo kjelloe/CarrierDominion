@@ -31,7 +31,19 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (error) => console.log('PAGEERROR', error.message));
 
-await page.goto(`http://127.0.0.1:${address.port}/?mode=lan&graphics=medium`, {
+// Low tier ON PURPOSE. This probe is about the war's LIFECYCLE - end a war,
+// take the room back, sail again - and nothing about rendering. Headless
+// Chromium rasterises Medium and High in software (SwiftShader), which made
+// the page janky enough that Playwright's click took seconds to become
+// actionable and the redraw took seconds more: 4 to 16 seconds to see the
+// room again, and a 20-second timeout that missed about one run in three.
+//
+// It was nearly written up as a defect in the LAN reopen. It is not. The same
+// round trip with no browser at all - raw socket, `lobby_reopen` in, `lobby`
+// back - takes **2 ms**, three runs out of three. The probe was timing its own
+// renderer. Measure the path without the UI before believing the feature is
+// slow.
+await page.goto(`http://127.0.0.1:${address.port}/?mode=lan&graphics=low`, {
   waitUntil: 'load',
 });
 await page.waitForSelector('#start-panel.open', { timeout: 20000 });

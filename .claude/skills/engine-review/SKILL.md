@@ -266,6 +266,16 @@ Look for these shapes first — every one produced a real bug:
   EMPTY PLAYER SEAT (`aiTeams: [1]`). "Team 0 dies without scratching team
   1" is a stationary unmanned ship, not an AI defect. Half a session went
   into that reading before the seat was checked.
+- **A headless browser doing software rendering is not a clock.** A probe
+  reported the LAN room taking 4-16 seconds to reopen and it was written up
+  as a UX defect - twice, the second time with three timings behind it. The
+  same round trip with no browser is 2 ms. The probe ran at `graphics=medium`,
+  which headless Chromium rasterises in software, and Playwright's click alone
+  took seconds to find the button actionable. Before believing a UI probe that
+  says something is slow, measure the same path WITHOUT the UI; and run every
+  probe at the cheapest tier that still tests what it is for. Two milliseconds
+  is not a faster four seconds - that size of gap means the instrument is in
+  the measurement.
 - **Run the probes before believing them.** They are not in `npm run gate`
   (they open browsers and take minutes), so they rot. `npm run probes` runs
   the lot; sweep it after any UI change, and read a failure as "either the
