@@ -5,6 +5,25 @@ golden hash and why.
 
 ---
 
+## 2026-08-27 — The sweep retries once, and says so
+
+Owner's ruling, after the flakiness above: `npm run probes` retries a failed
+probe once and reports `ok (2nd try - FLAKY)`.
+
+The point is not a green sweep. Every probe that needs a second attempt is
+listed by name under a FLAKY heading at the end of every run, and the exit
+code counts only probes that failed twice. What the retry buys is that a real
+failure is no longer buried among two false ones — which is exactly what
+happened in the sweep before it, where `second_war` (a renderer artefact),
+`playtest_round2` and `playtest_round3` (both contention) made a clean run
+look like three broken features.
+
+Verified with two throwaway probes: one that fails then passes, one that
+always fails. The first is reported flaky and named; the second fails twice
+and sets the exit code.
+
+---
+
 ## 2026-08-27 — The LAN room was never slow
 
 Asked to fix "the LAN room takes 4 to 16 seconds to come back". There was

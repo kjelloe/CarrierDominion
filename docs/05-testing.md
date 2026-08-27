@@ -118,7 +118,23 @@ before the chase started - 777001 fell from 116,320 ticks to 25,235.
 ## Probes
 
 `debugging/probes/*.mjs` drive a real Chromium through Playwright, do something,
-and screenshot it. They catch what unit tests structurally cannot: the compass
+and screenshot it.
+
+**A failure is retried once** (ruled 2026-08-27) and reported as
+`ok (2nd try - FLAKY)`. Thirty-one browser launches back to back exhaust a
+loaded machine, and two probes were failing on that alone while passing
+perfectly on their own — which cost the sweep most of its authority, because a
+sweep you have to re-run by hand to believe is one you stop reading. The retry
+is **not** there to make the sweep look green: every probe that only passes on
+the second attempt is listed by name under a FLAKY heading at the end, every
+run, because flakiness is a defect to fix rather than a pass to bank. The exit
+code counts only probes that failed **twice**.
+
+Run a probe at the cheapest graphics tier that still tests what it is for.
+`second_war` ran at `graphics=medium`, which headless Chromium rasterises in
+software, and the resulting jank was nearly written up as a defect in the LAN
+room: the same round trip without a browser takes 2 ms. A headless browser
+doing software rendering is not a clock. They catch what unit tests structurally cannot: the compass
 rose that was mirrored, the panel row that was replaced under the pointer, the
 smoke gate reading a HUD cell that no longer existed.
 
