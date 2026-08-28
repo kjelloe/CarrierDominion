@@ -107,6 +107,47 @@ if (!ok) {
 }
 
 
+// --- the top bar says what the game has (playtest 2026-08-28) ---------------
+//
+// Two bars along the top: the console's screens on the left where the eye
+// starts, the camera's ways-of-seeing beside them. The console strip used to
+// live INSIDE the console, so the six screens behind it were invisible until
+// you already knew a key that opened one.
+//
+// CHART belongs to the camera bar and nowhere else. It was on both for an
+// afternoon, and the console's copy was the worse of the two: it opened the
+// same map but left the camera bar lit on HELM.
+const bar = await page.evaluate(() => {
+  const text = (sel) => [...document.querySelectorAll(sel)]
+    .map((n) => n.textContent.replace(/\s+/g, ' ').trim());
+  const box = (id) => {
+    const e = document.getElementById(id);
+    if (e === null) return null;
+    const r = e.getBoundingClientRect();
+    return { left: Math.round(r.left), right: Math.round(r.right) };
+  };
+  return { tabs: text('.console-tab'), cameras: text('.cam-tab'),
+    consoleBox: box('console-tabs'), cameraBox: box('camera-tabs') };
+});
+console.log(`top bar: [${bar.tabs.join('] [')}] | [${bar.cameras.join('] [')}]`);
+const chartTabs = bar.tabs.filter((t) => /CHART|KART/.test(t));
+if (chartTabs.length > 0) {
+  console.log('FAIL: CHART is on the console bar as well as the camera bar');
+  process.exitCode = 1;
+}
+if (bar.tabs.length < 5) {
+  console.log(`FAIL: the console bar has only ${bar.tabs.length} screens on it`);
+  process.exitCode = 1;
+}
+// Side by side, not on top of each other. The first attempt pinned the camera
+// bar at a fixed left margin and the two overlapped by 75 pixels.
+if (bar.consoleBox.right > bar.cameraBox.left) {
+  console.log(`FAIL: the two top bars overlap (console ends ${bar.consoleBox.right},`
+    + ` camera starts ${bar.cameraBox.left})`);
+  process.exitCode = 1;
+}
+
+
 // --- the controls audit (playtest 2026-08-28, item 4) ------------------------
 //
 // "Verify that all actions that have a keyboard key assigned also exist as a

@@ -277,6 +277,38 @@ Look for these shapes first — every one produced a real bug:
   command being refused. When a check needs state, the validator is the wrong
   place and its absence there is not evidence it exists elsewhere.
 
+- **A control that is off the end of its container.** The right-hand action
+  column held 622px of buttons in 448px of screen; the three that fell off
+  were FIRE, POD and VIRUS. Nothing was disabled, nothing was hidden by a
+  rule, and no test noticed - a fixed-height flex column simply clips. For
+  any list of controls that grows, measure `scrollHeight` against
+  `clientHeight` in a probe; "it looked fine in the screenshot" is how this
+  survived, because the screenshot was cropped too.
+- **A keyboard-only action.** Four keys had no clickable equivalent, one of
+  them a whole ruled feature whose button label was already sitting unused in
+  the language files. Audit the key handler against the screen mechanically -
+  read `key === '...'` out of the source and diff it against the captions -
+  rather than trusting that adding a key reminded somebody to add a button.
+- **A control that does not name its subject.** PROG lays a course for the
+  selected craft, or the ship if none is selected. Correct, and it said
+  neither, so a playtester concluded the feature did not work. Any control
+  whose target depends on hidden state should show the target.
+- **Two controls for one job, one of them worse.** CHART appeared on both top
+  bars; the copy that did LESS (opened the map without lighting the camera
+  bar) was the one that looked equivalent. When deduplicating, check which one
+  leaves the rest of the interface consistent - that is the one to keep.
+
+- **A test that compares two snapshots of a moving system.** `server_watch`
+  read `/watch`, then `/healthz`, and asserted the counts were equal - but the
+  war ticks between the two requests, so a loaded box could add a finding in
+  the gap. Where a quantity only ever grows, read the two in the order that
+  makes an INEQUALITY true by construction rather than hoping for equality.
+- **The host's noise in the gate.** The smoke gate fails on any console error,
+  which is what makes it worth having - and a machine with no sound card makes
+  headless Chromium report an audio-device error about one run in five. Ignore
+  the host, narrowly and by its exact wording, so a real fault in the same
+  subsystem still fails.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

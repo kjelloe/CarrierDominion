@@ -641,6 +641,38 @@ only order that refuses a landed Manta) and R-012 (crypto session tokens, a
 stricter URL parser) were outside the batch asked for. All three are small and
 still open.
 
+## The first playtest at the controls (2026-08-28)
+
+Six findings from the owner actually flying the thing. They are mostly one
+finding wearing six hats: **the interface knew things it never said.**
+
+- **Every key must also be a button.** Four were keyboard-only, including the
+  decoy screen — a ruled feature whose button label had sat unused in both
+  language files since it was specced. Now enforced by an audit that reads the
+  key list out of the source, so the next one fails on the next probe run.
+- **A button below the fold does not exist.** The right-hand column held 622px
+  of controls in 448px of screen and cut FIRE, POD and VIRUS off the bottom.
+  The columns wrap now. Hiding the sleeping ones was refused: the 2026-08-24
+  ruling keeps them visible at a third opacity and that is how a player learns
+  the ship.
+- **Both bars go along the top**, screens on the left, ways of seeing beside
+  them — and the console's tab strip is always on screen rather than living
+  inside the thing it opens.
+- **CHART belongs to the camera bar alone.** It was on both bars briefly; the
+  console's copy opened the same map but left the camera bar lit on HELM. When
+  two controls do one job, keep the one that leaves the interface honest.
+- **A control must say what it will act on.** PROG routed to the selected
+  craft and to the ship otherwise, which is correct, and said neither - so a
+  player with nothing selected laid four waypoints, watched the carrier take
+  them, and concluded that plotting a course for a Manta did not work. It
+  reads PROG W4 or PROG SHIP now.
+- **The stick answers the mouse too**: right-drag over the view while flying.
+
+The Walrus that "just sat there" was not a bug in the engine - ordered moves
+and piloting both work, measured. It was the same defect as the rest: the
+PILOT button that would have explained it was one of the three cut off the
+bottom of the column.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

@@ -34,8 +34,24 @@ try {
 const problems = [];
 
 function watch(page, label) {
+  // The gate fails on ANY console error, which is what makes it worth having.
+  // One exception, narrowly worded: headless Chromium on a box with no sound
+  // card intermittently reports that the WebAudio renderer could not reach an
+  // audio device. That is the machine talking, not the game - it appeared in
+  // roughly one run in five on WSL and made the GATE flaky, which is worse
+  // than a flaky probe because a gate you re-run is a gate you stop reading.
+  //
+  // Deliberately matched on the device wording rather than on "audio", so a
+  // real fault in client/sound.js still fails the gate.
+  const HOST_AUDIO = /AudioContext encountered an error from the audio device/i;
   page.on('console', (message) => {
-    if (message.type() === 'error') problems.push(`[${label}] console: ${message.text()}`);
+    if (message.type() !== 'error') return;
+    const text = message.text();
+    if (HOST_AUDIO.test(text)) {
+      process.stdout.write(`[${label}] ignored (no audio device on this host): ${text}\n`);
+      return;
+    }
+    problems.push(`[${label}] console: ${text}`);
   });
   page.on('pageerror', (error) => problems.push(`[${label}] pageerror: ${error.message}`));
   page.on('requestfailed', (request) => {

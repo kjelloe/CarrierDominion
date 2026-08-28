@@ -155,12 +155,31 @@ lying about how much it knows.
 the ship with each section shaded by health, and a click cycling that section's
 repair priority between High, Medium and Low.
 
+## The two top bars
+
+Along the top of the screen, left to right: the **console bar** — SQUADRON,
+STORES, DAMAGE, ISLAND, SIGNALS — then the **camera bar** — HELM, WEAPON,
+BIRDSEYE, CHART, DRONE. Screens on the left where the eye starts, ways of
+seeing beside them. One flex row lays out both, so a longer label (or a
+longer language) cannot make them collide; the first attempt pinned the
+camera bar at a fixed offset and overlapped by 75px.
+
+**CHART lives on the camera bar and nowhere else** (playtest 2026-08-28). It
+was briefly on both, and the console's copy was the worse of the two: it
+opened the same map but left the camera bar lit on HELM. The chart is still a
+member of the console — opening another screen closes it, and closing the
+console puts the map away — it simply has no tab of its own.
+
 ## The console
 
 Six overlays with six keys became **one overlay with a tab strip** (ruled
-2026-08-26, Q5b): SQUADRON, STORES, DAMAGE, ISLAND, CHART, SIGNALS. One thing
-to open, one place to look, and a panel count that stops growing every time a
-screen is added.
+2026-08-26, Q5b). One thing to open, one place to look, and a panel count
+that stops growing every time a screen is added.
+
+The strip is **always on screen**, whether the console is open or shut
+(playtest 2026-08-28). It began life inside the console, which was backwards:
+the six screens behind it were invisible until you already knew a key that
+opened one.
 
 The panels themselves were not rewritten. Each still owns its element, its
 `.open` class and its own toggle; `#console` only decides which one is open at
@@ -381,6 +400,36 @@ The in-game list behind `?` names all four of those now. Until 2026-08-27 it
 mentioned only `Z`, so the squadron console and the quartermaster — two of the
 largest screens in the game — were reachable only by a player who had read
 this file.
+
+## Every key is also a button
+
+**Nothing may be keyboard-only** (playtest ruling 2026-08-28). Four things
+were: `Y` put the decoy screen out, `O` looked astern, `]` worked the scope,
+and `,` / `.` proposed a clock. `Y` was the worst of them — a whole ruled
+feature whose button label had been sitting unused in both language files
+since the day it was specced.
+
+The rule is enforced rather than remembered. `debugging/probes/consoles.mjs`
+reads every `key === '…'` out of `client/main.js` and checks each one against
+the captions actually on screen, with a short list of declared exceptions
+(the throttle scale *is* the W/S control; the rudder buttons are A/D; the
+weapon row is what V cycles; surrender is deliberately keyboard-only and
+deliberately twice). Add a key without a button and it fails on the next run.
+
+**The action columns wrap.** The right-hand column once held 622px of buttons
+in 448px of screen and cut the last three off the bottom — FIRE, POD and
+VIRUS, which is to say the most important button in the game was below the
+fold and a playtester could not find it. Hiding the sleeping ones was not
+available: the 2026-08-24 ruling keeps a button whose moment has not come
+visible at a third opacity, and that ruling is right — it is how a player
+learns what the ship can do. So the column becomes two columns when it fills,
+the right-hand one growing inward from the screen edge.
+
+**The stick has three inputs.** Arrow keys, the CLIMB/DIVE buttons, and —
+since 2026-08-28 — holding the right mouse button over the view and dragging:
+up noses down, down pulls up, release levels off. Only for a craft with a
+vertical axis; a drag that silently does nothing on a Walrus is worse than no
+drag at all.
 | `U` | escort: the selected unit takes station on the carrier |
 | click sea, nothing selected | lay a course - the ship sails there itself |
 | `C` | camera: chase / gunsight / map |

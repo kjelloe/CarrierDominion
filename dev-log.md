@@ -5,6 +5,80 @@ golden hash and why.
 
 ---
 
+## 2026-08-28 — The first playtest at the controls
+
+Six findings from the owner actually flying it, and they turn out to be
+mostly one finding wearing six hats: **the interface knew things it never
+said.**
+
+**The best of them was measurable, and the measurement was the fix.** "I did
+not find fire button." The right-hand column held **622px of buttons in 448px
+of screen** and simply cut the last three off the bottom: FIRE, POD, VIRUS.
+Not hidden by a rule, not disabled - off the end of a fixed-height column.
+The most important button in the game, invisible.
+
+Hiding the sleeping ones would have solved it and was refused: the 2026-08-24
+ruling keeps a button whose moment has not come visible at a third opacity,
+and that ruling is right - it is how a player learns what the ship can do. So
+the columns wrap, and the right-hand one grows inward from the edge.
+
+**"Cannot steer walrus" was not an engine bug.** Headless, both paths work: an
+ordered move makes speed 119, and `take_control` sets throttle 100 and it
+makes 118. What was missing was the telling - a selected craft sits at HOLD
+until you order it somewhere or press T, and the PILOT button that would have
+said so was one of the three below the fold. Same defect, different hat.
+
+**Four keys had no button at all**, found by auditing rather than by eye: Y
+the decoy screen, O rear view, ] the scope, and , / . the clock. Y is the one
+that stings - a whole ruled feature whose button label had been sitting unused
+in both language files since the day it was specced. The audit now reads every
+`key === '...'` out of client/main.js and checks it against the captions on
+screen, with declared exceptions. Verified by deleting the Y button and
+watching it named.
+
+**PROG said nothing about whose course it was laying.** It routes to the
+selected craft and to the ship otherwise, which is right; with nothing
+selected the owner laid four waypoints, watched the carrier take them, and
+reasonably concluded unit routing was broken. It reads PROG W4 or PROG SHIP
+now, live off the selection.
+
+**Both bars went to the top**, and then CHART was on both of them. The owner
+ruled it off the console bar, and the right one survived: the camera bar's
+CHART opens the same map AND lights the camera bar to match, where the
+console's left it reading HELM with a map on screen. The chart is still a
+member of the console - another tab closes it, closing the console puts it
+away - it just has no tab. Two controls for one job, keep the one that leaves
+the interface honest.
+
+**And two flakes in the GATE, which matter more than they look.** Running the
+suite five times to check the playtest work found `server_watch` failing about
+one run in three and `client_smoke` about one in five. Neither was the
+playtest's doing; both had been there.
+
+The watchdog one was a real race in the test: it read `/watch`, then
+`/healthz`, and asserted the two counts were EQUAL - two snapshots of a war
+that is still running, so on a loaded box the watchdog could notice one more
+slow tick in between. Findings only accumulate, so reading health first and
+`/watch` second turns it into an inequality that holds by construction. The
+architect's R-007 was the same class, in a different file.
+
+The smoke one was the host: headless Chromium on a machine with no sound card
+reports that the WebAudio renderer cannot reach an audio device, and the gate
+fails on any console error. Now ignored, matched on the device wording rather
+than on "audio" so a real fault in client/sound.js still fails.
+
+Five consecutive clean runs after. A flaky gate is worse than a flaky probe,
+because a gate you have to re-run is a gate you stop reading - and this week
+has been mostly about earning the right to believe the instruments.
+
+**One layout lesson, cheaply learned:** the first version of the top row
+pinned the camera bar at a fixed left margin and it overlapped the console's
+tabs by 75px - and would have overlapped worse in Norwegian, where every label
+is longer. One flex row instead of two offsets. Measuring the boxes found it
+immediately; looking at the screenshot had not.
+
+---
+
 ## 2026-08-27 — The architect's twelve, nine of them built
 
 An outside review landed twelve findings. I checked every one against the

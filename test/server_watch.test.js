@@ -168,12 +168,28 @@ test('the server serves what the watchdog found', async () => {
     const real = body.findings.filter((f) => f.kind !== 'tick slower than real time');
     assert.deepEqual(real, [],
       `a live war reported ${JSON.stringify(real)} after ${body.ticks} ticks`);
-    // healthz counts findings, so it carries the same machine-load caveat:
-    // it may be 1 on a loaded box because the watchdog noticed the box. It
-    // must never exceed what /watch actually reports.
+    // healthz counts findings, so it carries the same machine-load caveat: it
+    // may be 1 on a loaded box because the watchdog noticed the box.
+    //
+    // The two are read as a RANGE, not compared for equality, because they
+    // are two snapshots of a war that is still running. Asserting
+    // `health.watching === body.findings.length` compared a count taken at
+    // one instant with a list taken at another, and on a loaded machine the
+    // watchdog could notice one more slow tick in between - a flake in the
+    // GATE, which is worse than a flaky probe because it teaches you to
+    // re-run the gate.
+    //
+    // Findings only ever accumulate, so an EARLIER count can never exceed a
+    // LATER list. Read health first and /watch second and the inequality
+    // holds by construction, whatever the machine is doing.
     const health = await (await fetch(`http://127.0.0.1:${address.port}/healthz`)).json();
-    assert.equal(health.watching, body.findings.length,
-      'healthz and /watch disagree about what was found');
+    const later = await (await fetch(`http://127.0.0.1:${address.port}/watch`)).json();
+    assert.ok(health.watching <= later.findings.length,
+      `healthz counted ${health.watching} findings, more than the ${later.findings.length}`
+      + ' /watch lists - they disagree about more than timing');
+    assert.ok(health.watching >= body.findings.length,
+      `healthz counted ${health.watching}, fewer than the ${body.findings.length} already`
+      + ' reported - findings must not vanish');
   } finally {
     await app.close();
   }

@@ -686,7 +686,13 @@ const CONSOLE_TABS = [
   { name: 'stores', key: 'Q', label: 'console.stores' },
   { name: 'damage', key: 'Z', label: 'console.damage' },
   { name: 'island', key: '', label: 'console.island' },
-  { name: 'chart', key: '', label: 'console.chart' },
+  // The chart is a member of the console - opening another tab must close
+  // it, and closing the console must put the map away - but it gets NO tab
+  // of its own (owner's ruling 2026-08-28). The camera bar already has
+  // CHART, and that one is strictly better: it opens the same map AND lights
+  // the camera bar to match, where this one left the bar reading HELM with a
+  // map on the screen. Two buttons for one thing, one of them worse.
+  { name: 'chart', key: '', label: 'console.chart', hidden: true },
   { name: 'log', key: 'I', label: 'console.log' },
 ];
 
@@ -770,6 +776,7 @@ function renderConsoleTabs() {
   if (strip === null) return;
   let signature = '';
   for (const tab of CONSOLE_TABS) {
+    if (tab.hidden === true) continue;
     signature += `${tab.name}${consolePanelOpen(tab.name) ? '1' : '0'}`
       + `${consoleTabAvailable(tab.name) ? 'y' : 'n'}`;
   }
@@ -777,6 +784,7 @@ function renderConsoleTabs() {
   strip.__signature = signature;
   strip.textContent = '';
   for (const tab of CONSOLE_TABS) {
+    if (tab.hidden === true) continue;
     const node = document.createElement('div');
     node.className = 'console-tab';
     if (consolePanelOpen(tab.name)) node.classList.add('on');

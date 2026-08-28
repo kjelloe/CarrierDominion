@@ -228,21 +228,47 @@ anything you can feel, or is RING always right?
 
 ---
 
-## A10 — The console, and the keys you already know *(10 min — new)*
+## A10 — The two top bars, and the controls *(15 min — rebuilt 2026-08-28)*
 
-The six panels are now one overlay with a tab strip: SQUADRON, STORES,
-DAMAGE, ISLAND, CHART, SIGNALS. Your keys are unchanged - `J` `Q` `Z` `I`
-each bring up their own tab - with one difference worth feeling: they are a
-**radio** now, so pressing the same key twice closes the console rather than
-putting it back how it was.
+Your six findings from the first sitting are all in. What to check:
 
-- Walk all six tabs and tell me whether one overlay is better than six. This
-  is the change I am least sure of.
-- **The chart** takes the whole screen on its tab, with only the tab strip
-  floating over it. Does the strip get in the way of the map?
-- **ISLAND** is dimmed until you have clicked one of your islands. Click one,
-  go to another tab, come back - it should still be showing that island.
-- Anything that used to be one keypress and is now two is a defect. Tell me.
+**The top row.** Console screens on the left — SQUADRON, STORES, DAMAGE,
+ISLAND, SIGNALS — camera views beside them: HELM, WEAPON, BIRDSEYE, CHART,
+DRONE. CHART is on the camera bar only now, per your ruling. The console
+strip is always there whether the console is open or shut.
+
+- Walk all five screens and tell me whether one overlay beats six panels.
+  Still the change I am least sure of.
+- **ISLAND** is dimmed until you click one of your islands. Click one, visit
+  another screen, come back — it should still show that island.
+- The keys are a **radio**: pressing `J` twice closes the console rather than
+  putting it back how it was. Tell me if that fights your hands.
+
+**The buttons that were missing.** The right-hand column was cutting FIRE,
+POD and VIRUS off the bottom — that is why you could not find FIRE. The
+columns wrap into two now. Check nothing is off the edge at your resolution,
+and tell me if the second column crowds the view.
+
+`Y` (decoys), `O` (rear view), `]` (scope) and `,` `.` (clock) are buttons
+now; they were keyboard-only. If you find any other action you can do with a
+key and not with the mouse, that is a defect — there is a test for it, so
+tell me and I will find out why the test missed it.
+
+**The Walrus.** It was never broken in the engine: an ordered move and
+piloting both work, measured. A selected craft sits still until you either
+click the sea to send it or press `T` to fly it — and the PILOT button that
+would have said so was one of the three below the fold. Please try it again
+now and tell me whether it reads as obvious. **If it still feels dead, say
+so** — the next step is putting the craft's state (on autopilot / you have
+the stick) on the panel in words.
+
+**PROG** names its subject now: it reads `PROG W4` with a craft selected and
+`PROG SHIP` with none. That was the whole of finding #2 — the routing was
+always right, it just never said who it was for.
+
+**The stick** answers three ways while flying a Manta: arrows, the
+CLIMB/DIVE buttons, or holding the right mouse button over the view and
+dragging. Which do you reach for?
 - Press `?`. The key list now names `J`, `Q`, `Z` and `I` — until this pass it
   mentioned only `Z`, so two of the biggest screens in the game were
   undiscoverable. Check nothing else is missing from it.
