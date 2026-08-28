@@ -16,6 +16,7 @@ order, see [`../dev-log.md`](../dev-log.md).
 | [07-graphics.md](07-graphics.md) | The three graphics tiers: targets, the style×tier contract, and the High-tier roadmap |
 | [08-ports-plan.md](08-ports-plan.md) | Planning only: the Luau/Roblox twin and the true mobile Low tier — what each needs, for after the human-first pass |
 | [09-proposals.md](09-proposals.md) | The three proposals as they were specced for discussion — **all ruled in and built** on 2026-08-25; kept for the reasoning and the open questions their answers settled |
+| [10-squadron.md](10-squadron.md) | The 1988 squadron interface: the gap analysis against 83 screenshots of the original, and the four rulings that closed it — outfitting by weight, the full deck cycle, waypoints, typed pods |
 
 ## The three rules everything else hangs off
 

@@ -25,7 +25,7 @@ gate still runs locally before every commit.
 
 ### Tests that guard a RULE rather than a behaviour
 
-Four files exist to keep promises the documents make but nothing enforced,
+These files exist to keep promises the documents make but nothing enforced,
 each added after the promise had already been broken once:
 
 | File | What it will not let you do |
@@ -54,8 +54,9 @@ Re-pinning is `npm run repin`, and `tools/repin_m0a.mjs` **refuses** if the
 event stream drifted. A hash change with the same events is bookkeeping — a
 field added, a value widened. A hash change with different events means the war
 plays differently, and that is not something to wave through by running a tool.
-That distinction is also why `shared/statehash.js` offers `trajectoryHash()`
-(state minus events) and `behaviorHash()` (state minus the ruleset stamp).
+That distinction is also why there are two narrower hashes: `trajectoryHash()`
+(state minus events) in `engine/snapshot.js`, and `behaviorHash()` (state
+minus the ruleset stamp) in `shared/statehash.js`.
 
 **`behaviorHash` is now wired to the job it was written for** (2026-08-27).
 Every pinned step carries two hashes, and the repin tool reports them

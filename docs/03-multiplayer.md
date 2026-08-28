@@ -160,3 +160,30 @@ claim their teams again. The AI keeps any seat the log says it holds, because
   latency is not visible.
 - **No matchmaking, no accounts, no lobby server.** It is a LAN game with a join
   code, hosted at `carrierdominion.kjell.today` on port 8135 when it is up.
+
+## Who may sail
+
+Two rules the room enforces before a war starts, both learned the hard way:
+
+- **Everybody playing needs a carrier.** The table's size is a room option and
+  the seats fill independently, so three commanders in a two-carrier room was
+  a legal state - and the third seat would have been handed a snapshot view
+  that does not exist. The room refuses and says which way to fix it: turn the
+  table up, or somebody stands down. Observers are not owed a hull and never
+  block a start.
+- **A resumed war still has its room.** It used to be built only when nothing
+  was resumed, so with `RESUME=auto` - the service setting - a restart left
+  the table able to finish their war and unable to start another. The room now
+  comes back in `running`, holding the options the war was actually played
+  with, and reopens to the same join code when the war ends.
+
+## A war that faults does not take the server with it
+
+The engine throws on purpose - `shared/fixed.js` raises on a bad multiply, the
+hashing walk raises on a dirty state - and those throws used to reach an
+unguarded `setInterval`, killing the process and with it the shutdown save.
+Now the clock stops, the table is told, `/healthz` reports `ok: false` with
+the reason, and the war is written down. If the STATE is what broke, the
+ordinary save cannot be written at all (it hashes the state), so the command
+log goes to `<save>.halted` instead: recoverable by hand, deliberately not
+auto-resumable, because an empty hash cannot be verified.

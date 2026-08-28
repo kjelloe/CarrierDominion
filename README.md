@@ -199,6 +199,22 @@ gap analysis that drove all of it is docs/10 — closed on 2026-08-26 with the
 gunnery console (orientation dial, TEMP gauge), the decoy screen's patterns,
 and the chart's RESOURCES reading.
 
+**Weather** arrived on 2026-08-26 and is a pure function of the seed and the
+tick — stored nowhere, so every screen in a LAN game and every replay sees the
+same sky, and the state hash never carries it. A day is thirty minutes;
+fronts run under a slower swing. Most of it is scenery on the High tier — a
+twelve-component wind-aligned swell, a domain-warped cloud deck, a sun that
+crosses and never goes fully dark — but three things reach the war: heavy
+weather shortens every radar in it, a rough sea slows the boats afloat, and a
+gale lifts an aircraft off the wavetops.
+
+The interface became **two bars along the top** (2026-08-26, reworked at the
+first playtest on 2026-08-28): the console's screens on the left — squadron,
+stores, damage control, the island board, signals — and the camera's ways of
+seeing beside them. Six overlays became one, every key also has a button (a
+probe reads the key handler and checks), and fuel now bites: a full bunker is
+about an hour of hard steaming against wars of twenty-five to seventy minutes.
+
 How far along a war starts is now one ladder of five (2026-08-25): a home
 island each, nothing but the ship, developed, **late** — the whole
 archipelago held, built and refitted, for testing an endgame without playing

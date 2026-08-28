@@ -141,9 +141,10 @@ forgotten by the hash, and because the canonical walk doubles as the hygiene
 assertion: it throws on a float, a `null`, or a non-printable string, naming the
 path to the offender.
 
-`trajectoryHash()` (state minus events) and `behaviorHash()` (state minus the
-ruleset stamp) exist for telling apart "the war changed" from "the bookkeeping
-changed".
+`trajectoryHash()` (state minus events, in `engine/snapshot.js`) and
+`behaviorHash()` (state minus the ruleset stamp, in `shared/statehash.js`)
+exist for telling apart "the war changed" from "the bookkeeping changed".
+`tools/repin_m0a.mjs` reports the second one on every re-pin.
 
 ## Commands
 

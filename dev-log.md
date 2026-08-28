@@ -5,6 +5,33 @@ golden hash and why.
 
 ---
 
+## 2026-08-28 — The documentation catches up, and one last gap closes
+
+A sweep of docs, specs, skills, memories and tests before the owner sits down
+again. Mostly bookkeeping; two things were not.
+
+**The last open gap from the architect's review, closed.** R-010's four doc
+drifts are fixed - `trajectoryHash` was cited as living in
+`shared/statehash.js` and is in `engine/snapshot.js`, docs/05 said "four
+files" over a table of six, docs/00 had no row for docs/10, and the slice
+skill had a sentence from item 7 spliced onto the end of item 8.
+
+**And the one thing the review flagged as unread turned out to be real.** It
+said `lobby.js` "was not read deeply enough to confirm a guard exists" for a
+war restarted with fewer teams than seated players. There was no guard. The
+table's size is a room option and the seats fill independently, so three
+commanders in a two-carrier room was a legal state, and the third seat would
+have received `snapshot.views[2]` - undefined, a war with no view of it. The
+room refuses now and says which way to fix it: turn the table up, or somebody
+stands down. Observers are not owed a hull and do not block a start. Written
+as a failing test first, which is how I know the guard was missing rather
+than merely unproven.
+
+The slice skill also gained a ninth rule, from the playtest: **a new action
+needs a button, not only a key**, and there is a probe that checks.
+
+---
+
 ## 2026-08-28 — The first playtest at the controls
 
 Six findings from the owner actually flying it, and they turn out to be

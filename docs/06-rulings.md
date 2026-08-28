@@ -673,6 +673,10 @@ and piloting both work, measured. It was the same defect as the rest: the
 PILOT button that would have explained it was one of the three cut off the
 bottom of the column.
 
+- Everybody in a war needs a carrier: a room refuses to sail while a seated
+  commander's team falls outside the table (2026-08-28). Observers are not
+  owed a hull and never block a start.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

@@ -227,3 +227,38 @@ test('a war saved under the old switches still folds to the shape it was played 
   const nonsense = applyLobby(rules, { islands: 8, teams: 2, start: 9 });
   assert.equal(nonsense.rules.startShape, 0, 'a rung that does not exist was passed through');
 });
+
+// --- nobody starts a war with no carrier to sit in ---------------------------
+//
+// The last gap in the architect's review (2026-08-27): the table's SIZE is a
+// room option and the seats are filled independently, so three commanders in
+// a room set to two carriers was a legal state that `canStart` waved through.
+// The seat with team 2 then received `snapshot.views[2]`, which is undefined -
+// the client is handed a war with no view of it.
+//
+// The room refuses instead, and says what is wrong in terms the host can act
+// on: turn the table up, or somebody stands down.
+
+test('a room refuses to sail while somebody has no carrier', () => {
+  const seats = room(0, 1, 2);
+  const crowded = lobby();
+  for (const seat of seats) setReady(seat, 1);
+  assert.equal(crowded.options.teams, 2, 'the room did not start at two carriers');
+  assert.match(canStart(crowded, seats, seats[0]), /carrier/i,
+    'three commanders sailed in a war with two carriers');
+
+  // Room for everybody: away it goes.
+  setOption(crowded, seats, seats[0], 'teams', 4);
+  for (const seat of seats) setReady(seat, 1);
+  assert.equal(canStart(crowded, seats, seats[0]), '',
+    'the room refused a table that fits');
+});
+
+test('an observer is not somebody without a carrier', () => {
+  // team -1 is a spectator, who is not owed a hull and must not block a start.
+  const seats = room(0, -1);
+  const watched = lobby();
+  for (const seat of seats) setReady(seat, 1);
+  assert.equal(canStart(watched, seats, seats[0]), '',
+    'an observer blocked the war they came to watch');
+});

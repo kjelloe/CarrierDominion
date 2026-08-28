@@ -94,15 +94,20 @@ dev-log honest. This is the procedure.
    control before anyone noticed, while a fourth was correctly reporting a
    panel that threw on open. Select DOM by name, never by index.
 7. A new panel or screen needs one line in `test/client_smoke.mjs` that
-   OPENS it.
+   OPENS it. The gate fails on any console error, so that line is the whole
+   guard — and the island board threw for days precisely because nothing in
+   the gate ever opened it.
 8. If a change gives an action a DURATION, sweep for everything that presses
    the button and then asserts - the smoke gate, the probes, and every
    scenario test. The deck cycle broke a dozen of them, none of them wrong.
    Where the duration is not the subject, turn it off in the ruleset
    (`instantDeck`, beside the four things `bareRules` already strips) and
-   make the zero-length case complete inside the command. The gate fails on any console error, so that line is the whole
-   guard — and the island board threw for days precisely because nothing in
-   the gate ever opened it.
+   make the zero-length case complete inside the command.
+9. A new ACTION needs a button, not only a key. `debugging/probes/consoles.mjs`
+   reads every `key === '...'` out of `client/main.js` and checks it against
+   the captions on screen; add a key without a control and it fails there.
+   Four actions had been keyboard-only for weeks, including a whole ruled
+   feature (playtest 2026-08-28).
 
 ## The dev-log entry
 

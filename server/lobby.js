@@ -172,6 +172,24 @@ function canStart(lobby, seats, seat) {
   if (lobby.status !== 'lobby') return 'the war has already started';
   if (!isHost(seats, seat)) return 'only the host starts the war';
   if (!allReady(seats)) return 'not everybody is ready';
+  // Everybody who is playing needs a carrier to play from. The table's SIZE
+  // is a room option and the seats fill independently, so three commanders in
+  // a two-carrier room was a legal state - and the third seat would have been
+  // handed `snapshot.views[2]`, which does not exist, i.e. a war with no view
+  // of it. Found by the 2026-08-27 review as the one gap it had not read
+  // deeply enough to confirm; it was there.
+  //
+  // Observers (team -1) are not owed a hull and must not block the start.
+  let homeless = 0;
+  for (const other of seats) {
+    if (other.team === -1) continue;
+    if (other.team >= lobby.options.teams) homeless = homeless + 1;
+  }
+  if (homeless > 0) {
+    return homeless === 1
+      ? 'one commander has no carrier - turn the table up, or they stand down'
+      : `${homeless} commanders have no carrier - turn the table up`;
+  }
   return '';
 }
 
