@@ -640,10 +640,10 @@ from copied layout constants; and the permission allow-list lost `git push *`,
 to `main`, which the working agreement forbids, and `git fetch *` is
 prohibited outright.
 
-**Not done, and why:** R-010 (documentation drift), R-011 (`set_route` is the
-only order that refuses a landed Manta) and R-012 (crypto session tokens, a
-stricter URL parser) were outside the batch asked for. All three are small and
-still open.
+**Not done, and why:** R-011 (`set_route` is the only order that refuses a
+landed Manta) and R-012 (crypto session tokens, a stricter URL parser) were
+outside the batch asked for. Both are small and still open. R-010, the
+documentation drift, was closed on 2026-08-28.
 
 ## The first playtest at the controls (2026-08-28)
 

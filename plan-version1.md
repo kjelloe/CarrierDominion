@@ -228,11 +228,12 @@ menu, the bezelled instrument panel with a PPI scope and damage
 schematic, the war room with chat, seat grace with AI takeover, sound,
 decoy flares, and the playtest watchdog.
 
-Carried into Milestone 2: fog of war with a **memory** — detection is
-radar-range only by ruling, and there are no remembered contacts yet;
-`ai_strike.js` is the module to audit when that changes. The Luau twin
-(D3) remains unstarted by design; the engine is written to stay portable
-to it, and nothing has been added that breaks the subset.
+Carried into Milestone 2 and since **done**: fog of war with a memory was
+ruled in on 2026-08-21 and built — ghosts on the scope, disprove-by-scan
+with a rim margin, and the AI reading the same chart (`engine/contacts.js`
+`ghostsFor`). Detection is still radar-range only, which is the ruling.
+The Luau twin (D3) remains unstarted by design; the engine is written to
+stay portable to it, and nothing has been added that breaks the subset.
 
 What is built, and why, is in [`docs/`](docs/00-index.md). What changed,
 in order, is in `dev-log.md`.
