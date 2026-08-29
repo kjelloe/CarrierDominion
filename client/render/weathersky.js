@@ -20,6 +20,9 @@
 
 import * as THREE from '../vendor/three.module.min.js';
 
+// Hoisted out of updateClouds, which runs every frame.
+const CLOUD_WHITE = new THREE.Color(0xffffff);
+
 // The deck is drawn on a SHELL around the eye, not on a plane above it, and
 // this is the whole trick: a flat plane 2.6 km up is only visible when you
 // look up, and a chase camera looking at the horizon never does - the deck
@@ -220,7 +223,7 @@ function updateClouds(view3d, weather, sky, deltaSeconds) {
   uniforms.uDrift.value.set(Math.cos(bam), -Math.sin(bam));
   // The deck picks up the light it stands in, so dawn cloud is pink and
   // midnight cloud is nearly the sea.
-  uniforms.uLight.value.copy(sky.lightColour).lerp(new THREE.Color(0xffffff), 0.55);
+  uniforms.uLight.value.copy(sky.lightColour).lerp(CLOUD_WHITE, 0.55);
   // Except in a storm, where there is no lit side: a squall's cloud base is
   // grey all the way through. Without this the near-white "lit" colour was
   // the brightest thing in a storm frame and the whole sky read warm.

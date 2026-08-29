@@ -365,8 +365,32 @@ literal end the template.** A comment reading "that `mod` is the whole
 animation" turned the shader into a syntax error, and the browser reported it
 as `Unexpected identifier 'mod'` — a JS error, in a file whose JS was fine.
 
-**Landed checks** (`debugging/probes/weather.mjs`): a full squall must rain, a
-clear noon must not; the ship must HAVE a surface that can get wet (an empty
+**Reviewing the batch found four things it had left out**, and the first is
+the one worth remembering:
+
+1. **The reflection exclusion list still named only the cloud.** The mirror
+   water renders the scene from a mirrored camera, so anything positioned at
+   the main camera — or drawn in screen space — is nonsense from there. Phase
+   3b had already learned this and excluded the cloud shell; phase 3c added
+   three more eye-riding effects and did not add them to the list. The beams
+   were the worst: a screen-space triangle with depth testing off and the last
+   render order, painting over the whole reflection texture. **A hand-kept
+   list of exclusions is only correct until the next feature**, so the probe
+   now asserts the RULE — nothing that rides the eye may be drawn during the
+   reflection pass, and everything must be visible again afterwards.
+2. **The spray puffs were hard-edged rectangles.** The fragment shader read
+   `gl_PointCoord`, which means nothing in a triangle shader, and then never
+   used the value — so there was no soft falloff at all. The quad's own
+   coordinates are what it needed.
+3. **Four `THREE.Color` allocations per frame** in the update paths, hoisted
+   to module constants. Not a leak; just garbage for the collector to walk
+   during a render loop.
+4. `ownX`/`ownZ` were used before being declared on `view3d`. Harmless in
+   order of execution, and now initialised where every other field is.
+
+**Landed checks** (`debugging/probes/weather.mjs`): nothing that rides the eye
+reaches the water's reflection, and nothing is left hidden afterwards; a full
+squall must rain, a clear noon must not; the ship must HAVE a surface that can get wet (an empty
 wettables list would pass a naive "is it wet" check by doing nothing); a
 soaked deck's roughness must fall below 0.4 and a dry one stay above 0.7; and
 a gale must raise spray. Verified by disabling the rain threshold and watching

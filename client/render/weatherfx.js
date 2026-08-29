@@ -14,6 +14,11 @@
 
 import * as THREE from '../vendor/three.module.min.js';
 
+// Hoisted: these were being allocated inside the update functions, which run
+// every frame. A Color per effect per frame is not a leak, but it is garbage
+// the collector has to walk during a render loop that has better things to do.
+const WHITE = new THREE.Color(0xffffff);
+
 // The box of rain that rides the eye. SMALL on purpose: 9000 drops spread
 // through a 220 m cube is emptier than a light shower, because the volume
 // grows as the cube of the span and the eye only ever sees the near few
@@ -157,7 +162,7 @@ function updateRain(view3d, weather, sky) {
   uniforms.uSlant.value = 0.12 + (weather.windPermil / 1000) * 0.55;
   // Rain takes the light it falls through, so it is grey at dusk and never a
   // sheet of white against a dark sky.
-  uniforms.uColour.value.copy(sky.lightColour).lerp(new THREE.Color(0xffffff), 0.35);
+  uniforms.uColour.value.copy(sky.lightColour).lerp(WHITE, 0.35);
 
   rain.position.copy(view3d.camera.position);
   return strength;
@@ -188,6 +193,7 @@ const SPRAY_VERTEX = `
   uniform float uRise;
   uniform float uSize;
   varying float vFade;
+  varying vec2 vPuff;
 
   void main() {
     // Each puff has its own birth offset, so they do not pulse together.
@@ -205,6 +211,7 @@ const SPRAY_VERTEX = `
     vec4 mv = modelViewMatrix * vec4(local, 1.0);
     float grow = uSize * (0.45 + age * 1.5);
     mv.xy += position.xy * grow;
+    vPuff = position.xy * 2.0;
     // In on a rise, out on a long tail - a puff of spray does not blink off.
     vFade = smoothstep(0.0, 0.12, age) * (1.0 - smoothstep(0.35, 1.0, age)) * carried;
     gl_Position = projectionMatrix * mv;
@@ -216,10 +223,15 @@ const SPRAY_FRAGMENT = `
   uniform vec3 uColour;
   uniform float uStrength;
   varying float vFade;
+  varying vec2 vPuff;
   void main() {
-    // A soft round puff, from the quad's own corner distance.
-    vec2 d = gl_PointCoord;
-    float a = vFade * uStrength;
+    // A soft round puff. The first version reached for gl_PointCoord, which
+    // means nothing in a triangle shader - and never used the value it read,
+    // so every puff of spray was a hard-edged rectangle. The quad's own
+    // coordinates are what this needed.
+    float r = length(vPuff);
+    float soft = 1.0 - smoothstep(0.25, 1.0, r);
+    float a = vFade * uStrength * soft;
     if (a <= 0.003) discard;
     gl_FragColor = vec4(uColour, a);
   }
@@ -297,7 +309,7 @@ function updateSpray(view3d, weather, sky, own) {
   uniforms.uStrength.value = 0.10 + share * 0.34;
   const bam = (weather.windBam / 65536) * Math.PI * 2;
   uniforms.uWind.value.set(Math.cos(bam), -Math.sin(bam));
-  uniforms.uColour.value.copy(sky.lightColour).lerp(new THREE.Color(0xffffff), 0.6);
+  uniforms.uColour.value.copy(sky.lightColour).lerp(WHITE, 0.6);
 
   // At the bow, a little forward of the hull's middle.
   const yaw = (own.heading / 65536) * Math.PI * 2;
@@ -448,7 +460,7 @@ function updateBeams(view3d, weather, sky) {
   uniforms.uStrength.value = strength;
   uniforms.uAspect.value = window.innerWidth / Math.max(1, window.innerHeight);
   uniforms.uTime.value = view3d.elapsed;
-  uniforms.uColour.value.copy(sky.lightColour).lerp(new THREE.Color(0xffffff), 0.4);
+  uniforms.uColour.value.copy(sky.lightColour).lerp(WHITE, 0.4);
 }
 
 export {

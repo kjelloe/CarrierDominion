@@ -321,6 +321,14 @@ Look for these shapes first — every one produced a real bug:
   as a JavaScript syntax error in a file whose JavaScript was correct. Grep a
   new shader file for backticks before wondering what else is wrong.
 
+- **A hand-kept exclusion list, and the next feature.** The mirror water hides
+  the cloud shell while it renders its reflection, because the shell rides the
+  eye. Three more eye-riding effects were then added - rain, spray, sunbeams -
+  and none reached the list, so all three drew into the reflection from the
+  wrong camera. Whenever a fix takes the form of "remember to add X to this
+  list", the test should assert the RULE the list is trying to express, not
+  the membership of the list.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

@@ -187,6 +187,49 @@ for (const [name, tick] of found) {
   const sc = shot[name].scope;
   console.log(`${' '.repeat(9)} scope ${sc.r},${sc.g},${sc.b}`);
 
+  shot[name].reflection = await page.evaluate(() => {
+    const v = window.__scene3d;
+    const riders = ['clouds', 'rain', 'spray', 'beams'];
+    const seenHidden = {};
+    const before = {};
+    for (const name of riders) {
+      const thing = v[name];
+      before[name] = thing === null || thing === undefined ? 'missing' : thing.visible;
+    }
+    // Watch what the reflection pass hides, by listening from inside it.
+    const original = v.ocean.onBeforeRender;
+    v.ocean.onBeforeRender = function spy(renderer, scene, camera) {
+      original.call(this, renderer, scene, camera);
+      for (const name of riders) {
+        const thing = v[name];
+        // By the time the wrapper returns, visibility is restored - so sample
+        // from a material's own onBeforeRender instead.
+        if (thing !== null && thing !== undefined) seenHidden[name] = thing.__wasHidden === true;
+      }
+    };
+    for (const name of riders) {
+      const thing = v[name];
+      if (thing === null || thing === undefined) continue;
+      const priorHook = thing.onBeforeRender;
+      thing.onBeforeRender = function mark(renderer, scene, camera) {
+        // Drawn during the reflection pass means NOT excluded. The mirror
+        // camera is not the scene camera, which is how we tell the passes apart.
+        if (camera !== v.camera) thing.__drawnInReflection = true;
+        if (typeof priorHook === 'function') priorHook.call(this, renderer, scene, camera);
+      };
+      thing.__drawnInReflection = false;
+    }
+    v.renderer.render(v.scene, v.camera);
+    const out = {};
+    for (const name of riders) {
+      const thing = v[name];
+      out[name] = thing === null || thing === undefined ? 'missing'
+        : { visible: thing.visible, inReflection: thing.__drawnInReflection === true,
+            restored: thing.visible === before[name] };
+    }
+    return out;
+  });
+
   // And the pull-back, where there is sky in frame rather than a horizon.
   await page.keyboard.press('c');
   await page.keyboard.press('c');
@@ -252,6 +295,30 @@ if (shot.lightning !== undefined && shot.nostroke !== undefined) {
   check(lit > dark + 3,
     `the scope reads ${lit} with a strike and ${dark} without`
     + ' - the clutter is not reaching the instrument, or is too faint to see');
+}
+
+// --- nothing that rides the eye may be in the water's reflection ------------
+//
+// The mirror water renders the whole scene from a MIRRORED camera. Anything
+// positioned at the main camera, or drawn in screen space, is nonsense from
+// there: the cloud shell was, and when rain, spray and sunbeams arrived the
+// exclusion list still named only the cloud. The beams are the worst of them
+// - a screen-space triangle with depth testing off and the last render order,
+// which paints over the entire reflection texture.
+//
+// This asserts the RULE rather than the list: every effect that rides the eye
+// must be hidden while the reflection is drawn, and visible again after.
+const reflection = shot.storm === undefined ? {} : shot.storm.reflection;
+for (const name of Object.keys(reflection)) {
+  const r = reflection[name];
+  if (r === 'missing') {
+    check(false, `${name} is not in the scene at all on High + modern`);
+    continue;
+  }
+  check(r.inReflection === false,
+    `${name} is drawn into the water's reflection, where it rides the wrong camera`);
+  check(r.restored === true,
+    `${name} was left hidden after the reflection pass`);
 }
 
 // --- rain, spray and the wet deck (2026-08-29) ------------------------------

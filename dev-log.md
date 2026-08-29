@@ -66,6 +66,28 @@ a soaked deck is still rough, and the ship has no wettable surface at all.
 That last one matters most: an empty wettables list would pass a naive
 "is it wet" check by doing nothing.
 
+**Reviewed the batch afterwards and found four omissions**, of which one was
+the same mistake twice.
+
+Phase 3b learned that the cloud shell must be hidden while the mirror water
+renders its reflection, because the shell rides the eye and is therefore in
+the wrong place seen from a mirrored camera. Phase 3c then added three MORE
+eye-riding effects and put none of them on that list. The beams were the worst
+of the three: a screen-space triangle with depth testing off and the last
+render order, painting over the entire reflection texture. The lesson is not
+"remember the list" - it is that a hand-kept list is only correct until the
+next feature, so the probe now asserts the rule instead: nothing that rides
+the eye may be drawn during the reflection pass, and everything must be
+visible again after. Verified by restoring the cloud-only list and watching
+it name rain, spray and beams by name.
+
+Also: the spray puffs were hard-edged rectangles, because the fragment shader
+reached for `gl_PointCoord` - meaningless in a triangle shader - and then
+never used the value it read, so there was no falloff at all. Four Color
+allocations per frame hoisted out of the update paths. And `ownX`/`ownZ` were
+being used before they were declared on view3d, harmless by order of
+execution and now initialised where every other field is.
+
 ---
 
 ## 2026-08-28 — The documentation catches up, and one last gap closes

@@ -203,6 +203,10 @@ function createScene(canvas, preset, sizeMetres, style) {
     spray: null,
     beams: null,
     wettables: [],
+    // Where the player's own hull is, in scene metres, for the effects that
+    // happen AT the ship rather than around the eye.
+    ownX: 0,
+    ownZ: 0,
     // How wet the ship is, 0..1. It follows the rain UP quickly and comes
     // back down slowly, because a deck dries slower than a squall passes.
     wetness: 0,
@@ -683,11 +687,24 @@ function keepCloudsOutOfReflections(view3d, ocean) {
   const original = ocean.onBeforeRender;
   if (typeof original !== 'function') return;
   ocean.onBeforeRender = function wrapped(renderer, scene, camera) {
-    const clouds = view3d.clouds;
-    const wasVisible = clouds === null || clouds === undefined ? false : clouds.visible;
-    if (clouds !== null && clouds !== undefined) clouds.visible = false;
+    // EVERYTHING that rides the eye or lives in screen space, not just the
+    // cloud. When the rain, the spray and the sunbeams were added, only the
+    // cloud was on this list, and each of the three is wrong in a reflection
+    // for its own reason: the rain box is positioned at the MAIN camera, so
+    // from a mirrored one it is a slab of streaks in the wrong place; the
+    // spray is placed at the bow in world space but billboarded to the wrong
+    // eye; and the beams are a screen-space triangle with depth testing off
+    // and the last render order, which paints over the whole reflection
+    // texture. A list like this is only correct until somebody adds the next
+    // effect, which is exactly what happened.
+    const hidden = [];
+    for (const thing of [view3d.clouds, view3d.rain, view3d.spray, view3d.beams]) {
+      if (thing === null || thing === undefined || !thing.visible) continue;
+      thing.visible = false;
+      hidden.push(thing);
+    }
     original.call(this, renderer, scene, camera);
-    if (clouds !== null && clouds !== undefined) clouds.visible = wasVisible;
+    for (const thing of hidden) thing.visible = true;
   };
 }
 
