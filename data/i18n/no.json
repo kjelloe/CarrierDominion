@@ -467,5 +467,7 @@
   "act.faster": "RASKERE",
   "tip.faster": "Foreslå raskere klokke. På LAN må bordet være enig.",
   "chart.progFor": "PROG {who}",
-  "chart.ship": "SKIP"
+  "chart.ship": "SKIP",
+  "tip.tier": "Utseende og grafikknivå. Klikk for å bytte nivå (G).",
+  "tip.needHigh": "Dette utseendet krever mer enn nivået gir: været, speilsjøen og dønningen trenger HØY. Klikk for å bytte nivå (G)."
 }

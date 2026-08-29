@@ -329,6 +329,20 @@ Look for these shapes first — every one produced a real bug:
   list", the test should assert the RULE the list is trying to express, not
   the membership of the list.
 
+- **A first-person eye inside its own model.** The gunsight puts the camera on
+  the mount, eight metres ahead of a craft's centre - which is inside a Manta.
+  The whole screen was the inside of the player's own wing and WEAPON view
+  could not be aimed. Whenever a camera goes first-person on a thing, ask
+  whether that thing is still being drawn.
+- **A wrap that separates controls designed as a pair.** FIRE and its weapon
+  row were siblings in a column that wraps; the split landed between them, and
+  a playtester read it as "there are no weapon buttons". Controls that mean
+  nothing apart belong in one container, not next to each other and hoping.
+- **A gate whose cost is invisible.** The weather is High-tier only by ruling,
+  which is correct - but nothing on screen said which tier was running, so
+  choosing the modern LOOK and getting no waves looked like a bug. When a
+  setting decides whether a whole feature exists, show the setting.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the
@@ -373,6 +387,11 @@ Look for these shapes first — every one produced a real bug:
   were sharper than written. Checking cost minutes and made acting on them
   safe - and it found the two follow-on defects that the findings themselves
   did not mention.
+- **Solo mode runs the ENGINE IN THE CLIENT.** A probe at `graphics=high`
+  under software rendering advances the war at the page's frame rate, so the
+  craft it is waiting for never leaves the deck and the probe looks like a
+  feature failure. Behaviour probes belong at the cheapest tier - the same
+  rule that fixed second_war, re-learned two days later on a new probe.
 - **Run the probes before believing them.** They are not in `npm run gate`
   (they open browsers and take minutes), so they rot. `npm run probes` runs
   the lot; sweep it after any UI change, and read a failure as "either the

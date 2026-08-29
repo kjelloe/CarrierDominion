@@ -350,6 +350,17 @@ function syncUnits(view3d, view) {
     }
     group.position.set(toMetres(unit.x), toMetres(unit.z), -toMetres(unit.y));
     group.rotation.y = headingToYaw(unit.heading);
+    // YOU CANNOT SEE PAST YOUR OWN AIRFRAME. In the gunsight the eye sits on
+    // the mount, and for a flown craft that mount is eight metres ahead of the
+    // hull's centre - well inside a Manta, which is longer than that. The
+    // whole screen filled with the inside of the player's own wing, so WEAPON
+    // view could not be aimed at all (playtest 2026-08-29).
+    //
+    // The carrier solved the same problem by moving its eye out past the bow
+    // spike, which works for a ship you are standing ON. For a craft you ARE,
+    // the honest answer is that you do not draw it: a pilot does not see their
+    // own aircraft. It comes straight back the moment the view changes.
+    group.visible = !(view3d.gunsight === true && unit.id === view3d.followUnitId);
   }
   for (const id of Object.keys(view3d.units)) {
     if (seen[id] === undefined) {

@@ -425,6 +425,41 @@ visible at a third opacity, and that ruling is right — it is how a player
 learns what the ship can do. So the column becomes two columns when it fills,
 the right-hand one growing inward from the screen edge.
 
+**Which look, which tier — always on screen.** The chip in the top right
+reads e.g. `Modern · High`, and clicking it cycles the tier (what `G` does).
+It turns amber when the LOOK is asking for more than the TIER pays for:
+choosing modern does not choose High, and the weather, the mirror sea and the
+swell are all gated on `physicalEffects`, which only High sets. A playtester
+on modern/Medium asked why there were no waves and nothing on screen answered
+— the tier lived in the DBG strip, which is hidden by default (2026-08-29).
+
+That also retires the controls audit's exemption for `G`. "The graphics tier
+is a setting, not a war action" was defensible while the tier only changed how
+things looked; it stopped being defensible the moment the tier decided whether
+there was weather at all.
+
+**You do not see your own airframe.** In the gunsight the eye sits on the
+mount, and for a flown craft that mount is eight metres ahead of the hull's
+centre — well inside a Manta, which is longer than that. The whole screen
+filled with the inside of the player's own wing and WEAPON view could not be
+aimed. The carrier solved the same problem by pushing its eye out past the bow
+spike, which works for a ship you stand ON; for a craft you ARE, the answer is
+that a pilot does not see their own aircraft. It comes back the moment the
+view changes.
+
+**FIRE and its weapons are one block.** When the action column splits in two,
+a plain sibling pair can land at the foot of one column and the head of the
+other — and a playtester read that as "there are no weapon buttons". They live
+in one container now, so no wrap can come between them, and the buttons are
+tight enough that an ordinary window does not wrap at all.
+
+**A button whose moment has just come says so.** Asleep-at-a-third tells a
+player what the ship can do; it does not tell them what they can do NOW. A
+Manta that has just gone away is flyable, and its PILOT button sat in a column
+of thirteen looking like the other twelve. It lights while a craft is selected
+and unflown, and goes out when you take the controls — then `T` means release,
+and that is not news.
+
 **The stick has three inputs.** Arrow keys, the CLIMB/DIVE buttons, and —
 since 2026-08-28 — holding the right mouse button over the view and dragging:
 up noses down, down pulls up, release levels off. Only for a craft with a

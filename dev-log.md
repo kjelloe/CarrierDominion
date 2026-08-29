@@ -5,6 +5,57 @@ golden hash and why.
 
 ---
 
+## 2026-08-29 — Playtest: the cockpit in the way, and where the waves went
+
+Three findings from the controls, and the third was a question rather than a
+bug.
+
+**WEAPON view was completely blocked while flying.** In the gunsight the eye
+sits on the mount, and for a flown craft that mount is eight metres ahead of
+the hull's centre - well inside a Manta, which is longer than that. The screen
+filled with the inside of the player's own wing and there was no aiming at
+all. The carrier had the same problem years earlier in this codebase and
+solved it by pushing its eye out past the bow spike, which works for a ship
+you stand ON. For a craft you ARE, the honest answer is different: a pilot
+does not see their own aircraft. It is hidden while it is the gunsight
+subject and back the moment the view changes.
+
+**"No weapon buttons in HELM view" was my own regression, one round old.** The
+chips were there - but the column wrap I added at the last playtest had put
+FIRE at the foot of one column and the weapons it fires at the head of the
+other, which reads exactly like "the weapons are missing". Two fixes: the
+buttons are tighter, so an ordinary window does not wrap at all, and FIRE and
+its chips now live in one container that no wrap can split. Measured at four
+viewports; at 1600x900 and above it is a single column, and the pair is bound
+at every size.
+
+**PILOT now lights up** while a craft is selected and unflown. Asleep-at-a-
+third says what the ship CAN do; it does not say what you can do next, and a
+Manta that has just gone away is flyable with nothing on screen saying so.
+
+**And the waves.** The owner asked whether there is a setting beyond choosing
+modern. There is, and it is theirs: the 2026-08-26 ruling was "High + modern
+only", and the weather, mirror sea and swell are all gated on
+`physicalEffects`, which only the High preset sets. Confirmed by measurement -
+modern+High builds the swell, modern+Medium does not.
+
+So the gate is right and the TELLING was missing. The tier lived in the DBG
+strip, which is hidden by default. There is now a chip in the top right
+reading `Modern · High`, which turns amber when the look is asking for more
+than the tier pays for, and clicking it cycles the tier. That also retires the
+controls audit's exemption for `G`: "a setting, not a war action" was
+defensible while the tier only changed how things looked, and stopped being so
+the moment it decided whether there was weather.
+
+One process note. My first attempt to reproduce the cockpit bug ran the probe
+at `graphics=high` and the Manta never left the deck - in solo the ENGINE RUNS
+IN THE CLIENT, so a page rendering at three frames a second is a war advancing
+at three ticks a second. The rule I wrote two days ago ("run a probe at the
+cheapest tier that still tests what it is for") applied to my own new probe
+and I did not apply it.
+
+---
+
 ## 2026-08-29 — Rain, spray, a wet deck, sunbeams, and light through the wave
 
 Owner reversed Q2b's "not now" while playtesting. Five effects, all High +

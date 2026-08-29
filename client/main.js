@@ -1001,9 +1001,19 @@ function buildActionColumns(t) {
       // (playtest ruling 2026-08-23 - a cycle key hides what a row of
       // buttons shows). V still cycles for the keyboard hand.
       if (key === 'f' && id === 'actions-right') {
+        // FIRE and the weapons it fires are ONE wrap unit. When the column
+        // splits in two - which it does on a short window - a plain sibling
+        // pair can land at the foot of one column and the head of the other,
+        // and a playtester reads that as "there are no weapon buttons"
+        // (2026-08-29). Putting both inside one container makes them a single
+        // flex item, so no wrap can ever come between them.
+        const together = document.createElement('div');
+        together.id = 'fire-group';
         const group = document.createElement('div');
         group.id = 'weapon-group';
-        root.append(group);
+        root.removeChild(button);
+        together.append(button, group);
+        root.append(together);
       }
     }
   }
@@ -1045,6 +1055,14 @@ function updateActionButtons() {
   for (const key of Object.keys(actionButtons)) {
     actionButtons[key].classList.toggle('off', enabled[key] === false);
   }
+  // And one button is LIT rather than merely awake: the one that says you can
+  // fly the thing you have just selected. Asleep-at-a-third tells a player
+  // what the ship can do; it does not tell them what they can do next, and a
+  // Manta that has just gone away is flyable with nothing on screen saying so
+  // (playtest 2026-08-29). It goes out the moment you take the controls,
+  // because then T means release and that is not news.
+  const canFly = chosen !== undefined && chosen.kind !== 3 && !state.piloting;
+  if (actionButtons.t !== undefined) actionButtons.t.classList.toggle('ready', canFly);
 }
 
 // Rebuilt only when the holder or its loadout changes; the selection state
@@ -2162,6 +2180,27 @@ async function main() {
   // the sea grid have to use the SCALED size - the base size leaves the far
   // corners of a big archipelago outside the water.
   const sizeMetres = worldSizeMetres(rules.world);
+  // SAY WHICH TIER YOU ARE ON, permanently, and say it loudest when it is
+  // costing you something. A playtester on `?style=modern` asked why there
+  // were no waves: the weather, the mirror sea and the swell are gated on
+  // `physicalEffects`, which only HIGH sets, and choosing the modern LOOK does
+  // not choose the tier that pays for it. Nothing on screen said so - the tier
+  // lived in the DBG strip, which is hidden by default - and a transient
+  // status line was no good either, because "connected" arrives a moment
+  // later and takes it (playtest 2026-08-29).
+  //
+  // It is also the clickable G the controls audit had exempted. The exemption
+  // was defensible when the tier was a setting nobody needed mid-war; it stops
+  // being defensible the moment the tier decides whether there is weather.
+  const wantsMore = style.physicalSky === true && preset.physicalEffects !== true;
+  const tierChip = document.getElementById('tier-chip');
+  if (tierChip !== null) {
+    tierChip.textContent = `${style.label} · ${preset.label}`;
+    tierChip.classList.toggle('short', wantsMore);
+    attachTip(tierChip, state.t(wantsMore ? 'tip.needHigh' : 'tip.tier'));
+    tierChip.addEventListener('click', () => cycleGraphics(resolved.level));
+  }
+
   state.scene3d = createScene(document.getElementById('view'), preset, sizeMetres, style);
   state.panel = createInstruments(document.getElementById('panel'));
   state.instrumentColours = style.instruments;

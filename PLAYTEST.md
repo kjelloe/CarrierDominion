@@ -254,6 +254,21 @@ now; they were keyboard-only. If you find any other action you can do with a
 key and not with the mouse, that is a defect — there is a test for it, so
 tell me and I will find out why the test missed it.
 
+**Fixed since your last sitting (2026-08-29):** WEAPON view while flying was
+blocked by your own airframe — you were inside your own wing; the craft is
+hidden in first person now. FIRE and its weapons could be split apart by the
+column wrap, which read as "no weapon buttons" — they are one block now and an
+ordinary window does not wrap at all. PILOT lights up while a craft is
+selected and unflown.
+
+**And the waves.** There IS another setting: the **graphics tier**, which must
+be **High** as well as the look being modern — that was your own ruling of
+2026-08-26, and the weather, mirror sea and swell are all gated on it. Nothing
+said so, which is why it looked broken. The chip in the top right now reads
+`Modern · High`; it turns **amber** when the look is asking for more than the
+tier pays for, and clicking it cycles the tier. If it is amber, you are not
+seeing the weather at all.
+
 **The Walrus.** It was never broken in the engine: an ordered move and
 piloting both work, measured. A selected craft sits still until you either
 click the sea to send it or press `T` to fly it — and the PILOT button that

@@ -170,6 +170,8 @@ const KEYS_WITHOUT_BUTTONS = {
   arrowup: 'the CLIMB button, and right-drag',
   arrowdown: 'the DIVE button, and right-drag',
   '[': 'SCOPE steps out and wraps round; one button covers the ring',
+  g: 'the tier chip in the top right - it is a button now, because the tier'
+    + ' decides whether there is weather at all',
   v: 'the weapon selector is the row of buttons V cycles',
   h: 'the ? button',
   i: 'the SIGNALS tab on the console bar',
@@ -178,7 +180,6 @@ const KEYS_WITHOUT_BUTTONS = {
   z: 'the DAMAGE tab',
   escape: 'surrender is deliberately keyboard-only, and deliberately twice',
   tab: 'chat opens on its own in a LAN game',
-  g: 'the graphics tier is a setting, not a war action',
   ' ': 'the PAUSE button',
   c: 'the camera tabs',
   t: 'the PILOT button',
@@ -192,6 +193,22 @@ for (const match of source.matchAll(/key === '([^']+)'/g)) {
 }
 const clickable = await page.$$eval('.act .k, .console-tab .k, .cam-tab',
   (nodes) => nodes.map((n) => n.textContent.trim().toLowerCase()));
+
+// The tier chip: on screen always, warning when the look is asking for more
+// than the tier pays for. A playtester on modern/Medium asked why there were
+// no waves, and nothing on screen answered (2026-08-29).
+const tier = await page.evaluate(() => {
+  const chip = document.getElementById('tier-chip');
+  return chip === null ? null
+    : { text: chip.textContent.trim(), warns: chip.classList.contains('short'),
+        onScreen: chip.getBoundingClientRect().width > 0 };
+});
+if (tier === null || !tier.onScreen) {
+  console.log('FAIL: the look and tier are not shown anywhere on screen');
+  process.exitCode = 1;
+} else {
+  console.log(`tier chip: "${tier.text}"${tier.warns ? ' (warning)' : ''}`);
+}
 const unreachable = [];
 for (const key of answered) {
   if (clickable.includes(key)) continue;

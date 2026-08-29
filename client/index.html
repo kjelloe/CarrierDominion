@@ -62,7 +62,7 @@
        inward, away from the screen edge. */
     .actions {
       position: fixed; top: 56px; bottom: 216px; z-index: 7;
-      display: flex; flex-direction: column; flex-wrap: wrap; gap: 6px;
+      display: flex; flex-direction: column; flex-wrap: wrap; gap: 3px;
       align-content: flex-start;
       user-select: none;
     }
@@ -77,11 +77,18 @@
     .actions::after { margin-bottom: auto; }
     #actions-left { left: 10px; }
     #actions-right { right: 10px; }
+    /* Tight enough that the whole column fits on an ordinary screen without
+       wrapping. Wrapping still works and is still the safety net for a short
+       window, but it must be the EXCEPTION: when the right-hand column split
+       in two it put FIRE at the foot of one column and the weapons it fires
+       at the head of the other, and a playtester read that as "there are no
+       weapon buttons" (2026-08-29). Controls that belong together have to
+       stay together in the common case. */
     .act {
-      width: 58px; padding: 4px 0 3px; text-align: center; cursor: pointer;
+      width: 58px; padding: 2px 0 1px; text-align: center; cursor: pointer;
       border: 1px solid var(--hud-dim); border-radius: 4px;
       background: var(--hud-panel); color: var(--hud-dim);
-      font: 11px/1.2 var(--hud-font);
+      font: 11px/1.15 var(--hud-font);
     }
     .act:hover { color: var(--hud-ink); border-color: var(--hud-ink); }
     .act .k {
@@ -129,6 +136,29 @@
       width: 92px; padding: 8px 0; font-size: 13px;
     }
     body.weapon-mode #weapon-group .wep .n { font-size: 11px; }
+    /* Which look and which tier, always on screen. It is also the G key's
+       button: the tier decides whether there is weather at all, so it is not
+       the settings-only affair the controls audit had exempted. */
+    #tier-chip {
+      position: fixed; top: 10px; right: 148px; z-index: 13;
+      padding: 5px 10px; cursor: pointer; user-select: none;
+      border: 1px solid var(--hud-dim); background: var(--hud-panel);
+      color: var(--hud-dim); font: 11px/1.3 var(--hud-font); letter-spacing: 1px;
+    }
+    #tier-chip:hover { color: var(--hud-ink); border-color: var(--hud-ink); }
+    /* The look is asking for more than the tier is paying for. */
+    #tier-chip.short { color: #e8b45a; border-color: #e8b45a; }
+    /* FIRE and its weapon row, as one block the column cannot split. */
+    #fire-group { display: flex; flex-direction: column; gap: 3px; }
+    /* A button whose moment has just COME says so. Asleep-at-a-third tells a
+       player what the ship can do; it does not tell them what the ship can do
+       NOW. A Manta that has just gone away is flyable and nothing on screen
+       said so, so the pilot's own button sat in a column of thirteen looking
+       like the other twelve (playtest 2026-08-29). */
+    .act.ready {
+      border-color: var(--hud-ink); color: var(--hud-ink);
+      box-shadow: 0 0 0 1px var(--hud-ink) inset;
+    }
     /* A button whose moment has not come is visible but plainly asleep. */
     .act.off { opacity: 0.32; pointer-events: none; }
     /* A standing toggle that is ON says so, like PAUSE does. */
@@ -644,6 +674,7 @@
   <!-- One top row, two bars: the console's six screens on the left where
        the eye starts, the camera tabs beside them. Laid out by flex so a
        longer label - or a longer language - cannot make them collide. -->
+  <div id="tier-chip"></div>
   <div id="top-bar">
     <div id="console-tabs"></div>
     <div id="camera-tabs"></div>
