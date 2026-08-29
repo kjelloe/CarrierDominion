@@ -166,6 +166,24 @@ for (const [name, tick] of found) {
 
   // The scope box, for the lightning check below.
   shot[name].scope = await page.evaluate(SCOPE_READER);
+
+  // What the weather is doing to the AIR and to the ship (2026-08-29): rain,
+  // spray, the wet deck and the shafts. Read off the scene rather than out of
+  // the picture - a translucent streak is a poor thing to measure by pixel,
+  // and what matters is that each effect is driven by the weather at all.
+  shot[name].fx = await page.evaluate(() => {
+    const v = window.__scene3d;
+    const on = (mesh) => (mesh === null || mesh === undefined || !mesh.visible
+      ? 0 : mesh.material.uniforms.uStrength.value);
+    return {
+      rain: on(v.rain),
+      spray: on(v.spray),
+      beams: on(v.beams),
+      wetness: v.wetness,
+      wettables: v.wettables.length,
+      deckRoughness: v.wettables.length > 0 ? v.wettables[0].roughness : -1,
+    };
+  });
   const sc = shot[name].scope;
   console.log(`${' '.repeat(9)} scope ${sc.r},${sc.g},${sc.b}`);
 
@@ -234,6 +252,32 @@ if (shot.lightning !== undefined && shot.nostroke !== undefined) {
   check(lit > dark + 3,
     `the scope reads ${lit} with a strike and ${dark} without`
     + ' - the clutter is not reaching the instrument, or is too faint to see');
+}
+
+// --- rain, spray and the wet deck (2026-08-29) ------------------------------
+
+if (shot.storm !== undefined && shot.noon !== undefined) {
+  check(shot.storm.fx.rain > 0,
+    'a full squall is not raining');
+  check(shot.noon.fx.rain === 0,
+    `it is raining on a clear noon (${shot.noon.fx.rain}) - rain is the storm's, not the cloud's`);
+  // The deck answers the rain. It is a High-tier material swap, so if the
+  // list is empty the swap did not happen and the wetness has nothing to act
+  // on - which would pass a naive "is it wet" check by doing nothing at all.
+  check(shot.storm.fx.wettables > 0,
+    'no surface on the ship can get wet - the High-tier deck material is missing');
+  check(shot.storm.fx.wetness > 0.5,
+    `the deck is ${shot.storm.fx.wetness.toFixed(2)} wet in a downpour`);
+  check(shot.storm.fx.deckRoughness < 0.4,
+    `a soaked deck is still rough (${shot.storm.fx.deckRoughness.toFixed(2)}) - it should shine`);
+  check(shot.noon.fx.wetness < 0.05,
+    'the deck is wet on a dry day');
+  check(shot.noon.fx.deckRoughness > 0.7,
+    'a dry deck is shiny');
+}
+if (shot.storm !== undefined) {
+  // A gale throws water off the bow whatever else is happening.
+  check(shot.storm.fx.spray > 0, 'a gale raises no spray at all');
 }
 
 // Five distinct pictures, not one picture five times: this is the assertion

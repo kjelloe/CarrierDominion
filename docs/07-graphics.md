@@ -292,6 +292,86 @@ found it immediately.** The fix is a curve, not a bigger number —
 `stormWeight()` raises storm to the 0.45 power, so 0.9 pulls at 0.95 and the
 last few per cent, which are the ones that change the hue, actually arrive.
 
+## 3d. Phase 3c — the weather you stand in (2026-08-29)
+
+Owner reversed the Q2b "not now": rain, spray, a wet deck, sunbeams and a
+more convincing sea. High tier + modern only, as ever, and every figure comes
+from `shared/weather.js`.
+
+**Rain** (`client/render/weatherfx.js`) is one instanced draw of 11,000
+streaks in a **64 m box riding the eye** — small on purpose. The first attempt
+used a 220 m cube and looked emptier than a light shower, because volume grows
+as the cube of the span while the eye only ever sees the near few metres.
+Beyond the box the fog and the grey sky do the work, which is what distance
+does to real rain anyway. Every drop is placed in the vertex shader from a
+per-drop seed and one `mod()` of the clock, so nothing is written back and
+nothing is updated per frame. It slants with the same wind that raised the
+sea — a vertical downpour beside a running swell is the tell that two systems
+are not talking to each other — and it is the STORM's, not the cloud's: an
+overcast that is not a squall stays dry, which is what makes the squall mean
+something.
+
+**A wet deck** needed a material change. Lambert has no specular term, so a
+wet deck under it can only be a darker deck, which is the less convincing
+half. Where the tier already pays for a physical sky there is a PMREM
+environment map in the scene, so at High + modern the deck is a
+`MeshStandardMaterial` whose roughness is pulled from 0.96 to 0.14 as it
+soaks, and whose colour darkens by 40%. Both halves matter: darkening alone
+reads as a cloud passing over, gloss alone reads as fresh paint. Wetness
+follows the rain **up in about four seconds and back down over the better
+part of a minute**, because a deck dries slower than a squall passes.
+
+**Spray** is the same instancing trick, positioned at the bow rather than the
+eye, and it needs the sea AND the ship: a stopped hull in a gale smokes a
+little, a hull at speed on glass barely wets its paint, and the two together
+throw water. A carrier at speed in a heavy sea with a dry bow looks like a
+model on glass.
+
+**Sunbeams** are screen-space, on one triangle drawn last, and this is a
+deliberate trade. Real crepuscular rays want the scene rendered to a target
+and radially blurred — an `EffectComposer`, two more render targets and a
+rewrite of the render loop, which is a great deal of machinery and risk for
+an effect that is mostly believed rather than examined. These sample nothing:
+they draw wedges radiating from wherever the sun projects, and let cloud
+cover, the sun's elevation and the storm decide the strength. They need a
+**gap** in the cloud — a clear sky has nothing to shape them and the middle of
+a squall has no sun reaching the water.
+
+*The honest limitation, recorded because it will be noticed:* the shafts are
+not occluded by islands or by the ship. A hull between you and the sun does
+not cut them. Fixing that needs the depth buffer, and therefore the pass this
+avoids.
+
+**The sea got the one thing it was still missing: light THROUGH the wave.**
+Subsurface scatter is what separates water from a shiny surface — on the far
+side of a crest from the sun the light comes through and the wave glows from
+inside, greener and brighter than any reflection. It needs a raised piece of
+water, the sun roughly behind it and the eye roughly facing it, all at once,
+which is exactly when a real swell lights up. Troughs darken with the same
+term, so the sea stops being one tone with ripples drawn on it.
+
+**Lessons 13 and 14:**
+
+13. **A particle volume is a CUBE.** Doubling the box for "more coverage"
+    divides the apparent density by eight. Shrink the box and let the fog own
+    the distance.
+14. **A raw `ShaderMaterial` does not get three.js fog for free.** Setting
+    `fog: true` without declaring `fogColor` and friends makes
+    `refreshFogUniforms` reach for a uniform that is not there — on every
+    draw, as a page error per frame.
+
+And one that is not a lesson so much as a scar: **backticks inside a template
+literal end the template.** A comment reading "that `mod` is the whole
+animation" turned the shader into a syntax error, and the browser reported it
+as `Unexpected identifier 'mod'` — a JS error, in a file whose JS was fine.
+
+**Landed checks** (`debugging/probes/weather.mjs`): a full squall must rain, a
+clear noon must not; the ship must HAVE a surface that can get wet (an empty
+wettables list would pass a naive "is it wet" check by doing nothing); a
+soaked deck's roughness must fall below 0.4 and a dry one stay above 0.7; and
+a gale must raise spray. Verified by disabling the rain threshold and watching
+all four name themselves.
+
 ## 4. Low (deferred) — the real mobile pass
 
 When it is time: `powerPreference: 'low-power'`, resolution scaling below

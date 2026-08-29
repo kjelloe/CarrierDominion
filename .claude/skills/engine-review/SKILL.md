@@ -309,6 +309,18 @@ Look for these shapes first — every one produced a real bug:
   the host, narrowly and by its exact wording, so a real fault in the same
   subsystem still fails.
 
+- **A particle volume is a CUBE.** Doubling a rain box's span to get more
+  coverage divides the apparent density by eight, and the fix is the opposite
+  of the instinct: shrink the box until the drops are dense near the eye and
+  let the fog own the distance.
+- **A raw ShaderMaterial does not get three.js fog for free.** `fog: true`
+  without declaring `fogColor` and friends makes `refreshFogUniforms` reach
+  for a uniform that is not there - a page error on every draw of every frame.
+- **Backticks inside a template literal end the template.** A shader comment
+  quoting a function name broke the whole client, and the browser reported it
+  as a JavaScript syntax error in a file whose JavaScript was correct. Grep a
+  new shader file for backticks before wondering what else is wrong.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

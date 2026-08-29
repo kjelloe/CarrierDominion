@@ -5,6 +5,69 @@ golden hash and why.
 
 ---
 
+## 2026-08-29 — Rain, spray, a wet deck, sunbeams, and light through the wave
+
+Owner reversed Q2b's "not now" while playtesting. Five effects, all High +
+modern, all driven by the same pure weather function.
+
+**Rain** is 11,000 instanced streaks in a box that rides the eye, entirely
+positioned in the vertex shader by one `mod()` of the clock. The first box was
+220 m on a side and looked emptier than a light shower - **volume grows as the
+cube of the span** while the eye only ever sees the near few metres, so
+doubling the box to get coverage divides the apparent density by eight. At
+64 m the same drops read as a downpour, and the fog owns everything past it,
+which is what distance does to real rain.
+
+**The wet deck** needed a material change, not a colour change. Lambert has no
+specular term, so wet under it can only mean darker - the less convincing
+half. At High + modern there is already a PMREM environment map in the scene,
+so the deck becomes a standard material and its roughness falls from 0.96 to
+0.14 as it soaks. Wet up in four seconds, dry off over the better part of a
+minute: a deck that dries as fast as the cloud clears reads as a lighting
+change rather than as weather.
+
+**Spray** needs the sea AND the ship. A stopped hull in a gale smokes a
+little, a hull at speed on glass barely wets its paint, and the two together
+throw water off the bow.
+
+**Sunbeams** are screen-space on one triangle, and that is a deliberate trade
+written down in docs/07: real god rays want a render target and a radial blur,
+which means an EffectComposer and a rewritten render loop - a lot of machinery
+and risk for an effect that is believed rather than examined. The limitation
+is recorded rather than hidden: these shafts are not occluded by islands or by
+the ship, and fixing that needs the depth buffer this avoids.
+
+**And the sea got the thing it was still missing.** Twelve Gerstner components
+gave it shape; what it lacked was light coming THROUGH a wave. That is the
+term that separates water from a shiny surface - the far side of a crest from
+the sun glows from inside, greener and brighter than any reflection - and it
+needs a raised piece of water, the sun behind it and the eye facing it, all at
+once, which is exactly when a real swell lights up.
+
+**Three things cost time, all of them mine:**
+
+A comment inside a shader template literal read "that `mod` is the whole
+animation" - and backticks END a template literal. The browser reported
+`Unexpected identifier 'mod'`, a JavaScript error in a file whose JavaScript
+was fine, and the whole client failed to load.
+
+`fog: true` on a raw ShaderMaterial makes three.js call `refreshFogUniforms`,
+which reaches for `fogColor` on a material that never declared it - a page
+error per draw, per frame.
+
+And the beams looked like a lens flare on the first pass: high frequencies and
+a hard power give a sharp star pinned to the sun. Crepuscular rays are wide
+soft wedges with gaps between them, because they are the shape of the holes in
+the cloud, not the shape of the sun.
+
+**Verified by breaking it:** raising the rain threshold out of reach made four
+assertions name themselves - the squall is not raining, the deck is 0.00 wet,
+a soaked deck is still rough, and the ship has no wettable surface at all.
+That last one matters most: an empty wettables list would pass a naive
+"is it wet" check by doing nothing.
+
+---
+
 ## 2026-08-28 — The documentation catches up, and one last gap closes
 
 A sweep of docs, specs, skills, memories and tests before the owner sits down

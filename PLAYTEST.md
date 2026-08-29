@@ -360,6 +360,23 @@ What I want your eye on:
 - **The horizon.** Cloud, haze and sea have to agree at the sea line. Any
   bright strip there is the thing I chased longest.
 
+Added 2026-08-29, and all of it High + modern:
+
+- **Rain** in a squall, slanting with the wind. Does it read as rain or as
+  scratches on the lens? It thins out with distance on purpose.
+- **The deck goes wet** — darker and shinier — about four seconds into a
+  downpour, and takes most of a minute to dry. Watch it after a squall passes.
+- **Spray at the bow**, which needs both a sea and some speed. Stop the ship
+  in a gale and it should die back to a smoke; drive into the sea and it
+  should throw.
+- **Sunbeams** through a gap in the cloud — not in a clear sky, and not in the
+  middle of a squall, because neither has anything to shape them. Turn to face
+  the sun. **Known limit:** they are not blocked by islands or by your own
+  hull, and I would rather you knew than discovered it.
+- **The sea lights up from inside** when the sun is behind a crest and you are
+  facing it. That is the thing that makes water look like water; tell me if it
+  is overdone.
+
 And the parts that are not scenery. **A storm shortens radar** - watch the
 ring on the scope, which now draws what the set actually reaches rather than
 its fair-weather figure. **A heavy sea slows the boats**: the Walrus and the

@@ -303,10 +303,28 @@ function buildOceanGrid(sizeMetres, style) {
 function buildCarrier(teamColour, preset, style) {
   const group = new THREE.Group();
   const hullMaterial = new THREE.MeshLambertMaterial({ color: teamColour });
-  const deckMaterial = new THREE.MeshLambertMaterial({
-    color: style.deck,
-    flatShading: style.flatShading,
-  });
+  // A DECK THAT CAN GET WET (2026-08-29). Lambert has no specular term, so a
+  // wet deck under it can only be a darker deck - which is half the effect
+  // and the less convincing half. Where the tier already pays for a physical
+  // sky there is a PMREM environment map in the scene, so a standard material
+  // with its roughness pulled down genuinely reflects the sky it is standing
+  // under. Everywhere else the deck is exactly what it was.
+  const wetCapable = preset.physicalEffects === true && style.physicalSky === true;
+  const deckMaterial = wetCapable
+    ? new THREE.MeshStandardMaterial({
+      color: style.deck,
+      flatShading: style.flatShading,
+      roughness: 0.96,
+      metalness: 0.02,
+    })
+    : new THREE.MeshLambertMaterial({
+      color: style.deck,
+      flatShading: style.flatShading,
+    });
+  if (wetCapable) {
+    deckMaterial.userData.wettable = 1;
+    deckMaterial.userData.dry = new THREE.Color(style.deck);
+  }
 
   const hull = new THREE.Mesh(new THREE.BoxGeometry(330, 26, 72), hullMaterial);
   hull.position.y = 8;

@@ -9,6 +9,9 @@ import * as THREE from 'three';
 import { Sky } from '../vendor/Sky.js';
 import { skyStateOf, sunDirection } from './skystate.js';
 import { buildClouds, buildSwell, updateClouds, updateSwell } from './weathersky.js';
+import {
+  buildBeams, buildRain, buildSpray, updateBeams, updateRain, updateSpray,
+} from './weatherfx.js';
 import { forwardFromHeading, headingToYaw, toMetres } from './coords.js';
 import {
   NEUTRAL_NODE_COLOUR,
@@ -196,6 +199,13 @@ function createScene(canvas, preset, sizeMetres, style) {
     skyDome: null,
     clouds: null,
     swell: null,
+    rain: null,
+    spray: null,
+    beams: null,
+    wettables: [],
+    // How wet the ship is, 0..1. It follows the rain UP quickly and comes
+    // back down slowly, because a deck dries slower than a squall passes.
+    wetness: 0,
     sunDir: new THREE.Vector3(0.4, 0.6, 0.35).normalize(),
     envSunDir: new THREE.Vector3(0, -1, 0),
     fogDensityBase: fogDensity,
@@ -210,6 +220,12 @@ function createScene(canvas, preset, sizeMetres, style) {
     scene.add(view3d.clouds);
     view3d.swell = buildSwell(preset);
     scene.add(view3d.swell);
+    view3d.rain = buildRain();
+    scene.add(view3d.rain);
+    view3d.spray = buildSpray();
+    scene.add(view3d.spray);
+    view3d.beams = buildBeams();
+    scene.add(view3d.beams);
     keepCloudsOutOfReflections(view3d, ocean);
   }
   return view3d;
@@ -285,6 +301,7 @@ function syncCarriers(view3d, view) {
       if (carrier.contact === 1) dimForContact(group);
       view3d.carriers[carrier.id] = group;
       view3d.scene.add(group);
+      collectWettables(view3d, group);
     }
     group.position.set(toMetres(carrier.x), 0, -toMetres(carrier.y));
     group.rotation.y = headingToYaw(carrier.heading);
@@ -553,6 +570,18 @@ function applyWeather(view3d, view, deltaSeconds) {
   if (weather === undefined) return;
   if (!wantsPhysicalSky(view3d.preset, view3d.style)) return;
 
+  // The player's own hull, for the things that happen AT the ship rather than
+  // around the eye. Found here rather than passed in, so applyWeather keeps
+  // the one argument the render loop already had.
+  let own;
+  for (const carrier of view.carriers) {
+    if (carrier.team === view.team && carrier.contact === 0) own = carrier;
+  }
+  if (own !== undefined) {
+    view3d.ownX = toMetres(own.x);
+    view3d.ownZ = -toMetres(own.y);
+  }
+
   const sky = skyStateOf(weather);
   sunDirection(weather, view3d.sunDir);
 
@@ -602,6 +631,15 @@ function applyWeather(view3d, view, deltaSeconds) {
   if (view3d.clouds !== null && view3d.clouds !== undefined) {
     updateClouds(view3d, weather, sky, deltaSeconds);
   }
+  const rain = updateRain(view3d, weather, sky);
+  updateSpray(view3d, weather, sky, own);
+  updateBeams(view3d, weather, sky);
+  // Wet up fast, dry off slow: about four seconds into a downpour and the
+  // better part of a minute back out of it. A deck that dries as fast as the
+  // cloud clears reads as a lighting change rather than as weather.
+  const towards = rain > view3d.wetness ? 0.25 : 0.018;
+  view3d.wetness += (rain - view3d.wetness) * Math.min(1, towards * deltaSeconds * 60);
+  if (view3d.wettables.length > 0) applyWetness(view3d);
 }
 
 // Re-bake the sky into an environment map. Behind the dirty flag above, and
@@ -651,6 +689,30 @@ function keepCloudsOutOfReflections(view3d, ocean) {
     original.call(this, renderer, scene, camera);
     if (clouds !== null && clouds !== undefined) clouds.visible = wasVisible;
   };
+}
+
+// Materials that answer the rain. Gathered when a hull is built rather than
+// walked every frame: the scene is a whole archipelago and the wetness only
+// touches a handful of surfaces.
+function collectWettables(view3d, group) {
+  group.traverse((node) => {
+    const material = node.material;
+    if (material === undefined || material === null) return;
+    if (material.userData.wettable !== 1) return;
+    if (view3d.wettables.indexOf(material) === -1) view3d.wettables.push(material);
+  });
+}
+
+// What rain does to a surface: it darkens it and it makes it shine. Both
+// halves matter - a deck that only darkens reads as a cloud passing over, and
+// one that only shines reads as fresh paint.
+function applyWetness(view3d) {
+  const wet = view3d.wetness;
+  for (const material of view3d.wettables) {
+    material.color.copy(material.userData.dry).multiplyScalar(1 - wet * 0.42);
+    material.roughness = 0.96 - wet * 0.82;
+    material.metalness = 0.02 + wet * 0.28;
+  }
 }
 
 // The one sea colour, computed once and given to BOTH surfaces. The swell
@@ -732,11 +794,17 @@ function resetWorld(view3d, sizeMetres) {
       keepCloudsOutOfReflections(view3d, ocean);
     }
     if (view3d.swell !== null && view3d.swell !== undefined) scene.add(view3d.swell);
+    if (view3d.rain !== null && view3d.rain !== undefined) scene.add(view3d.rain);
+    if (view3d.spray !== null && view3d.spray !== undefined) scene.add(view3d.spray);
+    if (view3d.beams !== null && view3d.beams !== undefined) scene.add(view3d.beams);
   }
   view3d.islands = {};
   view3d.nodes = {};
   view3d.runways = {};
   view3d.carriers = {};
+  // A new war brings new hulls; the old materials went out with the old
+  // graph and must not keep receiving rain.
+  view3d.wettables = [];
   view3d.units = {};
   view3d.shots = {};
   view3d.turrets = {};

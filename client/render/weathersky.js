@@ -322,6 +322,7 @@ const SWELL_VERTEX = `
   varying vec3 vWorld;
   varying vec3 vNormal2;
   varying float vFade;
+  varying float vLift;
 
   void main() {
     vec4 world = modelMatrix * vec4(position, 1.0);
@@ -361,6 +362,10 @@ const SWELL_VERTEX = `
     vFade = 1.0 - smoothstep(0.62, 1.0, edge);
 
     world.xyz += offset * vFade;
+    // How high this bit of water is standing, normalised against the sea's
+    // own height. The fragment needs it for the light that comes THROUGH a
+    // wave rather than off it.
+    vLift = clamp(offset.y / max(0.35, uHeight), -1.0, 1.0) * 0.5 + 0.5;
     vWorld = world.xyz;
     vNormal2 = normalize(mix(vec3(0.0, 1.0, 0.0), normalize(normal), vFade));
     gl_Position = projectionMatrix * viewMatrix * world;
@@ -377,9 +382,11 @@ const SWELL_FRAGMENT = `
   uniform float uWindStrength;
   uniform float uTime;
   uniform vec2 uWind;
+  uniform vec3 uScatter;
   varying vec3 vWorld;
   varying vec3 vNormal2;
   varying float vFade;
+  varying float vLift;
 
   float rhash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -424,6 +431,19 @@ const SWELL_FRAGMENT = `
     // terraces with grey tops instead of as water.
     float lambert = 0.45 + 0.55 * max(0.0, dot(n, normalize(uSunDir)));
     colour = colour * (0.55 + 0.45 * lambert) + uSky * 0.18;
+    // LIGHT THROUGH THE WAVE. This is the thing that separates water from a
+    // shiny surface: on the far side of a crest from the sun, the sun is
+    // coming THROUGH the water and the wave glows from inside, greener and
+    // brighter than any reflection. It needs three things at once - a raised
+    // piece of water, the sun roughly behind it, and the eye roughly facing
+    // it - which is exactly when a real swell lights up.
+    float through = pow(max(0.0, dot(eye, -normalize(uSunDir))), 3.0);
+    float lifted = smoothstep(0.5, 1.0, vLift);
+    colour += uScatter * through * lifted * (0.35 + 0.65 * uWindStrength) * vFade;
+    // Troughs are deeper water and read darker; without this the sea is one
+    // tone with ripples drawn on it.
+    colour *= 0.82 + 0.18 * smoothstep(0.0, 1.0, vLift);
+
     // Sun glint, and white water on the steep faces when it blows.
     float spec = pow(max(0.0, dot(reflect(-uSunDir, n), eye)), 90.0);
     colour += uSunColour * spec * 0.9;
@@ -465,6 +485,7 @@ function buildSwell(preset) {
       uSunColour: { value: new THREE.Color(0xfff2df) },
       uStorm: { value: 0 },
       uWindStrength: { value: 0 },
+      uScatter: { value: new THREE.Color(0x1d5c52) },
     },
     vertexShader: SWELL_VERTEX,
     fragmentShader: SWELL_FRAGMENT,
@@ -497,6 +518,9 @@ function updateSwell(view3d, weather, sky, seaColour) {
   uniforms.uChop.value = 0.25 + (weather.windPermil / 1000) * 0.6;
   uniforms.uStorm.value = sky.storm;
   uniforms.uWindStrength.value = weather.windPermil / 1000;
+  // The scatter colour is the sea's own, pushed toward the green a wave goes
+  // when the sun is behind it, and dimmed with the light.
+  uniforms.uScatter.value.set(0x1d5c52).multiplyScalar(0.25 + 0.75 * sky.day);
   uniforms.uSunDir.value.copy(view3d.sunDir);
   uniforms.uSunColour.value.copy(sky.lightColour);
   uniforms.uSky.value.copy(sky.fogColour);
