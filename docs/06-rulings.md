@@ -273,8 +273,12 @@ Built the same day, from the same directive ("build 4, 9, 10, then 1, 2,
   strip catches inside 500 m; refuel from the island's own stock; any new
   order relaunches; parked = Command Centre control, no telemetry; a
   captured airfield captures what sits on it.
-- **3, 5, 6 — designed, not built**: docs/09-proposals.md carries the
-  specs and the open questions, awaiting discussion.
+- **3, 5, 6 — designed here, ruled in the next day, and BUILT on
+  2026-08-25**: the Base island and link topology, the Hammerhead with its
+  Viewing Drone, and the passive defence drones. docs/09-proposals.md is kept
+  for the reasoning, not as a queue. (This line said "designed, not built"
+  for three days after they shipped — the hazard of writing a status into a
+  ruling.)
 
 ## The proposals ruled (2026-08-25)
 
