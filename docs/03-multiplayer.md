@@ -177,6 +177,61 @@ Two rules the room enforces before a war starts, both learned the hard way:
   comes back in `running`, holding the options the war was actually played
   with, and reopens to the same join code when the war ends.
 
+## A solo war survives the tab
+
+In solo the engine runs in the BROWSER, so closing the page, reloading it, or
+changing the graphics tier used to be the end of the war. Since 2026-08-30 a
+solo war writes itself to `localStorage` under `cd_solo_autosave` — every
+thirty seconds, on `pagehide`, and whenever the tab is hidden (which is the
+case `pagehide` misses on a phone).
+
+**The record is the ordinary save format.** `shared/savefile.js` holds the
+format and the replay; `server/save.js` keeps the disk and the lobby options.
+So a solo save and a server save are the same object, the same hash check
+guards both, and a save the rules have moved underneath is refused rather than
+limping back as a subtly different war.
+
+Coming back to the bare page, the start menu offers it — `tick 4,210 · 6 min
+ago`, with RESUME and DISCARD — and `?resume=local` boots straight into it.
+Resuming skips the menu and takes the war's own start choices back with it,
+because the rules must be rebuilt exactly as they were or the replay hash will
+not match.
+
+It is also why the tier chip is no longer dangerous: changing tier still
+reloads the page, but the war is written down first and asked for back on the
+way in. The double-click guard that briefly protected it is gone — that was
+the right answer to a war that could be lost, and the better answer was to
+stop losing it.
+
+## A link can be a whole game
+
+Every row of the start menu is also a query parameter, so one address is one
+war: `islands`, `teams`, `enemy`, `ending`, `start`, `network`, `speed`,
+`style`, plus `graphics` for the tier and `seed`.
+
+With the menu shown, a link's settings become its starting position, so the
+recipient sees what they were sent and can change their mind. With the menu
+skipped (`?mode=solo`), they ARE the game — before this, `?mode=solo&islands=16`
+was silently ignored and a carefully written link handed over the defaults.
+
+A value the menu does not offer is **refused, not clamped**, and said out
+loud. In a game whose whole contract is that the same seed gives the same war,
+a typo that quietly changes the settings is the one failure that must never be
+silent.
+
+Two links worth keeping, once the host is up:
+
+```
+https://<host>/?mode=solo&style=retro&graphics=high&islands=16&teams=2&start=0
+https://<host>/?mode=solo&style=modern&graphics=high&islands=16&teams=2&start=0
+```
+
+The first is sharper 1988; the second is everything the RTX-class tier pays
+for — the Preetham sky, the mirror sea, the twelve-component swell, the
+weather, rain and sunbeams. Both are the same war, and they will play
+identically: the look and the tier are client data and never touch the state
+hash (ruling #13).
+
 ## A war that faults does not take the server with it
 
 The engine throws on purpose - `shared/fixed.js` raises on a bad multiply, the

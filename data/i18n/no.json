@@ -470,5 +470,11 @@
   "chart.ship": "SKIP",
   "tip.tier": "Utseende og grafikknivå. Klikk for å bytte nivå (G).",
   "tip.needHigh": "Dette utseendet krever mer enn nivået gir: været, speilsjøen og dønningen trenger HØY. Klikk for å bytte nivå (G).",
-  "status.tierArm": "Å bytte nivå starter denne solokrigen på nytt — klikk igjen for å gjøre det"
+  "status.resumed": "Fortsatte krigen din ved tikk {tick}",
+  "status.resumeRefused": "Kunne ikke fortsette: {why} — seiler en ny krig",
+  "status.saveFailed": "Denne krigen lagres ikke lenger ({why})",
+  "start.resume": "FORTSETT KRIGEN",
+  "start.resumeAt": "tikk {tick} · {ago}",
+  "start.discard": "FORKAST",
+  "status.linkRefused": "Denne lenken ba om innstillinger som ikke finnes ({what}) — bruker standard for dem"
 }

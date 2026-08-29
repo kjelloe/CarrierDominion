@@ -359,6 +359,21 @@ Look for these shapes first — every one produced a real bug:
   measured. Put it in a layout that flows, and assert no two things in the
   same row overlap.
 
+- **A guard where a fix belonged.** Changing the graphics tier could throw a
+  solo war away, and the first answer was a double-click confirmation. That
+  protects a loss it accepts as inevitable; the better answer was to make the
+  war survive the reload. When about to warn a player about a cost, ask
+  whether the cost can simply be removed.
+- **A setting that a URL can name but the code ignores.** `?mode=solo&islands=16`
+  was accepted by the address bar and dropped on the floor: the menu-skipped
+  path never applied start choices at all. When a value can arrive by more
+  than one route, walk every route, and refuse a value you cannot honour
+  rather than substituting one silently.
+- **A probe that throws instead of reporting.** Disabling the save to check a
+  tripwire made `solo_save.mjs` die with a TypeError three lines past the real
+  problem. Guard the point where a missing thing becomes unusable and say what
+  is missing - a probe's job is to name the failure, not to become one.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

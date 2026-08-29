@@ -5,6 +5,64 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — A solo war survives the tab, and a link is a whole game
+
+Two owner asks, and the first one closes yesterday's wound properly.
+
+**The solo war is written down now.** In solo the engine runs in the BROWSER,
+so closing the page was the end of the war - and the tier chip made that
+reachable by accident, a button beside PAUSE whose click restarted the
+evening. I had guarded it with a double-click. That was the right answer to a
+war that could be lost; the better answer, which the owner asked for, is to
+stop losing it. The guard is gone.
+
+**The record is the ORDINARY save format**, and getting there was the real
+work: `saveGame`, the replay and the hash check moved out of `server/save.js`
+into `shared/savefile.js`, leaving the server with what is genuinely its own -
+the disk, and folding saved lobby options back into the rules. So a solo save
+and a server save are now the same object, guarded by the same hash check. A
+save the rules have moved underneath is refused rather than limping back as a
+subtly different war, which is the whole reason this project has a hash in its
+save at all.
+
+Autosave every thirty seconds, on `pagehide`, and on `visibilitychange` -
+that last one because a phone being locked never fires `pagehide`. The menu
+offers the war back with its tick and how long ago, alongside DISCARD. And
+changing the graphics tier now carries the war across the reload, which is the
+thing that started all this.
+
+Multiciv reached the same shape from the other end (`client/ui/saves.js`
+there): autosave on a boundary and on tab-hide, offer the resume on the way
+in. Same idea, our save format.
+
+**And a link is a whole game.** Every row of the start menu is a query
+parameter now, so the owner can send one address for sharper 1988 and one for
+everything the RTX tier pays for. Two things worth recording about how it
+behaves: with the menu shown a link's settings become its STARTING POSITION,
+so the recipient sees what they were sent and can still change it; and a value
+the menu does not offer is REFUSED rather than clamped, and said out loud.
+In a game whose contract is that the same seed gives the same war, a typo that
+quietly changes the settings is the one failure that must never be silent.
+
+Before this, `?mode=solo&islands=16` was silently ignored - the menu-skipped
+path never applied choices at all - so a carefully written link handed over
+the defaults.
+
+**Two mistakes of my own on the way**, both about scope. The refusal message
+went into the transient status line and was eaten by "connected" a moment
+later - the same trap that lost the tier hint two days ago, so it now waits
+for startup to settle. And I moved that message to the wrong
+`requestAnimationFrame`: there are two, and the one I picked was in another
+function where `rejected` did not exist, so the client died on boot with the
+probe reporting only a timeout.
+
+**And a probe that crashed instead of reporting.** When I disabled saving to
+check the tripwire trips, `solo_save.mjs` threw a TypeError three lines past
+the thing that was actually wrong. It says "the war was never written down"
+and stops now. A probe's job is to name the failure, not to become one.
+
+---
+
 ## 2026-08-30 — Reviewing yesterday's fix, which had three faults of its own
 
 The tier chip I added to answer "where are the waves" was the least careful

@@ -93,6 +93,43 @@ const OPTIONS = [
 // islands ladder starts at 4 so the cycle reads small-to-large, but a
 // four-island sea is 14 km across and a war on it is a knife fight - not
 // what a first war should be, and not what the ruleset itself defaults to.
+// A LINK CAN BE A WHOLE GAME (owner's ask, 2026-08-30): every row of this
+// menu is also a query parameter, so a host can send one address for the 1988
+// look and another for a maxed-out modern one and both open on exactly the
+// intended war.
+//
+// A value the menu does not offer is REFUSED rather than clamped. A typo in a
+// shared link should not quietly hand two friends different wars - which, in
+// a game whose whole contract is that the same seed gives the same war, is
+// the one failure that must never be silent. The caller is told what it
+// dropped so it can say so.
+function choicesFromParams(params, rejected) {
+  const out = defaultChoices();
+  for (const option of OPTIONS) {
+    const raw = params.get(option.key);
+    if (raw === null || raw === undefined || raw === '') continue;
+    // Values are numbers everywhere except the style row, which is names.
+    const wanted = option.key === 'style' ? raw : Number(raw);
+    let found = false;
+    for (const value of option.values) {
+      if (value === wanted) found = true;
+    }
+    if (found) out[option.key] = wanted;
+    else if (rejected !== undefined) rejected.push(`${option.key}=${raw}`);
+  }
+  return out;
+}
+
+// Which of the menu's rows this URL actually spoke about.
+function namedInParams(params) {
+  const named = [];
+  for (const option of OPTIONS) {
+    const raw = params.get(option.key);
+    if (raw !== null && raw !== undefined && raw !== '') named.push(option.key);
+  }
+  return named;
+}
+
 function defaultChoices() {
   const out = {};
   for (const option of OPTIONS) {
@@ -147,6 +184,39 @@ function showStartPanel(panel) {
   document.getElementById('start-title').textContent = panel.t('start.title');
   body.textContent = '';
 
+  // A war you left is offered back before anything else on the menu (the
+  // multiciv pattern, 2026-08-30). Solo runs the engine in the tab, so
+  // closing it used to end the war; now it is written down, and this is where
+  // it comes back. DISCARD is beside it, because an old war you do not want
+  // should not need a console to be rid of.
+  if (panel.resume !== undefined && panel.resume !== 0) {
+    const row = document.createElement('div');
+    row.className = 'start-row start-resume';
+    const label = document.createElement('span');
+    label.className = 'hud-label';
+    label.textContent = panel.t('start.resumeAt', {
+      tick: panel.resume.save.tick,
+      ago: panel.resume.ago,
+    });
+    const go = document.createElement('div');
+    go.className = 'start-opt on';
+    go.textContent = panel.t('start.resume');
+    go.addEventListener('click', () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('resume', 'local');
+      window.location.href = url.toString();
+    });
+    const drop = document.createElement('div');
+    drop.className = 'start-opt';
+    drop.textContent = panel.t('start.discard');
+    drop.addEventListener('click', () => {
+      if (typeof panel.onDiscard === 'function') panel.onDiscard();
+      row.remove();
+    });
+    row.append(label, go, drop);
+    body.append(row);
+  }
+
   const seedRow = document.createElement('div');
   seedRow.className = 'start-row';
   const seedLabel = document.createElement('span');
@@ -199,4 +269,13 @@ function applyChoices(rules, choices) {
   return { speed: choices.speed, style: choices.style };
 }
 
-export { OPTIONS, createStartPanel, showStartPanel, applyChoices, defaultChoices, seedFromClock };
+export {
+  OPTIONS,
+  createStartPanel,
+  showStartPanel,
+  applyChoices,
+  defaultChoices,
+  choicesFromParams,
+  namedInParams,
+  seedFromClock,
+};

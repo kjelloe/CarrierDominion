@@ -269,11 +269,44 @@ said so, which is why it looked broken. The chip in the top row now reads
 tier pays for, and clicking it cycles the tier. If it is amber, you are not
 seeing the weather at all.
 
-**Careful with it mid-war, and this is my fault for telling you to press it.**
-Changing tier reloads the page, and in a SOLO war the engine runs in your tab
-— so it restarts the war. It now asks first: one click arms it and says so,
-a second within four seconds does it. In a LAN war the server holds the war
-and the reload just reconnects. Easiest is to set the tier before you sail.
+**Safe to press mid-war now (2026-08-30).** It still reloads — a tier changes
+how the renderer is built — but a solo war is written down first and resumed
+on the way in, so it costs a moment of black screen rather than the evening.
+
+## C1c — A solo war that survives the tab *(5 min — new)*
+
+Closing the page used to be the end of a solo war, because in solo the engine
+runs in your browser. It saves itself now: every thirty seconds, whenever the
+tab goes away, and before any tier change.
+
+- Sail a while, close the tab, open the bare page. The menu should offer
+  **RESUME YOUR WAR** at the top, with the tick and how long ago. Take it and
+  check the war is where you left it — your course, your craft, your stores.
+- **DISCARD** is beside it. Use it once and check the offer is gone.
+- Change the tier mid-war and confirm the war comes back.
+- Long wars are the interesting case: the save is the command log, so it grows
+  with the war. If you ever see *"This war is no longer being saved"*, tell me
+  — that is the browser's storage quota, and I want the number where it bit.
+
+## C1d — One link, one war *(5 min — new)*
+
+Every row of the start menu is a query parameter now, so you can send a friend
+an address that opens exactly the war you mean. Once the host is up:
+
+```
+https://<host>/?mode=solo&style=retro&graphics=high&islands=16&teams=2&start=0
+https://<host>/?mode=solo&style=modern&graphics=high&islands=16&teams=2&start=0
+```
+
+The first is sharper 1988; the second is everything the RTX tier pays for.
+Both are the same war and will play identically — the look and the tier are
+client data and never touch the state hash.
+
+- Open both and check the tier chip reads `1988 · High` and `Modern · High`.
+- Drop `mode=solo` and the menu opens **on** those settings instead, so the
+  recipient can see what they were sent and change their mind.
+- Try a nonsense value (`&islands=999`). It should use the default AND say so
+  — a typo that quietly changes the game is the thing I most wanted to avoid.
 
 **The Walrus.** It was never broken in the engine: an ordered move and
 piloting both work, measured. A selected craft sits still until you either

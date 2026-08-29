@@ -20,13 +20,24 @@ import { buildView } from '../shared/view.js';
 import { isSpeed } from '../shared/speeds.js';
 import { applyLobbyOptions } from '../shared/options.js';
 
-function createLocalTransport(seed, rules, team, speed) {
+// `resumed` is a game object replayed from a solo autosave (client/
+// localsave.js), or 0 for a fresh war. The transport does not know or care
+// which - it pumps whatever it is given, and a resumed war keeps its command
+// log so it goes on saving itself from where it left off.
+function createLocalTransport(seed, rules, team, speed, resumed) {
   const state = { game: 0, timer: 0, handlers: 0, team: team, speed: isSpeed(speed) ? speed : 1 };
   return {
     kind: 'local',
+    // The war itself, for the tab's own autosave. Only the local transport
+    // has one: in a LAN game the server owns the war and saves it.
+    localGame() {
+      return state.game;
+    },
     connect(handlers) {
       state.handlers = handlers;
-      state.game = createGame(seed, rules);
+      state.game = resumed === undefined || resumed === 0
+        ? createGame(seed, rules)
+        : resumed;
       handlers.onWelcome({
         team: state.team,
         seed: seed,

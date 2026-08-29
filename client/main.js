@@ -17,6 +17,10 @@ import { weatherAt } from '../shared/weather.js';
 import { createLocalTransport, createReplayTransport, createWsTransport } from './transport.js';
 import { getGraphicsDiagnostics, suggestGraphicsLevel, describeGpu } from './diagnostics.js';
 import { presetFor, readOverride, resolveGraphics, writeOverride, presetNames } from './graphics.js';
+import {
+  AUTOSAVE_MS, agoText, clearSoloSave, readSoloSave, writeSoloSave,
+} from './localsave.js';
+import { gameFromState, replayLog } from '../shared/savefile.js';
 import { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea, TEAM_COLOURS } from './render/scene.js';
 import { createInstruments, drawFlightInstruments, drawInstruments, helmHitAt } from './render/instruments.js';
 import { createSound, playEvents, playWarning, startAmbience, toggleMute, wakeSound } from './sound.js';
@@ -29,6 +33,8 @@ import {
 } from './panels/island.js';
 import {
   applyChoices,
+  choicesFromParams,
+  namedInParams,
   createStartPanel,
   seedFromClock,
   showStartPanel,
@@ -123,8 +129,6 @@ const state = {
   sound: createSound(),
   signals: [],
   signalsOpen: false,
-  // When the tier chip was armed, for the solo double-click above.
-  tierArmedMs: -100000,
   // Which low-fuel marks have already been announced (see warnOnFuel).
   fuelWarned: {},
   surrenderArmedMs: 0,
@@ -458,6 +462,41 @@ function nominateDepot() {
   setHud(state.hud, 'status', state.t('status.stockpileSet', { island: best.id }));
 }
 
+// A solo war writes itself down every half minute, and again whenever the tab
+// goes away - which is the moment that matters, because that is when it used
+// to be lost. `pagehide` covers closing and navigating; `visibilitychange`
+// covers a phone being locked or a tab going to the background, where
+// `pagehide` may never fire at all.
+function startSoloAutosave(seed, style) {
+  let complained = false;
+  const write = () => {
+    const transport = state.transport;
+    if (transport === undefined || typeof transport.localGame !== 'function') return;
+    const game = transport.localGame();
+    if (game === 0 || game === undefined || game.state === undefined) return;
+    // Nothing to save before the war has started, and nothing worth saving
+    // after it has ended.
+    if (game.state.tick === 0 || game.state.phase !== 0) return;
+    const trouble = writeSoloSave(window.localStorage, game, seed, state.savedChoices ?? 0, {
+      style: style.label,
+      islands: game.state.islands.length,
+    });
+    // Say it once. A full quota is not a reason to stop playing, but it IS a
+    // reason the player should know the war is no longer being kept.
+    if (trouble !== '' && !complained) {
+      complained = true;
+      setHud(state.hud, 'status', state.t('status.saveFailed', { why: trouble }));
+    }
+  };
+  // Anything that is about to reload the page can take the war with it.
+  state.saveSoloNow = write;
+  window.setInterval(write, AUTOSAVE_MS);
+  window.addEventListener('pagehide', write);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') write();
+  });
+}
+
 function cycleGraphics(currentLevel) {
   const names = presetNames();
   const next = names[(names.indexOf(currentLevel) + 1) % names.length];
@@ -471,12 +510,16 @@ function cycleGraphics(currentLevel) {
   // exactly as it was - the control doing nothing but restarting the war.
   // Dropping the parameter is what makes the click mean something.
   const url = new URL(window.location.href);
-  if (url.searchParams.has('graphics')) {
-    url.searchParams.delete('graphics');
-    window.location.href = url.toString();
-    return;
+  url.searchParams.delete('graphics');
+  // A SOLO war goes with you. The tier change still reloads - a preset
+  // changes how the renderer is built - but the war is written down first and
+  // asked for back on the way in, so changing tier mid-war costs a moment of
+  // black screen rather than the evening (owner's ask, 2026-08-30).
+  if (MODE === 'solo' && typeof state.saveSoloNow === 'function') {
+    state.saveSoloNow();
+    if (readSoloSave(window.localStorage) !== 0) url.searchParams.set('resume', 'local');
   }
-  window.location.reload();
+  window.location.href = url.toString();
 }
 
 // The camera tabs (playtest ruling 2026-08-24): the original's interface
@@ -2013,12 +2056,50 @@ async function main() {
   let seed = Number(params.get('seed') ?? 20260818);
   let startSpeed = START_SPEED;
   let styleName = params.get('style');
-  if (!params.has('mode')) {
+
+  // Resuming skips the menu and takes the war's OWN choices back: the rules
+  // must be rebuilt exactly as they were, or the replay hash will not match
+  // and the resume is refused for a reason that is really our own doing.
+  const resumeRecord = params.get('resume') === 'local'
+    ? readSoloSave(window.localStorage)
+    : 0;
+  if (resumeRecord !== 0) {
+    seed = resumeRecord.save.seed;
+    const saved = resumeRecord.save.options;
+    if (saved !== 0 && saved !== undefined) {
+      const extras = applyChoices(rules, saved);
+      startSpeed = extras.speed;
+      state.speed = startSpeed;
+      if (styleName === null) styleName = extras.style;
+    }
+    state.savedChoices = saved;
+  }
+
+  // Every menu row is also a query parameter, so one link is a whole game
+  // (2026-08-30). With the menu shown they become its starting position; with
+  // the menu skipped they ARE the game. A value the menu does not offer is
+  // refused rather than clamped, and said out loud - two friends opening the
+  // same link must get the same war or the link is worse than useless.
+  const rejected = [];
+  const urlChoices = choicesFromParams(params, rejected);
+  const namedByUrl = namedInParams(params);
+
+  if (!params.has('mode') && resumeRecord === 0) {
     // The shop window: a staged island assault behind the menu, torn down
     // whole before the war claims the screen (see openShowcase).
     openShowcase(styleName);
     document.getElementById('start-panel').classList.add('solo-menu');
     const panel = createStartPanel(state.t, seedFromClock());
+    // A link that named settings opens the menu ON them, so the recipient can
+    // see what they were sent and change their mind.
+    panel.choices = urlChoices;
+    if (params.has('seed')) panel.seed = seed;
+    // The war you walked away from, offered back at the top of the menu.
+    const waiting = readSoloSave(window.localStorage);
+    if (waiting !== 0) {
+      panel.resume = { save: waiting.save, ago: agoText(waiting.savedAt, Date.now()) };
+      panel.onDiscard = () => clearSoloSave(window.localStorage);
+    }
     // The look row previews live - unless the URL already dictated a style,
     // in which case the URL wins at BEGIN and the preview would be a lie.
     if (styleName === null) {
@@ -2034,6 +2115,20 @@ async function main() {
     startSpeed = extras.speed;
     state.speed = startSpeed;
     if (styleName === null) styleName = extras.style;
+    // Kept so a solo war can be rebuilt exactly as it was started.
+    state.savedChoices = chosen.choices;
+  }
+
+  // Menu skipped: the link's own settings are the war. Applied here so
+  // `?mode=solo&islands=16&start=2` means what it plainly says - before this
+  // it meant nothing at all, and the recipient of a carefully written link
+  // got the defaults.
+  if (params.has('mode') && resumeRecord === 0 && namedByUrl.length > 0) {
+    const extras = applyChoices(rules, urlChoices);
+    startSpeed = params.has('speed') ? startSpeed : extras.speed;
+    state.speed = startSpeed;
+    if (styleName === null) styleName = extras.style;
+    state.savedChoices = urlChoices;
   }
 
   state.podBuildTicks = rules.rules.podBuildTicks;
@@ -2223,14 +2318,11 @@ async function main() {
     // they will. So in solo, mid-war, it arms first and fires on the second
     // click, the same idiom the game already uses for surrender.
     tierChip.addEventListener('click', () => {
-      const soloWarUnderWay = MODE === 'solo'
-        && state.view !== undefined && state.view.tick > 0 && state.view.phase === 0;
-      const now = window.performance.now();
-      if (soloWarUnderWay && now - state.tierArmedMs > 4000) {
-        state.tierArmedMs = now;
-        setHud(state.hud, 'status', state.t('status.tierArm'));
-        return;
-      }
+      // No arming any more, and no warning: since 2026-08-30 a solo war is
+      // written down and resumed across the reload, so this costs a moment of
+      // black screen rather than the evening. The double-click guard was the
+      // right answer to a war that could be lost; the better answer was to
+      // stop losing it.
       cycleGraphics(resolved.level);
     });
   }
@@ -2274,7 +2366,30 @@ async function main() {
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
     state.transport = createWsTransport(`${scheme}://${window.location.host}`);
   } else {
-    state.transport = createLocalTransport(seed, rules, SEAT, startSpeed);
+    // A solo war saves itself, and comes back if asked (2026-08-30). The
+    // record is the ordinary save format, so the hash check refuses one the
+    // rules have moved underneath rather than resuming a subtly different
+    // war - and a refusal says so and sails a fresh one rather than leaving
+    // the player at a blank screen.
+    let resumed = 0;
+    if (resumeRecord !== 0) {
+      const record = resumeRecord;
+      {
+        const problem = { reason: '' };
+        const state0 = replayLog(record.save, rules, problem);
+        if (state0 === -1) {
+          setHud(state.hud, 'status', state.t('status.resumeRefused', {
+            why: problem.reason,
+          }));
+          clearSoloSave(window.localStorage);
+        } else {
+          resumed = gameFromState(state0, record.save.commandLog);
+          setHud(state.hud, 'status', state.t('status.resumed', { tick: record.save.tick }));
+        }
+      }
+    }
+    state.transport = createLocalTransport(seed, rules, SEAT, startSpeed, resumed);
+    startSoloAutosave(seed, style);
   }
   setHud(state.hud, 'transport', state.t(MODE === 'lan' ? 'transport.ws' : 'transport.local'));
   bindInput(resolved.level);
@@ -2287,6 +2402,16 @@ async function main() {
     onRejected: onRejected,
     onClosed: onClosed,
   });
+  // Said AFTER the transport has settled: "connected" arrives a moment into
+  // the boot and takes the status line with it, which is how the tier hint
+  // was lost a day ago. This is the same trap, so it gets the same answer -
+  // say it once the noisy part of startup is over.
+  if (rejected.length > 0) {
+    window.setTimeout(() => {
+      setHud(state.hud, 'status', state.t('status.linkRefused', { what: rejected.join(' ') }));
+    }, 1200);
+  }
+
   window.requestAnimationFrame(frame);
 }
 

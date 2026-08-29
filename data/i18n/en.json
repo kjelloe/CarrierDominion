@@ -470,5 +470,11 @@
   "chart.ship": "SHIP",
   "tip.tier": "The look and the graphics tier. Click to change tier (G).",
   "tip.needHigh": "This look wants more than this tier pays for: the weather, the mirror sea and the swell need HIGH. Click to change tier (G).",
-  "status.tierArm": "Changing tier restarts this solo war — click again to do it"
+  "status.resumed": "Resumed your war at tick {tick}",
+  "status.resumeRefused": "Could not resume: {why} — sailing a fresh war",
+  "status.saveFailed": "This war is no longer being saved ({why})",
+  "start.resume": "RESUME YOUR WAR",
+  "start.resumeAt": "tick {tick} · {ago}",
+  "start.discard": "DISCARD",
+  "status.linkRefused": "This link asked for settings this build does not offer ({what}) — using the defaults for those"
 }

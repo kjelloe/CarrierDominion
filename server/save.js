@@ -14,88 +14,36 @@
 
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 
-import { CMD_ADVANCE_TICK } from '../engine/commands.js';
-import { createInitialState } from '../engine/state.js';
-import { apply } from '../engine/reducer.js';
-import { hashState } from '../shared/statehash.js';
+import {
+  SAVE_VERSION, gameFromState, readableSave, replayLog, saveGame, saveLogOnly,
+} from '../shared/savefile.js';
 import { applyLobby } from './lobby.js';
 
-const SAVE_VERSION = 1;
+// The FORMAT and the REPLAY moved to shared/savefile.js on 2026-08-30, because
+// both sides save now: the server writes wars to disk, and the client writes a
+// solo war to localStorage - in solo the engine runs in the tab, so closing it
+// used to be the end of the war. What stays here is what is genuinely the
+// server's: the disk, and folding the saved LOBBY options back into the rules.
 
-// The war as a plain object. `options` is the lobby/start choices or 0 for a
-// war sailed straight from data/rules.json.
-function saveGame(game, seed, options) {
-  return {
-    version: SAVE_VERSION,
-    seed: seed,
-    options: options,
-    tick: game.state.tick,
-    stateHash: hashState(game.state),
-    commandLog: game.commandLog,
-  };
-}
-
-// The same save with the state hash left blank, for the one case where the
-// STATE is what broke: an engine fault mid-tick means `hashState` throws, so
-// the ordinary save cannot be written at all - and the command log, which is
-// the actual save format, is perfectly fine. Writing it beside the real save
-// keeps the evening recoverable by hand.
-//
-// It is deliberately NOT resumable without a human: an empty hash cannot be
-// verified, and resume refusing on a mismatch is a guard worth keeping.
-function saveLogOnly(game, seed, options) {
-  return {
-    version: SAVE_VERSION,
-    seed: seed,
-    options: options,
-    tick: game.state.tick,
-    stateHash: '',
-    commandLog: game.commandLog,
-  };
-}
-
-// Rebuild the exact state by replaying the log. Returns the state, or -1 with
-// a reason via the `problem` out-parameter object.
+// Rebuild the exact state by replaying the log, with the saved lobby options
+// folded in. Returns the state, or -1 with a reason via `problem`.
 function replayWar(saved, rules, problem) {
   const chosen = saved.options === 0 || saved.options === undefined
     ? rules
     : applyLobby(rules, saved.options);
-  let state = createInitialState(saved.seed, chosen);
-  let cursor = 0;
-  while (state.tick < saved.tick) {
-    while (cursor < saved.commandLog.length
-      && saved.commandLog[cursor].tick === state.tick) {
-      state = apply(state, saved.commandLog[cursor]);
-      cursor = cursor + 1;
-    }
-    state = apply(state, { type: CMD_ADVANCE_TICK });
-  }
-  if (hashState(state) !== saved.stateHash) {
-    problem.reason = 'the replay does not reproduce the saved war - '
-      + 'the rules or the code have changed since it was saved';
-    return -1;
-  }
-  return state;
+  return replayLog(saved, chosen, problem);
 }
 
 // A game object continuing the saved war: same state, same log, ready for the
 // pump. Returns -1 (and fills `problem.reason`) rather than resuming wrongly.
 function resumeGame(saved, rules, problem) {
-  if (saved === undefined || saved === null || saved.version !== SAVE_VERSION) {
+  if (readableSave(saved) !== 1) {
     problem.reason = 'not a save file this build understands';
     return -1;
   }
   const state = replayWar(saved, rules, problem);
   if (state === -1) return -1;
-  return {
-    state: state,
-    queue: [],
-    nextSequence: 0,
-    snapshots: [],
-    commandLog: saved.commandLog,
-    snapshotCapacity: 30,
-    recordCommands: 1,
-  };
+  return gameFromState(state, saved.commandLog);
 }
 
 // Write-then-rename, so a crash mid-write leaves the previous save intact
