@@ -343,6 +343,22 @@ Look for these shapes first — every one produced a real bug:
   choosing the modern LOOK and getting no waves looked like a bug. When a
   setting decides whether a whole feature exists, show the setting.
 
+- **Making a control discoverable makes its cost reachable.** Changing the
+  graphics tier reloads the page, which in solo - where the engine runs in the
+  tab - restarts the war. Harmless while it was an obscure key; a hazard the
+  moment it became a button next to PAUSE. When you give an existing action a
+  button, re-ask what that action costs, because the population that can now
+  reach it has changed.
+- **Two sources for one setting, and one of them wins silently.** A
+  `?graphics=` URL parameter outranks the stored override, so the tier control
+  wrote a new value, reloaded, re-read the URL and came back unchanged - doing
+  nothing but restarting the war. When a setting has a URL form and a stored
+  form, the control that changes it must clear the one it does not write.
+- **A fixed position guessed against other fixed elements.** `right: 148px`
+  put a new chip on top of the autopilot indicator at every window width
+  measured. Put it in a layout that flows, and assert no two things in the
+  same row overlap.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

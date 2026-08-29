@@ -433,6 +433,16 @@ swell are all gated on `physicalEffects`, which only High sets. A playtester
 on modern/Medium asked why there were no waves and nothing on screen answered
 — the tier lived in the DBG strip, which is hidden by default (2026-08-29).
 
+Two things about that chip are worth knowing before touching it. Changing tier
+**reloads the page**, because a preset changes how the renderer is constructed
+and cannot be swapped in place. In a LAN war the server holds the war and the
+reload just reconnects; **in solo the engine runs in this tab**, so a reload
+throws the war away — the chip therefore arms on the first click and fires on
+the second, the same idiom as surrender. And a `?graphics=` parameter in the
+address outranks the stored choice, so cycling now DROPS that parameter;
+without it the control wrote the new tier, reloaded, read the URL again and
+came back exactly as it was — doing nothing but restarting the war.
+
 That also retires the controls audit's exemption for `G`. "The graphics tier
 is a setting, not a war action" was defensible while the tier only changed how
 things looked; it stopped being defensible the moment the tier decided whether

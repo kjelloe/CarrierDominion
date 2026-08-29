@@ -264,10 +264,16 @@ selected and unflown.
 **And the waves.** There IS another setting: the **graphics tier**, which must
 be **High** as well as the look being modern — that was your own ruling of
 2026-08-26, and the weather, mirror sea and swell are all gated on it. Nothing
-said so, which is why it looked broken. The chip in the top right now reads
+said so, which is why it looked broken. The chip in the top row now reads
 `Modern · High`; it turns **amber** when the look is asking for more than the
 tier pays for, and clicking it cycles the tier. If it is amber, you are not
 seeing the weather at all.
+
+**Careful with it mid-war, and this is my fault for telling you to press it.**
+Changing tier reloads the page, and in a SOLO war the engine runs in your tab
+— so it restarts the war. It now asks first: one click arms it and says so,
+a second within four seconds does it. In a LAN war the server holds the war
+and the reload just reconnects. Easiest is to set the tier before you sail.
 
 **The Walrus.** It was never broken in the engine: an ordered move and
 piloting both work, measured. A selected craft sits still until you either

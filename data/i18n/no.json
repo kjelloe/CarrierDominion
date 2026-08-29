@@ -469,5 +469,6 @@
   "chart.progFor": "PROG {who}",
   "chart.ship": "SKIP",
   "tip.tier": "Utseende og grafikknivå. Klikk for å bytte nivå (G).",
-  "tip.needHigh": "Dette utseendet krever mer enn nivået gir: været, speilsjøen og dønningen trenger HØY. Klikk for å bytte nivå (G)."
+  "tip.needHigh": "Dette utseendet krever mer enn nivået gir: været, speilsjøen og dønningen trenger HØY. Klikk for å bytte nivå (G).",
+  "status.tierArm": "Å bytte nivå starter denne solokrigen på nytt — klikk igjen for å gjøre det"
 }

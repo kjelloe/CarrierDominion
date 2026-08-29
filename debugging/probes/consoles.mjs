@@ -203,6 +203,35 @@ const tier = await page.evaluate(() => {
     : { text: chip.textContent.trim(), warns: chip.classList.contains('short'),
         onScreen: chip.getBoundingClientRect().width > 0 };
 });
+// Nothing in the top row may sit on anything else. The tier chip was pinned
+// at a guessed `right: 148px` and landed on the autopilot indicator at every
+// width measured - guessing a margin against other fixed elements is how two
+// things end up in one place (2026-08-30).
+const collisions = await page.evaluate(() => {
+  const names = { tier: '#tier-chip', pause: '#pause-button', help: '#help-button',
+    auto: '#auto-chip', consoleTabs: '#console-tabs', cameraTabs: '#camera-tabs' };
+  const keys = Object.keys(names).filter((k) => document.querySelector(names[k]) !== null);
+  const hit = [];
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = i + 1; j < keys.length; j++) {
+      const ea = document.querySelector(names[keys[i]]);
+      const eb = document.querySelector(names[keys[j]]);
+      if (ea.contains(eb) || eb.contains(ea)) continue;
+      const A = ea.getBoundingClientRect();
+      const B = eb.getBoundingClientRect();
+      if (A.width === 0 || B.width === 0) continue;
+      if (A.left < B.right && B.left < A.right && A.top < B.bottom && B.top < A.bottom) {
+        hit.push(`${keys[i]}/${keys[j]}`);
+      }
+    }
+  }
+  return hit;
+});
+if (collisions.length > 0) {
+  console.log(`FAIL: things in the top row are sitting on each other: ${collisions.join(' ')}`);
+  process.exitCode = 1;
+}
+
 if (tier === null || !tier.onScreen) {
   console.log('FAIL: the look and tier are not shown anywhere on screen');
   process.exitCode = 1;

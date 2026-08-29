@@ -111,7 +111,7 @@
     #top-bar {
       position: fixed; top: 10px; left: 76px; z-index: 13;
       display: flex; gap: 18px; align-items: flex-start; user-select: none;
-      flex-wrap: wrap; max-width: calc(100vw - 200px);
+      flex-wrap: wrap; max-width: calc(100vw - 240px);
     }
     #camera-tabs { display: flex; gap: 2px; }
     .cam-tab {
@@ -139,8 +139,12 @@
     /* Which look and which tier, always on screen. It is also the G key's
        button: the tier decides whether there is weather at all, so it is not
        the settings-only affair the controls audit had exempted. */
+    /* In the top ROW, not pinned to the right edge. Pinned at `right: 148px`
+       it sat on top of the autopilot chip at every window width I measured -
+       guessing a margin against other fixed elements is how two things end up
+       in one place. The row already reserves the right-hand corner for PAUSE
+       and the help button, so flowing inside it cannot collide with anything. */
     #tier-chip {
-      position: fixed; top: 10px; right: 148px; z-index: 13;
       padding: 5px 10px; cursor: pointer; user-select: none;
       border: 1px solid var(--hud-dim); background: var(--hud-panel);
       color: var(--hud-dim); font: 11px/1.3 var(--hud-font); letter-spacing: 1px;
@@ -674,10 +678,10 @@
   <!-- One top row, two bars: the console's six screens on the left where
        the eye starts, the camera tabs beside them. Laid out by flex so a
        longer label - or a longer language - cannot make them collide. -->
-  <div id="tier-chip"></div>
   <div id="top-bar">
     <div id="console-tabs"></div>
     <div id="camera-tabs"></div>
+    <div id="tier-chip"></div>
   </div>
   <div id="console">
     <div id="console-body">

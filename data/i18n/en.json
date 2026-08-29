@@ -469,5 +469,6 @@
   "chart.progFor": "PROG {who}",
   "chart.ship": "SHIP",
   "tip.tier": "The look and the graphics tier. Click to change tier (G).",
-  "tip.needHigh": "This look wants more than this tier pays for: the weather, the mirror sea and the swell need HIGH. Click to change tier (G)."
+  "tip.needHigh": "This look wants more than this tier pays for: the weather, the mirror sea and the swell need HIGH. Click to change tier (G).",
+  "status.tierArm": "Changing tier restarts this solo war — click again to do it"
 }

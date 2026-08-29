@@ -123,6 +123,8 @@ const state = {
   sound: createSound(),
   signals: [],
   signalsOpen: false,
+  // When the tier chip was armed, for the solo double-click above.
+  tierArmedMs: -100000,
   // Which low-fuel marks have already been announced (see warnOnFuel).
   fuelWarned: {},
   surrenderArmedMs: 0,
@@ -462,6 +464,18 @@ function cycleGraphics(currentLevel) {
   writeOverride(window.localStorage, next);
   // A preset changes renderer construction (antialias, shadow maps), so it is
   // applied by reloading rather than by rebuilding half the scene in place.
+  //
+  // And the URL has to let go first. `?graphics=` outranks the stored
+  // override on startup, so a page opened with the tier pinned in its address
+  // would write the new choice, reload, read the URL again and come back
+  // exactly as it was - the control doing nothing but restarting the war.
+  // Dropping the parameter is what makes the click mean something.
+  const url = new URL(window.location.href);
+  if (url.searchParams.has('graphics')) {
+    url.searchParams.delete('graphics');
+    window.location.href = url.toString();
+    return;
+  }
   window.location.reload();
 }
 
@@ -2198,7 +2212,27 @@ async function main() {
     tierChip.textContent = `${style.label} · ${preset.label}`;
     tierChip.classList.toggle('short', wantsMore);
     attachTip(tierChip, state.t(wantsMore ? 'tip.needHigh' : 'tip.tier'));
-    tierChip.addEventListener('click', () => cycleGraphics(resolved.level));
+    // Changing tier RELOADS THE PAGE - a preset changes how the renderer is
+    // constructed, so it cannot be swapped in place. In a LAN war the server
+    // holds the war and a reload just reconnects; in SOLO the engine runs in
+    // this tab, so a reload throws the war away.
+    //
+    // That was already true of the G key, and G was obscure enough that
+    // nobody hit it. Putting a button on it beside PAUSE - and then telling
+    // the playtester to press it - turns a footgun nobody found into one
+    // they will. So in solo, mid-war, it arms first and fires on the second
+    // click, the same idiom the game already uses for surrender.
+    tierChip.addEventListener('click', () => {
+      const soloWarUnderWay = MODE === 'solo'
+        && state.view !== undefined && state.view.tick > 0 && state.view.phase === 0;
+      const now = window.performance.now();
+      if (soloWarUnderWay && now - state.tierArmedMs > 4000) {
+        state.tierArmedMs = now;
+        setHud(state.hud, 'status', state.t('status.tierArm'));
+        return;
+      }
+      cycleGraphics(resolved.level);
+    });
   }
 
   state.scene3d = createScene(document.getElementById('view'), preset, sizeMetres, style);

@@ -5,6 +5,40 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — Reviewing yesterday's fix, which had three faults of its own
+
+The tier chip I added to answer "where are the waves" was the least careful
+thing I have shipped this week, and reviewing it found three.
+
+**It could throw the war away.** Changing tier reloads the page, because a
+preset changes how the renderer is built. In LAN the server holds the war and
+a reload reconnects; **in solo the engine runs in the tab**, so a reload
+restarts the war. That was already true of the G key - and G was obscure
+enough that nobody found it. Putting a button on it beside PAUSE, and then
+writing in PLAYTEST "press it once and everything appears", turns a footgun
+nobody hit into one the owner would hit on purpose, mid-war. It arms on the
+first click now and fires on the second, the same idiom as surrender.
+
+**It did not actually change the tier.** A `?graphics=` parameter in the
+address outranks the stored override at startup, so the chip wrote the new
+choice, reloaded, read the URL again and came back exactly as it was: a
+control that did nothing except restart the war. Cycling drops the parameter
+now. Caught by watching the chip still read "Modern · Medium" after a click
+that was supposed to change it - the sort of thing a screenshot shows and an
+assertion does not, unless somebody writes the assertion.
+
+**It sat on the autopilot indicator at every width I measured.** I had pinned
+it at `right: 148px`, which is guessing a margin against other fixed elements.
+It flows inside the top row now, which already reserves the corner for PAUSE
+and help, so it cannot collide; the probe asserts that nothing in the top row
+overlaps anything else, at the sizes that matter.
+
+Three faults in one small change, and the common thread is that each was a
+guess I did not measure: what a reload costs, what wins between a URL and
+localStorage, and where 148 pixels lands.
+
+---
+
 ## 2026-08-29 — Playtest: the cockpit in the way, and where the waves went
 
 Three findings from the controls, and the third was a question rather than a
