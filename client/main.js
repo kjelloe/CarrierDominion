@@ -129,6 +129,8 @@ const state = {
   sound: createSound(),
   signals: [],
   signalsOpen: false,
+  // Set once when a war ends, so the solo autosave is dropped exactly once.
+  soloSaveCleared: false,
   // Which low-fuel marks have already been announced (see warnOnFuel).
   fuelWarned: {},
   surrenderArmedMs: 0,
@@ -1667,6 +1669,14 @@ function frame(nowMs) {
   if (state.view !== undefined && state.view.phase !== 0
     && document.getElementById('console').classList.contains('open')) {
     showConsoleNone();
+  }
+  // A war that is OVER is not a war to come back to. The autosave stops at
+  // the whistle (it refuses a finished war), so without this the last record
+  // would sit in storage offering to "resume" something already won - which
+  // resumes to the tick before the ending and then ends again immediately.
+  if (state.view !== undefined && state.view.phase !== 0 && !state.soloSaveCleared) {
+    state.soloSaveCleared = true;
+    clearSoloSave(window.localStorage);
   }
   updateWaroverPanel(state.warover, state.view);
   updateWeaponGroup();

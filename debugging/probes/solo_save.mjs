@@ -12,7 +12,7 @@ import { chromium } from 'playwright';
 import { createApp } from '../../server/app.js';
 import { loadRules } from '../../server/rules.js';
 const app = createApp({ seed: 20260818, rules: loadRules() });
-const a = await app.listen(0, '127.0.0.1');
+const address = await app.listen(0, '127.0.0.1');
 const b = await chromium.launch();
 const ctx = await b.newContext({ viewport: { width: 1200, height: 700 } });
 const page = await ctx.newPage();
@@ -20,7 +20,7 @@ page.on('pageerror', (e) => console.log('PAGEERROR', e.message));
 page.on('console', (m) => { if (m.type() === 'error') console.log('CONSOLE', m.text().slice(0, 200)); });
 
 // Sail a war, do something to it, let it autosave.
-await page.goto(`http://127.0.0.1:${a.port}/?mode=solo&graphics=low`, { waitUntil: 'load' });
+await page.goto(`http://127.0.0.1:${address.port}/?mode=solo&graphics=low`, { waitUntil: 'load' });
 await page.waitForFunction(() => Number(document.getElementById('hud-tick')?.textContent) > 40);
 await page.keyboard.press('w'); await page.keyboard.press('w');
 await page.waitForTimeout(1200);
@@ -40,7 +40,7 @@ const stored = await page.evaluate(() => {
 console.log('saved:', JSON.stringify(stored), '| war was at tick', before.tick, 'throttle', before.throttle);
 
 // Come back to the bare page: the menu should offer it.
-await page.goto(`http://127.0.0.1:${a.port}/`, { waitUntil: 'load' });
+await page.goto(`http://127.0.0.1:${address.port}/`, { waitUntil: 'load' });
 await page.waitForTimeout(900);
 const offered = await page.evaluate(() => {
   const row = document.querySelector('.start-resume');
@@ -49,7 +49,7 @@ const offered = await page.evaluate(() => {
 console.log('menu offers:', JSON.stringify(offered));
 
 // Take it.
-await page.goto(`http://127.0.0.1:${a.port}/?mode=solo&graphics=low&resume=local`, { waitUntil: 'load' });
+await page.goto(`http://127.0.0.1:${address.port}/?mode=solo&graphics=low&resume=local`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.__lastView !== undefined, undefined, { timeout: 40000 });
 await page.waitForTimeout(800);
 const after = await page.evaluate(() => ({
@@ -79,9 +79,35 @@ if (after.throttle !== before.throttle) {
 }
 if (after.tick < stored.tick) problems.push('the resumed war is older than the save');
 
+// A war that is OVER is not offered back. The autosave refuses a finished
+// war, so without an explicit clear the last record would sit there inviting
+// a resume to the tick before the ending.
+await page.goto(`http://127.0.0.1:${address.port}/?mode=solo&graphics=low`, { waitUntil: 'load' });
+await page.waitForFunction(() => Number(document.getElementById('hud-tick')?.textContent) > 30);
+await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+await page.waitForTimeout(300);
+const hadSave = await page.evaluate(() => window.localStorage.getItem('cd_solo_autosave') !== null);
+// PAUSE FIRST. A doctored view survives only until the next snapshot, and in
+// solo that is fifty milliseconds away - the check passed or failed on a
+// race. Paused, the war stops sending and the doctored ending stands.
+await page.keyboard.press(' ');
+await page.waitForTimeout(400);
+await page.evaluate(() => {
+  const view = window.__lastView;
+  view.phase = 1;
+  view.winner = view.team;
+  view.winReason = 2;
+  window.__debugView(view);
+});
+await page.waitForTimeout(900);
+const afterEnd = await page.evaluate(() => window.localStorage.getItem('cd_solo_autosave') !== null);
+console.log(`war over: save existed ${hadSave}, still there afterwards ${afterEnd}`);
+if (!hadSave) problems.push('no save to clear, so the end-of-war check proves nothing');
+if (afterEnd) problems.push('a finished war is still offered back as if it could be resumed');
+
 // And changing the graphics tier must carry the war too - that is the whole
 // reason this exists: the tier chip beside PAUSE reloads the page.
-await page.goto(`http://127.0.0.1:${a.port}/?mode=solo&style=modern&graphics=medium`, { waitUntil: 'load' });
+await page.goto(`http://127.0.0.1:${address.port}/?mode=solo&style=modern&graphics=medium`, { waitUntil: 'load' });
 await page.waitForFunction(() => Number(document.getElementById('hud-tick')?.textContent) > 30);
 await page.keyboard.press('w');
 await page.waitForTimeout(900);

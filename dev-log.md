@@ -5,6 +5,28 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — Reviewing the save: a finished war was still on offer
+
+Two things, one real.
+
+**A war that is OVER was still offered back.** The autosave refuses a finished
+war, so the last record sat in storage inviting a resume to the tick before
+the ending - which resumes, then ends again immediately. It is dropped at the
+whistle now.
+
+**And the check for it was racy**, which is the more useful half. The probe
+doctored the view to end the war, but in solo a doctored view survives only
+until the next snapshot fifty milliseconds later, so it passed or failed on
+timing. Pausing first makes the ending stand. Three runs, three passes.
+
+**Measured and NOT a problem:** save size. A 120,000-tick war with 3,000
+commands is 195 KB, against a localStorage budget around 5 MB - a war would
+need something like 75,000 commands to trouble it. The quota guard stays
+because a browser can refuse for its own reasons, but there is no growth
+problem to solve here.
+
+---
+
 ## 2026-08-30 — A solo war survives the tab, and a link is a whole game
 
 Two owner asks, and the first one closes yesterday's wound properly.
