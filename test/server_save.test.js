@@ -214,7 +214,16 @@ test('a throwing tick halts the war, saves it, and leaves the server up', () => 
   const folder = mkdtempSync(join(tmpdir(), 'cd-halt-'));
   const path = join(folder, 'war.json');
   try {
-    const app = createApp({ seed: SEED, rules: rules, savePath: path });
+    // The log is CAPTURED, not printed. This test breaks the engine on
+    // purpose, so on a green suite it used to emit `Error:`, a stack trace and
+    // "HALTED" to stderr - which was reported as a failing test on 2026-08-31
+    // by somebody reasonably believing their own eyes. Output that looks like
+    // a failure on a passing run is a defect in the test, not in the reader.
+    // And capturing it turns noise into the assertions below.
+    const said = [];
+    const app = createApp({
+      seed: SEED, rules: rules, savePath: path, logFn: (text) => said.push(text),
+    });
     try {
       // A float in the state: the canonical hashing walk refuses it, which is
       // the shape of every deliberate engine assertion - the walk and
@@ -233,6 +242,15 @@ test('a throwing tick halts the war, saves it, and leaves the server up', () => 
       assert.ok(Array.isArray(rescued.commandLog), 'the rescue save has no log in it');
       assert.equal(rescued.stateHash, '',
         'a log-only save must not claim a hash it could not compute');
+
+      // What the operator is told. This is the only place the halt message is
+      // checked, and it is the message somebody reads at 2am off journalctl.
+      const shout = said.join('');
+      assert.match(shout, /HALTED/, 'the halt was silent');
+      assert.match(shout, /carriers\[0\]\.x/, 'the halt does not say WHAT was wrong');
+      assert.match(shout, /seats stay connected/,
+        'the halt does not say the table is still there - which is the whole ruling');
+      assert.match(shout, /\.halted/, 'the halt does not say where the log went');
     } finally {
       app.close();
     }

@@ -101,6 +101,13 @@ function createApp(options) {
     // and never writes it, so it cannot change a war it is watching.
     watch: options.watch === true ? createWatch({ stuckAfter: options.stuckAfter }) : 0,
     // Seats held for players who dropped, and the tokens they come back with.
+    // Where the server's own diagnostics go. Default stderr; a test that
+    // DELIBERATELY breaks the engine passes a collector instead, so a passing
+    // suite stops printing `Error:` and a stack trace. That noise is not free:
+    // it was read as a test failure on 2026-08-31 and cost a round trip, which
+    // is exactly the "a probe that cries wolf gets ignored" lesson arriving
+    // from the other direction.
+    logFn: options.logFn ?? ((text) => process.stderr.write(text)),
     doorman: createDoorman(options.nowFn ?? (() => Date.now())),
     holder: createHolder(
       options.nowFn ?? (() => Date.now()),
@@ -173,7 +180,7 @@ function createApp(options) {
     try {
       writeSave(app.savePath, saveGame(app.game, app.seed, app.savedOptions));
     } catch (error) {
-      process.stderr.write(`autosave failed: ${error.message}\n`);
+      app.logFn(`autosave failed: ${error.message}\n`);
       return 0;
     }
     return 1;
@@ -370,7 +377,7 @@ function createApp(options) {
         res.end('not found');
       }
     }).catch((error) => {
-      process.stderr.write(`static error: ${error.message}\n`);
+      app.logFn(`static error: ${error.message}\n`);
       if (!res.headersSent) res.writeHead(500);
       res.end('server error');
     });
@@ -810,7 +817,7 @@ function createApp(options) {
       }
       const fate = wrote === 1 ? 'saved'
         : (wrote === 2 ? `NOT saved; the command log is in ${rescue}` : 'NOT saved');
-      process.stderr.write(`HALTED at ${app.halted}\n${error.stack ?? ''}\n`
+      app.logFn(`HALTED at ${app.halted}\n${error.stack ?? ''}\n`
         + `the war is ${fate}; seats stay connected\n`);
       broadcastHalt();
     }

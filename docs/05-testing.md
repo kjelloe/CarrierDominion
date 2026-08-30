@@ -224,6 +224,20 @@ slow - and it sorts last, so it runs when the machine is at its most loaded.
 Use `npm run probes -- <name>` while working and keep the full sweep for
 before a hand-over.
 
+**A passing run must not look like a failing one.** The R-005 test breaks the
+engine on purpose — a float in the state, which the canonical hashing walk
+refuses — and the halt path wrote `Error:`, a stack trace and `HALTED` to
+stderr. On a green suite. That was reported as a failing test on 2026-08-31 by
+somebody reasonably believing their own eyes, and it cost a round trip to
+establish that 604/604 had passed.
+
+`createApp` takes a `logFn` now; the test passes a collector and **asserts on
+what it collected** — that the halt names the field that broke, says where the
+command log went, and says the seats stay connected, which is the whole ruling.
+Noise became four assertions. If a test must produce alarming output, capture
+it: output that looks like a failure on a passing run is a defect in the test,
+not in the reader.
+
 **Assert the invariant, not a symptom of it.** The sea-grid probe could have
 checked that the mesh got smaller; it checks that 8 islands and 32 islands
 build the **same** number of vertices. Smaller is satisfied by a cap that

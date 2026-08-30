@@ -158,6 +158,12 @@ Look for these shapes first — every one produced a real bug:
   four executed a carrier in under a minute. When a fix lands in one
   branch, grep for every other branch that does the same kind of work.
 
+- **A passing test that prints like a failing one.** The halt-path test wrote
+  `Error:` and a stack trace to stderr on every green run; it was reported as a
+  failure twice before the output was captured. Any test that deliberately
+  triggers an error path should inject a log sink and ASSERT the message rather
+  than emit it - noise on a green run is a defect in the test, and it trains
+  everyone to skim the one run that really did fail.
 - **A layout checked at one window size.** The console/column overlap of
   playtest round five was invisible at 1280x720 to a button-versus-button
   sweep and obvious at 1280x600, because it needs a window short enough that a
