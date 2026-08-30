@@ -99,11 +99,18 @@ name. Deploy engine-changing releases between wars, or accept the fresh start.
 
 | Endpoint | What it answers |
 |---|---|
-| `/healthz` | tick, state hash, seats, join code, status (`lobby`/`running`), whether this boot resumed, rss |
+| `/healthz` | tick, state hash, seats, status (`lobby`/`running`), whether a room is waiting (`hasJoinCode`), whether this boot resumed, rss |
 | `/watch` | the playtest watchdog's findings — impossible values, stalls, slow ticks — one line per kind with the first tick and a count |
 
 A monitor should read `status` from `/healthz`, not the tick: a war waiting in
 its room does not tick, and that is health, not a hang.
+
+**Neither endpoint carries the join code.** `/healthz` is the natural thing to
+put behind a public hostname, and a room's code is the only thing between a
+stranger and a seat — so the code is not in the health object at all, only
+`hasJoinCode: 0|1`. It is printed to the log at boot, which is where the host
+reads it. If you put either endpoint on the public internet, that is the
+property you are relying on; `test/server_ws.test.js` holds it.
 
 ## What this file deliberately is not
 

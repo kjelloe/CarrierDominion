@@ -5,6 +5,68 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — The deploy script found a leak the reviews did not
+
+Writing the private ops set (deploy script, unit, nginx vhost, DEPLOY/NOTES)
+against the newest sibling's pattern turned up something six code reviews had
+walked past, because it is only a defect once the thing is on the internet.
+
+**`/healthz` published the war room's join code.** Confirmed against a live
+server, not read off the source: `"status":"lobby" ... "joinCode":"JYWYH"`. On
+a shared box `/healthz` is public by the monitoring contract — that is what it
+is *for* — and the join code is the only thing between a stranger and a seat.
+Anyone who curled the health endpoint could walk into the room.
+
+Owner ruled: fix it in the game. The shape of the fix is the part worth
+keeping: **the code is not stripped on the way out, it is not in the object at
+all.** `app.health()` no longer knows it and `app.joinCode()` is a separate
+call. A field that must not be published cannot live in the thing that gets
+published — the next endpoint to serve that object leaks it again, which is
+precisely how it got out. `hasJoinCode: 0|1` is what remains, and it is all the
+box-wide sweep ever read.
+
+The test asserts on the **raw response body**, not the parsed object: a nested
+copy or a renamed field would still be a leak, and a field-by-field check would
+sail straight past it. A second test does the same for `/watch`, the other
+public JSON, because "it has no business with the code" was equally true of
+`/healthz` an hour earlier. Verified by putting the field back — `the join code
+36F9M is in the public health body`.
+
+**Then I made R-012's mistake again, three hours after fixing it.** The deploy
+script's tripwire matched a bare `*joinCode*` — which also matches the FIXED
+shape's own `"hasJoinCode":1`, so it would have cried wolf on every deploy
+forever. A substring standing in for a parser, the exact failure class I had
+just written into the review skill that morning. Anchored on the quoted field
+name now and tested against four bodies, including a rename to `"code"`. The
+lesson that generalises is in the skill: **when you fix a leak by renaming the
+field, every grep for the old name matches the new one.**
+
+Two other things the ops pass surfaced, both recorded in the private NOTES:
+
+- **The autosave defaults to `data/autosave.json` — inside the deploy's rsync
+  target**, because `data/` has to ship (the rulesets are runtime code and the
+  browser fetches them). State inside the sync target is state a deploy eats.
+  The unit points `SAVE` at a state dir outside the tree, and the rsync
+  excludes the file besides — needed on its own, since rsync copies the working
+  tree and gitignored is not absent.
+- **There is no server-side websocket heartbeat, and `broadcastLobby()` is
+  event-driven.** A table sitting in the war room choosing options sends
+  nothing, so at nginx's default 60 s read timeout every one of them is dropped
+  a minute in — *before the war starts*, which is the worst possible place. The
+  vhost sets 7d. A real heartbeat is still the right fix and is on the list.
+
+And a correction worth writing down because the reasoning was the fault, not
+the fact: I recorded DNS for `carrierdominion.kjell.today` as not resolving,
+having inferred it from a silent `curl -sI https://...`. It resolves fine on
+both public resolvers; what was missing was the vhost and the certificate. **A
+failed HTTPS request is not a DNS answer** — the same shape as the guide's rule
+about never trusting an empty diagnostic from a redirected pipeline.
+
+578 tests, smoke clean, lobby/rejoin/watch_run probes green. The ops files live
+in the private repo and are not committed here.
+
+---
+
 ## 2026-08-30 — The last three small ones: R-011, R-012, and a sea that stopped growing
 
 Owner's ask before a mobile playtest: the two review findings left over from

@@ -83,7 +83,7 @@ test('healthz reports a live, ticking war', async () => {
     assert.equal(body.rulesHash, app.game.state.rulesHash);
     assert.ok(body.rssMb > 0);
     assert.equal(body.status, 'running');
-    assert.equal(body.joinCode, '');
+    assert.equal(body.hasJoinCode, 0, 'a running war has no room to join');
   });
 });
 
@@ -95,8 +95,10 @@ test('healthz says a lobby is a lobby, not a hung server', async () => {
     const body = await (await fetch(`http://127.0.0.1:${address.port}/healthz`)).json();
     assert.equal(body.ok, true);
     assert.equal(body.status, 'lobby');
-    assert.match(body.joinCode, /^[0-9A-HJKMNP-TV-Z]{5}$/);
+    assert.equal(body.hasJoinCode, 1, 'a lobby should say a room is waiting');
     assert.equal(body.tick, 0, 'a war nobody started should not be ticking');
+    // The room HAS a code; the health endpoint does not say what it is.
+    assert.match(app.joinCode(), /^[0-9A-HJKMNP-TV-Z]{5}$/);
   } finally {
     await app.close();
   }
@@ -517,4 +519,53 @@ test('with observers welcome, the third connection gets the referee view', async
     second.close();
     third.close();
   });
+});
+
+// --- the join code does not leave over HTTP ---------------------------------
+//
+// /healthz is public on the shared box by the monitoring contract, and it used
+// to carry `joinCode`. The room's code is the only thing between a stranger
+// and a seat, so anyone who curled the health endpoint could walk in. Found
+// while writing the deploy script (ops/DEPLOY.md pre-flight), against a live
+// server: `"status":"lobby" ... "joinCode":"JYWYH"`.
+//
+// This asserts on the RAW BODY, not the parsed object, because that is what
+// actually goes over the wire - a nested copy or a renamed field would still
+// be a leak and a field-by-field check would miss it.
+
+test('the health endpoint never puts the join code on the wire', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-secret' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const code = app.joinCode();
+    assert.match(code, /^[0-9A-HJKMNP-TV-Z]{5}$/, 'this test needs a room with a code');
+
+    const raw = await (await fetch(`http://127.0.0.1:${address.port}/healthz`)).text();
+    assert.equal(raw.includes(code), false, `the join code ${code} is in the public health body`);
+    assert.equal(raw.includes('joinCode'), false, 'the health body still names a joinCode field');
+
+    // And it still says everything a monitor needs.
+    const body = JSON.parse(raw);
+    assert.equal(body.status, 'lobby');
+    assert.equal(body.hasJoinCode, 1);
+    assert.ok(body.rssMb > 0);
+  } finally {
+    await app.close();
+  }
+});
+
+test('the watchdog endpoint does not carry the code either', async () => {
+  // /watch is the other public JSON on this server. It has no business with
+  // the code, but "it has no business with it" is what was true of /healthz.
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, watch: true, bootId: 'boot-watch2' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const code = app.joinCode();
+    const raw = await (await fetch(`http://127.0.0.1:${address.port}/watch`)).text();
+    assert.equal(raw.includes(code), false, `the join code ${code} is in the watchdog body`);
+  } finally {
+    await app.close();
+  }
 });

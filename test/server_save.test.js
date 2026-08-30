@@ -200,7 +200,7 @@ test('a resumed war keeps its war room, already running', async () => {
     // parked in a war room would never advance a tick.
     assert.equal(app.lobby.status, 'running',
       'the resumed war was parked in its own war room and would never tick');
-    assert.notEqual(app.health().joinCode, '', 'the room has no code to hand out');
+    assert.notEqual(app.joinCode(), '', 'the room has no code to hand out');
     // And the room remembers what was actually being played.
     assert.equal(app.lobby.options.islands, 8, 'the room forgot the war it resumed');
   } finally {

@@ -284,6 +284,12 @@ function createApp(options) {
     }
   }
 
+  // The war room's code, for the host and for the process itself. Deliberately
+  // NOT part of app.health() - see hasJoinCode there.
+  app.joinCode = function joinCodeNow() {
+    return app.lobby === 0 ? '' : app.lobby.code;
+  };
+
   app.health = function health() {
     const snapshot = latestSnapshot(app.game);
     return {
@@ -301,7 +307,19 @@ function createApp(options) {
       status: app.lobby === 0 ? 'running' : app.lobby.status,
       resumed: app.resumed,
       resumeProblem: app.resumeProblem,
-      joinCode: app.lobby === 0 ? '' : app.lobby.code,
+      // NOT the code itself. /healthz is reachable from the internet by the
+      // shared-box monitoring contract (ops/DEPLOY.md), and the war room's
+      // join code is the only thing standing between a stranger and a seat -
+      // publishing it there meant anyone who curled the health endpoint could
+      // walk into the room. A monitor only ever needed to know that a room is
+      // WAITING, which is what this says.
+      //
+      // The code is not merely stripped on the way out, it is not in the
+      // object at all: a field that must not be published cannot live in the
+      // thing that gets published, or the next endpoint to serve this object
+      // leaks it again. Ask app.joinCode() for the code - the boot log already
+      // prints it, and that is where the host reads it.
+      hasJoinCode: app.lobby === 0 ? 0 : 1,
       speed: app.clock === 0 ? app.speed : app.clock.speed,
       uptimeS: Math.floor((Date.now() - app.startedAtMs) / 1000),
       rssMb: Math.round(process.memoryUsage().rss / 1048576),

@@ -165,6 +165,18 @@ Look for these shapes first — every one produced a real bug:
   ladder row went in at the top; a HUD line moved to the instrument panel; a
   throttle scale grew an astern half). Select by NAME, and read chosen values
   BACK rather than hardcoding them - defaults move too.
+- **A secret riding in the object that gets published.** `/healthz` carried the
+  war room's join code, and `/healthz` is public on a shared box by the
+  monitoring contract — so the room was not private. Stripping the field at the
+  serving site is NOT the fix: the next endpoint to serve the same object leaks
+  it again. Take it out of the object and expose it by its own call. And assert
+  on the RAW BODY, not the parsed one — a nested copy or a rename defeats a
+  field-by-field check.
+- **A grep for the old name matches the new one.** Having removed `joinCode`
+  and added `hasJoinCode`, the guard written to catch a regression matched
+  `*joinCode*` — which the FIXED shape contains. Any tripwire keyed on a name
+  you just renamed must be anchored (quotes, word boundaries, a real parse), or
+  it fires forever on the correct state.
 - **A substring search standing in for a parser.** `tokenFrom` found a seat
   token with `url.indexOf('token=')`, so `?xtoken=` matched and any parameter
   whose NAME merely ended in those letters was read as a credential. Wherever
