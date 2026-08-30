@@ -158,6 +158,23 @@ Look for these shapes first — every one produced a real bug:
   four executed a carrier in under a minute. When a fix lands in one
   branch, grep for every other branch that does the same kind of work.
 
+- **A layout checked at one window size.** The console/column overlap of
+  playtest round five was invisible at 1280x720 to a button-versus-button
+  sweep and obvious at 1280x600, because it needs a window short enough that a
+  column WRAPS. Any layout assertion should run at several sizes - tall, short,
+  narrow - or it is a check on one machine's window.
+- **A fix that satisfies the measurement and breaks the ruling.** Making the
+  action columns scroll instead of wrap cleared every overlap the probe knew
+  about and hid RECALL, FIRE and PILOT below the fold - against a standing
+  ruling that every action is a visible button. When a layout fix makes things
+  fit by removing them from sight, check what was ruled about seeing them.
+- **A measurement wired to `resize` instead of the frame.** `--bar-clear` and
+  `--col-left` are published after layout so other elements can follow them.
+  Both were called only from the resize handler, which fires while the MENU is
+  up - the action columns do not exist yet, the function returns early, and the
+  property stays unset for the entire war. If a value must track layout, it
+  belongs where layout is read every frame, not on an event that may fire once
+  at the wrong moment.
 - **A probe that selects the UI by position.** `rows.nth(1)`, or "the first
   settable row", is correct until a row is inserted above it - and then the
   probe silently drives a different control and reports the feature it was

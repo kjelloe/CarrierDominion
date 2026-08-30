@@ -654,6 +654,44 @@ parsed instead of searched, because `indexOf('token=')` also matched
 `?xtoken=` and read it as a seat token. R-010, the documentation drift, was
 closed on 2026-08-28.
 
+## Playtest round five (2026-08-30)
+
+Three findings, and the second and third turned out to be one bug.
+
+**The game's name appeared twice on the menu after changing the look.**
+`closeShowcase()` removed `solo-menu` — a class it does not own — and
+`openShowcase()`, which restarts the diorama on every style change, only put
+`showcase` back. The rule that hides the menu's own small header needs BOTH
+(`#start-panel.showcase.solo-menu #start-title`), so from the first style
+change onward the header reappeared under the big title card. The marker is
+now cleared where it is set, when the menu closes, rather than by a function
+that runs several times a session.
+
+**"Log is under SQUADRON", and no PILOT button — the same cause.** The action
+columns `flex-wrap` into a second column when they do not fit, and an open
+console positioned itself with a hardcoded `left: 76px` that assumed one
+column. At an ordinary 1280x720 the SIGNALS log (`log-panel` — that is the
+"log") sat under the left column by 57x52px, the damage board by 57x446px.
+
+The first attempt made the columns `nowrap` and scroll. That cleared every
+overlap and **broke the round-one ruling**: at 1280x600 it hid RECALL and
+FIRE, and on a small window it hid PILOT itself — the very button reported
+missing. Reverted. **Every action a player can take must be a button they can
+SEE; a column that scrolls obeys the layout and breaks the ruling.**
+
+What landed instead: the columns still wrap, and the console gets out of their
+way. `--col-left` and `--col-right` are published after layout by
+`syncColumnWidths()` and the console reads them — the same measure-and-publish
+trick `--bar-clear` already used for the top row. And both measurements moved
+into the frame loop: they were wired only to `resize`, which fires while the
+MENU is up, when the action columns do not exist yet, so `--col-left` stayed
+unset for the whole war. Their own comments had said "free in the frame loop"
+since the day they were written.
+
+`debugging/probes/playtest_round5.mjs` checks all of it at six window sizes,
+because at 1280x720 the FIRST sweep found nothing: the bug needs a window
+short enough to wrap a column or narrow enough to wrap the top row.
+
 ## The first playtest at the controls (2026-08-28)
 
 Six findings from the owner actually flying the thing. They are mostly one

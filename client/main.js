@@ -845,6 +845,28 @@ function syncBarHeight() {
   document.documentElement.style.setProperty('--bar-clear', wanted);
 }
 
+// The button columns' real widths, published so an open console can sit
+// between them. They WRAP into extra columns when the window is short (the
+// ruling is that every action stays visible), so this is not a constant: at
+// 1280x540 the right column is two buttons wide and a console that assumed one
+// sat underneath it. Same shape as syncBarHeight above, and written only when
+// it changes, so it is free in the frame loop.
+function syncColumnWidths() {
+  const left = document.getElementById('actions-left');
+  const right = document.getElementById('actions-right');
+  if (left === null || right === null) return;
+  const wantedLeft = `${Math.round(left.getBoundingClientRect().width)}px`;
+  const wantedRight = `${Math.round(right.getBoundingClientRect().width)}px`;
+  if (syncColumnWidths.left !== wantedLeft) {
+    syncColumnWidths.left = wantedLeft;
+    document.documentElement.style.setProperty('--col-left', wantedLeft);
+  }
+  if (syncColumnWidths.right !== wantedRight) {
+    syncColumnWidths.right = wantedRight;
+    document.documentElement.style.setProperty('--col-right', wantedRight);
+  }
+}
+
 function renderConsoleTabs() {
   const strip = document.getElementById('console-tabs');
   if (strip === null) return;
@@ -1492,7 +1514,15 @@ function closeShowcase() {
   showcase.diorama = null;
   showcase.ambience = null;
   showcase.styleName = '';
-  document.getElementById('start-panel').classList.remove('showcase', 'solo-menu');
+  // `showcase` only. `solo-menu` says WHICH menu is on screen, not whether the
+  // diorama is running, and this function does not own it - it is added once
+  // when the solo menu opens. Removing it here meant changing the look (which
+  // restarts the diorama through openShowcase) dropped it for good, and the
+  // rule that hides the menu's own small header needs BOTH classes:
+  //   #start-panel.showcase.solo-menu #start-title { display: none; }
+  // So from the first style change onward the player saw the game's name
+  // twice - the big card, and the small header underneath it.
+  document.getElementById('start-panel').classList.remove('showcase');
   document.body.classList.remove('showcase', 'war-room');
 }
 
@@ -1649,6 +1679,15 @@ function frame(nowMs) {
   renderView(state.scene3d, state.view, deltaSeconds, state.podBuildTicks);
   updateCameraTabs();
   updateActionButtons();
+  // AFTER the buttons: their enabled/disabled set changes what the columns
+  // contain, which changes how they wrap, which changes how wide they are -
+  // and an open console positions itself between them. Both of these were
+  // wired only to `resize`, which fires while the MENU is up: at that point
+  // the action columns do not exist yet, syncColumnWidths returned early, and
+  // the custom properties stayed unset for the whole war. Their own comments
+  // always said "free in the frame loop"; now they are in it.
+  syncBarHeight();
+  syncColumnWidths();
   setHud(state.hud, 'tick', state.view.tick);
   setHud(state.hud, 'hash', state.stateHash === '' ? '-' : state.stateHash);
   updateCarrierHud(state.hud, ownCarrierOf(state.view), state.view.params);
@@ -2140,6 +2179,12 @@ async function main() {
     }
     const chosen = await showStartPanel(panel);
     closeShowcase();
+    // The solo menu is done with, so its marker goes too - here, where it was
+    // added, and not inside closeShowcase, which restarts the diorama on every
+    // style change. Leaving it set would let it meet a later `showcase` (the
+    // war room takes the diorama as well) and hide THAT header, which is the
+    // one carrying the join code.
+    document.getElementById('start-panel').classList.remove('solo-menu');
     seed = chosen.seed;
     const extras = applyChoices(rules, chosen.choices);
     startSpeed = extras.speed;
@@ -2384,6 +2429,7 @@ async function main() {
     // frame.
     forgetPanelHeight();
     syncBarHeight();
+    syncColumnWidths();
     resize(state.scene3d);
   });
 

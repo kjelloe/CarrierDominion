@@ -67,9 +67,19 @@
          overlapped the bar. `--bar-clear` is written back by the client after
          layout, so the columns follow the bar rather than a guess. */
       position: fixed; top: var(--bar-clear, 56px); bottom: var(--panel-clear); z-index: 7;
-      display: flex; flex-direction: column; flex-wrap: wrap; gap: 3px;
+      display: flex; flex-direction: column; gap: 3px;
       align-content: flex-start;
       user-select: none;
+      /* WRAPS, deliberately. Thirteen buttons need 616px and an ordinary
+         1280x720 window gives the column 456px, so something has to give: it
+         either grows sideways or it hides buttons. The ruling from playtest
+         round one is that every action a player can take is VISIBLE as a
+         button, so it grows sideways and the things beside it make room.
+         Turning the wrap off (tried first, playtest round five) obeyed the
+         layout and broke the ruling - at 1280x600 it hid RECALL and FIRE, and
+         on a small window it hid PILOT itself, which is exactly the button the
+         owner reported missing. */
+      flex-wrap: wrap;
     }
     #actions-right.actions { align-content: flex-end; }
     /* Centered by auto margins, NOT justify-content: center - a centered
@@ -223,9 +233,24 @@
          floated over the war-over result, which is the one screen nothing
          may cover. Its tab strip is a separate fixed bar along the top; this
          is only the body that opens under it. */
-      position: fixed; top: 40px; left: 76px; z-index: 8; display: none;
-      width: 620px; max-width: calc(100vw - 96px);
-      max-height: calc(100vh - 250px);
+      position: fixed; top: var(--bar-clear, 40px); z-index: 8; display: none;
+      width: 620px;
+      /* Clear of BOTH button columns, at whatever width they actually came out
+         as. The columns wrap into extra columns when they do not fit, so their
+         width is not a constant to hardcode - `--col-left` and `--col-right`
+         are published after layout by syncColumnWidths(), the same trick
+         `--bar-clear` already uses for the top row. The old
+         `calc(100vw - 96px)` accounted only for this panel's own left offset,
+         so a wrapped column landed underneath an open console: measured at
+         1280x540 as up to 42x333px of SIGNALS log under the button column. */
+      left: calc(var(--col-left, 64px) + 12px);
+      max-width: calc(100vw - var(--col-left, 64px) - var(--col-right, 64px) - 32px);
+      /* Below the bar as MEASURED and above the instrument panel, rather than
+         two guesses. A hardcoded 40px top slid under the top row wherever that
+         row wraps to two lines; `--bar-clear` is published by syncBarHeight()
+         for exactly this and only `.actions` was reading it (playtest round
+         five, 2026-08-30). */
+      max-height: calc(100vh - var(--bar-clear, 40px) - var(--panel-clear) - 12px);
       background: var(--hud-panel); border: 1px solid var(--hud-dim);
       border-radius: 6px; color: var(--hud-ink);
       font: 12px/1.6 var(--hud-font);
@@ -324,6 +349,10 @@
     }
     #msg-button:hover, #msg-button.open { color: var(--hud-ink); border-color: var(--hud-ink); }
     body.menu #msg-button { display: none; }
+    /* NOTE: these four panels live INSIDE #console-body, whose rule below
+       resets position/inset/max-height on every child - so their own geometry
+       here only applies if one is ever lifted back out of the console. The
+       size and placement that a player actually sees belongs to #console. */
     #log-panel {
       position: fixed; top: 44px; left: 12px; z-index: 12; display: none;
       min-width: 340px; max-width: 480px; padding: 12px 16px;

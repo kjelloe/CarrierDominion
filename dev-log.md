@@ -5,6 +5,67 @@ golden hash and why.
 
 ---
 
+## 2026-08-31 — Playtest round five: two of the three were one bug
+
+Owner at the controls again. Three findings; the second and third had the same
+cause, and the first attempt at fixing them broke a standing ruling.
+
+**The name twice on the menu.** `closeShowcase()` removed `solo-menu`, a class
+it does not own. `openShowcase()` restarts the diorama on every style change
+and only puts `showcase` back, so from the first change onward the rule that
+hides the menu's small header — which needs both classes — stopped matching and
+the header reappeared under the big card. Cleared where it is set now, when the
+menu closes.
+
+**"Log is under SQUADRON" and the missing PILOT were the same bug.** The action
+columns `flex-wrap` sideways when they do not fit; an open console positioned
+itself at a hardcoded `left: 76px` that assumed one column's width. At an
+ordinary 1280x720: the SIGNALS log under the left column by 57x52px, the damage
+board by 57x446px. `log-panel` is literally the signals log, which is what made
+the owner's phrasing exact.
+
+**And then I broke a ruling fixing it.** First attempt: `flex-wrap: nowrap` and
+scroll, reusing the phone's rule on the argument that wrapping sprawls whenever
+a column does not fit, which is a height question and not a pointer question.
+Every overlap cleared. Then the visibility check I had written for finding 3
+reported what it had cost: at 1280x600 RECALL and FIRE were below the fold, and
+at 740x420 **PILOT itself** — the exact button reported missing. Playtest round
+one ruled that every action a player can take is a button they can SEE, and a
+scrolling column obeys the layout while breaking the ruling. Reverted.
+
+What landed: the columns still wrap, and the console gets out of their way.
+`syncColumnWidths()` publishes `--col-left` and `--col-right` after layout and
+the console reads them — the same measure-and-publish shape `--bar-clear`
+already had for the top row, which is the pattern this codebase reaches for
+whenever a constant turns out to be a measurement.
+
+**Both measurements were wired to `resize` alone.** That fires while the MENU
+is up, when the action columns do not exist, so `syncColumnWidths` returned
+early and `--col-left` stayed unset for the whole war. `--bar-clear` survived
+only because a later resize happened to catch it. Both comments had claimed
+since the day they were written that they were "free in the frame loop"; now
+they are actually in it.
+
+Two things about the instrument, both of which cost time:
+
+- **One window size found nothing.** My first sweep compared button rectangles
+  at 1280x720 and reported everything clean, which nearly became "cannot
+  reproduce". The bug needs a window short enough to wrap a column. The probe
+  runs six sizes now, and against the CONSOLE rather than only buttons — the
+  two existing overlap checks compared six named top-row elements and
+  container-level boxes on a phone, and neither could have seen this.
+- **A probe that cries wolf gets ignored.** Measuring a panel INSIDE the
+  scrolling console reported it "off the bottom" when the console box was
+  comfortably in the window and its body scrolled. Fixed by measuring the
+  clipping box, not the child.
+
+Verified by reverting the console geometry and watching round five fail at four
+sizes including 1280x720. 587 tests, smoke clean, and consoles / mobile /
+start_menu / squadron / island_board / chart_and_chips / playtest_round1-4 /
+splash_shot / touch_controls all green.
+
+---
+
 ## 2026-08-30 — `npm test` could not start on Node 24
 
 The batch PC's first run never reached a war:
