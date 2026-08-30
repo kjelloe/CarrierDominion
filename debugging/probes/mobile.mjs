@@ -184,6 +184,43 @@ for (const [name, width, height] of PHONES) {
       + `(${narrow.panel}px small, ${wide.panel}px large)`);
   }
 
+  // THE MENU, WHICH IS THE FIRST THING ANYONE SEES. The war screen was
+  // measured and the menu was not: on a 390px-tall phone the splash title
+  // came down across the first two option rows - "CARRIER DOMINION" written
+  // through "seed" and "islands". Nothing was off screen and nothing was out
+  // of reach, so the earlier checks called it fine; overlap is what catches
+  // it, which is the same lesson as the sprawling columns.
+  await page.goto(`http://127.0.0.1:${address.port}/`, { waitUntil: 'load' });
+  await page.waitForSelector('#start-panel.open', { timeout: 20000 }).catch(() => {});
+  await page.waitForTimeout(700);
+  const menu = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('#start-panel .start-row')];
+    const card = document.getElementById('title-card');
+    const cardShown = card !== null
+      && window.getComputedStyle(card).display !== 'none';
+    const clashes = [];
+    if (cardShown) {
+      const c = card.getBoundingClientRect();
+      for (const row of rows) {
+        const r = row.getBoundingClientRect();
+        if (c.left < r.right && r.left < c.right && c.top < r.bottom && r.top < c.bottom) {
+          clashes.push(row.textContent.replace(/\s+/g, ' ').trim().slice(0, 14));
+        }
+      }
+    }
+    const offScreen = rows.filter((row) => {
+      const r = row.getBoundingClientRect();
+      return r.bottom > window.innerHeight + 1 || r.top < -1;
+    }).length;
+    return { rows: rows.length, clashes: clashes, offScreen: offScreen };
+  });
+  if (menu.rows === 0) problems.push(`${name}: the start menu had no rows to check`);
+  if (menu.clashes.length > 0) {
+    problems.push(`${name}: the title card is written across the menu - ${menu.clashes.join(' ')}`);
+  }
+  if (menu.offScreen > 0) problems.push(`${name}: ${menu.offScreen} menu rows are off the screen`);
+  await page.screenshot({ path: `debugging/shots/mobile-${name}-menu.png` });
+
   await page.screenshot({ path: `debugging/shots/mobile-${name}.png` });
   await context.close();
 }

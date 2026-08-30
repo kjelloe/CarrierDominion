@@ -117,6 +117,19 @@ all, because the home island hands everyone a plant at tick one and the
 fortress rule keyed off that. Four of the five seeds now resolve FASTER than
 before the chase started - 777001 fell from 116,320 ticks to 25,235.
 
+## Playtesting
+
+`PLAYTEST.md` is the owner's script, with a hand-written self-contained copy
+at `PLAYTEST.html` for reading on a tablet beside the machine. Rewritten
+2026-08-30 into two parts: **six ranked questions** — the things a test run
+cannot answer and a player can — followed by **one complete war walked step by
+step**, in the order a game uses its systems rather than the order they were
+built.
+
+The ranking is the point. Everything in the second half is checkable by a
+probe eventually; the six questions are not, and they are what a playtest is
+actually for.
+
 ## Probes
 
 `debugging/probes/*.mjs` drive a real Chromium through Playwright, do something,

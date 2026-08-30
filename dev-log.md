@@ -5,6 +5,34 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — The menu had never been measured, and PLAYTEST rewritten
+
+**The mobile probe walked the war and never the menu.** On a 390px-tall phone
+the splash title card - 42px with 20px of letter-spacing - came down across
+the first two option rows: "CARRIER DOMINION" written through "seed" and
+"islands". Nothing was off screen and nothing was out of reach, so every check
+I had written called it fine.
+
+That is the third time this week that REACH passed a layout OVERLAP would have
+failed, and the second time I fixed it on one screen and not the others. The
+card shrinks below 620px and stands aside below 460px, the menu tightens and
+scrolls, and the probe now walks the menu too - the option rows must not be
+off the screen and the title must not be written across them.
+
+**PLAYTEST rewritten**, with an HTML copy beside it. It had grown by
+accretion - eleven A-steps, four B, five C, in the order the features were
+built rather than the order a player meets them. It is now two parts: six
+ranked questions worth more than the rest of the document put together, and
+one complete war walked start to finish in the order a real game uses its
+systems - bridge, air group, taking an island, supply, being shot at, the
+weather, the ending.
+
+The HTML is hand-written and self-contained in the game's own amber palette,
+following multiciv's pattern: no generator, no dependency, and readable on a
+tablet beside the machine running the war.
+
+---
+
 ## 2026-08-30 — Reviewing the mobile slice: two layout reads in the render loop
 
 Three findings, all mine, and the first two are the kind that make a

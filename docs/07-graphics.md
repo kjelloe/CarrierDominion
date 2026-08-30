@@ -470,6 +470,16 @@ ironic in a pass about making the game cheaper:**
   rest of the session. `resize()` re-chooses them now, and the probe asserts
   it by shrinking and growing the window.
 
+**And the menu had never been measured, only the war.** On a 390px-tall phone
+the splash title card — 42px with 20px of letter-spacing — came down across
+the first two option rows: "CARRIER DOMINION" written through "seed" and
+"islands". Nothing was off screen and nothing was out of reach, so the
+existing checks called it fine; **overlap** is what catches it, which is the
+same lesson the sprawling columns taught a day earlier and which I had only
+applied to the war screen. The card shrinks below 620px of height and stands
+aside entirely below 460px, the menu tightens and scrolls, and the probe now
+walks the menu as well as the bridge.
+
 Still open from the plan: the grid sea capped by distance. And a caution for
 whoever writes the next check here: `offsetParent` is null for ANY
 `position: fixed` element, visible or not, so both of the rotate-gate

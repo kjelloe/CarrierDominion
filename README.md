@@ -8,8 +8,9 @@ the 1988 classic, not a port.
 Design of record: [`plan-version1.md`](plan-version1.md). What is actually
 built, in detail: [`docs/`](docs/00-index.md). Putting it on a box:
 [`DEPLOYING.md`](DEPLOYING.md). **Sitting down to play it:
-[`PLAYTEST.md`](PLAYTEST.md)** — a step-by-step script, priority A/B/C, for
-judging what changed.
+[`PLAYTEST.md`](PLAYTEST.md)** (or [`PLAYTEST.html`](PLAYTEST.html) on a
+tablet) — six ranked questions a test run cannot answer, then one complete
+war walked step by step.
 
 ## Running it
 

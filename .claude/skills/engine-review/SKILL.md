@@ -401,6 +401,13 @@ Look for these shapes first — every one produced a real bug:
   rest of the session. Anything derived from the window belongs in the resize
   path too, and a probe can prove it by shrinking and growing the window.
 
+- **A check applied to one screen and not its neighbours.** The mobile probe
+  measured the WAR and never the menu, so a splash title written across the
+  first two option rows survived a pass that was specifically about phones.
+  When a class of defect is found on one screen, run the same check over
+  every screen the player actually sees - here that meant the menu, and the
+  ending screen after it.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

@@ -621,6 +621,30 @@
       letter-spacing: 20px; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9);
     }
     body.showcase #title-card { display: block; }
+    /* A 42px title with 20px of letter-spacing needs a screen to sit on. On a
+       390px-tall phone it came down across the first two rows of the menu -
+       "CARRIER DOMINION" written through "seed" and "islands" (mobile pass,
+       2026-08-30). It shrinks, and on the shortest screens it stands aside
+       entirely: the menu is what the player came to use, and the game's name
+       is on the tab. */
+    @media (max-height: 620px) {
+      #title-card { font: 26px/1.2 var(--hud-font); letter-spacing: 10px; top: 2%; }
+      #title-card::after { width: 200px; margin-top: 6px; }
+    }
+    @media (max-height: 460px) {
+      body.showcase #title-card { display: none; }
+    }
+    /* And the menu itself has to fit, or scroll. Ten option rows at a 1.9
+       line-height need more than a 360px phone has; the last row went off the
+       bottom, which on this menu is the one that starts the war. */
+    @media (max-height: 620px) {
+      #start-panel {
+        align-items: flex-start; overflow-y: auto; overscroll-behavior: contain;
+        font-size: 13px; line-height: 1.55; padding: 10px 0;
+      }
+      #start-inner { min-width: 0; width: min(560px, calc(100vw - 32px)); }
+      #start-title { margin-bottom: 8px; font-size: 16px; letter-spacing: 3px; }
+    }
     /* The war room's roster stands tall and its header already names the
        table (and carries the join code) - there the card yields. */
     body.war-room #title-card { display: none; }

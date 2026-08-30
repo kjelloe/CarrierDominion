@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carrier Dominion — playtest script</title>
+<style>
+  /* The game's own 1988 palette: amber on a night bridge. Self-contained, no
+     fonts or scripts fetched - this gets read on a tablet beside the machine
+     running the war, and sometimes on a phone with no connection at all. */
+  :root {
+    --bg: #05070b; --card: #0d1219; --ink: #e8b45a; --pale: #cfd8e3;
+    --dim: #6f7d90; --line: #243040; --hot: #d85b4a; --ok: #5fa85f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto; padding: 24px 20px 80px; max-width: 900px;
+    background: var(--bg); color: var(--pale);
+    font: 16px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  h1 { font-size: 1.5em; letter-spacing: 4px; color: var(--ink); margin: 0 0 2px; }
+  .sub { color: var(--dim); margin: 0 0 28px; font-size: 0.9em; }
+  h2 {
+    font-size: 1.15em; color: var(--ink); margin: 40px 0 12px;
+    border-bottom: 1px solid var(--line); padding-bottom: 6px; letter-spacing: 2px;
+  }
+  h3 { font-size: 1em; color: var(--pale); margin: 24px 0 6px; }
+  p { margin: 10px 0; }
+  a { color: var(--ink); }
+  code, kbd {
+    background: #131a24; border: 1px solid var(--line); border-radius: 3px;
+    padding: 1px 5px; font-size: 0.9em; color: var(--ink);
+  }
+  kbd { min-width: 1.6em; display: inline-block; text-align: center; }
+  pre {
+    background: #131a24; border: 1px solid var(--line); border-radius: 5px;
+    padding: 12px 14px; overflow-x: auto; font-size: 0.85em; color: var(--ink);
+  }
+  .lede {
+    background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--ink);
+    border-radius: 5px; padding: 14px 18px; margin: 18px 0 28px;
+  }
+  .q {
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    padding: 14px 18px; margin: 14px 0;
+  }
+  .q h3 { margin-top: 0; color: var(--ink); }
+  .q .rank {
+    display: inline-block; min-width: 1.7em; margin-right: 8px;
+    color: var(--bg); background: var(--ink); border-radius: 3px;
+    text-align: center; font-weight: bold;
+  }
+  .warn { border-left: 3px solid var(--hot); }
+  .warn h3 { color: var(--hot); }
+  ol.steps { padding-left: 0; list-style: none; counter-reset: step; }
+  ol.steps > li {
+    counter-increment: step; position: relative; margin: 0 0 12px;
+    padding: 10px 14px 10px 52px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 5px;
+  }
+  ol.steps > li::before {
+    content: counter(step); position: absolute; left: 14px; top: 10px;
+    color: var(--ink); font-weight: bold;
+  }
+  .note { color: var(--dim); font-size: 0.9em; }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
+  strong { color: var(--ink); font-weight: normal; }
+  em { color: var(--pale); }
+  @media (max-width: 620px) { body { padding: 16px 12px 60px; font-size: 15px; } }
+</style>
+</head>
+<body>
+
+<h1>CARRIER DOMINION</h1>
+<p class="sub">Playtest script &middot; rewritten 2026-08-30 &middot; the Markdown copy is <code>PLAYTEST.md</code></p>
+
+<div class="lede">
+  <p>Two parts. <strong>Part one is what I most need to know</strong> — six
+  questions, worth more than everything else here put together. <strong>Part
+  two is a scenario</strong>: one complete war, start to finish, walking every
+  system in the order a real game uses them.</p>
+  <p>If you only have twenty minutes, do part one. Nothing needs preparation
+  beyond <code>./run.sh</code> and a browser.</p>
+</div>
+
+<h2>Part one — the six questions</h2>
+<p class="note">Ranked. If your time runs out, it runs out at the bottom.</p>
+
+<div class="q">
+  <h3><span class="rank">1</span>Does the Walrus feel dead?</h3>
+  <p>Launch one (<kbd>2</kbd>), wait for it to leave the deck, select it
+  (<kbd>N</kbd>), and try to drive it.</p>
+  <p>It <strong>will not</strong> answer the throttle: a selected craft sits
+  until you either click the sea to send it somewhere or press <kbd>T</kbd> to
+  take the stick. That is the design — the throttle is the carrier's helm
+  unless you are flying something.</p>
+  <p>You reported it as broken, and I believe the reason was that the
+  <strong>PILOT</strong> button was cut off the bottom of the button column,
+  so nothing on screen told you the option existed. That is fixed, and PILOT
+  now lights up when a craft is selected and unflown.</p>
+  <p><strong>So: does it read as obvious now?</strong> If it still feels dead,
+  my diagnosis was wrong, and the answer is to put the craft's state on the
+  panel in words — <em>on autopilot</em> versus <em>you have the stick</em>.</p>
+</div>
+
+<div class="q">
+  <h3><span class="rank">2</span>Does fuel biting make you think, or just make you wait?</h3>
+  <p>A full bunker is about an hour of hard steaming; wars run 25–70 minutes.
+  The ship warns at 25% and again at 10%.</p>
+  <p>Before this change you could steam flat out for an entire war and finish
+  with a fifth left, which made the whole fuel supply chain decorative. But
+  there is a bad version where fuel is simply a tax on going anywhere.
+  <strong>If it is a tax, say so and I will put it back</strong> — it is one
+  number.</p>
+</div>
+
+<div class="q">
+  <h3><span class="rank">3</span>One tabbed console, or six panels?</h3>
+  <p><kbd>J</kbd> <kbd>Q</kbd> <kbd>Z</kbd> <kbd>I</kbd> each open the console
+  at their own screen; the tabs along the top left do the same with a mouse.
+  The change I am least sure of.</p>
+  <p>The keys are a <strong>radio</strong> now: pressing the same key twice
+  closes the console rather than putting it back how it was. Tell me if that
+  fights your hands.</p>
+</div>
+
+<div class="q">
+  <h3><span class="rank">4</span>Which of the three stick inputs do you actually use?</h3>
+  <p>While flying a Manta you can pitch with the <strong>arrow keys</strong>,
+  the <strong>CLIMB/DIVE buttons</strong>, or by <strong>holding the right
+  mouse button over the view and dragging</strong>. If you only ever reach for
+  one, the other two are clutter and should go.</p>
+</div>
+
+<div class="q">
+  <h3><span class="rank">5</span>Is the weather overdone?</h3>
+  <p>Specifically the sea lighting up from inside when the sun is behind a
+  crest. That is the effect that makes water look like water, and the easiest
+  of the five to have overcooked. Rain, the wet deck, spray and the sunbeams
+  are the others.</p>
+  <p><strong>This needs <code>Modern · High</code></strong> — see <em>Before
+  you start</em>.</p>
+</div>
+
+<div class="q">
+  <h3><span class="rank">6</span>Does anything read as the game cheating?</h3>
+  <p>A storm shortens radar, a rough sea slows the boats, a gale lifts you off
+  the wavetops. All three are meant to be reasons to change your mind, not
+  taxes. If any feels like the game taking something away without telling you,
+  that is a defect in how it is <em>said</em>, and I want to know.</p>
+</div>
+
+<h2>Before you start</h2>
+
+<div class="q warn">
+  <h3>Check the tier chip in the top row</h3>
+  <p>It reads something like <code>1988 · Low</code> or <code>Modern · High</code>.</p>
+  <ul>
+    <li>If it is <strong>amber</strong>, the look you have chosen is asking for
+    more than the graphics tier pays for — and you are seeing <strong>none</strong>
+    of the weather, the mirror sea or the swell. Click it to change tier.</li>
+    <li>Weather needs <strong>High</strong>, whichever look you use. Your own ruling.</li>
+    <li>Clicking it reloads the page, but a solo war is saved first and resumed
+    on the way back in, so it is safe mid-war.</li>
+  </ul>
+</div>
+
+<p><strong>Two links worth keeping</strong>, once the game is on the host:</p>
+<pre>https://&lt;host&gt;/?mode=solo&amp;style=retro&amp;graphics=high&amp;islands=16&amp;teams=2&amp;start=0
+https://&lt;host&gt;/?mode=solo&amp;style=modern&amp;graphics=high&amp;islands=16&amp;teams=2&amp;start=0</pre>
+<p>Sharper 1988, and everything the RTX tier pays for. Same war either way —
+the look never touches the simulation.</p>
+
+<p><strong>Your war saves itself.</strong> Close the tab and the menu offers it
+back. If you ever see <em>“this war is no longer being saved”</em>, tell me —
+that is the browser's storage quota and I want the number where it bit.</p>
+
+<hr>
+
+<h2>Part two — one complete war, step by step</h2>
+<p>Start at the menu with <strong>8 islands</strong>, an <strong>AI
+commander</strong>, <strong>a home island each</strong>, and the look you want
+to judge. Each step says what to do and what should happen; anything else is a
+finding.</p>
+
+<h3>A. The bridge</h3>
+<ol class="steps">
+  <li><strong>Take the helm.</strong> <kbd>W</kbd> to build speed, <kbd>A</kbd>/<kbd>D</kbd>
+  to steer, <kbd>X</kbd> for all stop. Compass, throttle, speed and fuel live in
+  the HELM box, bottom left. The throttle bar is clickable — the original was
+  mouse-first.</li>
+  <li><strong>Look around.</strong> <kbd>C</kbd> cycles chase → gunsight →
+  birdseye; the camera tabs do the same. <kbd>O</kbd> looks astern.</li>
+  <li><strong>Lay a course.</strong> Click open water with nothing selected and
+  the ship sails there itself; the <code>A</code> chip lights while the
+  autopilot has it.</li>
+  <li><strong>Open the chart.</strong> Click <strong>PROG</strong>, tap three or
+  four points, then <strong>LAY COURSE</strong>. The button names whose course
+  it is laying — <code>PROG SHIP</code> with nothing selected.
+  <strong>CLEAR COURSE</strong> throws it away.</li>
+  <li><strong>RESOURCES</strong> on the chart colours the islands by role and
+  shows what is stockpiled where.</li>
+</ol>
+
+<h3>B. The air group</h3>
+<ol class="steps" start="6">
+  <li><strong>Launch a Manta</strong> (<kbd>1</kbd>). Watch the deck cycle —
+  hangar, lift, ramp, away. About five seconds, and meant to be a procedure
+  rather than a keypress.</li>
+  <li><strong>Select and fly it.</strong> <kbd>N</kbd> to select, <kbd>T</kbd>
+  to take the stick. The panel becomes the craft's. Pitch three ways
+  (question 4).</li>
+  <li><strong>WEAPON view.</strong> The selector moves to the bottom centre.
+  Pick a weapon and press <kbd>F</kbd>, or click the chip. You should be
+  looking <em>out of</em> the aircraft, not at it.</li>
+  <li><strong>Attack something.</strong> Click an enemy contact to order an
+  attack; with nothing selected, a click sends the ship's own laser.</li>
+  <li><strong>Bring it home.</strong> <kbd>R</kbd> recalls. Watch it dock — the
+  deck cycle in reverse.</li>
+</ol>
+
+<h3>C. Taking an island</h3>
+<ol class="steps" start="11">
+  <li><strong>Launch a Walrus</strong> (<kbd>2</kbd>) and send it to a neutral
+  island by clicking the shore.</li>
+  <li><strong>Deploy the ACCB pod</strong> (<kbd>P</kbd>) beside the island's
+  command node. That is the capture.</li>
+  <li><strong>Open the island board</strong> by clicking an island you hold.
+  Set its <strong>role</strong> — resource, factory or defence — and build.</li>
+  <li><strong>The virus bomb</strong> (<kbd>B</kbd>) takes an <em>enemy</em>
+  island intact instead of levelling it. Worth doing once for the difference.</li>
+  <li><strong>Island runways</strong> go on resource and defence islands. Land
+  a Manta on one and watch it refuel from the island's own stock.</li>
+</ol>
+
+<h3>D. Keeping the war supplied</h3>
+<ol class="steps" start="16">
+  <li><strong>The quartermaster</strong> (<kbd>Q</kbd>): island stocks, the
+  depot, the production bias, the refit rows. Buy a refit and watch it build at
+  a factory island.</li>
+  <li><kbd>K</kbd> makes the nearest island your depot; <kbd>L</kbd> calls a
+  supply run. The lighter sails out with fuel, ordnance and parts.</li>
+  <li><strong>The squadron console</strong> (<kbd>J</kbd>): the board, the
+  <strong>OUTFIT</strong> screen (every store has a weight, every hull a
+  budget), the <strong>DECK</strong>, and <strong>SCREEN</strong> for the decoy
+  pattern.</li>
+  <li><strong>The damage board</strong> (<kbd>Z</kbd>): seven sections, and
+  repair priorities you set yourself.</li>
+</ol>
+
+<h3>E. Being shot at</h3>
+<ol class="steps" start="20">
+  <li><strong>Flares</strong> (<kbd>E</kbd>) break a missile lock.
+  <kbd>Y</kbd> puts the decoy screen out — four inflatable decoys around the
+  ship, at the price of a quarter of your speed.</li>
+  <li><strong>The Hammerhead:</strong> <kbd>3</kbd> launches the Viewing Drone,
+  and in DRONE view a click fires a missile at what you are looking at.</li>
+  <li><strong>Take damage on purpose</strong> — sail into a defended island's
+  envelope — and watch the damage board and the repair system work.</li>
+</ol>
+
+<h3>F. The weather</h3>
+<ol class="steps" start="23">
+  <li><strong>Run the clock up</strong> (<kbd>.</kbd> for faster) and watch a
+  front come through. A day is thirty minutes at 1&times;.</li>
+  <li>In a squall: <strong>rain</strong>, a <strong>wet deck</strong> that
+  darkens and shines and takes a minute to dry, <strong>spray at the bow</strong>
+  when you are driving into a sea, and the scope's bottom line naming the sea
+  state and what the rain is costing your radar.</li>
+  <li><strong>Face the sun through a gap in the cloud</strong> for the shafts.
+  Not in clear sky, not in a downpour — neither has anything to shape them.
+  <em>Known limit:</em> they are not blocked by islands or by your own hull.</li>
+</ol>
+
+<h3>G. Finishing it</h3>
+<ol class="steps" start="26">
+  <li><strong>Win it.</strong> Hold two thirds of the islands, or sink the
+  enemy carrier.</li>
+  <li><strong>The ending screen</strong> shows the scoreboard the fog was
+  hiding, the islands, and how long the war ran.</li>
+  <li><kbd>ESC</kbd> twice surrenders, if you would rather see that ending.</li>
+</ol>
+
+<h2>Also worth a look</h2>
+<ul>
+  <li><strong>A second seat.</strong> <code>./run.sh --lan</code>, join from a
+  phone or another machine. The war room keeps the same join code all evening.</li>
+  <li><strong>Watch a war back.</strong> <code>?mode=replay</code> replays the
+  autosaved war through the same engine.</li>
+  <li><strong>A phone.</strong> Landscape only — portrait is gated. One
+  scrolling column of buttons a side. <strong>I have not been able to measure
+  how fast it runs</strong>, so if it is sluggish, tell me <em>what you were
+  doing</em> when it was.</li>
+  <li><strong>The shop window.</strong> Sit on the menu and watch the diorama.</li>
+</ul>
+
+<h2>How to report</h2>
+<p>What helps most, in order:</p>
+<ol>
+  <li><strong>What you were doing</strong> — the step number above is ideal.</li>
+  <li><strong>A screenshot.</strong> <code>debugging/shots/</code> is where mine go.</li>
+  <li><strong>The seed and the tick</strong>, if the DBG strip is open.</li>
+  <li><strong>Whether it happened twice.</strong> Intermittent and consistent
+  are different bugs and I chase them differently.</li>
+</ol>
+<p>For anything that feels wrong rather than broken — pacing, difficulty, a
+control that fights you — say it in your own words. Those have been the most
+valuable reports so far.</p>
+
+</body>
+</html>
