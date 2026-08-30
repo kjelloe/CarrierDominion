@@ -390,6 +390,17 @@ Look for these shapes first — every one produced a real bug:
   frustum culling handles it. A plan is a hypothesis; measure before spending
   a day on it.
 
+- **A layout read in the render loop.** `getComputedStyle` and
+  `getBoundingClientRect` force the browser to resolve layout; calling either
+  from the draw path, every frame, is a style flush per frame. Both crept in
+  during a pass whose entire purpose was making the game cheaper on a phone.
+  Cache the value and invalidate it from `resize`.
+- **A value chosen once from the window's shape.** The pixel ratio and the
+  instrument panel's height are both decided from the viewport, and both were
+  computed at construction - so rotating a phone kept the wrong ones for the
+  rest of the session. Anything derived from the window belongs in the resize
+  path too, and a probe can prove it by shrinking and growing the window.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

@@ -876,6 +876,11 @@ function resize(view3d) {
   const height = Math.max(1, window.innerHeight);
   view3d.camera.aspect = width / height;
   view3d.camera.updateProjectionMatrix();
+  // The pixel ratio has to follow the window too. `renderScale` reads the
+  // SHORT side to decide whether this is a phone, and a phone rotating from
+  // portrait to landscape changes which side that is - so a ratio chosen once
+  // at construction is the wrong one for half of the device's life.
+  view3d.renderer.setPixelRatio(renderScale(view3d.preset));
   view3d.renderer.setSize(width, height, false);
 }
 

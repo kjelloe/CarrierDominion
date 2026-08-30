@@ -22,7 +22,9 @@ import {
 } from './localsave.js';
 import { gameFromState, replayLog } from '../shared/savefile.js';
 import { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea, TEAM_COLOURS } from './render/scene.js';
-import { createInstruments, drawFlightInstruments, drawInstruments, helmHitAt } from './render/instruments.js';
+import {
+  createInstruments, drawFlightInstruments, drawInstruments, forgetPanelHeight, helmHitAt,
+} from './render/instruments.js';
 import { createSound, playEvents, playWarning, startAmbience, toggleMute, wakeSound } from './sound.js';
 import { createDamagePanel, renderDamagePanel, toggleDamagePanel } from './panels/damage.js';
 import {
@@ -855,6 +857,11 @@ function renderConsoleTabs() {
   if (strip.__signature === signature) return;
   strip.__signature = signature;
   strip.textContent = '';
+  // The row's height can only change when its contents do - here - or when
+  // the window does (the resize handler). Reading `getBoundingClientRect`
+  // every frame to find that out is a layout flush per frame, which is the
+  // opposite of what a mobile pass is for.
+  window.setTimeout(syncBarHeight, 0);
   for (const tab of CONSOLE_TABS) {
     if (tab.hidden === true) continue;
     const node = document.createElement('div');
@@ -1673,7 +1680,6 @@ function frame(nowMs) {
   // it is kept current every frame rather than only when the console opens.
   // It rebuilds only when something it shows has actually changed.
   renderConsoleTabs();
-  syncBarHeight();
   updateLocation();
   updateAlwaysOn();
   renderChart(state.chart, state.view, ownTeamColour());
@@ -2372,7 +2378,14 @@ async function main() {
   // next real snapshot overwrites it, which is why the probe pauses first.
   window.__debugView = (view) => { state.view = view; };
   resize(state.scene3d);
-  window.addEventListener('resize', () => resize(state.scene3d));
+  window.addEventListener('resize', () => {
+    // The stylesheet may have chosen a different panel height for the new
+    // shape, and the instruments cache it rather than re-reading style every
+    // frame.
+    forgetPanelHeight();
+    syncBarHeight();
+    resize(state.scene3d);
+  });
 
   if (MODE === 'replay') {
     // The autosaved war, played back through the same reducer. 404 means no

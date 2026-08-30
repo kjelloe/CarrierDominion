@@ -5,6 +5,39 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — Reviewing the mobile slice: two layout reads in the render loop
+
+Three findings, all mine, and the first two are the kind that make a
+performance pass worse than not doing it.
+
+**`panelHeight()` called `getComputedStyle` five times a frame.** Reading
+computed style forces the browser to resolve layout, and I had put it in the
+draw path and the hit test - so every frame flushed style five times, on the
+hardware least able to afford it. It is cached now and cleared by resize.
+
+**`syncBarHeight()` measured the top row every frame** with
+`getBoundingClientRect`, for the same reason and with the same cost. The row's
+height can only change when its contents change or when the window does, so it
+runs on exactly those two events.
+
+**And rotating is not a reload.** Both the pixel ratio and the panel's height
+are chosen from the window's SHAPE, and both were decided once at construction
+- so a phone turned from portrait to landscape kept the wrong ones for the
+rest of the session. `resize()` re-chooses them, and the probe proves it by
+shrinking the window to 1600x900 and back: 0.75 -> 1 -> 0.75 for the ratio,
+124 -> 196 -> 124 for the panel, with the canvas following.
+
+Verified the usual way, by breaking it: with the `setPixelRatio` line removed
+the probe names the defect on every phone.
+
+One thing worth noting about how this was caught: `npm run smoke` passed with
+a missing import, because the import was only reached from the resize handler
+and the smoke gate never resizes. A gate that does not exercise a path cannot
+protect it - the same lesson as the island board that threw for days because
+nothing ever opened it.
+
+---
+
 ## 2026-08-30 — The mobile pass, first slice: it was the layout, not the renderer
 
 The plan for this (docs/07 §4) was a list of renderer knobs written three

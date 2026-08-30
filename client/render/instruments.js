@@ -20,12 +20,27 @@ const TAU = Math.PI * 2;
 // the box it is drawn into.
 const PANEL_FALLBACK = 196;
 
+// CACHED. `getComputedStyle` forces the browser to resolve style, and this is
+// called five times a frame from the draw path and the hit test - a
+// per-frame style flush is exactly the wrong thing to add during a pass whose
+// whole purpose is making the game cheaper on a phone. The value only changes
+// when the window does, so the resize handler clears it.
+let cachedPanelHeight = -1;
+
 function panelHeight() {
+  if (cachedPanelHeight > 0) return cachedPanelHeight;
   if (typeof window === 'undefined') return PANEL_FALLBACK;
   const raw = window.getComputedStyle(document.documentElement)
     .getPropertyValue('--panel-h');
   const value = Number(String(raw).replace('px', '').trim());
-  return Number.isFinite(value) && value > 40 ? value : PANEL_FALLBACK;
+  cachedPanelHeight = Number.isFinite(value) && value > 40 ? value : PANEL_FALLBACK;
+  return cachedPanelHeight;
+}
+
+// The window changed shape, so the stylesheet may have chosen a different
+// panel height. Called from the resize handler; nothing else may need it.
+function forgetPanelHeight() {
+  cachedPanelHeight = -1;
 }
 
 // The helm's clickable geometry, shared between the drawing below and the
@@ -591,6 +606,6 @@ function drawFlightInstruments(panel, view, unit, readout, deltaSeconds, colours
 }
 
 export {
-  panelHeight, SCHEMATIC, HELM, helmHitAt, createInstruments,
+  panelHeight, forgetPanelHeight, SCHEMATIC, HELM, helmHitAt, createInstruments,
   drawInstruments, drawFlightInstruments, bezel, bar,
 };

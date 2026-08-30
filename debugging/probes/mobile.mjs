@@ -159,6 +159,31 @@ for (const [name, width, height] of PHONES) {
   );
   if (!portraitGate) problems.push(`${name}: portrait was allowed through without the gate`);
 
+  // ROTATING IS NOT A RELOAD. The pixel ratio and the panel's height are both
+  // chosen from the window's shape, and both were decided once at startup -
+  // so a phone turned from portrait to landscape kept the wrong ones for the
+  // rest of the session.
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.waitForTimeout(600);
+  const wide = await page.evaluate(() => ({
+    dpr: window.__scene3d.renderer.getPixelRatio(),
+    panel: document.getElementById('panel').height,
+  }));
+  await page.setViewportSize({ width: width, height: height });
+  await page.waitForTimeout(600);
+  const narrow = await page.evaluate(() => ({
+    dpr: window.__scene3d.renderer.getPixelRatio(),
+    panel: document.getElementById('panel').height,
+  }));
+  if (!(wide.dpr > narrow.dpr)) {
+    problems.push(`${name}: the pixel ratio did not follow the window `
+      + `(${narrow.dpr} small, ${wide.dpr} large)`);
+  }
+  if (!(wide.panel > narrow.panel)) {
+    problems.push(`${name}: the instrument panel did not resize with the window `
+      + `(${narrow.panel}px small, ${wide.panel}px large)`);
+  }
+
   await page.screenshot({ path: `debugging/shots/mobile-${name}.png` });
   await context.close();
 }

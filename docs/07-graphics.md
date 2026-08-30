@@ -453,6 +453,23 @@ sizes, nothing escapes the window, nothing is out of a finger's reach,
 and the rotate gate is down in landscape and up in portrait. The overlap check
 is the important one — reach alone called the sprawling layout fine.
 
+**Reviewing that slice found three more, all of them mine and two of them
+ironic in a pass about making the game cheaper:**
+
+- **`panelHeight()` called `getComputedStyle` five times a frame.** Reading
+  computed style forces the browser to resolve layout; doing it from the draw
+  path and the hit test, every frame, is precisely the cost this pass exists
+  to remove. Cached, and cleared by the resize handler.
+- **`syncBarHeight()` measured the top row every frame** with
+  `getBoundingClientRect` — another layout flush. The row's height can only
+  change when its contents do or when the window does, so it runs on those
+  two events instead.
+- **Rotating is not a reload.** The pixel ratio and the panel height are both
+  chosen from the window's shape, and both were decided once at construction
+  — so a phone turned from portrait to landscape kept the wrong ones for the
+  rest of the session. `resize()` re-chooses them now, and the probe asserts
+  it by shrinking and growing the window.
+
 Still open from the plan: the grid sea capped by distance. And a caution for
 whoever writes the next check here: `offsetParent` is null for ANY
 `position: fixed` element, visible or not, so both of the rotate-gate
