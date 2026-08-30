@@ -569,3 +569,54 @@ test('the watchdog endpoint does not carry the code either', async () => {
     await app.close();
   }
 });
+
+// --- what actually stands between a stranger and a carrier -------------------
+//
+// NOTHING DOES, and that is worth a test rather than a discovery.
+//
+// The war room has a join code, docs/03 says "one code hands friends a whole
+// evening", and ops/DEPLOY.md said the code was the only thing between a
+// stranger and a seat. None of that is enforcement: the server never verifies
+// a code and the client never sends one. The code is a LABEL for the room, so
+// friends know they are in the same one - not a lock.
+//
+// On a LAN that is correct and deliberate; the network is the boundary. On the
+// public host this game is days away from, it means the first person to open
+// the URL commands a carrier in somebody's war. That is an owner decision, not
+// a bug to fix quietly, so these tests pin the behaviour as it IS. If access
+// control is ever added, they fail and say exactly what changed.
+
+test('a stranger with no token and no code is given a carrier', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-open-door' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const sock = connect(`ws://127.0.0.1:${address.port}`);
+    await sock.open();
+    const welcome = await sock.next((m) => m.type === 'welcome');
+    assert.equal(welcome.team, 0, 'a stranger was not given the first carrier');
+    assert.equal(welcome.spectator, false, 'a stranger was seated as a spectator, not a commander');
+    sock.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test('and the room hands that stranger its join code', async () => {
+  // `broadcastLobby` sends to every entry in app.seats, and an observer is an
+  // entry in app.seats with team -1 - so even a table that only lets people
+  // WATCH hands them the code.
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-open-code' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const code = app.joinCode();
+    assert.match(code, /^[0-9A-HJKMNP-TV-Z]{5}$/);
+    const sock = connect(`ws://127.0.0.1:${address.port}`);
+    await sock.open();
+    const lobby = await sock.next((m) => m.type === 'lobby');
+    assert.equal(lobby.lobby.code, code,
+      'if this now differs, the code stopped being broadcast - update docs/03 and ops/DEPLOY.md');
+    sock.close();
+  } finally {
+    await app.close();
+  }
+});

@@ -68,7 +68,10 @@ app.listen(PORT, HOST).then(() => {
     process.stdout.write(`Resumed the saved war at tick ${app.game.state.tick}.\n`);
   }
   if (LOBBY && app.lobby !== 0) {
-    process.stdout.write(`War room open - join code ${app.lobby.code}\n`);
+    // Through app.joinCode(), the one reader: the code was deliberately taken
+    // out of app.health() so it cannot be published by accident, and a second
+    // place that reaches into app.lobby.code directly is how that comes undone.
+    process.stdout.write(`War room open - join code ${app.joinCode()}\n`);
   }
   if (WATCH) {
     process.stdout.write(`Watchdog on - findings at http://${HOST}:${PORT}/watch\n`);

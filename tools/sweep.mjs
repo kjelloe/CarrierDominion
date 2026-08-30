@@ -140,6 +140,14 @@ function git(...args) {
   return (r.stdout ?? '').trim();
 }
 
+// Only sweep when INVOKED, never when imported - the sibling file learned
+// this the hard way (a module body that runs the CLI kills the test process),
+// and this one is worse: importing it without the guard runs forty-eight wars
+// before the first assertion. Exporting runWar is what lets the suite check
+// this instrument against `npm run battery`.
+const invokedDirectly = process.argv[1] !== undefined
+  && new URL(`file://${process.argv[1]}`).pathname === new URL(import.meta.url).pathname;
+
 const COUNT = flag('count', 48);
 const ISLANDS = flag('islands', 0);
 const TEAMS = flag('teams', 2);
@@ -151,7 +159,7 @@ const ONE = flag('seed', 0);
 
 // The header is written by shard 0 only, so the runner can concatenate shards
 // without teaching it which lines to drop.
-if (SHARD === 0) {
+if (invokedDirectly && SHARD === 0) {
   const raw = createInitialState(seedFor(0), loadRules());
   const probe = createInitialState(seedFor(0), rulesFor(ISLANDS, TEAMS));
   process.stdout.write(`# carrier-dominion sweep\n`);
@@ -163,12 +171,16 @@ if (SHARD === 0) {
   process.stdout.write(`${COLUMNS.join(',')}\n`);
 }
 
-if (ONE > 0) {
-  const row = runWar(ONE, ISLANDS, TEAMS);
-  process.stdout.write(`${COLUMNS.map((c) => row[c]).join(',')}\n`);
-} else {
-  for (let i = SHARD; i < COUNT; i += SHARDS) {
-    const row = runWar(seedFor(i), ISLANDS, TEAMS);
+if (invokedDirectly) {
+  if (ONE > 0) {
+    const row = runWar(ONE, ISLANDS, TEAMS);
     process.stdout.write(`${COLUMNS.map((c) => row[c]).join(',')}\n`);
+  } else {
+    for (let i = SHARD; i < COUNT; i += SHARDS) {
+      const row = runWar(seedFor(i), ISLANDS, TEAMS);
+      process.stdout.write(`${COLUMNS.map((c) => row[c]).join(',')}\n`);
+    }
   }
 }
+
+export { COLUMNS, PROGRESS, TICK_CAP, runWar, rulesFor, seedFor };

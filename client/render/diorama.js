@@ -24,6 +24,7 @@ import {
   buildManta,
   buildOcean,
   buildOceanGrid,
+  updateOceanGrid,
   buildShot,
   buildTurret,
   buildWalrus,
@@ -125,7 +126,14 @@ function startDiorama(style) {
   };
   scene.add(buildIslandMesh(ISLE, stagePreset, style));
   scene.add(buildOcean(SEA_METRES, stagePreset, style));
-  if (style.oceanGrid) scene.add(buildOceanGrid(SEA_METRES, style));
+  // Held, and updated in the frame below. A 6 km sea is smaller than the
+  // grid's reach, so today this builds one static mesh over the whole stage
+  // and `updateOceanGrid` does nothing - but that is a fact about a constant
+  // in ANOTHER file (GRID_REACH_METRES in world.js). Calling the updater
+  // anyway costs nothing and means raising SEA_METRES past the reach cannot
+  // silently strand the patch at the origin.
+  const oceanGrid = style.oceanGrid ? buildOceanGrid(SEA_METRES, style) : 0;
+  if (oceanGrid !== 0) scene.add(oceanGrid);
 
   // The cast. Defences on the island's shoulders, the Walrus on the beach it
   // is storming, the carrier standing off with its bow toward the fight.
@@ -207,6 +215,8 @@ function startDiorama(style) {
       CENTRE.z + Math.sin(orbit) * 1750,
     );
     camera.lookAt(CENTRE.x, 110, CENTRE.z);
+
+    updateOceanGrid(oceanGrid, camera);
 
     const uniforms = scene.getObjectByName('ocean')?.material.uniforms;
     if (uniforms !== undefined && uniforms.uTime !== undefined) uniforms.uTime.value = elapsed;

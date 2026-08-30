@@ -123,7 +123,12 @@ The owner's first hands-on session ruled three things:
 
 - **One join code is an evening** (2026-08-22): when a LAN war ends, the
   host reopens the room from the ending screen and the table fights again on
-  the same code.
+  the same code. **The code names the room; it does not guard it** — nothing
+  verifies it, and there is no access control of any kind (docs/03). That was
+  invisible while the game only ran on a LAN, where the network is the
+  boundary. It stops being invisible the moment it is on a public hostname:
+  **open question for the owner, raised 2026-08-30 while writing the deploy
+  script.**
 
 - **Graphics tiers get real targets** (2026-08-22): Low = mobile and
   integrated GPUs (full mobile pass deferred), Medium = the current look,

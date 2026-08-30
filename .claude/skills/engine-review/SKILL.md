@@ -165,6 +165,17 @@ Look for these shapes first — every one produced a real bug:
   ladder row went in at the top; a HUD line moved to the instrument panel; a
   throttle scale grew an astern half). Select by NAME, and read chosen values
   BACK rather than hardcoding them - defaults move too.
+- **A token that reads like a gate and checks nothing.** The war room has a
+  join code, the docs said "one code hands friends a whole evening", and a
+  deploy doc called it "the only thing between a stranger and a seat" - but no
+  code is ever verified, by anyone. It is a label. Before writing down what a
+  credential protects, find the line that REJECTS a request lacking it; if
+  there is no such line, the thing is a name, not a lock. The boundary was the
+  LAN all along, which is invisible until the day a public hostname removes it.
+- **A guard you claimed exists but never automated.** A dev-log entry said the
+  sweep/battery agreement "now guards" the harness; it was run by hand once.
+  When a write-up says a check guards something, grep the suite for it - the
+  sentence is worth nothing until a test fails without it.
 - **A secret riding in the object that gets published.** `/healthz` carried the
   war room's join code, and `/healthz` is public on a shared box by the
   monitoring contract — so the room was not private. Stripping the field at the

@@ -308,11 +308,15 @@ function createApp(options) {
       resumed: app.resumed,
       resumeProblem: app.resumeProblem,
       // NOT the code itself. /healthz is reachable from the internet by the
-      // shared-box monitoring contract (ops/DEPLOY.md), and the war room's
-      // join code is the only thing standing between a stranger and a seat -
-      // publishing it there meant anyone who curled the health endpoint could
-      // walk into the room. A monitor only ever needed to know that a room is
-      // WAITING, which is what this says.
+      // shared-box monitoring contract (ops/DEPLOY.md), and a room's code has
+      // no business on an endpoint built for a monitor. A monitor only ever
+      // needed to know that a room is WAITING, which is what this says.
+      //
+      // Be honest about what this buys: the code is a LABEL, not a lock. The
+      // server never verifies one and the client never sends one, so nothing
+      // gates a seat (docs/03; pinned by test/server_ws.test.js "a stranger
+      // with no token and no code is given a carrier"). Keeping the code off a
+      // public endpoint is defence in depth, not the door.
       //
       // The code is not merely stripped on the way out, it is not in the
       // object at all: a field that must not be published cannot live in the

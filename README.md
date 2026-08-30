@@ -82,6 +82,8 @@ npm run smoke   # Playwright: the real client in a real Chromium
 npm run gate    # both - what a slice must pass before it closes
 npm run sim     # headless sim probe: trajectory + tick rate
 npm run battery # the sim across five seeds, under the watchdog
+npm run sweep   # many wars, one CSV row each (--count, --islands, --teams, --seed)
+npm run batch   # the battery lane: queue | status | run  (see batch/README.md)
 npm run repin   # re-pin the M0-A fixture (refuses on event drift)
 npm run trig    # regenerate the committed trig tables
 ```
@@ -98,7 +100,8 @@ client/    three.js renderer, instruments, panels, input, sound, transports.
            Floats live here and nowhere else.
 data/      every tunable number, as JSON. Never a constant in engine code.
 test/      node --test suite, the pinned fixture, headless drivers, smoke gate.
-tools/     generators and the re-pin tool.
+tools/     generators, the re-pin tool, the battery, the sweep and the batch lane.
+batch/     the battery lane's queue: tasks in, responses out, git as transport.
 debugging/ probes that drive a real browser, and the screenshots they take.
 docs/      what is built, and why it is built that way.
 ```

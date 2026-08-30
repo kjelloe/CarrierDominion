@@ -87,10 +87,21 @@ expensive damage state in the game — though the chart keeps its ghosts.
   of its identity and a replay cannot silently use different ones.
 - **Chat**: `CHAT_KEPT = 24` lines of scrollback, `CHAT_MAX = 160` characters
   each, both before and during a war.
+- **The join code is a LABEL, not a LOCK.** Nothing verifies it: the server
+  never checks a code and the client never sends one. It exists so friends can
+  confirm they are in the same room. **There is no access control at all** — a
+  socket with no token and no code is handed the lowest free team, and a full
+  table gets a spectator seat if the room allows watchers. On a LAN that is the
+  design and the network is the boundary; on a public host it means the first
+  person to open the URL commands a carrier. Pinned by
+  `test/server_ws.test.js` ("a stranger with no token and no code is given a
+  carrier") so that changing it is a decision rather than an accident. The room
+  also broadcasts the code to every seat including spectators, so a
+  watch-only table hands it out too.
 - **The room comes back.** When the war ends, the host takes BACK TO THE WAR
   ROOM from the ending screen: the finished war is saved one last time, the
-  table unreadies, and the SAME join code holds — one code hands friends a
-  whole evening, not one war. Each new war gets a fresh watchdog, and the
+  table unreadies, and the SAME join code holds — one code names an evening,
+  not one war. Each new war gets a fresh watchdog, and the
   client rebuilds its world from the new war's first snapshot (the room may
   have chosen a different archipelago). Reopening a war still in progress is
   refused: abandoning is a different decision from finishing.

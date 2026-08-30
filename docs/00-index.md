@@ -1,6 +1,6 @@
 # Carrier Dominion — documentation
 
-What is actually built, as of 2026-08-25. These describe the code that exists;
+What is actually built, as of 2026-08-30. These describe the code that exists;
 they are not a plan. For the plan and the rulings behind it see
 [`../plan-version1.md`](../plan-version1.md); for what changed and why, in
 order, see [`../dev-log.md`](../dev-log.md).
@@ -44,6 +44,10 @@ client/    three.js renderer, instruments, panels, input, sound, transports.
            Floats live here and nowhere else.
 data/      every tunable number, as JSON. Never a constant in engine code.
 test/      node --test suite, the pinned fixture, headless drivers, smoke gate.
-tools/     generators and the re-pin tool.
+tools/     generators, the re-pin tool, the battery, and the sweep + batch
+           lane that runs long sweeps on a second machine.
+batch/     the battery lane's queue: tasks in, responses out, git as the
+           transport. Tracked, and therefore never allowed to carry a
+           hostname, a username or an absolute path.
 debugging/ probes that drive a real browser, and the screenshots they take.
 ```

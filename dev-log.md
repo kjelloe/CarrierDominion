@@ -5,6 +5,70 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — The seventh review: the lock that was only a label
+
+Owner asked for the usual sweep for omissions. The headline is a correction to
+work from earlier the same day.
+
+**Nothing stands between a stranger and a carrier.** Hours earlier I took the
+join code out of `/healthz` and wrote, in three places, that the code "is the
+only thing between a stranger and a seat". It is not. **The server never
+verifies a join code and the client never sends one.** The code is a LABEL, so
+friends know they are in the same room — not a lock. Verified against a running
+server rather than argued from the source: a socket with **no token and no
+code** is handed **team 0, a real carrier**, and is then sent the code anyway,
+because `broadcastLobby` writes to every entry in `app.seats` and a spectator is
+an entry in `app.seats`.
+
+On a LAN that is correct and deliberate: the network is the boundary. The game
+is days from a public hostname, which removes the boundary and puts nothing in
+its place — the first person to open the URL commands a carrier in whatever war
+is running. That is an owner decision (accept it, as every drop-in sibling on
+that box does; gate it, cheapest as nginx basic auth; or keep the hostname
+unpublished), so it is written up as an open question in docs/06 and as the
+blocking item in ops/DEPLOY.md rather than quietly fixed.
+
+Two tests now pin the behaviour AS IT IS, so that changing it is a decision:
+"a stranger with no token and no code is given a carrier", and "the room hands
+that stranger its join code". The health fix stands — a code broadcast to the
+whole internet is worse than one broadcast to whoever already joined — but it
+is defence in depth, not the door, and the comment in `server/app.js` now says
+so. The wrong sentence is corrected in the earlier dev-log entry, in
+ops/DEPLOY.md and in ops/NOTES.md.
+
+**A guard I claimed existed did not.** The battery-lane entry says the
+sweep/battery agreement "now guards" against an instrument measuring a
+different game. It was something I ran by hand once. `test/tools_sweep.test.js`
+runs it now — seed 900913 must give t=18695, winner 0, sinking, lull 3444 @
+14069 through both instruments — along with checks that the sweep's config
+comes through `applyLobbyOptions` for every team count, that seeds are
+collision-free, and that the PROGRESS list still matches the battery's.
+
+**And the lesson the sibling file had already learned.** `tools/batch.mjs` has
+an invoked-directly guard; `tools/sweep.mjs`, written an hour later, did not —
+so importing it ran forty-eight wars before the first assertion. Exactly "a
+guard applied to one caller and not its sibling", committed by the same hand on
+the same afternoon. Guarded, and `runWar` exported, which is what let the
+agreement test exist at all.
+
+Smaller things, each a latent trap rather than a bug today:
+
+- **The diorama's grid was safe by coincidence.** A 6 km stage is smaller than
+  the grid's 16.8 km reach, so it builds one static mesh — but that is a fact
+  about a constant in `world.js`, and raising `SEA_METRES` past the reach would
+  have stranded the patch at the origin with nothing to say so. The diorama
+  calls `updateOceanGrid` every frame now; the coupling is gone rather than
+  documented.
+- **Two readers of the join code.** `server/index.js` reached into
+  `app.lobby.code` directly. The whole point of `app.joinCode()` is that there
+  is one reader; a second one is how the field creeps back into a payload.
+- **docs/00-index.md still said "as of 2026-08-25"** and its layout tree had no
+  `batch/`; the README's command block had no `sweep` or `batch`.
+
+592 tests, smoke clean, splash_shot/sea_grid/lobby probes green.
+
+---
+
 ## 2026-08-30 — Five seeds are five anecdotes: the battery lane
 
 Owner asked whether there was batch-PC work here, pointing at the sibling's
@@ -77,8 +141,13 @@ walked past, because it is only a defect once the thing is on the internet.
 **`/healthz` published the war room's join code.** Confirmed against a live
 server, not read off the source: `"status":"lobby" ... "joinCode":"JYWYH"`. On
 a shared box `/healthz` is public by the monitoring contract — that is what it
-is *for* — and the join code is the only thing between a stranger and a seat.
-Anyone who curled the health endpoint could walk into the room.
+is *for* — so a room's code had no business on it. Anyone who curled the health
+endpoint could read it.
+
+> **Corrected the same day, by the review below.** This entry originally said
+> the code "is the only thing between a stranger and a seat". Nothing is: the
+> server never verifies a code and the client never sends one. The fix is still
+> right; the reason given for it was not. See the review entry above.
 
 Owner ruled: fix it in the game. The shape of the fix is the part worth
 keeping: **the code is not stripped on the way out, it is not in the object at
