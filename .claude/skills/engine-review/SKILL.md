@@ -374,6 +374,22 @@ Look for these shapes first — every one produced a real bug:
   problem. Guard the point where a missing thing becomes unusable and say what
   is missing - a probe's job is to name the failure, not to become one.
 
+- **`offsetParent` is null for `position: fixed`.** Two probe assertions about
+  a rotate-to-landscape gate were written on it and could never fail - the
+  gate is fixed, so it reads as hidden whether it is up or not. Test computed
+  `display`, and be suspicious of any visibility check that has never once
+  gone red.
+- **A desktop answer applied to a touch layout.** Wrapping the action columns
+  fixed a desktop overflow; on a coarse pointer, with bigger buttons, it
+  fanned them across the whole phone screen on top of everything else. When a
+  layout rule meets a different input class, re-measure rather than assume it
+  generalises.
+- **An optimisation from an old plan, unmeasured.** docs/07 had listed
+  "merge island geometry into one draw call" for weeks. Measured, draw calls
+  do not scale with island count at all (79 at 8 islands, 57 at 64) because
+  frustum culling handles it. A plan is a hypothesis; measure before spending
+  a day on it.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

@@ -13,7 +13,20 @@
 import { drawRadar } from './radar.js';
 
 const TAU = Math.PI * 2;
-const PANEL_HEIGHT = 196;
+// Read back from the stylesheet rather than repeated here: the panel is
+// shorter on a landscape phone, where 196px of a 390px window left the sea
+// with less room than the instruments (mobile pass, 2026-08-30). One number,
+// declared in CSS as `--panel-h`, so the canvas is always exactly as tall as
+// the box it is drawn into.
+const PANEL_FALLBACK = 196;
+
+function panelHeight() {
+  if (typeof window === 'undefined') return PANEL_FALLBACK;
+  const raw = window.getComputedStyle(document.documentElement)
+    .getPropertyValue('--panel-h');
+  const value = Number(String(raw).replace('px', '').trim());
+  return Number.isFinite(value) && value > 40 ? value : PANEL_FALLBACK;
+}
 
 // The helm's clickable geometry, shared between the drawing below and the
 // hit-test the client uses - one table, so the paint and the click can never
@@ -21,22 +34,62 @@ const PANEL_HEIGHT = 196;
 // to set target speed" - the operations manual), and this is that: the
 // throttle bar IS the speed scale, and the rudder arrows hold like the keys
 // and CENTRE UP on release.
-const HELM = {
+// The helm's geometry at the FULL panel height, and a scaled copy for any
+// other. On a landscape phone the panel is 124px rather than 196, and these
+// vertical offsets are what put the fuel bar and the rudder buttons below the
+// bottom edge - drawn but unreachable, which for a rudder is worse than
+// missing (mobile pass, 2026-08-30).
+//
+// Everything vertical scales; nothing horizontal does, because the panel is
+// always as wide as the window. The hit test reads the SAME scaled table as
+// the paint, so a shrunken helm still answers the finger where it looks.
+const HELM_FULL = {
   pad: 10,
   width: 250,
   gaugeX: 10 + 250 * 0.55,
   gaugeW: 250 * 0.38,
   throttleY: 58,
   throttleH: 12,
+  speedY: 88,
+  fuelY: 128,
   rudderY: 156,
   rudderW: 34,
   rudderH: 24,
 };
 
+// How much shorter this panel is than the one the layout was designed for.
+// Everything with a fixed vertical offset multiplies by this; horizontal
+// positions do not, because the panel is always the width of the window.
+function panelScale(panelH) {
+  return Math.min(1, panelH / PANEL_FALLBACK);
+}
+
+function helmLayout(panelH) {
+  const scale = panelH / PANEL_FALLBACK;
+  if (scale >= 0.999) return HELM_FULL;
+  return {
+    pad: Math.max(4, Math.round(HELM_FULL.pad * scale)),
+    width: HELM_FULL.width,
+    gaugeX: HELM_FULL.gaugeX,
+    gaugeW: HELM_FULL.gaugeW,
+    throttleY: Math.round(HELM_FULL.throttleY * scale),
+    throttleH: Math.max(8, Math.round(HELM_FULL.throttleH * scale)),
+    speedY: Math.round(HELM_FULL.speedY * scale),
+    fuelY: Math.round(HELM_FULL.fuelY * scale),
+    rudderY: Math.round(HELM_FULL.rudderY * scale),
+    rudderW: HELM_FULL.rudderW,
+    rudderH: Math.max(18, Math.round(HELM_FULL.rudderH * scale)),
+  };
+}
+
+// Kept for anything that wants the nominal table.
+const HELM = HELM_FULL;
+
 // What a click at panel coordinates (x, y) means: a throttle setting, a held
 // rudder, or nothing. Slack rows above and below the bar make the scale easy
 // to hit without stealing the rest of the helm.
 function helmHitAt(x, y) {
+  const HELM = helmLayout(panelHeight());
   if (x >= HELM.gaugeX - 4 && x <= HELM.gaugeX + HELM.gaugeW + 4
     && y >= HELM.throttleY - 10 && y <= HELM.throttleY + HELM.throttleH + 8) {
     // The scale runs -25..100: the leftmost fifth is the astern gear (the
@@ -60,6 +113,9 @@ function helmHitAt(x, y) {
 // mirror. `active` is the current rudder so the pressed side reads pressed.
 // No label: two arrows either side of the helm explain themselves.
 function drawRudderButtons(ctx, colours, active) {
+  // The scaled table, like everything else on the helm: at 124px the nominal
+  // rudder row sits 32 pixels below the bottom edge.
+  const HELM = helmLayout(panelHeight());
   const y = HELM.rudderY;
   for (const side of [1, -1]) {
     const x = side === 1 ? HELM.gaugeX : HELM.gaugeX + HELM.gaugeW - HELM.rudderW;
@@ -316,6 +372,7 @@ function publishScopeBox(box) {
 function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   const canvas = panel.canvas;
   const width = window.innerWidth;
+  const PANEL_HEIGHT = panelHeight();
   if (canvas.width !== width || canvas.height !== PANEL_HEIGHT) {
     canvas.width = width;
     canvas.height = PANEL_HEIGHT;
@@ -325,6 +382,7 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   ctx.clearRect(0, 0, width, PANEL_HEIGHT);
   if (own === undefined) return;
 
+  const HELM = helmLayout(PANEL_HEIGHT);
   const pad = HELM.pad;
   const helmW = HELM.width;
   const scopeSize = PANEL_HEIGHT - pad * 2;
@@ -339,9 +397,9 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   drawThrottleScale(ctx, gaugeX, HELM.throttleY, gaugeW, HELM.throttleH,
     own.throttle, colours, readout.throttle);
   const wayOn = own.speed < 0 ? -own.speed : own.speed;
-  bar(ctx, gaugeX, pad + 88, gaugeW, 12,
+  bar(ctx, gaugeX, HELM.speedY, gaugeW, HELM.throttleH,
     permilOf(wayOn, own.maxSpeed > 0 ? own.maxSpeed : 1), colours, readout.speed, readout.knots);
-  bar(ctx, gaugeX, pad + 128, gaugeW, 12,
+  bar(ctx, gaugeX, HELM.fuelY, gaugeW, HELM.throttleH,
     permilOf(own.fuel, own.fuelCapacity), colours, readout.fuel, readout.fuelFigure);
   drawRudderButtons(ctx, colours, own.rudder);
 
@@ -378,11 +436,19 @@ function drawInstruments(panel, view, own, readout, deltaSeconds, colours) {
   // the screen stops looking like a ship and starts looking like a bar chart.
   bezel(ctx, rightX, pad, rightW, PANEL_HEIGHT - pad * 2, colours, readout.shipTitle);
   const shipW = Math.min(340, Math.round(rightW * 0.46));
-  drawSchematic(ctx, { x: rightX + 16, y: pad + 34, w: shipW, h: 96 }, own, colours);
+  // The ship in plan, scaled with the panel: at 124px a 96-pixel schematic
+  // started 40 pixels down and ran off the bottom edge (mobile pass).
+  const shrink = panelScale(PANEL_HEIGHT);
+  drawSchematic(ctx, {
+    x: rightX + 16,
+    y: Math.round((pad + 34) * shrink),
+    w: shipW,
+    h: Math.round(96 * shrink),
+  }, own, colours);
   ctx.fillStyle = colours.dim;
   ctx.font = '10px ui-monospace, monospace';
-  ctx.fillText(readout.bow, rightX + 16 + shipW - 22, pad + 148);
-  ctx.fillText(readout.stern, rightX + 16, pad + 148);
+  ctx.fillText(readout.bow, rightX + 16 + shipW - 22, Math.round((pad + 148) * shrink));
+  ctx.fillText(readout.stern, rightX + 16, Math.round((pad + 148) * shrink));
 
   // Four bars in two columns rather than four stacked: stacked, the fourth
   // pushed the weapon line out through the bottom of its own bezel.
@@ -450,6 +516,7 @@ function drawGunneryBox(ctx, box, own, colours, readout) {
 function drawFlightInstruments(panel, view, unit, readout, deltaSeconds, colours) {
   const canvas = panel.canvas;
   const width = window.innerWidth;
+  const PANEL_HEIGHT = panelHeight();
   if (canvas.width !== width || canvas.height !== PANEL_HEIGHT) {
     canvas.width = width;
     canvas.height = PANEL_HEIGHT;
@@ -459,6 +526,7 @@ function drawFlightInstruments(panel, view, unit, readout, deltaSeconds, colours
   ctx.clearRect(0, 0, width, PANEL_HEIGHT);
   if (unit === undefined) return;
 
+  const HELM = helmLayout(PANEL_HEIGHT);
   const pad = HELM.pad;
   const helmW = HELM.width;
   const scopeSize = PANEL_HEIGHT - pad * 2;
@@ -470,10 +538,10 @@ function drawFlightInstruments(panel, view, unit, readout, deltaSeconds, colours
   drawCompass(ctx, { x: pad, y: pad, w: helmW * 0.52, h: PANEL_HEIGHT - pad * 2 }, unit.heading, colours);
   bar(ctx, HELM.gaugeX, HELM.throttleY, HELM.gaugeW, HELM.throttleH,
     unit.throttle * 10, colours, readout.throttle, `${unit.throttle}%`);
-  bar(ctx, HELM.gaugeX, pad + 88, HELM.gaugeW, 12,
+  bar(ctx, HELM.gaugeX, HELM.speedY, HELM.gaugeW, HELM.throttleH,
     permilOf(unit.speed, unit.maxSpeed > 0 ? unit.maxSpeed : 1), colours,
     readout.speed, readout.speedFigure);
-  bar(ctx, HELM.gaugeX, pad + 128, HELM.gaugeW, 12,
+  bar(ctx, HELM.gaugeX, HELM.fuelY, HELM.gaugeW, HELM.throttleH,
     permilOf(unit.fuel, unit.fuelCapacity), colours, readout.fuel, readout.fuelFigure);
   drawRudderButtons(ctx, colours, readout.rudderActive);
 
@@ -523,6 +591,6 @@ function drawFlightInstruments(panel, view, unit, readout, deltaSeconds, colours
 }
 
 export {
-  PANEL_HEIGHT, SCHEMATIC, HELM, helmHitAt, createInstruments,
+  panelHeight, SCHEMATIC, HELM, helmHitAt, createInstruments,
   drawInstruments, drawFlightInstruments, bezel, bar,
 };

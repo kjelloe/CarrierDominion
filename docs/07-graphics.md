@@ -396,13 +396,67 @@ soaked deck's roughness must fall below 0.4 and a dry one stay above 0.7; and
 a gale must raise spray. Verified by disabling the rain threshold and watching
 all four name themselves.
 
-## 4. Low (deferred) — the real mobile pass
+## 4. Low — the mobile pass (first slice, 2026-08-30)
 
-When it is time: `powerPreference: 'low-power'`, resolution scaling below
+The plan said: `powerPreference: 'low-power'`, resolution scaling below
 devicePixelRatio 1 on small screens, no shadows (already), a static
 single-draw sea (already), merged island geometry into one draw call, the
-grid sea capped by distance, and touch controls — which are an interface
-question and therefore a separate ruling.
+grid sea capped by distance, and touch controls.
+
+**What was actually wrong was the LAYOUT, not the renderer.** The interface
+grew a great deal in a week — a top bar of screens, a camera bar, a tier chip,
+wrapping action columns, a 196px instrument panel — all designed on a desktop.
+Measured on an 844×390 phone in landscape, it was a mess: the coarse-pointer
+button sizing plus the wrapping added for desktop overflow fanned each column
+into five or six, sprawled across the whole window, sitting on top of the
+camera tabs and each other, with **eleven buttons entirely off screen** and
+the panel taking **half the height**.
+
+What landed:
+
+- **A phone gets one column a side, and it SCROLLS.** Wrapping is a desktop
+  answer; on a coarse pointer it sprawls. The honest trade is the same
+  controls reachable by dragging, not a smaller unreadable desktop.
+- **The panel is 124px below 520px of height**, down from 196 — 30–34% of the
+  screen instead of ~50%. Its height is now ONE number: `--panel-h` in CSS,
+  read back by `instruments.js`, where it had been written out as 196 in the
+  JS and 216 in five CSS rules.
+- **The helm's layout scales with it**, and so does the hit test — the same
+  table feeds both, so a shrunken helm still answers the finger where it
+  looks. At 124px the nominal rudder row sat 32 pixels below the bottom edge:
+  drawn, and unreachable.
+- **The columns start below the top row's REAL height** (`--bar-clear`,
+  published by the client after layout). On a narrow phone that row wraps to
+  two lines, and a hardcoded 56px put the columns underneath it.
+- **`powerPreference: 'low-power'`** for every tier that is not paying for
+  fidelity, and **resolution scaling to 0.75** below 480 CSS pixels on the
+  short side. A phone at device ratio 3 asks for nine times the fragments on
+  the hardware least able to pay.
+
+**Merging island geometry is NOT indicated, and the plan was wrong to assume
+it.** Measured: 79 draw calls at 8 islands, 82 at 32, and **57 at 64** — they
+do not scale, because frustum culling means a bigger map shows proportionally
+less of itself. Triangles go 21k → 30k. There is no draw-call problem to
+solve, and doing the merge would have been optimising on a guess three weeks
+old.
+
+**What cannot be judged from here, and is not claimed:** frame rate. Headless
+Chromium rasterises in software, which docs/07's own lesson says is not a
+clock. Pausing the war barely moved the frame time (35ms → 46ms at 8 islands),
+which rules the ENGINE out as the dominant cost but says nothing useful about
+a real GPU. Real devices judge that — which is the standing ruling from
+2026-08-23 and still the right one.
+
+**Landed checks** (`debugging/probes/mobile.mjs`): at three landscape phone
+sizes, nothing escapes the window, nothing is out of a finger's reach,
+**nothing overlaps anything else**, the panel stays under 38% of the height,
+and the rotate gate is down in landscape and up in portrait. The overlap check
+is the important one — reach alone called the sprawling layout fine.
+
+Still open from the plan: the grid sea capped by distance. And a caution for
+whoever writes the next check here: `offsetParent` is null for ANY
+`position: fixed` element, visible or not, so both of the rotate-gate
+assertions were vacuous until they were rewritten against computed display.
 
 ## 5. How tiers are chosen
 

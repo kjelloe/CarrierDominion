@@ -5,6 +5,59 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — The mobile pass, first slice: it was the layout, not the renderer
+
+The plan for this (docs/07 §4) was a list of renderer knobs written three
+weeks ago. Measured on an 844x390 phone, almost none of it was the problem.
+
+**The interface did not fit.** A week of growth - a top bar of screens, a
+camera bar, a tier chip, wrapping columns, a 196px panel - all designed in a
+desktop window. On a phone the coarse-pointer button sizing PLUS the wrapping
+added for desktop overflow fanned each column into five or six, sprawled
+across the whole screen, sitting on the camera tabs and each other. Eleven
+buttons entirely off screen; the panel taking half the height. None of that
+was visible from a desktop and none of it was guessed.
+
+What landed: one scrolling column a side on a coarse pointer; the panel down
+to 124px (30-34% instead of ~50%); the helm's layout AND its hit test scaled
+together, because at 124px the rudder row sat 32 pixels below the bottom edge,
+drawn and unreachable; the columns starting below the top row's real height,
+because on a narrow phone that row wraps to two lines; plus the two cheap
+renderer knobs the plan did name - low-power and 0.75 resolution below 480
+CSS pixels.
+
+**And one thing from the plan that measurement says NOT to do.** "Merge island
+geometry into one draw call" has been on the list for weeks. Draw calls do not
+scale with island count: 79 at 8 islands, 82 at 32, and 57 at 64 - fewer,
+because frustum culling means a bigger map shows proportionally less of
+itself. There is no draw-call problem. A plan is a hypothesis, and this one
+would have cost a day.
+
+**What I cannot claim:** frame rate. Headless Chromium rasterises in software,
+which is the thing this project already knows is not a clock. Pausing the war
+barely moved the frame time (35ms to 46ms), which rules the engine out as the
+dominant cost and says nothing useful about a real GPU. Real devices judge
+that, which was already the ruling.
+
+**Two mistakes worth keeping.** The panel's height was written out as 196 in
+the JS and 216 in five CSS rules - fine until it needs to be shorter on a
+phone, then it is six places to keep in step. It is one variable now.
+
+And the probe's rotate-gate checks were VACUOUS: `offsetParent` is null for
+any `position: fixed` element, visible or not, so both assertions passed
+whatever the gate was doing. The gate was working; the test could not have
+told me if it had not been. Rewritten against computed display - and the
+lesson is the general one, that a visibility check which has never gone red
+deserves suspicion.
+
+The first version of the fit probe had the same shape of flaw: it measured
+REACH, and reach alone called the sprawling layout fine, because a scrolling
+column makes everything technically reachable. It asserts overlap now, which
+is what actually went wrong, and that check does trip when the wrapping comes
+back.
+
+---
+
 ## 2026-08-30 — Reviewing the save: a finished war was still on offer
 
 Two things, one real.

@@ -451,6 +451,21 @@ whether those marks come early enough to act on, or whether the first one
 should be higher — the engine's own fuel event only fires at empty, which is
 long past useful.
 
+## C5 — A phone, if you have one to hand *(10 min — new 2026-08-30)*
+
+First slice of the mobile pass. Landscape only — portrait is gated, as ruled.
+
+- The button columns are **one column a side and they scroll**. Drag them.
+  Everything that was there on a desktop is still there.
+- The instrument panel is shorter (about a third of the screen instead of a
+  half) and its helm scales with it — check the throttle, the rudder arrows
+  and the fuel bar all sit inside the box and answer where you tap.
+- Rotate to portrait: the gate should come up. Rotate back: it should go.
+- **What I have NOT measured is how fast it runs.** I can only render
+  headless in software here, which is not a clock. If it is sluggish, tell me
+  what it is doing when it is sluggish — sailing, flying, or the chart —
+  because that decides what to fix.
+
 ## C2 — The shop window
 
 Reload to the menu and just watch the diorama for a few seconds — island

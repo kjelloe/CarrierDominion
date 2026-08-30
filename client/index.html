@@ -41,7 +41,7 @@
     /* Status feedback while the strip is hidden: one transient line, centred
        above the instruments, gone in a couple of seconds. */
     #toast {
-      position: fixed; left: 50%; bottom: 216px; transform: translateX(-50%);
+      position: fixed; left: 50%; bottom: var(--panel-clear); transform: translateX(-50%);
       padding: 4px 14px; border-radius: 4px;
       background: var(--hud-panel); color: var(--hud-ink);
       font: 12px var(--hud-font); user-select: none; pointer-events: none;
@@ -61,7 +61,12 @@
        `right: 10px` anchors the right-hand one, so its second column grows
        inward, away from the screen edge. */
     .actions {
-      position: fixed; top: 56px; bottom: 216px; z-index: 7;
+      /* Below whatever the top row actually came out as. On a narrow phone
+         that row wraps to two lines, and a hardcoded 56px put the button
+         columns underneath it - measured at 740x360, where both columns
+         overlapped the bar. `--bar-clear` is written back by the client after
+         layout, so the columns follow the bar rather than a guess. */
+      position: fixed; top: var(--bar-clear, 56px); bottom: var(--panel-clear); z-index: 7;
       display: flex; flex-direction: column; flex-wrap: wrap; gap: 3px;
       align-content: flex-start;
       user-select: none;
@@ -129,7 +134,7 @@
        weapon chips move to the bottom centre, above the panel, full size. */
     body.weapon-mode #weapon-group {
       position: fixed; left: 50%; transform: translateX(-50%);
-      bottom: 216px; display: flex; flex-direction: row; gap: 6px;
+      bottom: var(--panel-clear); display: flex; flex-direction: row; gap: 6px;
       z-index: 8;
     }
     body.weapon-mode #weapon-group .wep {
@@ -278,6 +283,19 @@
     #console.chart #chart-panel { pointer-events: auto; }
     /* And the chart's own button row drops below the strip. */
     #console.chart #chart-buttons { top: 96px; }
+    /* THE PANEL'S HEIGHT IS ONE NUMBER (mobile pass, 2026-08-30). It was
+       written out as 196 in the JS and 216 in five CSS rules, which is fine
+       until the panel needs to be shorter on a phone - then it is six places
+       to keep in step. Everything anchored above the panel now sits at
+       `--panel-clear`, and the client reads `--panel-h` back so the canvas
+       is exactly as tall as the CSS says.
+
+       On a landscape phone the instruments were taking half the screen: 196px
+       of a 390px window, with the sea in what was left. */
+    :root { --panel-h: 196px; --panel-clear: 216px; }
+    @media (max-height: 520px) {
+      :root { --panel-h: 124px; --panel-clear: 136px; }
+    }
     #chart-panel { display: none; }
     #chart-panel.open { display: block; }
     #chart-canvas {
@@ -327,7 +345,7 @@
     /* The drone console's readout, and the crosshair cursor that says a
        click is a TRIGGER here. */
     #drone-info {
-      position: fixed; bottom: 216px; left: 50%; transform: translateX(-50%);
+      position: fixed; bottom: var(--panel-clear); left: 50%; transform: translateX(-50%);
       z-index: 8; display: none; padding: 5px 14px;
       border: 1px solid var(--hud-ink); background: var(--hud-panel);
       color: var(--hud-ink); font: 12px/1.4 var(--hud-font); letter-spacing: 2px;
@@ -345,10 +363,27 @@
        column overran it the moment the probe looked (the launch button sat
        below the screen) - the columns scroll under a finger instead. */
     .actions { touch-action: pan-y; overflow-y: auto; }
+    /* A FINGER NEEDS A BIGGER BUTTON, AND A PHONE HAS FEWER OF THEM ON SCREEN
+       (mobile pass, 2026-08-30). Coarse-pointer sizing plus the wrapping
+       introduced for desktop overflow was a disaster: on an 844x390 phone the
+       columns wrapped into five or six columns each, sprawled across the
+       whole window and sat on top of the camera tabs and each other.
+       Measured, not guessed - eleven buttons were entirely off screen.
+       A phone gets ONE column a side that SCROLLS, which is the honest
+       trade: the same controls, reachable by dragging, rather than a smaller
+       unreadable version of the desktop. */
     @media (pointer: coarse) {
-      .act { padding: 10px 12px; }
-      .act .k { font-size: 16px; }
-      .act .l { font-size: 11px; }
+      .act { padding: 9px 10px; }
+      .act .k { font-size: 15px; }
+      .act .l { font-size: 10px; }
+      .actions { flex-wrap: nowrap; overflow-y: auto; overscroll-behavior: contain; }
+      /* The auto margins that centre a short column fight a scrolling one:
+         they push the first item out of reach above the top. */
+      .actions::before, .actions::after { display: none; }
+      /* The top row is the first thing to run out of width on a phone. */
+      #top-bar { gap: 8px; max-width: calc(100vw - 150px); }
+      .console-tab, .cam-tab, #tier-chip { padding: 5px 7px; letter-spacing: 0; }
+      .console-tab .k { display: none; }
     }
     #rotate-gate {
       position: fixed; inset: 0; z-index: 30; display: none;
@@ -389,7 +424,7 @@
     .wep .n { display: block; font-size: 9px; letter-spacing: 0; }
     /* The 1988 panel: bezelled instruments across the bottom. */
     #panel {
-      position: fixed; left: 0; right: 0; bottom: 0; height: 196px;
+      position: fixed; left: 0; right: 0; bottom: 0; height: var(--panel-h);
       pointer-events: none; user-select: none;
     }
     .hud-row { display: flex; justify-content: space-between; gap: 18px; }

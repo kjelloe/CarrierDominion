@@ -830,6 +830,19 @@ function showConsoleNone() {
   renderConsoleTabs();
 }
 
+// The top row's real height, published so the button columns can start below
+// it. On a narrow phone the row wraps to two lines and a fixed offset puts
+// the columns underneath it (measured at 740x360). Written only when it
+// changes, so this is free in the frame loop.
+function syncBarHeight() {
+  const bar = document.getElementById('top-bar');
+  if (bar === null) return;
+  const wanted = `${Math.round(bar.getBoundingClientRect().bottom) + 12}px`;
+  if (syncBarHeight.last === wanted) return;
+  syncBarHeight.last = wanted;
+  document.documentElement.style.setProperty('--bar-clear', wanted);
+}
+
 function renderConsoleTabs() {
   const strip = document.getElementById('console-tabs');
   if (strip === null) return;
@@ -1660,6 +1673,7 @@ function frame(nowMs) {
   // it is kept current every frame rather than only when the console opens.
   // It rebuilds only when something it shows has actually changed.
   renderConsoleTabs();
+  syncBarHeight();
   updateLocation();
   updateAlwaysOn();
   renderChart(state.chart, state.view, ownTeamColour());

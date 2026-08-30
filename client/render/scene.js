@@ -68,8 +68,16 @@ function wantsMirrorWater(preset, style) {
 const ACES_EXPOSURE_FIXED_SUN = 0.32;
 
 function createRenderer(canvas, preset, style) {
-  const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: preset.antialias });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, preset.pixelRatioCap));
+  const renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    antialias: preset.antialias,
+    // Ask the machine for its efficient GPU rather than its fast one when the
+    // tier is not paying for fidelity anyway (docs/07 §4). On a laptop that
+    // is the integrated chip; on a phone it is the difference between a warm
+    // pocket and a hot one. High-tier explicitly wants the other answer.
+    powerPreference: preset.physicalEffects === true ? 'high-performance' : 'low-power',
+  });
+  renderer.setPixelRatio(renderScale(preset));
   renderer.shadowMap.enabled = preset.shadows;
   if (preset.shadows) renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   if (wantsPhysicalSky(preset, style)) {
@@ -77,6 +85,22 @@ function createRenderer(canvas, preset, style) {
     renderer.toneMappingExposure = ACES_EXPOSURE_FIXED_SUN;
   }
   return renderer;
+}
+
+// How many device pixels to draw per CSS pixel.
+//
+// The tier's cap is the ceiling; a small screen goes BELOW it. A phone with a
+// device ratio of 3 asks for nine times the fragments of a plain one, on the
+// hardware least able to pay - and at arm's length nobody can see the
+// difference between 1.0 and 0.75 on a 5-inch panel. The threshold is the
+// width in CSS pixels, not the ratio, because that is what says "phone".
+function renderScale(preset) {
+  const ratio = window.devicePixelRatio || 1;
+  const capped = Math.min(ratio, preset.pixelRatioCap);
+  const shortest = Math.min(window.innerWidth, window.innerHeight);
+  if (shortest <= 480) return Math.min(capped, 0.75);
+  if (shortest <= 640) return Math.min(capped, 1);
+  return capped;
 }
 
 // The Preetham skydome, and the sky AS the light: the dome is rendered once
