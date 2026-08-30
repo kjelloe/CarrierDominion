@@ -12,6 +12,7 @@
 // it, and shut it down without spawning a process.
 
 import { createServer } from 'node:http';
+import { randomBytes } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
@@ -101,7 +102,13 @@ function createApp(options) {
     // Seats held for players who dropped, and the tokens they come back with.
     holder: createHolder(
       options.nowFn ?? (() => Date.now()),
-      options.tokenFn ?? (() => Math.random().toString(36).slice(2, 12)),
+      // A seat token is what lets somebody take a held carrier back, so it
+      // should not be guessable (review R-012). Math.random is not a random
+      // number generator in the sense this needs - it is seeded from the
+      // process and predictable from a few outputs. On a LAN behind a join
+      // code the exposure is small, which is why this waited; it is also one
+      // line, which is why it should not have waited.
+      options.tokenFn ?? (() => randomBytes(12).toString('base64url')),
     ),
     // A war room whenever the server is asked for one - INCLUDING after a
     // resume (review R-004). It used to be built only when `resumedGame ===
@@ -209,11 +216,18 @@ function createApp(options) {
   }
 
   // The token in the socket's URL, if it brought one back.
+  //
+  // Parsed rather than searched for. `indexOf('token=')` also matches
+  // `?xtoken=` and `?not-a-token=`, so a parameter that merely ENDED in the
+  // right letters was read as a seat token (review R-012). The base is a
+  // throwaway - only the query matters.
   function tokenFrom(req) {
-    const url = String(req.url ?? '');
-    const at = url.indexOf('token=');
-    if (at === -1) return '';
-    return url.slice(at + 6).split('&')[0];
+    try {
+      const url = new URL(String(req.url ?? ''), 'http://carrier.invalid');
+      return url.searchParams.get('token') ?? '';
+    } catch (error) {
+      return '';
+    }
   }
 
   // A seat handed to the machine when its grace window runs out, so the other

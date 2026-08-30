@@ -480,9 +480,41 @@ applied to the war screen. The card shrinks below 620px of height and stands
 aside entirely below 460px, the menu tightens and scrolls, and the probe now
 walks the menu as well as the bridge.
 
-Still open from the plan: the grid sea capped by distance. And a caution for
-whoever writes the next check here: `offsetParent` is null for ANY
-`position: fixed` element, visible or not, so both of the rotate-gate
+**The grid sea, capped by distance (2026-08-30).** The last renderer item from
+the plan, and the one place the mobile plan was right about the renderer.
+
+The 1988 grid was built over the whole ocean, so it grew with the square of
+the map: 42,024 vertices at 8 islands, 168,920 at 32, **337,560 at 64** — a
+megabyte of line geometry, and the largest single thing in the scene. The
+shader has always faded it out between 2500 m and 8000 m, so at 64 islands
+about three per cent of it was ever inside the fade; the rest was uploaded
+once and then discarded a vertex at a time, every frame.
+
+It is now **one patch, 16.8 km across, that slides along under the eye**:
+**12,768 vertices whatever the island count** — a 3× cut at 8 islands and a
+26× cut at 64. Two things make it work rather than merely make it smaller:
+
+- **The patch moves in whole cells.** `Math.round(camera.x / step) * step`. A
+  grid that slid smoothly with the camera would be nailed to the ship, and a
+  grid nailed to the ship is the one thing this mesh must never be — its only
+  job is to give the eye something stationary to measure motion against. In
+  whole cells, every line stays on one world lattice: the patch is somewhere
+  else, the grid is not.
+- **`frustumCulled = false`.** A mesh centred on the camera cannot be culled
+  against a bounding sphere computed for where it was built, or the sea blinks
+  out. `debugging/probes/sea_grid.mjs` asserts both, plus the claim that
+  matters most — 8 islands and 32 islands must build the *same* count, not
+  merely fewer.
+
+A map smaller than the patch (the menu diorama, at 6 km) still gets the whole
+sea in one static mesh, because a patch would be bigger than the map it was
+meant to save. And `resetWorld` rebuilds the held reference, for the same
+reason the ocean's reflection hook has to be put back: a new war brings a new
+grid, and the frame would otherwise go on sliding the one that left with the
+old graph.
+
+A caution for whoever writes the next check here: `offsetParent` is null for
+ANY `position: fixed` element, visible or not, so both of the rotate-gate
 assertions were vacuous until they were rewritten against computed display.
 
 ## 5. How tiers are chosen

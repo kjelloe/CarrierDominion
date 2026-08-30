@@ -145,6 +145,12 @@ Look for these shapes first — every one produced a real bug:
   in while the water past it was open to the middle. Ask whether a refused
   option should end the loop or just be skipped - for a placement (as
   opposed to a voyage) it is nearly always skipped.
+- **A rule applied to one order and not its siblings.** `move`, `attack`,
+  `escort` and `recall` all accepted a landed hull and lifted it off;
+  `set_route` alone refused, for no reason anyone had decided - it was simply
+  written at a different time. When commands form a family, list them and
+  check the predicate is the same across all of them, because the odd one out
+  reads as a rule to whoever hits it.
 - **A guard applied to one caller and not its sibling.** The 2026-08-23
   review gave the DEVELOPED start a clearance walk so no carrier spawns
   inside a hostile battery. The DEFAULT start does the same thing - hands
@@ -159,6 +165,12 @@ Look for these shapes first — every one produced a real bug:
   ladder row went in at the top; a HUD line moved to the instrument panel; a
   throttle scale grew an astern half). Select by NAME, and read chosen values
   BACK rather than hardcoding them - defaults move too.
+- **A substring search standing in for a parser.** `tokenFrom` found a seat
+  token with `url.indexOf('token=')`, so `?xtoken=` matched and any parameter
+  whose NAME merely ended in those letters was read as a credential. Wherever
+  a structured string (a URL, a query, a header, a path) is searched rather
+  than parsed, ask what else contains that substring - the answer is usually
+  "a thing an attacker chooses the name of".
 - **The thing no gate opens is the thing that breaks.** `client/panels/
   island.js` used `islandName` without importing it, so the island board
   threw for every player who clicked one of their own islands - for days.

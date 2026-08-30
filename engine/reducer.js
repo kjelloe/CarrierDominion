@@ -428,12 +428,22 @@ function applyRoute(next, command) {
   if (command.unitId !== undefined) {
     const unit = findUnit(next, command.unitId);
     if (unit === -1) return reject(next);
-    if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING) return reject(next);
+    // A parked aircraft may be given a course, like every other order
+    // (review R-011). Move, attack, escort and recall all accept a landed
+    // hull and lift it off; `set_route` alone refused, so a Manta on an
+    // island runway could be sent to a single waypoint but not given a
+    // course - an inconsistency with no reason behind it.
+    if (unit.state !== UNIT_ACTIVE && unit.state !== UNIT_RETURNING
+      && unit.state !== UNIT_LANDED) return reject(next);
     if (points.length === 0) {
       clearRoute(unit);
       return next;
     }
     if (routeOffMap(points, next.params.sizeUnits) === 1) return reject(next);
+    // AFTER the last check that can refuse (review R-001): `reject` returns
+    // the state it was handed and rolls nothing back, so a lift-off before a
+    // refusal is a lift-off for good.
+    liftOff(unit);
     setRoute(unit, points);
     const leg = legOf(unit);
     unit.targetX = leg.x;

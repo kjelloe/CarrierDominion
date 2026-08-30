@@ -240,11 +240,18 @@ function buildMirrorOcean(sizeMetres, style, fog) {
 // The 1988 sea was a grid running to a hard horizon. It is also the cheapest
 // possible sense of speed: without it, a flat colour gives the eye nothing to
 // measure motion against.
+// How far the grid is worth drawing. The shader has always faded it out
+// between 2500 m and 8000 m, so nothing past 8000 m has ever reached the
+// screen - the geometry beyond that was paid for and then discarded, one
+// vertex at a time, every frame.
+const GRID_REACH_METRES = 8400;
+
+// Fixed ~300 m spacing rather than a fixed division count: the map grows with
+// the island count, and a count would stretch the mesh until it stopped
+// reading as motion.
+const GRID_STEP_METRES = 300;
+
 function buildOceanGrid(sizeMetres, style) {
-  // Fixed ~300 m spacing rather than a fixed division count: the map grows
-  // with the island count, and a count would stretch the mesh until it stopped
-  // reading as motion.
-  //
   // Not GridHelper. Its lines run the full width of the map, so the ones on
   // either side of the ship have an endpoint far behind the camera - and a
   // segment with a vertex behind the eye is exactly what line clipping gets
@@ -252,10 +259,27 @@ function buildOceanGrid(sizeMetres, style) {
   // distance, which is the one place it does nothing, and vanishes from the
   // near water, which is the only place it sells speed. Cutting every line at
   // each crossing costs ~40k vertices once and cannot fail that way.
-  const span = sizeMetres * 1.5;
-  const cells = Math.max(40, Math.round(span / 300));
+  //
+  // ~40k was the 8-island map. The mesh is built over the whole ocean, so it
+  // grows with the square of the map: 337,000 vertices and a megabyte of
+  // floats at 64 islands, of which about three per cent are ever inside the
+  // fade. On a phone that is the largest single thing in the scene and almost
+  // all of it is invisible.
+  //
+  // So: when the map is bigger than the reach, build ONE patch the size of
+  // the reach and slide it along under the eye (`updateOceanGrid`). 12,768
+  // vertices, whatever the island count. A small map - the menu diorama, at
+  // 6 km - still gets the whole sea in one static mesh, because a patch would
+  // be bigger than the map it was meant to save.
+  const mapSpan = sizeMetres * 1.5;
+  const patchSpan = GRID_REACH_METRES * 2;
+  const follows = mapSpan > patchSpan;
+  const span = follows === true ? patchSpan : mapSpan;
+  const cells = Math.max(40, Math.round(span / GRID_STEP_METRES));
   const step = span / cells;
-  const origin = sizeMetres / 2 - span / 2;
+  // A following patch is built around zero and moved; a whole-map one keeps
+  // the place it has always had.
+  const origin = follows === true ? -span / 2 : sizeMetres / 2 - span / 2;
   const points = [];
   for (let line = 0; line <= cells; line += 1) {
     const fixed = origin + line * step;
@@ -295,7 +319,27 @@ function buildOceanGrid(sizeMetres, style) {
   });
   const grid = new THREE.LineSegments(geometry, material);
   grid.name = 'ocean-grid';
+  grid.userData.follows = follows === true ? 1 : 0;
+  grid.userData.step = step;
+  // The patch is centred on the eye, so it must never be culled by a
+  // bounding sphere computed for where it was built.
+  if (follows === true) grid.frustumCulled = false;
   return grid;
+}
+
+// Keep the patch under the eye, snapped to a whole cell.
+//
+// The snap is the whole trick. A grid that slid smoothly with the camera
+// would be nailed to the ship, and a grid nailed to the ship is exactly the
+// one thing this mesh must not be - it exists to give the eye something
+// STATIONARY to measure motion against. Moving it in whole cells leaves every
+// line on one world lattice: the patch is somewhere else, the grid is not.
+function updateOceanGrid(grid, camera) {
+  if (grid === 0 || grid === undefined || grid === null) return;
+  if (grid.userData === undefined || grid.userData.follows !== 1) return;
+  const step = grid.userData.step;
+  grid.position.x = Math.round(camera.position.x / step) * step;
+  grid.position.z = Math.round(camera.position.z / step) * step;
 }
 
 // A placeholder hull: a 330 m box with an island superstructure and a bow
@@ -901,6 +945,7 @@ export {
   buildOcean,
   buildMirrorOcean,
   buildOceanGrid,
+  updateOceanGrid,
   buildCarrier,
   buildManta,
   buildWalrus,

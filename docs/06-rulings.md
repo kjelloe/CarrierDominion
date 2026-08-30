@@ -640,10 +640,14 @@ from copied layout constants; and the permission allow-list lost `git push *`,
 to `main`, which the working agreement forbids, and `git fetch *` is
 prohibited outright.
 
-**Not done, and why:** R-011 (`set_route` is the only order that refuses a
-landed Manta) and R-012 (crypto session tokens, a stricter URL parser) were
-outside the batch asked for. Both are small and still open. R-010, the
-documentation drift, was closed on 2026-08-28.
+**R-011 and R-012 closed 2026-08-30**, so all twelve findings are now
+answered. R-011: `set_route` accepts `UNIT_LANDED` and lifts the aircraft off
+*after* the bounds check, because a refused route must leave a parked Manta
+parked - the same ordering rule R-001 established. R-012: seat tokens come
+from `randomBytes(12)` rather than `Math.random`, and the socket's URL is
+parsed instead of searched, because `indexOf('token=')` also matched
+`?xtoken=` and read it as a seat token. R-010, the documentation drift, was
+closed on 2026-08-28.
 
 ## The first playtest at the controls (2026-08-28)
 

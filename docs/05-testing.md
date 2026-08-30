@@ -153,6 +153,13 @@ slow - and it sorts last, so it runs when the machine is at its most loaded.
 Use `npm run probes -- <name>` while working and keep the full sweep for
 before a hand-over.
 
+**Assert the invariant, not a symptom of it.** The sea-grid probe could have
+checked that the mesh got smaller; it checks that 8 islands and 32 islands
+build the **same** number of vertices. Smaller is satisfied by a cap that
+still grows with the map, which is the bug wearing the fix's name. Where a
+change claims something no longer depends on an input, vary that input and
+assert equality.
+
 Run a probe at the cheapest graphics tier that still tests what it is for.
 `second_war` ran at `graphics=medium`, which headless Chromium rasterises in
 software, and the resulting jank was nearly written up as a defect in the LAN

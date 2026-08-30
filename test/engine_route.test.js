@@ -191,3 +191,42 @@ test('a route that fits the map is still accepted', () => {
   const carrier = next.carriers.find((c) => c.id === 0);
   assert.equal(carrier.route.length, 1, 'a leg exactly on the edge was refused');
 });
+
+// --- a parked aircraft may be given a course too (review R-011) -------------
+//
+// Move, attack, escort and recall all accept a landed hull and lift it off.
+// `set_route` alone refused, so a Manta on an island runway could be sent to
+// a single waypoint but not given a course - an inconsistency with nothing
+// behind it. And the lift-off comes AFTER the bounds check, or a refused
+// route would leave the aircraft airborne (R-001).
+
+test('a landed Manta accepts a course, and takes off to fly it', async () => {
+  const { createInitialState: fresh2 } = await import('../engine/state.js');
+  const { loadRules } = await import('../server/rules.js');
+  const { UNIT_LANDED, UNIT_ACTIVE: ACTIVE } = await import('../engine/units.js');
+  let state = fresh2(SEED, loadRules());
+  const manta = state.units.find((u) => u.kind === KIND_MANTA);
+  manta.state = UNIT_LANDED;
+  manta.landedIsland = 1;
+  manta.x = 2000 * 256;
+  manta.y = 2000 * 256;
+
+  const legs = [manta.x + 1000 * 256, manta.y, manta.x + 2000 * 256, manta.y];
+  const next = apply(state, { type: 'set_route', unitId: manta.id, points: legs });
+  const flown = next.units.find((u) => u.id === manta.id);
+  assert.equal(flown.route.length, 2, 'a parked Manta was refused a course');
+  assert.equal(flown.state, ACTIVE, 'it took the course without taking off');
+  assert.equal(flown.landedIsland, -1, 'it is still marked as parked somewhere');
+});
+
+test('a refused course leaves a parked Manta parked', () => {
+  const state = fresh();
+  const manta = state.units.find((u) => u.kind === KIND_MANTA);
+  manta.state = 4; // UNIT_LANDED
+  manta.landedIsland = 1;
+  const off = state.params.sizeUnits + 1;
+  const next = apply(state, { type: 'set_route', unitId: manta.id, points: [off, 0] });
+  const still = next.units.find((u) => u.id === manta.id);
+  assert.equal(still.state, 4, 'an off-map course took the aircraft off the runway');
+  assert.equal(still.landedIsland, 1, 'an off-map course forgot where it was parked');
+});

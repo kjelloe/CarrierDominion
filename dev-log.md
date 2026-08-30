@@ -5,6 +5,73 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — The last three small ones: R-011, R-012, and a sea that stopped growing
+
+Owner's ask before a mobile playtest: the two review findings left over from
+the batch, and the one renderer item left over from the mobile plan.
+
+**R-011 — a parked aircraft may be given a course too.** `move`, `attack`,
+`escort` and `recall` all accept a landed hull and lift it off; `set_route`
+alone refused, so a Manta on an island runway could be sent to a single
+waypoint but not given a course. There was no reason behind the difference,
+only an omission. The lift-off goes **after** the bounds check, which is R-001's
+rule and not a detail: `reject()` returns the state it was handed and rolls
+nothing back, so a lift-off before a refusal is a lift-off for good. Two tests,
+and the second one is the one worth having — an off-map course must leave the
+aircraft parked, still knowing which island it is parked on.
+
+**R-012 — a seat token is what lets somebody take your carrier back.**
+`Math.random().toString(36).slice(2, 12)` is not a random number generator in
+the sense that needs; it is seeded from the process and predictable from a few
+outputs. `randomBytes(12).toString('base64url')` now, which is one line and
+should not have waited behind a LAN-and-a-join-code argument. The second half
+was the better find: `tokenFrom` did `url.indexOf('token=')`, so **any**
+parameter whose name merely ENDED in those letters was read as a seat token.
+The URL is parsed now, and a test connects with `?xtoken=<a real token>` and
+asserts it does not resume — then with `?token=` and asserts it still does, so
+the fix cannot pass by simply reading nothing.
+
+**The grid sea, capped by distance.** The last item from the mobile plan, and
+the one place that plan was right about the renderer rather than the layout.
+
+The 1988 grid was built over the whole ocean and therefore grew with the
+square of the map: 42,024 vertices at 8 islands, 168,920 at 32, **337,560 at
+64** — a megabyte of line geometry and the largest single thing in the scene.
+The shader has faded it out between 2500 m and 8000 m since the day it was
+written, so at 64 islands roughly three per cent of it was ever inside the
+fade. The rest was paid for and then discarded, one vertex at a time, every
+frame.
+
+One patch now, 16.8 km across, sliding along under the eye: **12,768 vertices
+whatever the island count**, a 26× cut at 64 islands. Two things make that a
+fix rather than just a smaller number:
+
+- **It moves in whole cells.** A grid that slid smoothly with the camera would
+  be nailed to the ship, and a grid nailed to the ship is the one thing this
+  mesh must never be — its entire job is to give the eye something stationary
+  to measure motion against. Rounding to the cell leaves every line on one
+  world lattice: the patch moves, the grid does not.
+- **`frustumCulled = false`.** A mesh centred on the camera cannot be culled
+  against a bounding sphere computed for where it was built.
+
+A map smaller than the patch — the menu diorama, at 6 km — still gets the whole
+sea statically, because a patch would be bigger than the map it was meant to
+save. And `resetWorld` reassigns the held reference: the file already carried
+that lesson for the ocean's reflection hook ("a NEW war brings a new ocean
+object") and the grid needed the same line, or a second war would slide the
+mesh that went out with the old graph.
+
+`debugging/probes/sea_grid.mjs` asserts the count is **equal** at 8 and 32
+islands rather than merely smaller, that the patch sits on whole cells and
+within half a cell of the eye, and that it is not culled. Verified by removing
+the rounding: `worst off-lattice 248.457 m`, one failure, exactly the one
+intended.
+
+576 tests, smoke clean, both new probes green. All twelve of the architect's
+findings are now answered.
+
+---
+
 ## 2026-08-30 — The menu had never been measured, and PLAYTEST rewritten
 
 **The mobile probe walked the war and never the menu.** On a 390px-tall phone

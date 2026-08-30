@@ -235,3 +235,59 @@ test('a seat nobody comes back to is handed to the machine', async () => {
     await app.close();
   }
 });
+
+// --- the token is not guessable, and not confusable (review R-012) ----------
+
+test('a seat token is long and not drawn from Math.random', async () => {
+  const { createApp } = await import('../server/app.js');
+  const { loadRules } = await import('../server/rules.js');
+  const app = createApp({ seed: 20260818, rules: loadRules() });
+  try {
+    const seen = new Set();
+    for (let i = 0; i < 64; i++) {
+      const token = app.holder.tokenFn();
+      assert.ok(token.length >= 16, `a token of ${token.length} characters is guessable`);
+      assert.ok(!seen.has(token), 'two seat tokens came out the same');
+      seen.add(token);
+      // base64url only, so it survives a query string untouched.
+      assert.match(token, /^[A-Za-z0-9_-]+$/);
+    }
+  } finally {
+    await app.close();
+  }
+});
+
+test('a parameter that merely ends in "token" does not reclaim a seat', async () => {
+  // `indexOf('token=')` matched `?xtoken=` too, so a query parameter whose
+  // NAME happened to end in the right letters was read as a seat token
+  // (review R-012). The URL is parsed now.
+  const app = createApp({ seed: 20260818, rules: rules });
+  const address = await app.listen(0, '127.0.0.1');
+  const wsUrl = `ws://127.0.0.1:${address.port}`;
+  try {
+    const first = connect(wsUrl);
+    await first.open();
+    const welcome = await first.next((m) => m.type === 'welcome');
+    assert.equal(welcome.team, 0);
+    first.close();
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    // The real token, under a name that is not `token`.
+    const sneak = connect(`${wsUrl}/?xtoken=${welcome.token}`);
+    await sneak.open();
+    const got = await sneak.next((m) => m.type === 'welcome');
+    assert.equal(got.resumed, 0, 'a lookalike parameter reclaimed a held seat');
+    assert.notEqual(got.team, 0, 'a lookalike parameter was given the held carrier');
+    sneak.close();
+
+    // And the real one still works, so the parser did not simply stop reading.
+    const back = connect(`${wsUrl}/?token=${welcome.token}`);
+    await back.open();
+    const resumed = await back.next((m) => m.type === 'welcome');
+    assert.equal(resumed.resumed, 1, 'the genuine token stopped working');
+    assert.equal(resumed.team, 0);
+    back.close();
+  } finally {
+    await app.close();
+  }
+});

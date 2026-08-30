@@ -26,6 +26,7 @@ import {
   buildMirrorOcean,
   buildOcean,
   buildOceanGrid,
+  updateOceanGrid,
   buildRunway,
   buildSelectionMarker,
   buildShot,
@@ -189,13 +190,16 @@ function createScene(canvas, preset, sizeMetres, style) {
     ? buildMirrorOcean(sizeMetres, style, scene.fog)
     : buildOcean(sizeMetres, preset, style);
   scene.add(ocean);
-  if (style.oceanGrid) scene.add(buildOceanGrid(sizeMetres, style));
+  // Held, not looked up by name each frame: it moves with the eye now.
+  const oceanGrid = style.oceanGrid ? buildOceanGrid(sizeMetres, style) : 0;
+  if (oceanGrid !== 0) scene.add(oceanGrid);
 
   const view3d = {
     scene: scene,
     camera: camera,
     renderer: renderer,
     ocean: ocean,
+    oceanGrid: oceanGrid,
     preset: preset,
     style: style,
     islands: {},
@@ -584,6 +588,9 @@ function renderView(view3d, view, deltaSeconds, podBuildTicks) {
   syncShots(view3d, view);
   syncMarker(view3d, view);
   placeCamera(view3d, chaseSubject(view3d, view));
+  // After the camera is placed, or the patch chases last frame's eye and
+  // shows its own edge on a fast turn.
+  updateOceanGrid(view3d.oceanGrid, view3d.camera);
   const uniforms = view3d.ocean.material.uniforms;
   if (uniforms !== undefined) {
     // Our own water calls it uTime; the vendored mirror water calls it time.
@@ -834,7 +841,11 @@ function resetWorld(view3d, sizeMetres) {
     ? buildMirrorOcean(sizeMetres, view3d.style, scene.fog)
     : buildOcean(sizeMetres, view3d.preset, view3d.style);
   scene.add(ocean);
-  if (view3d.style.oceanGrid) scene.add(buildOceanGrid(sizeMetres, view3d.style));
+  // The same lesson as the ocean below it: a NEW war brings a new grid, and
+  // the held reference has to move with it or the frame goes on sliding the
+  // one that went out with the old graph.
+  view3d.oceanGrid = view3d.style.oceanGrid ? buildOceanGrid(sizeMetres, view3d.style) : 0;
+  if (view3d.oceanGrid !== 0) scene.add(view3d.oceanGrid);
   view3d.scene = scene;
   view3d.ocean = ocean;
   if (wantsPhysicalSky(view3d.preset, view3d.style)) {

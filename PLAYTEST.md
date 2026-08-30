@@ -204,8 +204,11 @@ says what to do and what should happen; anything else is a finding.
 - **Watch a war back.** `?mode=replay` replays the autosaved war through the
   same engine.
 - **A phone.** Landscape only — portrait is gated. One scrolling column of
-  buttons a side. **I have not been able to measure how fast it runs**, so if
-  it is sluggish, tell me *what you were doing* when it was.
+  buttons a side. The 1988 sea's grid no longer grows with the map — it is one
+  patch that follows the camera, so a 32-island war costs the same as an
+  8-island one instead of four times as much. **I still have no way to measure
+  frame rate here**, so if it is sluggish, tell me *what you were doing* and
+  *how many islands*.
 - **The shop window.** Sit on the menu and watch the diorama.
 
 ---
