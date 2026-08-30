@@ -79,6 +79,21 @@ on a save an engine change has outgrown. `auto` also handles the very first
 boot, when no autosave exists yet. Strict `RESUME=1` is for a human at a
 terminal who would rather be told than fall back.
 
+## What the server reads off disk
+
+Five directories, and nothing else: `client/ engine/ shared/ server/ data/`,
+plus `package.json` and `package-lock.json`. `data/` is runtime code, not
+content — `server/rules.js` loads the rulesets at boot and the browser fetches
+the same files over `/data/`.
+
+That list is worth stating because a sensible deployment ships an **allowlist**
+rather than an exclude list: an exclude list fails open, and everything you
+forget to name goes out. The cost is the opposite failure — add a sixth runtime
+directory and the deploy quietly ships a game that cannot find it. The suite
+pins the invariant (`test/deploy_payload.test.js`): if the server starts
+serving or reading a directory outside that set, it fails and names the file to
+change.
+
 ## Updating
 
 ```bash

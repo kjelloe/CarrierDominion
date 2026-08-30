@@ -182,6 +182,25 @@ Look for these shapes first — every one produced a real bug:
   ladder row went in at the top; a HUD line moved to the instrument panel; a
   throttle scale grew an astern half). Select by NAME, and read chosen values
   BACK rather than hardcoding them - defaults move too.
+- **A flag that becomes combinable inherits every other flag's promises.**
+  The deploy script read only `"$1"`, so `--bootstrap --dry` was impossible;
+  making the flags composable made it reachable, and `--bootstrap` had no
+  `--dry` guard - a run promising to change nothing would have created a system
+  user and enabled a systemd unit. After widening how options combine, re-read
+  every option against every other.
+- **Installed once, never compared again.** The systemd unit was written by
+  `--bootstrap` and no later run looked at it, so every edit stayed on the dev
+  machine while the box kept the original - and that file held the one setting
+  keeping runtime state out of the rsync target. For anything installed on a
+  remote once, ask what checks it is still what the repo says.
+- **A fallback that hides why the first attempt failed.** `npm ci 2>/dev/null
+  || npm install` discards the error AND drops lockfile pinning, on a
+  production host. A fallback must say that it fired and why; the repo's own
+  debugging note already said never to trust an empty diagnostic from a
+  `2>/dev/null` pipeline.
+- **`sudo cmd < file` does the redirection as the CALLING user.** sudo buys
+  nothing there, and the failure is silent - an unreadable file reads as an
+  absent one. `sudo cat file | cmd`.
 - **A command whose meaning depends on the runtime's version.**
   `node --test test/` walks a directory on Node 20 and is a glob pattern on
   Node 22+, so the suite could not START on the batch PC's Node 24. Anything
