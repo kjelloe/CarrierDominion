@@ -165,6 +165,18 @@ Look for these shapes first — every one produced a real bug:
   ladder row went in at the top; a HUD line moved to the instrument panel; a
   throttle scale grew an astern half). Select by NAME, and read chosen values
   BACK rather than hardcoding them - defaults move too.
+- **A command whose meaning depends on the runtime's version.**
+  `node --test test/` walks a directory on Node 20 and is a glob pattern on
+  Node 22+, so the suite could not START on the batch PC's Node 24. Anything
+  that only ever runs on one machine's toolchain is untested against every
+  other; name files explicitly rather than relying on a runner's discovery
+  defaults. The corollary: a second machine earns its keep on the first run,
+  before it computes anything.
+- **A collector that quietly runs non-tests.** The same directory form executed
+  every `.js`/`.mjs` under `test/` — fixture scripts, the headless sim driver,
+  a helpers module — and counted each as a passing test for exiting 0. Five
+  phantom passes, and the headless sim running on every `npm test`. When a test
+  count seems high, list what the runner actually collected.
 - **A token that reads like a gate and checks nothing.** The war room has a
   join code, the docs said "one code hands friends a whole evening", and a
   deploy doc called it "the only thing between a stranger and a seat" - but no

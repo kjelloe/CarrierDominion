@@ -5,6 +5,54 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — `npm test` could not start on Node 24
+
+The batch PC's first run never reached a war:
+
+```
+> node --test test/
+Error: Cannot find module '/home/kjelloe/GIT/CarrierDominion/test'
+Node.js v24.16.0
+```
+
+**Node 22 changed `--test` positional arguments from "a directory to search"
+into glob patterns.** On Node 20 `node --test test/` walks the directory; on
+Node 24 it matches nothing, falls through to treating `test/` as a module path,
+and dies before a single test runs. Nothing about the batch PC's setup was
+wrong — the command itself was version-dependent, and this machine happens to
+run Node 20.
+
+`node --test test/*.test.js` now, with the SHELL expanding the glob, which
+every Node version understands. Not Node's own quoted-glob support: that
+arrived in 21 and `engines` says >= 20. The one thing this trades away is
+native-Windows `cmd.exe`, which does not glob — recorded in docs/05 rather than
+solved, because everything here runs under WSL or Linux.
+
+Verified the way the failure deserved: a clean clone of `dev_night`, `npm ci
+--omit=dev` exactly as a worker installs, suite green. I could not reproduce it
+here at all before that — the tree, the missing dev dependencies, Playwright's
+absence and a fully loaded machine were each eliminated in turn, and every one
+of them passed. The answer was in the version string at the bottom of the
+traceback.
+
+**And it was hiding a second thing.** The directory form ran EVERY `.js`/`.mjs`
+under `test/`, including `client_smoke.mjs`, both fixture scripts,
+`headless/sim_m0.mjs` and `helpers/rules.mjs` — none of which declare a single
+test. Each was executed as a script and counted as one passing "test" for
+exiting 0. So the suite has been quietly running the headless sim and the
+fixture runner on every `npm test`, and **every test count in this log before
+today is five too high**: 592 was 587, 584 was 579, and so on. The new number
+is honest.
+
+The lane's refusal behaved exactly as designed, which is the consolation: a red
+suite means every pending task comes back FAILED with the reason attached,
+rather than eight cheerful CSVs measured on a build that could not run its own
+tests.
+
+587 tests, smoke clean, on Node 20 here and on a worker-shaped clone.
+
+---
+
 ## 2026-08-30 — The seventh review: the lock that was only a label
 
 Owner asked for the usual sweep for omissions. The headline is a correction to

@@ -130,6 +130,31 @@ The ranking is the point. Everything in the second half is checkable by a
 probe eventually; the six questions are not, and they are what a playtest is
 actually for.
 
+### `npm test` names its files, and that is not fussiness
+
+`node --test test/*.test.js`, never `node --test test/`. The shell expands the
+glob, so Node receives explicit paths on every version.
+
+The directory form is **version-dependent**. Node 22 changed `--test`
+positional arguments from "a directory to search" into glob patterns, so on
+**Node 24 `node --test test/` fails outright** — it tries to load `test/` as a
+module and dies with `Cannot find module '.../test'`. The suite was green on
+Node 20 and could not start on Node 24. Found on 2026-08-30 the first time the
+batch PC ran it, which is a fair share of what a second machine is for.
+
+It also fixed a quieter thing. The directory form ran **every** `.js`/`.mjs`
+under `test/` — including `client_smoke.mjs`, both fixture scripts,
+`headless/sim_m0.mjs` and `helpers/rules.mjs`, none of which declare a single
+test. Each was executed as a script and counted as one passing "test" for
+exiting 0. That is why the total dropped from 592 to **587** when the glob
+landed: five non-tests stopped being run and stopped being counted. Any test
+count quoted in the log before that date is five too high.
+
+One caveat, recorded rather than solved: shell globbing needs a POSIX shell, so
+`npm test` on native Windows `cmd.exe` would pass the pattern through
+unexpanded. Everything here runs under WSL or Linux. Node 21+ would accept a
+quoted glob natively, but that would break Node 20, and `engines` says >= 20.
+
 ## The battery lane (the batch PC)
 
 `npm run battery` is five fixed seeds in eight seconds and answers *does the

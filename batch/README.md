@@ -142,6 +142,13 @@ node tools/batch.mjs run
 git add batch/responses && git commit -m "batch: results" && git push
 ```
 
+**Node 22+ note.** `npm test` runs `node --test test/*.test.js`, with the shell
+expanding the glob. It used to say `node --test test/`, which works on Node 20
+and **fails outright on Node 24** — the directory is read as a glob pattern,
+matches nothing, and Node tries to load `test/` as a module. The batch PC (Node
+24) hit that the first time it ran, and because the runner refuses to serve on
+a red suite, all eight tasks would have come back FAILED. Fixed 2026-08-30.
+
 The worker checks out the same repo as the dev machine. It will **not** have
 `ops/`, `dev-questions.md`, `dev-prompts.md`, `reviews/` or `reports/` — those
 are gitignored and local. Nothing in the lane needs them.

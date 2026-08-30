@@ -10,9 +10,9 @@
   },
   "scripts": {
     "start": "node server/index.js",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "smoke": "node test/client_smoke.mjs",
-    "gate": "node --test test/ && node test/client_smoke.mjs",
+    "gate": "node --test test/*.test.js && node test/client_smoke.mjs",
     "trig": "node tools/gen_trig.mjs",
     "repin": "node tools/repin_m0a.mjs",
     "sim": "node test/headless/sim_m0.mjs",
