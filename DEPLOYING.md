@@ -29,6 +29,24 @@ Everything is environment variables, all optional:
 | `SAVE` | data/autosave.json | war autosave every 30 s and on shutdown; `0` disables |
 | `RESUME` | 0 | `1` resumes the autosave strictly (exits with the reason if it cannot); `auto` resumes when possible and starts fresh with a notice when not |
 
+## Who may join
+
+Three rules (`server/doorman.js`):
+
+- **An open lobby.** A socket with no token and no code takes the lowest free
+  team. A room nobody can wander into is a room nobody joins.
+- **A war already started needs the room's join code**, passed as `?code=` on
+  the page URL. A returning commander's seat **token** beats the code — they
+  get their own ship back without re-typing anything.
+- **The host can remove somebody**, in the room or mid-war; that address waits
+  60 seconds before it may return. The seat is freed at once rather than held,
+  and the AI takes the hull if a war is running.
+
+With `LOBBY=0` no code exists, so nothing is demanded.
+
+If you want the whole site private, that is your proxy's job — HTTP basic auth
+in front of it costs nothing and this game will never fight you for it.
+
 ## The shape of a shared box
 
 The doctrine this family of games deploys under: one nginx with TLS

@@ -171,7 +171,21 @@ function createWsTransport(url) {
       } catch {
         token = '';
       }
-      const socket = new WebSocket(token === '' ? url : `${url}/?token=${token}`);
+      // The room's join code, from `?code=` on the page's own URL. A war
+      // already in progress asks for it (owner ruling 2026-08-31); an open
+      // lobby does not, and a token beats it either way. It rides the socket
+      // URL beside the token because that is the only thing a WebSocket
+      // handshake can carry.
+      let code = '';
+      try {
+        code = new URL(window.location.href).searchParams.get('code') ?? '';
+      } catch (error) {
+        code = '';
+      }
+      const query = [];
+      if (token !== '') query.push(`token=${encodeURIComponent(token)}`);
+      if (code !== '') query.push(`code=${encodeURIComponent(code)}`);
+      const socket = new WebSocket(query.length === 0 ? url : `${url}/?${query.join('&')}`);
       state.socket = socket;
       socket.addEventListener('open', () => { state.attempts = 0; });
       socket.addEventListener('message', (event) => {
@@ -197,6 +211,15 @@ function createWsTransport(url) {
         else if (message.type === 'vote') handlers.onVote(message);
         else if (message.type === 'lobby') handlers.onLobby(message.lobby);
         else if (message.type === 'rejected') handlers.onRejected(message.reason);
+        else if (message.type === 'kicked') {
+          // A kick is not a blip. Without this the socket closes, the retry
+          // backoff treats it as a sleeping laptop and reconnects - straight
+          // into the minute-long ban, over and over, telling the player
+          // nothing except that the game is broken.
+          state.closing = true;
+          handlers.onRejected(message.reason);
+          handlers.onClosed('removed from the table');
+        }
       });
       // A dropped socket is retried with a backoff before it is called dead:
       // the server is holding the seat for a grace window, and most drops are a

@@ -41,6 +41,7 @@ import {
   setReady,
 } from './lobby.js';
 import { createHolder, expired, holdSeat, isHeld, reclaim, release } from './reconnect.js';
+import { admit, banAddress, createDoorman } from './doorman.js';
 import { resumeGame, saveGame, saveLogOnly, writeSave } from './save.js';
 import { createWatch, watchReport, watchTick } from './watch.js';
 
@@ -100,6 +101,7 @@ function createApp(options) {
     // and never writes it, so it cannot change a war it is watching.
     watch: options.watch === true ? createWatch({ stuckAfter: options.stuckAfter }) : 0,
     // Seats held for players who dropped, and the tokens they come back with.
+    doorman: createDoorman(options.nowFn ?? (() => Date.now())),
     holder: createHolder(
       options.nowFn ?? (() => Date.now()),
       // A seat token is what lets somebody take a held carrier back, so it
@@ -213,6 +215,18 @@ function createApp(options) {
       if (!taken.includes(t) && !isHeld(app.holder, t)) return t;
     }
     return -1;
+  }
+
+  // The room's join code, if the socket brought one. Same parser as the token
+  // below and for the same reason: `indexOf('code=')` would also match
+  // `?joincode=` and `?xcode=` (review R-012).
+  function codeFrom(req) {
+    try {
+      const url = new URL(String(req.url ?? ''), 'http://carrier.invalid');
+      return url.searchParams.get('code') ?? '';
+    } catch (error) {
+      return '';
+    }
   }
 
   // The token in the socket's URL, if it brought one back.
@@ -369,6 +383,26 @@ function createApp(options) {
     // Somebody coming back gets their own seat, with their own name on it, and
     // takes the war back off the machine if it had been handed over.
     const returning = reclaim(app.holder, tokenFrom(req));
+
+    // The door (owner rulings, 2026-08-31): a war IN PROGRESS needs the room's
+    // join code, and a kicked address waits a minute. An open LOBBY is
+    // deliberately still open - strangers wandering in before the table sails
+    // is how a drop-in game works, and the kick is the answer to the ones who
+    // should not stay. A returning commander's token beats both, or the
+    // ruling that they get their ship back would not survive.
+    const refusal = admit(app.doorman, {
+      address: req.socket === undefined ? '' : req.socket.remoteAddress,
+      hasToken: returning === -1 ? 0 : 1,
+      roomCode: app.lobby === 0 ? '' : app.lobby.code,
+      started: app.lobby !== 0 && app.lobby.status !== 'lobby' ? 1 : 0,
+      code: codeFrom(req),
+    });
+    if (refusal !== '') {
+      send(socket, { type: 'rejected', reason: refusal });
+      socket.close();
+      return;
+    }
+
     const claimed = returning === -1 ? claimTeam() : returning.team;
     // No seat and no observers allowed: the door is closed, and it says so.
     if (returning === -1 && claimed === -1 && !observersAllowed()) {
@@ -380,14 +414,19 @@ function createApp(options) {
     // the absent commander's token stops opening it, because somebody is
     // actually flying it now.
     if (returning === -1 && claimed !== -1) release(app.holder, claimed);
+    // The address is kept on the SEAT. Reaching into `socket._socket` for it
+    // later works today and is one ws upgrade away from being undefined, which
+    // would silently turn every kick into a kick with no ban.
+    const address = req.socket === undefined ? '' : req.socket.remoteAddress;
     const seat = returning === -1
-      ? { socket: socket, team: claimed, vote: NO_VOTE, token: app.holder.tokenFn() }
+      ? { socket: socket, team: claimed, vote: NO_VOTE, token: app.holder.tokenFn(), address: address }
       : {
         socket: socket,
         team: returning.team,
         vote: NO_VOTE,
         token: returning.token,
         name: returning.name,
+        address: address,
       };
     // A human at a seat takes it off the machine, whether they are coming back
     // to it or sitting down at it for the first time. Without this a player who
@@ -440,6 +479,14 @@ function createApp(options) {
         send(socket, { type: 'rejected', reason: 'malformed json' });
         return;
       }
+      // Kick is handled BEFORE the lobby dispatch and outside it, because
+      // handleLobby refuses everything once the war has started - and a
+      // stranger who needs removing is most likely to need it mid-war, not
+      // while the table is still choosing islands.
+      if (message !== null && typeof message === 'object' && message.type === 'kick') {
+        handleKick(socket, message);
+        return;
+      }
       if (message !== null && typeof message === 'object' && isLobbyMessage(message.type)) {
         handleLobby(socket, message);
         return;
@@ -484,7 +531,17 @@ function createApp(options) {
       app.seats.splice(index, 1);
       // Hold the seat rather than freeing it: a locked phone should not cost
       // somebody their carrier, and the war should not stop for them either.
-      if (seat.team !== -1) holdSeat(app.holder, seat);
+      //
+      // Unless they were KICKED, in which case holding the seat open for their
+      // return is the opposite of what the host asked for. The seat is freed
+      // at once, and if a war is running the machine takes the carrier - a
+      // held seat would have waited out the grace window before the AI got it,
+      // leaving a hull nobody was flying in the meantime.
+      if (seat.team !== -1 && seat.kicked !== 1) {
+        holdSeat(app.holder, seat);
+      } else if (seat.team !== -1 && !inLobby()) {
+        enqueueCommand(app.game, { type: 'set_ai', team: seat.team, active: 1 });
+      }
       // Somebody leaving can complete a vote the rest had already agreed on.
       settleVote();
       // And in the lobby it can pass the host seat, or make the room ready.
@@ -595,6 +652,51 @@ function createApp(options) {
     broadcastLobby();
     broadcastVote();
     return '';
+  }
+
+  // The host removes somebody from the table (owner ruling, 2026-08-31). The
+  // open lobby is the deliberate half of the access rules; this is the other
+  // half, and without it "anyone may join" has no remedy.
+  //
+  // Works in the room AND during the war. Frees the seat, hands the carrier to
+  // the machine if a war is running, and shuts the address out for a minute so
+  // the kick is not undone by a reconnect two seconds later.
+  function handleKick(socket, message) {
+    const seat = seatFor(socket);
+    if (seat === undefined) return;
+    if (app.lobby === 0) {
+      send(socket, { type: 'rejected', reason: 'there is no table to kick from' });
+      return;
+    }
+    if (!isHost(app.seats, seat)) {
+      send(socket, { type: 'rejected', reason: 'only the host removes people' });
+      return;
+    }
+    const team = Number(message.team);
+    if (!Number.isInteger(team)) {
+      send(socket, { type: 'rejected', reason: 'no such seat' });
+      return;
+    }
+    if (team === seat.team) {
+      send(socket, { type: 'rejected', reason: 'you cannot remove yourself' });
+      return;
+    }
+    const target = app.seats.find((other) => other.team === team && other !== seat);
+    if (target === undefined) {
+      send(socket, { type: 'rejected', reason: 'nobody is sitting there' });
+      return;
+    }
+    // The ban is on the ADDRESS, which is the only handle a socket gives us.
+    // On a LAN that is one machine; behind one public NAT it may be more than
+    // the person kicked, which is a real cost and the reason the window is a
+    // minute rather than an evening.
+    banAddress(app.doorman, target.address);
+    target.kicked = 1;
+    send(target.socket, { type: 'kicked', reason: 'the host removed you from this table' });
+    // Close AFTER the message, and let the ordinary drop handler do the rest:
+    // it releases the seat, hands the team to the AI if a war is running, and
+    // tells the room. Duplicating that here is how the two paths drift.
+    try { target.socket.close(); } catch (error) { /* already gone */ }
   }
 
   function handleLobby(socket, message) {

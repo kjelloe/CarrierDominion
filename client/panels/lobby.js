@@ -111,14 +111,29 @@ function meIn(room, team) {
   return room.seats.find((s) => s.team === team);
 }
 
-function drawRoster(panel, room, body) {
+function drawRoster(panel, room, body, host, team) {
   const t = panel.ctx.t;
   for (const seat of room.seats) {
     const who = seat.team === -1 ? t('lobby.watching') : t('lobby.seat', { team: seat.team + 1 });
     const marks = [];
     if (seat.host === 1) marks.push(t('lobby.host'));
     marks.push(t(seat.ready === 1 ? 'lobby.ready' : 'lobby.waiting'));
-    body.append(line('start-row', `${who}  ${seat.name}`, marks.join(' - ')));
+    // The host can remove anybody but themselves (owner ruling 2026-08-31).
+    // The lobby is deliberately open to strangers, and a kick is the remedy
+    // that makes that safe to leave open - so the control has to be here,
+    // where the host is looking at the list of who turned up.
+    const canKick = host && seat.team !== team && seat.host !== 1;
+    const row = line(
+      canKick ? 'start-row island-act' : 'start-row',
+      `${who}  ${seat.name}`,
+      canKick ? `${marks.join(' - ')}  ${t('lobby.remove')}` : marks.join(' - '),
+    );
+    if (canKick) {
+      row.addEventListener('click', () => {
+        panel.ctx.send({ type: 'kick', team: seat.team });
+      });
+    }
+    body.append(row);
   }
 }
 
@@ -169,7 +184,7 @@ function renderLobbyPanel(panel, room, team) {
 
   const body = document.getElementById('start-body');
   body.textContent = '';
-  drawRoster(panel, room, body);
+  drawRoster(panel, room, body, host, team);
   body.append(document.createElement('br'));
   drawOptions(panel, room, body, host);
 

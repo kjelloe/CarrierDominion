@@ -5,6 +5,52 @@ golden hash and why.
 
 ---
 
+## 2026-08-31 — The door: a lobby anyone may enter, a war that asks
+
+Owner's ruling on the question the deploy script raised, and it is better than
+the question was. Not "lock it": **an open lobby is fine** — strangers
+wandering into a room that has not sailed is how a drop-in game works and every
+sibling on that box is one — but **a war already in progress needs the room's
+join code**, and **the host can kick, with a one-minute cannot-rejoin**.
+
+`server/doorman.js`, pure and clock-injected, so a sixty-second ban costs a
+test no time at all and the policy is argued about without a network. Three
+decisions inside the ruling that were not stated and had to be made:
+
+- **A seat token beats the code.** A commander coming back presents a token
+  this server issued for one seat. Asking them for the code as well would have
+  quietly undone the 2026-08-27 ruling that they get their ship back.
+- **The ban is checked BEFORE the token.** The other order is a kick that lasts
+  two seconds, until the reconnect.
+- **A kicked seat is not held.** An ordinary drop holds the seat 90 seconds
+  because a locked phone should not cost anybody their carrier. A kick means
+  the opposite, so it is freed at once and the machine takes the hull — a held
+  seat would have left an unmanned carrier for the whole grace window.
+
+Two things fell out of building it that are worth as much as the feature:
+
+- **A kick is not a dropped connection.** The transport's retry backoff exists
+  because most drops are a sleeping laptop; left alone it would have reconnected
+  straight into the ban, over and over, for the whole minute, telling the player
+  nothing except that the game was broken. `kicked` now stops the retry and says
+  why. The refusal also carries the seconds left — "come back in 43s" is an
+  answer, "no" is a mystery.
+- **The control has to exist where the host is looking.** The kick is on the
+  roster row, beside the name of whoever turned up, because a rule with no
+  button is the PILOT bug from round five wearing different clothes.
+
+And one mistake worth recording: the first socket test waited three times for
+`type === 'rejected'` and passed on the first refusal every time — `next()`
+scans the whole inbox from the start. That is the stale-inbox trap docs/05
+already records, walked into by the person who has been quoting it. Each wait
+matches its own reason now.
+
+604 tests, smoke clean, lobby/rejoin/second_war probes green. Q37.1 is closed
+in the queue and in ops/DEPLOY.md; two follow-ups (is the address the right
+handle for a ban; should a kicked player be told) are queued as §38.
+
+---
+
 ## 2026-08-31 — Playtest round five: two of the three were one bug
 
 Owner at the controls again. Three findings; the second and third had the same

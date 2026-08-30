@@ -87,17 +87,31 @@ expensive damage state in the game — though the chart keeps its ghosts.
   of its identity and a replay cannot silently use different ones.
 - **Chat**: `CHAT_KEPT = 24` lines of scrollback, `CHAT_MAX = 160` characters
   each, both before and during a war.
-- **The join code is a LABEL, not a LOCK.** Nothing verifies it: the server
-  never checks a code and the client never sends one. It exists so friends can
-  confirm they are in the same room. **There is no access control at all** — a
-  socket with no token and no code is handed the lowest free team, and a full
-  table gets a spectator seat if the room allows watchers. On a LAN that is the
-  design and the network is the boundary; on a public host it means the first
-  person to open the URL commands a carrier. Pinned by
-  `test/server_ws.test.js` ("a stranger with no token and no code is given a
-  carrier") so that changing it is a decision rather than an accident. The room
-  also broadcasts the code to every seat including spectators, so a
-  watch-only table hands it out too.
+- **The door** (owner rulings, 2026-08-31; `server/doorman.js`). Two rules, and
+  the asymmetry between them is the point:
+
+  - **An open lobby stays open.** A socket with no token and no code is handed
+    the lowest free team. That is deliberate — every drop-in game on this box
+    works that way, and a room nobody can wander into is a room nobody joins.
+  - **A war already sailed needs the room's code.** Once `status` leaves
+    `lobby`, a newcomer must present `?code=` or be refused. A returning
+    commander's **token beats the code**, because the 2026-08-27 ruling says
+    they get their ship back and making them re-type a code to reclaim a seat
+    this server issued them a token for would quietly undo it.
+  - **The host can remove somebody**, in the room or mid-war, and the address
+    waits **60 seconds** before it may return (`BAN_MS`). The ban is checked
+    *before* the token, or a kick would be undone by the reconnect two seconds
+    later. A kicked seat is **not** held for their return — it is freed at
+    once, and the machine takes the carrier if a war is running.
+
+  Ban keyed by remote address, which is the only handle a socket gives: one
+  machine on a LAN, possibly more than one person behind a single public NAT.
+  That cost is real and is why the window is a minute rather than an evening.
+  With `LOBBY=0` no code is ever issued, so nothing is demanded — inventing a
+  lock with no key would refuse everybody forever.
+
+  The room broadcasts the code to every seat including spectators, so anyone
+  already admitted can read it.
 - **The room comes back.** When the war ends, the host takes BACK TO THE WAR
   ROOM from the ending screen: the finished war is saved one last time, the
   table unreadies, and the SAME join code holds — one code names an evening,

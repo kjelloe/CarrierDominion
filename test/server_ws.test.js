@@ -570,9 +570,13 @@ test('the watchdog endpoint does not carry the code either', async () => {
   }
 });
 
-// --- what actually stands between a stranger and a carrier -------------------
+// --- what stands between a stranger and a carrier IN THE LOBBY ---------------
 //
-// NOTHING DOES, and that is worth a test rather than a discovery.
+// Nothing does, and as of the 2026-08-31 rulings that is deliberate rather
+// than an oversight: an open lobby is how every drop-in game on this box
+// works. The two tests below pin the OPEN half of the door. The closed half -
+// a war in progress needs the code, and a kicked address waits a minute - is
+// pinned above and in server_doorman.test.js.
 //
 // The war room has a join code, docs/03 says "one code hands friends a whole
 // evening", and ops/DEPLOY.md said the code was the only thing between a
@@ -585,6 +589,129 @@ test('the watchdog endpoint does not carry the code either', async () => {
 // the URL commands a carrier in somebody's war. That is an owner decision, not
 // a bug to fix quietly, so these tests pin the behaviour as it IS. If access
 // control is ever added, they fail and say exactly what changed.
+
+// --- the door, over a real socket (owner rulings, 2026-08-31) ---------------
+
+test('a war in progress refuses a stranger who has no code', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-door-1' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const host = connect(`ws://127.0.0.1:${address.port}`);
+    await host.open();
+    await host.next((m) => m.type === 'welcome');
+    const code = app.joinCode();
+    host.send({ type: 'lobby_ready', ready: 1 });
+    host.send({ type: 'lobby_start' });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.notEqual(app.lobby.status, 'lobby', 'this test needs the war to have started');
+
+    const stranger = connect(`ws://127.0.0.1:${address.port}`);
+    await stranger.open();
+    const refused = await stranger.next((m) => m.type === 'rejected');
+    assert.match(refused.reason, /join code/, `refused for the wrong reason: ${refused.reason}`);
+    stranger.close();
+
+    // And with the code, they are welcome - the code is the gate, not a wall.
+    const friend = connect(`ws://127.0.0.1:${address.port}/?code=${code}`);
+    await friend.open();
+    const welcome = await friend.next((m) => m.type === 'welcome');
+    assert.ok(welcome.team >= 0 || welcome.spectator === true,
+      'the right code did not get in');
+    friend.close();
+    host.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test('a commander coming back to a started war needs no code, only their token', async () => {
+  // The 2026-08-27 ruling survives the new door: their token names the seat.
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-door-2' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const host = connect(`ws://127.0.0.1:${address.port}`);
+    await host.open();
+    const welcome = await host.next((m) => m.type === 'welcome');
+    host.send({ type: 'lobby_ready', ready: 1 });
+    host.send({ type: 'lobby_start' });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    host.close();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const back = connect(`ws://127.0.0.1:${address.port}/?token=${welcome.token}`);
+    await back.open();
+    const resumed = await back.next((m) => m.type === 'welcome');
+    assert.equal(resumed.team, welcome.team, 'a token holder was refused their own seat');
+    assert.equal(resumed.resumed, 1);
+    back.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test('the host can remove somebody, and they cannot walk straight back in', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-kick' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const host = connect(`ws://127.0.0.1:${address.port}`);
+    await host.open();
+    const hostWelcome = await host.next((m) => m.type === 'welcome');
+    assert.equal(hostWelcome.team, 0);
+
+    const guest = connect(`ws://127.0.0.1:${address.port}`);
+    await guest.open();
+    const guestWelcome = await guest.next((m) => m.type === 'welcome');
+    assert.equal(guestWelcome.team, 1, 'the second player did not get the second carrier');
+
+    host.send({ type: 'kick', team: 1 });
+    const told = await guest.next((m) => m.type === 'kicked');
+    assert.match(told.reason, /removed/);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    // Straight back in is refused, and told how long to wait.
+    const again = connect(`ws://127.0.0.1:${address.port}`);
+    again.open().catch(() => {});
+    const refused = await again.next((m) => m.type === 'rejected');
+    assert.match(refused.reason, /removed/, `wrong refusal: ${refused.reason}`);
+    assert.match(refused.reason, /\d+s/, 'the refusal does not say how long');
+    again.close();
+    host.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test('only the host removes people, and never themselves', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-kick-2' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const host = connect(`ws://127.0.0.1:${address.port}`);
+    await host.open();
+    await host.next((m) => m.type === 'welcome');
+    const guest = connect(`ws://127.0.0.1:${address.port}`);
+    await guest.open();
+    await guest.next((m) => m.type === 'welcome');
+
+    // Each wait matches its OWN reason, not just `type === 'rejected'`.
+    // `next()` scans the whole inbox from the start, so three waits for the
+    // same type are all satisfied by the first refusal - the stale-inbox trap
+    // docs/05 records, walked straight into on the first draft of this test.
+    const rejection = (re) => (m) => m.type === 'rejected' && re.test(m.reason);
+
+    guest.send({ type: 'kick', team: 0 });
+    await guest.next(rejection(/only the host/));
+
+    host.send({ type: 'kick', team: 0 });
+    await host.next(rejection(/yourself/));
+
+    host.send({ type: 'kick', team: 9 });
+    await host.next(rejection(/nobody/));
+    guest.close();
+    host.close();
+  } finally {
+    await app.close();
+  }
+});
 
 test('a stranger with no token and no code is given a carrier', async () => {
   const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-open-door' });

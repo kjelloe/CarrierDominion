@@ -165,6 +165,7 @@
   "lobby.seat": "seat {team}",
   "lobby.watching": "watching",
   "lobby.host": "HOST",
+  "lobby.remove": "REMOVE",
   "lobby.ready": "ready",
   "lobby.waiting": "not ready",
   "lobby.iAmReady": "I AM READY",

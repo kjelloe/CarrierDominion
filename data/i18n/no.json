@@ -165,6 +165,7 @@
   "lobby.seat": "plass {team}",
   "lobby.watching": "tilskuer",
   "lobby.host": "VERT",
+  "lobby.remove": "FJERN",
   "lobby.ready": "klar",
   "lobby.waiting": "ikke klar",
   "lobby.iAmReady": "JEG ER KLAR",

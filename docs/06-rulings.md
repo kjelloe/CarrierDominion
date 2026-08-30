@@ -123,12 +123,11 @@ The owner's first hands-on session ruled three things:
 
 - **One join code is an evening** (2026-08-22): when a LAN war ends, the
   host reopens the room from the ending screen and the table fights again on
-  the same code. **The code names the room; it does not guard it** — nothing
-  verifies it, and there is no access control of any kind (docs/03). That was
-  invisible while the game only ran on a LAN, where the network is the
-  boundary. It stops being invisible the moment it is on a public hostname:
-  **open question for the owner, raised 2026-08-30 while writing the deploy
-  script.**
+  the same code. **As of 2026-08-31 the code also GUARDS a war that has already
+  started** — see "The door" below. Until then nothing verified it and there
+  was no access control at all, which was invisible while the game only ran on
+  a LAN, where the network is the boundary. It stopped being invisible the
+  moment a public hostname was days away.
 
 - **Graphics tiers get real targets** (2026-08-22): Low = mobile and
   integrated GPUs (full mobile pass deferred), Medium = the current look,
@@ -653,6 +652,39 @@ from `randomBytes(12)` rather than `Math.random`, and the socket's URL is
 parsed instead of searched, because `indexOf('token=')` also matched
 `?xtoken=` and read it as a seat token. R-010, the documentation drift, was
 closed on 2026-08-28.
+
+## The door (2026-08-31)
+
+Answering the question the deploy script raised: **nothing gated a seat.** No
+join code was ever verified — the server never checked one and the client never
+sent one — so on a public hostname the first stranger to open the URL would
+command a carrier. The owner's ruling was not "lock it":
+
+- **An open lobby is fine.** Strangers wandering into a room that has not
+  sailed is how a drop-in game works, and every sibling on that box is one.
+- **A LAN war already in progress requires the code.** Once the table is
+  playing, a newcomer needs what the host gave their friends.
+- **The host can kick**, and a kicked player **cannot rejoin for one minute**.
+
+Built as `server/doorman.js`, pure and clock-injected so the policy is tested
+without a network. Three things in it are deliberate and not obvious:
+
+- **A token beats the code.** Otherwise the 2026-08-27 ruling — a commander
+  back late gets their ship back — would be quietly undone by the new door.
+- **The ban is checked BEFORE the token**, or a kick is reversed by the
+  reconnect two seconds later.
+- **A kicked seat is not held.** An ordinary drop holds a seat for 90 seconds
+  because a locked phone should not cost somebody their carrier; a kick means
+  the opposite, so the seat is freed at once and the machine takes the hull if
+  a war is running.
+
+The refusal says how long to wait. "Come back in 43 seconds" is an answer; "no"
+is a mystery, and a client told nothing reconnects in a loop — which the
+transport now also refuses to do, because a kick is not a dropped connection.
+
+The ban is keyed by remote address, the only handle a socket gives: one machine
+on a LAN, possibly more than one person behind a single public NAT. That cost
+is real, and is why the window is a minute rather than an evening.
 
 ## Playtest round five (2026-08-30)
 
