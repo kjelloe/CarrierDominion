@@ -17,7 +17,9 @@
     "repin": "node tools/repin_m0a.mjs",
     "sim": "node test/headless/sim_m0.mjs",
     "battery": "node tools/sim_battery.mjs",
-    "probes": "node tools/run_probes.mjs"
+    "probes": "node tools/run_probes.mjs",
+    "sweep": "node tools/sweep.mjs",
+    "batch": "node tools/batch.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"

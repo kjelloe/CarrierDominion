@@ -432,6 +432,24 @@ Look for these shapes first — every one produced a real bug:
   every screen the player actually sees - here that meant the menu, and the
   ending screen after it.
 
+- **A sample too small to tell a coincidence from a rule.** The five-seed
+  battery ended `winner=0 by sinking` five times running, which reads like a
+  side bias; forty-eight seeds came back 25/22. Before diagnosing an asymmetry,
+  ask how many samples produced it — `npm run battery` is a pass/fail gate, not
+  a measurement, and five is five anecdotes.
+- **Every measurement taken at one configuration.** The lobby offers 4-64
+  islands and 2-16 teams; nearly every number quoted in this project came from
+  8 islands and 2 teams. At 32 islands and 4 teams, 14 of 16 wars did not
+  resolve inside the tick cap. This is "edges the current config cannot reach"
+  again, one level up: not an unreachable branch, but an unmeasured region of
+  a space the player can actually select.
+- **A harness bug wearing a finding's clothes.** Building a sweep's ruleset by
+  hand (`aiTeams: [0,1,2,3]` while `teamCount` stayed 2) gave two teams an AI
+  plan and no carrier, and every war then failed to resolve. Any instrument
+  must build its config through the SAME fold the game uses
+  (`applyLobbyOptions`), and must reproduce the existing instrument to the tick
+  on a shared seed before its new numbers are believed.
+
 ### And two habits, not classes
 
 - **Check who is driving.** In the headless sim and battery, team 0 is the

@@ -1,0 +1,9 @@
+{
+  "id": "0007-matrix",
+  "kind": "matrix",
+  "count": 20,
+  "queuedForEra": "57f588c895da27c5",
+  "queuedAtCommit": "44c6701",
+  "islands": 16,
+  "teams": 8
+}

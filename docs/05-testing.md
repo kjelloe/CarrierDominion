@@ -130,6 +130,52 @@ The ranking is the point. Everything in the second half is checkable by a
 probe eventually; the six questions are not, and they are what a playtest is
 actually for.
 
+## The battery lane (the batch PC)
+
+`npm run battery` is five fixed seeds in eight seconds and answers *does the
+war still work*. It cannot answer *how does the war behave*, and on 2026-08-30
+it showed exactly why: all five seeds end `winner=0 by sinking`, which reads
+like a side bias when both sides are the same AI. **Forty-eight fresh seeds
+came back 25/22.** Five seeds cannot tell a coincidence from a rule, and a
+five-seed battery is not a sample — it is five anecdotes with a pass/fail.
+
+`tools/sweep.mjs` runs many wars and emits one CSV row each; `tools/batch.mjs`
+is the lane that gets those runs onto a second machine, with **git as the
+transport** — the dev machine commits a task, the worker pulls, runs, and
+commits a response. Ported from `shadowmandate/batch/`. Full protocol in
+`batch/README.md`.
+
+**What justifies a second machine** is the configuration matrix. The lobby
+offers 4–64 islands and 2–16 teams, ruling #9 says nothing may hard-code two
+teams, and almost every measurement ever taken here has been an 8-island,
+2-team war. The cost is not linear:
+
+| configuration | per war | outcome |
+|---|---|---|
+| 8 islands, 2 teams | ~15 core-seconds | resolves |
+| 32 islands, 4 teams | ~655 core-seconds | **14 of 16 never resolved** |
+
+An unresolved war runs the full 900,000-tick cap — 12.5 hours at ×1 — so the
+expensive cells are expensive *because* they are the ones going wrong.
+
+Three rules from the lane worth applying beyond it:
+
+- **Build the config through `applyLobbyOptions`, never by poking the ruleset.**
+  The first draft of the sweep set `aiTeams` to four teams while `teamCount`
+  stayed at two, giving teams 2 and 3 an AI plan and no carrier. Every war
+  failed to resolve, and it looked exactly like a finding. What caught it: the
+  sweep and `npm run battery` must agree **to the tick** on a shared seed
+  (900913 → t=18695, winner 0, sinking, lull 3444 @ 14069). An instrument that
+  cannot reproduce the existing one is measuring a different game.
+- **Two hashes, two questions.** `era` is the RAW ruleset's hash — *same rules?*
+  `configHash` is the FOLDED one — *same war?* The first draft printed only the
+  folded hash and called it the rules hash, which would have silently disagreed
+  with the era in every response.
+- **A metric that returns the same number for every row is not a metric.**
+  The sweep's first lull column counted *any* event and read a flat 100
+  everywhere, because something ticks over constantly. The battery counts only
+  PROGRESS codes. Copied, not reinvented — so the two can be compared.
+
 ## Probes
 
 `debugging/probes/*.mjs` drive a real Chromium through Playwright, do something,

@@ -5,6 +5,69 @@ golden hash and why.
 
 ---
 
+## 2026-08-30 — Five seeds are five anecdotes: the battery lane
+
+Owner asked whether there was batch-PC work here, pointing at the sibling's
+`shadowmandate/batch/`. Measuring before answering turned the question into a
+finding.
+
+**The five-seed battery ends `winner=0 by sinking` five times out of five.**
+Both seats are AI in the battery (`aiTeams: [0, 1]`), so that reads like a side
+bias — spawn asymmetry, or team 0 winning every tie in the step order. Forty-
+eight fresh seeds across the cores came back **25/22**. No bias; the five
+chosen seeds were a coincidence. Worth the hour on its own: a false alarm
+killed is a real result, and this one would have cost a day of hunting.
+
+**Then the real one.** The lobby offers 4–64 islands and 2–16 teams, and ruling
+#9 says nothing may hard-code two teams — but nearly every number this project
+has ever quoted came from an 8-island, 2-team war. At **32 islands and 4 teams,
+14 of 16 wars did not resolve** inside the 900,000-tick cap, which is 12.5 hours
+of war at ×1. Two resolved, both around 365k ticks against a median of 56k for
+the default. The victory condition — two thirds of the islands, or sink the
+enemy carrier — does not obviously scale to four claimants on a big map, and
+nothing had ever looked.
+
+**I nearly filed that finding while it was my own bug.** The first harness set
+`aiTeams: [0,1,2,3]` directly on the ruleset and left `teamCount` at its default
+of 2, so teams 2 and 3 had an AI plan and no carrier; of course nothing
+resolved. The config a sweep runs must come through `applyLobbyOptions`, the
+same fold the lobby, the resume and the replay use, or it is not a war the game
+can produce. The check that would have caught it immediately, and now guards it:
+**the sweep must agree with `npm run battery` to the tick on a shared seed** —
+900913 gives t=18695, winner 0, sinking, lull 3444 @ 14069 in both. The finding
+survived the correction, which is the only reason it is written here.
+
+What landed: `tools/sweep.mjs` (many wars, one CSV row each, shardable) and
+`tools/batch.mjs` (the lane, git as the transport, ported from the sibling),
+plus `batch/README.md` and eight queued tasks covering the matrix.
+
+Three smaller lessons, each from a first draft that was wrong:
+
+- **A metric that returns the same number for every row is not a metric.** The
+  first lull column counted any event and read a flat 100 everywhere, because
+  something ticks over constantly. The battery counts only PROGRESS codes —
+  copied verbatim rather than reinvented, so the two instruments can be
+  compared at all.
+- **Two hashes, two questions.** `era` is the RAW ruleset's hash ("same
+  rules?"), `configHash` the FOLDED one ("same war?"). The first draft printed
+  only the folded hash and called it the rules hash, which would have disagreed
+  with the era in every response for no visible reason. This game has a better
+  era than a version string: `rulesHash` is computed from the data the war runs
+  on and cannot be forgotten the way a hand-bumped number can.
+- **A comment promised a flag that did not exist.** The header said a single
+  row could be reproduced without the sweep; there was no `--seed`. Added.
+
+The lane's refusals were verified by causing them: a deliberately failing test
+made `run` write a FAILED response for every pending task instead of serving
+(`npm test is RED on this commit`), and deleting the home-directory rule from
+`scrub` made `test/tools_batch.test.js` report `the username survived`. That
+scrubber is the whole privacy guarantee — the responses are tracked files and
+the leak risk is not the data but the stack traces.
+
+584 tests, smoke clean.
+
+---
+
 ## 2026-08-30 — The deploy script found a leak the reviews did not
 
 Writing the private ops set (deploy script, unit, nginx vhost, DEPLOY/NOTES)
