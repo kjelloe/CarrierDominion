@@ -1,0 +1,12 @@
+{
+  "id": "0004-matrix",
+  "kind": "matrix",
+  "commit": "1318b30",
+  "ranOnEra": "57f588c895da27c5",
+  "queuedForEra": "57f588c895da27c5",
+  "eraMatch": true,
+  "status": "ok",
+  "shards": 18,
+  "rows": 20,
+  "csv": "0004-matrix.csv"
+}
