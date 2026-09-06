@@ -5,6 +5,55 @@ golden hash and why.
 
 ---
 
+## 2026-09-06 — The omission sweep: a kick nobody could see
+
+Asked for the follow-ups to be written down and for a hunt through what had
+been left out. Four omissions, and the first one was a live bug in a feature
+shipped five days ago.
+
+**The kick had no probe**, so nobody had ever pressed the button in a browser -
+this repo's own recorded class, "the thing no gate opens is the thing that
+breaks", and the same shape as the PILOT button the owner reported missing.
+`debugging/probes/door.mjs` found a real bug on its first run: a removed player
+was told **"disconnected"**. `onClosed(reason)` maps known reasons to i18n keys
+and falls back to `status.disconnected` for anything else, so the message the
+transport was carefully passing was eaten by a lookup table. A `status.removed`
+key, in both languages, and the transport passes a KEY rather than prose.
+
+**Then the probe's own assertion was vacuous** in exactly the way `offsetParent`
+had been in the mobile pass: it read `textContent` from `#hud-status`, which
+`body.menu #hud { display: none }` hides behind the war room. The string
+existed; nobody could see it. Rewritten to walk the ancestors for
+`display: none` and assert on VISIBLE text - and then it failed honestly,
+showing a kicked player still looking at the roster and the join code as if
+nothing had happened. `onClosed` now says it in the room, where they are
+actually looking, and clears the room that is no longer live.
+
+Three more:
+
+- **The batch worker had no suite timeout.** I flagged it, offered it, and
+  never did it. `npm test` on this project has hung twice for real - nine and
+  eleven days - so an unattended worker could block forever and never report.
+  Ten minutes, then a FAILED response for every pending task saying the suite
+  hung. `--test-timeout` covers a hanging TEST; this covers a hanging npm.
+- **The sweep recorded `findings` as a bare count.** The matrix returned 96
+  watchdog findings across 440 wars and the number could say nothing about any
+  of them - the kinds had to be recovered by re-running seeds by hand. There is
+  a `findingKinds` column now, so the next run is diagnosable from the CSV.
+- **PLAYTEST never mentioned the door or the kick**, a feature the owner is
+  meant to try with friends. Both are in the script now, with something to
+  try to break.
+
+The standing list of what is left - waiting on a ruling, decided but not done,
+deliberately not built, and worth measuring next - is now written down in
+`docs/09-proposals.md` under "Follow-ups worth planning next", indexed from
+docs/00 and pointed at from memory, so "what is left?" has one answer instead
+of six places to look.
+
+605 tests, smoke clean, door/lobby/rejoin green.
+
+---
+
 ## 2026-09-06 — The matrix came back: 440 wars, and two different failures
 
 Eight tasks, 440 AI-vs-AI wars, all on era `57f588c895da27c5` — the same

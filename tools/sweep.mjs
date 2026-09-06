@@ -127,13 +127,20 @@ function runWar(seed, islands, teams) {
     worstGap: worstGap,
     worstGapAt: worstGapAt,
     findings: report.findings === undefined ? 0 : report.findings.length,
+    // WHAT the watchdog saw, not just how many. The first full matrix returned
+    // 96 findings across 440 wars and the count alone could say nothing about
+    // any of them; the kinds had to be recovered by re-running seeds by hand.
+    // Kinds only - a detail string would carry tick numbers and blow the CSV
+    // open - joined with `+` because a comma is the column separator.
+    findingKinds: report.findings === undefined ? ''
+      : [...new Set(report.findings.map((f) => f.kind))].join('+'),
     held: held.join('|'),
     wallMs: Date.now() - startedMs,
   };
 }
 
 const COLUMNS = ['seed', 'islands', 'teams', 'tick', 'resolved', 'winner', 'reason',
-  'worstGap', 'worstGapAt', 'findings', 'held', 'wallMs'];
+  'worstGap', 'worstGapAt', 'findings', 'findingKinds', 'held', 'wallMs'];
 
 function git(...args) {
   const r = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });

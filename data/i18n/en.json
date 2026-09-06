@@ -32,6 +32,7 @@
   "status.disconnected": "disconnected",
   "status.error": "connection error",
   "status.closed": "closed",
+  "status.removed": "removed from the table by the host",
   "status.rejected": "rejected: {reason}",
   "status.needWalrus": "select a Walrus to deploy a pod",
   "status.noPod": "no pod aboard - go back to the carrier",

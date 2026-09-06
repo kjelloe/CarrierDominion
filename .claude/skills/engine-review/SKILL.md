@@ -497,6 +497,15 @@ Look for these shapes first — every one produced a real bug:
   every screen the player actually sees - here that meant the menu, and the
   ending screen after it.
 
+- **A message eaten by a lookup table.** `onClosed(reason)` mapped known
+  reasons to i18n keys and fell back to "disconnected" for everything else - so
+  a kicked player was told their connection had dropped. A table that silently
+  substitutes a WRONG answer for an unknown key is worse than one that throws.
+  When adding a reason, check what the table does with it.
+- **A message nobody can see is not a message.** The kick's explanation landed
+  in the HUD, which `body.menu #hud { display: none }` hides behind the war
+  room. Assert on VISIBLE text - walk the ancestors for `display: none` - not
+  on `textContent`, which is the `offsetParent` mistake in another costume.
 - **A duplicated helper, fixed in one copy.** The socket test helper exists in
   both `server_ws.test.js` and `server_reconnect.test.js`; a missed-event race
   in `open()` was found and fixed in one while the other kept it - and the

@@ -68,6 +68,10 @@ const KINDS = {
   },
 };
 
+// How long the gate suite may take before the worker calls it hung. The suite
+// runs in about a minute; ten is slack for a loaded machine, not patience.
+const SUITE_TIMEOUT_MS = 600000;
+
 const read = (p) => JSON.parse(readFileSync(p, 'utf8'));
 const ensure = (d) => mkdirSync(d, { recursive: true });
 
@@ -235,7 +239,29 @@ function run(argv) {
   if (!dry) {
     // REFUSE TO SERVE ON A RED SUITE.
     process.stdout.write('checking the suite... ');
-    const t = spawnSync('npm', ['test'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    // A TIMEOUT, because the worker is unattended. `npm test` on this project
+    // has hung twice for real - a missed-event race in a socket helper left two
+    // runs sitting for nine and eleven days - and a worker blocked on it never
+    // runs, never reports, and never says why. `--test-timeout` inside the
+    // suite covers a hanging TEST; this covers a hanging npm.
+    const t = spawnSync('npm', ['test'], {
+      cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: SUITE_TIMEOUT_MS,
+    });
+    if (t.error !== undefined && t.error !== null && t.error.code === 'ETIMEDOUT') {
+      console.log(`the suite did not finish in ${Math.round(SUITE_TIMEOUT_MS / 60000)} minutes - refusing to serve`);
+      for (const task of pending) {
+        writeResponse(task.id, {
+          id: task.id,
+          kind: task.kind,
+          status: 'failed',
+          commit: git('describe', '--always', '--dirty'),
+          ranOnEra: currentEra(),
+          error: `npm test HUNG (over ${Math.round(SUITE_TIMEOUT_MS / 60000)} min) - refusing to serve.`,
+        });
+      }
+      console.log('wrote a FAILED response for every pending task - commit and push so it is visible.');
+      process.exit(1);
+    }
     if (t.status !== 0) {
       const tail = scrub((t.stdout ?? '').split('\n').slice(-12).join(' '));
       console.log('RED - refusing to serve');

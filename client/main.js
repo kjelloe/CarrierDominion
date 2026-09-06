@@ -1639,15 +1639,38 @@ function onRejected(reason) {
   setHud(state.hud, 'status', state.t('status.rejected', { reason: reason }));
 }
 
+// The transport passes one of THESE, not prose: anything else falls through to
+// "disconnected", which is a lie whenever the socket closed for a reason the
+// player should hear. That is how a kicked player came to be told their
+// connection had dropped - the message existed, and this table ate it
+// (probe `door.mjs`, first run).
 const CLOSE_KEYS = {
   disconnected: 'status.disconnected',
   'connection error': 'status.error',
   closed: 'status.closed',
+  removed: 'status.removed',
   'replay finished': 'status.replayDone',
 };
 
 function onClosed(reason) {
-  setHud(state.hud, 'status', state.t(CLOSE_KEYS[reason] ?? 'status.disconnected'));
+  const said = state.t(CLOSE_KEYS[reason] ?? 'status.disconnected');
+  setHud(state.hud, 'status', said);
+  // The HUD is HIDDEN behind the war room (`body.menu #hud { display: none }`),
+  // so a player removed while still in the room saw the roster and the join
+  // code carry on as if nothing had happened - the message existed and nobody
+  // could read it. Say it where they are actually looking. Found by door.mjs
+  // asserting on VISIBLE text rather than textContent, which is the only
+  // assertion worth making about a message.
+  const panel = document.getElementById('start-panel');
+  if (reason === 'removed' && panel !== null && panel.classList.contains('open')) {
+    const note = document.getElementById('start-note');
+    if (note !== null) note.textContent = said;
+    const title = document.getElementById('start-title');
+    if (title !== null) title.textContent = said;
+    // The room is not live any more; nothing it offers would do anything.
+    const body = document.getElementById('start-body');
+    if (body !== null) body.textContent = '';
+  }
 }
 
 function frame(nowMs) {

@@ -201,6 +201,16 @@ says what to do and what should happen; anything else is a finding.
 
 - **A second seat.** `./run.sh --lan`, join from a phone or another machine.
   The war room takes the same join code all evening.
+- **The door** (new, 2026-08-31). The **lobby is open** — anyone who reaches the
+  page can take a seat, deliberately. Once the war has **started**, a newcomer
+  needs the code: `…/?code=XXXXX`. Someone coming back to their own seat needs
+  nothing; their token still works.
+  **Try to break it:** start a war, then open a fresh tab with no code (should
+  be refused), then with the code (should get in).
+- **Removing somebody.** As host, click their row in the war room — it reads
+  **REMOVE**. They should be told in plain words, not "disconnected", and they
+  should not be able to rejoin for a minute. **Tell me if the wording is wrong
+  or if they can get straight back in.**
 - **Watch a war back.** `?mode=replay` replays the autosaved war through the
   same engine.
 - **A phone.** Landscape only — portrait is gated. One scrolling column of

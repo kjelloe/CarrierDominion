@@ -167,3 +167,60 @@ deployed, and were factory-replaceable.
 (drones) — small and mostly reuses escort/flare machinery; then 3b
 (topology) last, because it re-teaches the AI and re-balances the economy,
 and 3a (home island) can ride with it or land alone any time.
+
+---
+
+# Follow-ups worth planning next (2026-09-06)
+
+Written after the first full battery matrix and the pre-deploy review. This is
+the standing list: what is decided, what is waiting on a ruling, and what is
+merely known. It is not a promise of order — the owner sets that — but nothing
+here is forgotten.
+
+## A. Waiting on a ruling (nothing moves until these are answered)
+
+| # | Question | Recommendation |
+|---|---|---|
+| §39.1 | **The default config deadlocks 6% of wars** — both carriers at `fuel 0/0`, recoverable only with enough territory. Should running dry be recoverable, fatal, or left? | A fuel trickle from any owned island **plus** a long stop-loss so a truly dead war still ends |
+| §39.2 | **The island victory condition never fires above 8 islands** (zero island wins in 80 wars at 16/32/64). Scale the threshold, add a points/time ending, or cap the offered map size? | Scale it (a margin rather than an absolute fraction), with the room's existing point/time caps as the escape hatch. Do not ship 64×16 while it has produced no ending in twenty attempts |
+| §37.2 | A websocket **heartbeat**. There is none; `proxy_read_timeout 7d` covers the symptom, not a half-open socket | Build it, but after the playtest |
+| §37.3 | The `solo` tag in `games.json` — new vocabulary in that index | Keep, or drop if it looks out of place |
+| §38.1 | Is the **remote address** the right handle for a ban? One machine on a LAN; possibly a household behind one NAT | Leave it — the one-minute window bounds the cost |
+| §38.2 | Should a kicked player be **told**, or silently dropped? | Told (built that way) |
+
+## B. Decided, not yet done
+
+- **The deploy itself** — `ops/DEPLOY.md` steps 3–8. DNS, the port row and the
+  hostname are done; the pre-deploy script review is done. Do **not** deploy
+  `gamesindex/games.json` until the game answers, or the index prober pushes a
+  DOWN alert within ~11 minutes.
+- **A mobile playtest** on a real device. Frame rate cannot be measured here at
+  all — headless renders in software (ruling 2026-08-23).
+- **PLAYTEST A5** — the one open *number* in docs/02: whether a 4 km
+  action-start spawn is lethal to a human as it is to a stationary AI.
+
+## C. Known and deliberately not built
+
+Recorded so they are choices rather than oversights:
+
+- The **2×2 quad camera view** (docs/10 gap 3) — a renderer question, not a
+  console one.
+- The **inset route map while piloting** (docs/10 gap 4) — the chart draws the
+  course instead.
+- **Sunbeams are screen-space**, so islands and the hull do not occlude them
+  (docs/07) — a recorded trade against building a post-processing pass.
+- The **Luau/Roblox twin** and the **true mobile Low tier** (docs/08) —
+  planning only until this version passes playtesting.
+
+## D. Worth measuring next on the batch PC
+
+The matrix answered its question and raised sharper ones:
+
+- **Re-run 8×2 with more seeds** once §39.1 is ruled on: 6% needs a few hundred
+  wars to move confidently, and the sweep now records *which* watchdog finding
+  fired (`findingKinds`), so the next run is diagnosable from the CSV alone.
+- **Bisect the island count** between 8 and 16, where resolution falls from 94%
+  to 80%. That is where a scaled victory threshold should be aimed.
+- **The start ladder** (`start` 0–4) has never been swept. Every war measured
+  so far starts at `start: 0`; a developed or late start may resolve where a
+  cold one cannot, which would change what §39.2 is really about.

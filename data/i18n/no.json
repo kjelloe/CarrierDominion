@@ -32,6 +32,7 @@
   "status.disconnected": "frakoblet",
   "status.error": "tilkoblingsfeil",
   "status.closed": "lukket",
+  "status.removed": "fjernet fra bordet av verten",
   "status.rejected": "avvist: {reason}",
   "status.needWalrus": "velg en Walrus for å sette ut en pod",
   "status.noPod": "ingen pod om bord - dra tilbake til hangarskipet",

@@ -218,7 +218,9 @@ function createWsTransport(url) {
           // nothing except that the game is broken.
           state.closing = true;
           handlers.onRejected(message.reason);
-          handlers.onClosed('removed from the table');
+          // A KEY from CLOSE_KEYS, not prose - onClosed looks it up and shows
+          // "disconnected" for anything it does not know.
+          handlers.onClosed('removed');
         }
       });
       // A dropped socket is retried with a backoff before it is called dead:
