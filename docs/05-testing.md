@@ -189,6 +189,24 @@ teams, and almost every measurement ever taken here has been an 8-island,
 An unresolved war runs the full 900,000-tick cap — 12.5 hours at ×1 — so the
 expensive cells are expensive *because* they are the ones going wrong.
 
+**What it found on its first full run (2026-09-06, 440 wars):** the island
+victory condition never fires above 8 islands (zero island wins across 80 wars
+at 16/32/64 — every win is by sinking), and the DEFAULT 8x2 config deadlocks 6%
+of the time with both carriers out of fuel. Both are in `dev-questions.md` §39
+awaiting a ruling. **Island count dominates resolution, not team count** — my
+guess from a single cell was wrong, which is what a matrix is for.
+
+Two techniques from reading it, worth reusing:
+
+- **`worstGap` separates two failures that look identical in a pass/fail.** A
+  war that is alive but cannot finish has a median quiet stretch of 66k–88k
+  ticks; a deadlocked one has 265k against 22k for wars that resolve. Without
+  that column both are just "unresolved".
+- **Instrument the FLOW to turn a statistic into a diagnosis.** Printing fuel,
+  hull, islands and hulls afloat every 100k ticks of one stalled seed put the
+  cause on one line — `fuel 0/0` — where 18 unresolved rows had said nothing
+  about why.
+
 Three rules from the lane worth applying beyond it:
 
 - **Build the config through `applyLobbyOptions`, never by poking the ruleset.**

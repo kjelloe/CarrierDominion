@@ -5,6 +5,72 @@ golden hash and why.
 
 ---
 
+## 2026-09-06 — The matrix came back: 440 wars, and two different failures
+
+Eight tasks, 440 AI-vs-AI wars, all on era `57f588c895da27c5` — the same
+ruleset this machine measures, so the numbers are comparable to everything in
+this log. The lane paid for itself on its first full run.
+
+| config | resolved | median tick | wins by sinking / by islands |
+|---|---|---|---|
+| 8 islands, 2 teams | **282/300 (94%)** | 56,953 | 250 / 32 |
+| 8 islands, 4 teams | 18/20 (90%) | 177,706 | 12 / 6 |
+| 16 islands, 2 teams | 16/20 (80%) | 300,151 | 16 / **0** |
+| 16 islands, 8 teams | 10/20 (50%) | 294,022 | 9 / 1 |
+| 32 islands, 2 teams | 8/20 (40%) | 558,086 | 8 / **0** |
+| 32 islands, 4 teams | 2/20 (10%) | 368,928 | 2 / **0** |
+| 64 islands, 2 teams | 1/20 (5%) | 514,835 | 1 / **0** |
+| 64 islands, 16 teams | **0/20 (0%)** | — | — |
+
+**The map, not the table.** I had guessed team count was the driver, from one
+32x4 cell. Holding teams at two and walking the islands up gives 94% → 80% →
+40% → 5%: **island count dominates**, and team count compounds it. Two teams on
+64 islands resolve one war in twenty.
+
+**The island victory condition is dead above 8 islands.** Zero island wins at
+16, 32 and 64. Every win on a real map is by sinking the enemy carrier — and as
+the ocean grows, two carriers stop finding each other. Two thirds of 64 islands
+is 43; the widest split ever reached at the cap was 11 to 10.
+
+**And they are two different failures**, which `worstGap` separates:
+
+- On **big maps the wars are alive** and simply cannot finish: median quiet
+  stretch 66k–88k ticks, real contest on the board (9|9, 10|11 at 64 islands).
+  The cap is not the problem; the win condition is.
+- At the **DEFAULT 8x2 config, 18 of 300 wars are DEADLOCKED**: median quiet
+  stretch 265,161 ticks against 22,159 for the wars that resolve. Seed
+  **1370987** does nothing for **519,804 ticks** from t=48,804.
+
+**What the deadlock actually is.** Instrumenting the flow rather than guessing
+(the 2026-08-25 lesson) put it in one line: `fuel 0/0`. Both carriers dry
+before t=100,000, hulls untouched at 1000/1000, ordnance plentiful, six of
+eight islands still neutral, and nothing moves again. The watchdog had already
+said so — *"the war has stopped happening: nothing since tick 48804"*.
+
+Seed 1299716 shows the shape more completely: both dry at t=100k, then team 0
+**recovers** to 7,656 fuel by t=200k and 15,209 by t=300k while team 1, holding
+one island, never does. So running dry IS recoverable — with enough territory.
+And then the fuelled, healthy, undamaged survivor leaves **five neutral islands
+untaken for 700,000 ticks** and never wins. A dry carrier is stranded for good;
+a fuelled one stops expanding.
+
+That is a 6% chance of a dead war at the shipping configuration, and the
+five-seed battery cannot see it: all five of its fixed seeds resolve. Exactly
+what "five seeds are five anecdotes" was written about.
+
+Nothing has been retuned. Fuel biting was an owner ruling (Q6a/b) and so is
+pacing, so this is written up as questions rather than fixed by me.
+
+Also this run: the duplicated socket helper. The race was found and fixed in
+`server_ws.test.js` and `server_reconnect.test.js` kept it — the other file I
+found hung in the process table. Both guard `readyState` now, and both also
+treat an already-CLOSED socket as a rejection rather than a wait, which matters
+since the door started refusing sockets. Six runs of both files, 44/44 each.
+
+605 tests, smoke clean.
+
+---
+
 ## 2026-09-06 — The suite that hung was a race, not a Node version
 
 `npm test` on the second machine sat for 110 minutes and then died, on the

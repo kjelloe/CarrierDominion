@@ -153,7 +153,17 @@ function connect(wsUrl) {
   });
   return {
     socket: socket,
+    // The same guard as server_ws.test.js, and the reason it is written twice
+    // is the reason it was missing here: this helper is DUPLICATED. The race
+    // was found and fixed in one copy on 2026-09-06 while this one - which is
+    // the other file that was found hung in the process table - kept it.
+    // "A guard applied to one caller and not its sibling", from this repo's
+    // own review skill.
     open() {
+      if (socket.readyState === WebSocket.OPEN) return Promise.resolve();
+      if (socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED) {
+        return Promise.reject(new Error('socket closed before open was awaited'));
+      }
       return new Promise((resolve, reject) => {
         socket.once('open', resolve);
         socket.once('error', reject);

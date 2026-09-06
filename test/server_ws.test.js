@@ -37,8 +37,17 @@ function connect(wsUrl) {
     // Two sockets opened back to back finish in either order: if this one
     // opened while the caller was still awaiting the other, the event has
     // already been emitted to nobody, and a listener attached now waits forever.
+    //
+    // CLOSED counts too, and for the same reason. The door refuses some
+    // sockets now (a war in progress without the code, a kicked address), so
+    // `rejected` and `close` can both land before anyone awaits `open` - and
+    // then neither `open` nor `error` will ever fire again. Rejecting is the
+    // honest answer; hanging until the 60s test timeout is not.
     open() {
       if (socket.readyState === WebSocket.OPEN) return Promise.resolve();
+      if (socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED) {
+        return Promise.reject(new Error('socket closed before open was awaited'));
+      }
       return new Promise((resolve, reject) => {
         socket.once('open', resolve);
         socket.once('error', reject);

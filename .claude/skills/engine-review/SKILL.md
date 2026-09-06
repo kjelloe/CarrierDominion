@@ -497,6 +497,15 @@ Look for these shapes first — every one produced a real bug:
   every screen the player actually sees - here that meant the menu, and the
   ending screen after it.
 
+- **A duplicated helper, fixed in one copy.** The socket test helper exists in
+  both `server_ws.test.js` and `server_reconnect.test.js`; a missed-event race
+  in `open()` was found and fixed in one while the other kept it - and the
+  other was the second file found hung. When fixing anything in a test helper,
+  grep for its twin before believing it is done.
+- **An event that has already fired.** `once('open')` attached after the socket
+  opened waits forever. Any wait for an event must first ask whether it has
+  already happened - and must also handle the states where it can NEVER happen
+  now (a closed socket will emit neither `open` nor `error`).
 - **A sample too small to tell a coincidence from a rule.** The five-seed
   battery ended `winner=0 by sinking` five times running, which reads like a
   side bias; forty-eight seeds came back 25/22. Before diagnosing an asymmetry,
