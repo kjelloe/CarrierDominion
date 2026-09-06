@@ -34,7 +34,11 @@ function connect(wsUrl) {
   return {
     socket: socket,
     inbox: inbox,
+    // Two sockets opened back to back finish in either order: if this one
+    // opened while the caller was still awaiting the other, the event has
+    // already been emitted to nobody, and a listener attached now waits forever.
     open() {
+      if (socket.readyState === WebSocket.OPEN) return Promise.resolve();
       return new Promise((resolve, reject) => {
         socket.once('open', resolve);
         socket.once('error', reject);
@@ -140,6 +144,15 @@ test('a joining client is seated and starts receiving its own view', async () =>
     assert.equal(snapshot.view.team, 0);
     assert.match(snapshot.stateHash, /^[0-9a-f]{16}$/);
     assert.equal(snapshot.view.rng, undefined, 'the view must not carry engine internals');
+    client.close();
+  });
+});
+
+test('an open that already happened is still awaited, not waited for', async () => {
+  await withServer(async (app, httpUrl, wsUrl) => {
+    const client = connect(wsUrl);
+    await new Promise((resolve) => client.socket.once('open', resolve));
+    await client.open();
     client.close();
   });
 });

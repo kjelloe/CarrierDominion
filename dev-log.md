@@ -5,6 +5,41 @@ golden hash and why.
 
 ---
 
+## 2026-09-06 — The suite that hung was a race, not a Node version
+
+`npm test` on the second machine sat for 110 minutes and then died, on the
+same commit that was green on the first. The obvious suspect was Node 24
+against Node 20, and it was innocent: a clean run here passed 604/604 in
+fourteen seconds. The suite is fine one run in two.
+
+The other run, `server_ws.test.js` never finishes. Two tests — the observer
+door closed, the observer door open — create two sockets and then await
+`first.open()`, then `second.open()`. The helper's `open()` attaches
+`once('open')` when it is *called*. Two connections to the same loopback
+server complete in either order, and when the second one lands first its
+`open` event goes out with nobody listening; the listener attached a moment
+later waits for an event that has already been and gone. A probe logging
+event order shows it plainly: `B open`, `B welcome`, `A open`, `A welcome`,
+then `second.open()` with `readyState` already 1. Every other test in the file
+connects, awaits, connects, awaits — and none of them has ever failed.
+
+Why one machine and not the other is down to which socket the kernel serves
+first, which is nothing this project controls. Ten solo runs of the file here:
+five hangs, all in those two tests.
+
+Two fixes. `open()` resolves at once on a socket that is already open — the
+general rule, now in docs/05: a wait for an event checks whether it has already
+happened. And `npm test` carries `--test-timeout=60000`, because the runner has
+no timeout of its own: a test that never resolves never reaches its `finally`,
+the server it opened keeps the child alive, and the whole suite waits with it.
+With the timeout, the same bug is a named failure in one minute instead of a
+hang that gets blamed on the wrong thing.
+
+One test added: an `open()` called after the event has already fired resolves.
+Without the fix it hangs; with the timeout, it fails. Nothing moved a hash.
+
+---
+
 ## 2026-08-31 — The door: a lobby anyone may enter, a war that asks
 
 Owner's ruling on the question the deploy script raised, and it is better than

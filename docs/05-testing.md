@@ -150,6 +150,12 @@ exiting 0. That is why the total dropped from 592 to **587** when the glob
 landed: five non-tests stopped being run and stopped being counted. Any test
 count quoted in the log before that date is five too high.
 
+The script also passes `--test-timeout=60000`. Without it a test that never
+resolves is not a failure but a suite that never ends: the runner has no
+timeout of its own, and a test stuck before its `finally` leaves a server
+listening, which keeps the child alive, which keeps `npm test` waiting. Sixty
+seconds is five times the slowest test under full parallel load.
+
 One caveat, recorded rather than solved: shell globbing needs a POSIX shell, so
 `npm test` on native Windows `cmd.exe` would pass the pattern through
 unexpanded. Everything here runs under WSL or Linux. Node 21+ would accept a
@@ -253,11 +259,20 @@ doing software rendering is not a clock. They catch what unit tests structurally
 rose that was mirrored, the panel row that was replaced under the pointer, the
 smoke gate reading a HUD cell that no longer existed.
 
-Socket tests have one rule of their own, learned twice: a wait that scans the
-whole inbox is satisfied by stale messages from an earlier phase of the same
-test — an evening of two wars produces two `welcome` messages, and the second
-wait happily matches the first. Waits across a phase boundary use the inbox
-cursor (`mark()` / `nextAfter()` in `server_ws.test.js`).
+Socket tests have two rules of their own. The first, learned twice: a wait
+that scans the whole inbox is satisfied by stale messages from an earlier phase
+of the same test — an evening of two wars produces two `welcome` messages, and
+the second wait happily matches the first. Waits across a phase boundary use
+the inbox cursor (`mark()` / `nextAfter()` in `server_ws.test.js`).
+
+The second, learned on 2026-09-06 as a suite that hung for 110 minutes: **a
+wait for an event must first check whether the event has already happened.**
+Two sockets opened back to back complete in either order. The two observer
+tests opened both before awaiting either, and whenever the second finished
+first its `open` was emitted to nobody, and the listener attached afterwards
+waited forever. One machine lost that race about one run in two; the other
+almost never, which looked like a Node version difference and was not. `open()`
+in the helper now resolves at once on a socket that is already open.
 
 The lobby bug is the clearest case for having them at all — every socket test
 passed, because socket tests write raw JSON and the bug was in how the *client*
