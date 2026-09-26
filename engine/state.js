@@ -243,6 +243,10 @@ function copyState(state) {
     phase: state.phase,
     winner: state.winner,
     winReason: state.winReason,
+    // The last tick anything happened that MOVED the war (engine/events.js
+    // PROGRESS_CODES). The stall rule reads it; a deadlocked war is one where
+    // this stops advancing (ruling 39.1b, 2026-09-06).
+    lastProgressTick: state.lastProgressTick,
     rulesHash: state.rulesHash,
     params: {
       unitsPerMetre: state.params.unitsPerMetre,
@@ -279,6 +283,11 @@ function copyState(state) {
       neutralSiloRounds: state.params.neutralSiloRounds,
       networkLink: state.params.networkLink,
       victoryIslandPermil: state.params.victoryIslandPermil,
+      victoryMinIslands: state.params.victoryMinIslands,
+      stallCapTicks: state.params.stallCapTicks,
+      lifelineFloorPermil: state.params.lifelineFloorPermil,
+      lifelineFuelPerTick: state.params.lifelineFuelPerTick,
+      lifelineEveryTicks: state.params.lifelineEveryTicks,
       pointCap: state.params.pointCap,
       timeCapTicks: state.params.timeCapTicks,
       pointsPerIsland: state.params.pointsPerIsland,
@@ -527,6 +536,7 @@ function createInitialState(seed, rules) {
     phase: PHASE_RUNNING,
     winner: -1,
     winReason: 0,
+    lastProgressTick: 0,
     rulesHash: hashState(rules),
     params: {
       unitsPerMetre: unitsPerMetre,
@@ -596,6 +606,11 @@ function createInitialState(seed, rules) {
       networkLink: world.networkLinkMetres === undefined
         ? 0 : world.networkLinkMetres * unitsPerMetre,
       victoryIslandPermil: base.victoryIslandPermil,
+      victoryMinIslands: base.victoryMinIslands,
+      stallCapTicks: base.stallCapTicks,
+      lifelineFloorPermil: base.lifelineFloorPermil,
+      lifelineFuelPerTick: base.lifelineFuelPerTick,
+      lifelineEveryTicks: base.lifelineEveryTicks,
       pointCap: base.pointCap,
       timeCapTicks: base.timeCapTicks,
       pointsPerIsland: base.pointsPerIslandPer100Ticks,

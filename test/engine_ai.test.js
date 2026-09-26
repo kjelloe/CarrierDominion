@@ -8,7 +8,7 @@ import { canonicalize } from '../shared/statehash.js';
 import { hashState } from '../engine/snapshot.js';
 import { buildView } from '../shared/view.js';
 import { AI_SEEK, chooseTarget } from '../engine/ai_carrier.js';
-import { islandsHeldBy, PHASE_OVER, WIN_ISLANDS } from '../engine/victory.js';
+import { islandsHeldBy, PHASE_OVER, WIN_ISLANDS, WIN_STALLED } from '../engine/victory.js';
 import { EVT_WAR_OVER } from '../engine/events.js';
 import { KIND_MANTA, UNIT_STOWED } from '../engine/units.js';
 import { planFor } from '../engine/ai_estate.js';
@@ -96,19 +96,54 @@ test('the AI takes an island unaided, and the state stays hygienic', (t) => {
   t.diagnostic(`second island by tick ${state.tick + next.ticks}`);
 });
 
-test('holding two thirds of the archipelago ends the war', () => {
+// Rewritten for ruling 39.2a (2026-09-06). The threshold is two thirds of the
+// islands anybody has CLAIMED - not of the whole archipelago, which is why no
+// war above 8 islands had ever been won on islands in 440 measured games - and
+// a winner must also hold at least `victoryMinIslands` and TWICE the runner-up.
+test('holding two thirds of the CLAIMED islands, by a margin, ends the war', () => {
   let state = createInitialState(SEED, withoutAi(rules));
-  const needed = Math.floor((state.islands.length * rules.rules.victoryIslandPermil) / 1000);
-  for (let i = 0; i < needed - 1; i++) state.islands[i].owner = 0;
+  for (const island of state.islands) island.owner = -1;
+  // Three each: nobody has a margin, so nobody wins however long it runs.
+  for (let i = 0; i < 3; i++) state.islands[i].owner = 0;
+  for (let i = 3; i < 6; i++) state.islands[i].owner = 1;
   state = drive(state, 1);
-  assert.equal(state.phase, 0, 'one short should not win it');
+  assert.equal(state.phase, 0, 'a level table should not end the war');
 
-  state.islands[needed - 1].owner = 0;
+  // Six against three IS two thirds of the nine claimed, and twice the
+  // runner-up, and past the minimum.
+  for (let i = 6; i < 8; i++) state.islands[i].owner = 0;
+  state.islands[5].owner = 0;
   state = drive(state, 1);
   assert.equal(state.phase, PHASE_OVER);
   assert.equal(state.winner, 0);
   assert.equal(state.winReason, WIN_ISLANDS);
   assert.ok(state.events.some((e) => e.code === EVT_WAR_OVER));
+});
+
+test('a land grab on an empty map does not win it', () => {
+  // The margin's whole job. The first pass of this rule ended a real war at
+  // tick 72,050 with the winner on two islands of eight and five neutral -
+  // two thirds of what was claimed, and plainly not a conquest.
+  let state = createInitialState(SEED, withoutAi(rules));
+  for (const island of state.islands) island.owner = -1;
+  state.islands[0].owner = 0;
+  state.islands[1].owner = 0;
+  state.islands[2].owner = 1;
+  state = drive(state, 1);
+  assert.equal(state.phase, 0,
+    'two islands of eight, with five still neutral, won the war');
+});
+
+test('a war that stops moving is called rather than run forever', () => {
+  // Ruling 39.1b. 18 of 300 measured wars sat with nothing happening for up to
+  // 519,804 ticks; "the game never ends" is the one outcome a player can do
+  // nothing about.
+  let state = createInitialState(SEED, withoutAi(rules));
+  state.lastProgressTick = 0;
+  state.tick = rules.rules.stallCapTicks;
+  state = drive(state, 1);
+  assert.equal(state.phase, PHASE_OVER, 'a dead war ran on');
+  assert.equal(state.winReason, WIN_STALLED);
 });
 
 test('losing the last carrier ends the war outright', () => {

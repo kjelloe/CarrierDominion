@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { loadRules, withoutAi } from './helpers/rules.mjs';
 import { createInitialState } from '../engine/state.js';
+import { stepLifeline } from '../engine/lifeline.js';
 import { apply } from '../engine/reducer.js';
 import { dist2D, mulDiv } from '../shared/fixed.js';
 import { worldHeightAt } from '../engine/heightmap.js';
@@ -101,10 +102,73 @@ test('fuel drains under way and never goes negative', () => {
 test('an empty tank stops the ship', () => {
   let state = createInitialState(SEED, rules);
   state.carriers[0].fuel = 3;
+  // Nothing ashore to draw on. Since the lifeline (ruling 39.1a) a team that
+  // still owns an island gets a trickle from it, so "the tank is empty" stops
+  // a ship only when there is nowhere to draw from - and zeroing the island's
+  // stock is not enough, because island INCOME puts more there within a few
+  // hundred ticks. Owning nothing is the honest precondition.
+  for (const island of state.islands) island.owner = -1;
   state = apply(state, { type: 'set_throttle', carrierId: 0, throttle: 100 });
   state = drive(state, 400);
   assert.equal(state.carriers[0].fuel, 0);
   assert.equal(state.carriers[0].speed, 0);
+});
+
+// --- the lifeline (ruling 39.1a, 2026-09-06) --------------------------------
+//
+// 18 of 300 measured wars sat with both carriers at zero fuel and nothing
+// moving again for up to 519,804 ticks. The supply boat is the only way fuel
+// reaches a hull, and a fleet with too little territory never got one out, so
+// running dry was permanent.
+//
+// The first two call stepLifeline DIRECTLY. Driving a whole war cannot test
+// them: the supply boat delivers fuel too, and island income tops the store up
+// while the lifeline drains it, so neither the floor nor conservation can be
+// read off a live war - a first draft tried and measured the boat.
+
+test('the lifeline takes every drop out of the island', () => {
+  const state = createInitialState(SEED, rules);
+  const carrier = state.carriers[0];
+  carrier.fuel = 0;
+  const mine = state.islands.find((i) => i.owner === carrier.team);
+  assert.ok(mine !== undefined, 'this test needs the team to hold an island');
+  mine.stockFuel = 50000;
+  const before = mine.stockFuel;
+  for (let i = 0; i < 2000; i++) {
+    state.tick = state.tick + 1;
+    stepLifeline(state);
+  }
+  assert.ok(carrier.fuel > 0, 'a dry carrier with a stocked island stayed dry');
+  // NOTHING IS CONJURED (ruling #3).
+  assert.equal(before - mine.stockFuel, carrier.fuel,
+    'the carrier gained fuel the island did not pay for');
+});
+
+test('the lifeline stops at its floor - it is not a second supply chain', () => {
+  const state = createInitialState(SEED, rules);
+  const carrier = state.carriers[0];
+  carrier.fuel = 0;
+  const mine = state.islands.find((i) => i.owner === carrier.team);
+  mine.stockFuel = 500000;
+  const floor = Math.floor((carrier.fuelCapacity * rules.rules.lifelineFloorPermil) / 1000);
+  // Far longer than it needs to reach the floor.
+  for (let i = 0; i < 200000; i++) {
+    state.tick = state.tick + 1;
+    stepLifeline(state);
+  }
+  assert.equal(carrier.fuel, floor,
+    `the lifeline did not stop at its floor (${carrier.fuel} against ${floor})`);
+  assert.ok(floor < carrier.fuelCapacity / 4,
+    'the floor is high enough to be a refill rather than a tow home');
+});
+
+test('a dry carrier with nothing ashore stays dry', () => {
+  let state = createInitialState(SEED, rules);
+  state.carriers[0].fuel = 0;
+  for (const island of state.islands) island.owner = -1;
+  state = drive(state, 5000);
+  assert.equal(state.carriers[0].fuel, 0,
+    'fuel appeared from nowhere - ruling #3 says nothing is conjured');
 });
 
 test('a carrier driven at an island grounds instead of sailing through it', () => {

@@ -20,6 +20,7 @@ import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { hashState } from '../shared/statehash.js';
 import { createWatch, watchTick, watchReport } from '../server/watch.js';
+import { PROGRESS_CODES as PROGRESS } from '../engine/events.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPORTS = join(HERE, '..', 'reports', 'sweeps');
@@ -30,8 +31,8 @@ const TICK_CAP = 900000;
 const TICK = { type: 'advance_tick' };
 
 // The same "war is moving" event codes the watchdog uses for its stuck check.
-const PROGRESS = [10, 17, 18, 21, 26, 31, 32, 34, 36];
-const REASONS = ['none', 'islands', 'sinking', 'draw', 'points', 'time'];
+// Imported, not copied - engine/events.js owns it (the stall rule reads it).
+const REASONS = ['none', 'islands', 'sinking', 'draw', 'points', 'time', 'stalled'];
 
 function runWar(seed) {
   const rules = loadRules();

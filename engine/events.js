@@ -44,6 +44,43 @@ const EVT_ISLAND_CONVERTED = 36; // a = islandId, b = the team it changed to
 const EVT_FLARES = 37; // a = carrierId, b = team, c = seekers blinded
 const EVT_AI_SEAT = 38; // a = team, b = 1 the machine has it / 0 a human does
 const EVT_COURSE = 39; // a = carrierId, b = 1 set / 0 done or cleared
+
+// The events that mean the war MOVED: a hull lost, an island taken or
+// converted, a carrier sunk, a shot fired, something built, a turret lost, the
+// war ended. Anything else is bookkeeping that ticks over whether or not
+// anybody is playing.
+//
+// ONE definition. `tools/sim_battery.mjs` and `tools/sweep.mjs` each carried
+// their own copy of this list, and engine/victory.js needs it too for the
+// stall rule (ruling 39.1b) - three copies of a list is how an instrument ends
+// up measuring a game the engine no longer has.
+const PROGRESS_CODES = [
+  EVT_UNIT_LOST, EVT_ISLAND_CAPTURED, EVT_WAR_OVER, EVT_CARRIER_SUNK,
+  EVT_SHOT_FIRED, EVT_ISLAND_BUILT, EVT_HULL_REPLACED, EVT_TURRET_LOST,
+  EVT_ISLAND_CONVERTED,
+];
+
+function isProgress(code) {
+  for (let i = 0; i < PROGRESS_CODES.length; i++) {
+    if (PROGRESS_CODES[i] === code) return 1;
+  }
+  return 0;
+}
+
+// Stamp the tick if anything this tick MOVED the war. Called once from the
+// reducer's tail, after every system has had its turn and before victory is
+// judged - the stall rule reads it, and reading it earlier would race the
+// systems that write the events. It lives here rather than in the reducer
+// because the reducer is up against its 900-line portability cap and this is
+// events' business anyway.
+function markProgress(state) {
+  for (let i = 0; i < state.events.length; i++) {
+    if (isProgress(state.events[i].code) === 1) {
+      state.lastProgressTick = state.tick;
+      return;
+    }
+  }
+}
 const EVT_SUPPLY_BIAS = 40; // a = item category, b = owning team, c = level
 const EVT_TELEMETRY_LOST = 41; // a = unitId, b = team - the leash took it
 const EVT_UNIT_LANDED = 42; // a = unitId, b = team, c = islandId - down on a runway
@@ -59,6 +96,9 @@ function pushEvent(events, code, a, b, c) {
 }
 
 export {
+  PROGRESS_CODES,
+  isProgress,
+  markProgress,
   EVT_COMMAND_REJECTED,
   EVT_THROTTLE_SET,
   EVT_RUDDER_SET,

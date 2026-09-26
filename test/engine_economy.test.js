@@ -170,6 +170,12 @@ test('the network ships a share of every island toward the stockpile', () => {
     state.islands[id].kind = KIND_RADAR; // plain ground: no bonus to reason about
   }
   state.teams[0].stockpileIsland = 0;
+  // Give the other side a presence, or the war is WON before the economy gets
+  // a tick: three islands against nobody clears the island victory now that it
+  // is measured against what has been CLAIMED (ruling 39.2a). The margin rule
+  // needs a runner-up to have any bite, and this test is about materials.
+  state.islands[5].owner = 1;
+  state.islands[6].owner = 1;
   // Seed the outlying islands and let one accrual move goods inward.
   state.islands[1].stockMaterials = 1000;
   state.islands[2].stockMaterials = 1000;

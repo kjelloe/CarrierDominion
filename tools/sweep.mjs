@@ -42,6 +42,7 @@ import { applyLobbyOptions } from '../shared/options.js';
 import { createInitialState } from '../engine/state.js';
 import { apply } from '../engine/reducer.js';
 import { createWatch, watchTick, watchReport } from '../server/watch.js';
+import { PROGRESS_CODES as PROGRESS } from '../engine/events.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -51,15 +52,12 @@ const TICK = { type: 'advance_tick' };
 // "who won" but "why has nobody", and the row says so with resolved=0 rather
 // than pretending the cap was an ending.
 const TICK_CAP = 900000;
-const REASONS = ['none', 'islands', 'sinking', 'draw', 'points', 'time'];
+const REASONS = ['none', 'islands', 'sinking', 'draw', 'points', 'time', 'stalled'];
 
-// The event codes that mean the war MOVED - a capture, a sinking, a conversion.
-// Copied deliberately from tools/sim_battery.mjs so the two instruments report
-// the same lull and can be compared. Measuring "any event at all" instead
-// yields a flat 100 for every war, because something ticks over constantly;
-// the first draft of this file did exactly that and produced a column that
-// looked like data and said nothing.
-const PROGRESS = [10, 17, 18, 21, 26, 31, 32, 34, 36];
+// The event codes that mean the war MOVED. Imported, not copied: the engine
+// owns this list (engine/events.js PROGRESS_CODES) because the stall rule
+// reads it too, and three copies of a list is how an instrument ends up
+// measuring a game the engine no longer has.
 
 function flag(name, fallback) {
   const at = process.argv.indexOf(`--${name}`);

@@ -62,14 +62,14 @@ import {
   EVT_AI_SEAT,
   EVT_COURSE,
   EVT_SUPPLY_BIAS,
-  pushEvent,
-} from './events.js';
+  pushEvent, markProgress } from './events.js';
 import { stepCarriers } from './carrier.js';
 import { abortDeck, beginLaunch, stepDeck } from './deck.js';
 import { checkDeploy, deployPod, stepCapture } from './capture.js';
 import { checkVirus, deployVirus, stepVirus } from './virus.js';
 import { createBrain, stepAi } from './ai_carrier.js';
 import { checkVictory } from './victory.js';
+import { stepLifeline } from './lifeline.js';
 import { stepEconomy, teamById } from './economy.js';
 import { stepSupply } from './supply.js';
 import { stepRepair } from './repair.js';
@@ -823,12 +823,17 @@ function advanceTick(next) {
     stepEconomy(next);
   }
   stepSupply(next);
+  // AFTER the boat: a ship the lighter has just reached does not need a
+  // lifeline, and running this first would spend an island's fuel on a hull
+  // that was about to be filled properly.
+  stepLifeline(next);
   // Repairs last: the boat has landed this tick's materials, and the yard
   // spends what is in the store, not what is in the hold.
   stepRepair(next);
   if (next.phase === PHASE_RUNNING) {
     stepScore(next, next.params.pointsPerIsland);
   }
+  markProgress(next);
   checkVictory(next, next.params);
   return next;
 }
