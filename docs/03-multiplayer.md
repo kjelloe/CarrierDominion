@@ -106,6 +106,9 @@ expensive damage state in the game — though the chart keeps its ghosts.
 
   Ban keyed by remote address, which is the only handle a socket gives: one
   machine on a LAN, possibly more than one person behind a single public NAT.
+  Behind the proxy every socket arrives from loopback, so from loopback (and
+  only from loopback) the address is the proxy's `X-Real-IP`; before that, one
+  kick on the hosted box banned everybody.
   That cost is real and is why the window is a minute rather than an evening.
   With `LOBBY=0` no code is ever issued, so nothing is demanded — inventing a
   lock with no key would refuse everybody forever.
@@ -186,6 +189,30 @@ destroyed a hold it was never let in to use.
 which a browser always sends and a native client does not. `createApp` is
 silent unless given `noteFn`. `/healthz` splits `seats` into `players` and
 `observers`.
+
+## What a socket may cost
+
+`server/guard.js`, the baseline the Unity port asked every server in the family
+for and boombrawl already had. It is separate from the door: the doorman decides
+who may sit down, the guard decides how much any socket may ask of the process.
+
+- **Frame size**: `maxPayload` 4 KB (`ws` defaults to 100 MiB). The largest real
+  message, an eight-point course or a full chat line, is under 1 KB. An
+  oversize frame closes that socket (1009), and the seat is held as for any drop.
+- **Rate**: 200 messages per 10-second window per socket. Every command is a key
+  press or a click (keys ignore auto-repeat), so that is a script, not a
+  player. Over it, the socket gets `kicked` with `too many messages` and is
+  closed. This is not the host's kick: no ban, and the seat is held, so a
+  reloaded page reclaims its carrier.
+- **Heartbeat**: a ping every 30 s, and a socket that missed the previous pong is
+  terminated. Before this, a half-open connection (a lid shut on the wifi)
+  kept its seat, and kept the AI off that carrier, until the OS gave up on
+  TCP. Browsers and .NET's `ClientWebSocket` answer pings on their own.
+- **Origin**: checked at the upgrade, before any seat or token. No `Origin`
+  header (a native client, a test, curl) is let in. A browser's `Origin` must
+  name the same host:port as `Host`, otherwise 403. Schemes are not compared,
+  because behind TLS the page is https and the upgrade arrives as http. This
+  needs the proxy to pass `Host` through (DEPLOYING.md).
 
 ## Saving and resuming
 

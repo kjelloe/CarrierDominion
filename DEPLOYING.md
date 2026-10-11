@@ -70,6 +70,13 @@ server {
         # The war is a websocket; without these it is a page that never moves.
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
+        # The socket's origin check compares the page's host with Host, and
+        # nginx otherwise sends 127.0.0.1:8135: every browser would get a 403.
+        proxy_set_header Host $host;
+        # Bans (a host's kick) key on the player's address. From loopback the
+        # server believes this header; without it every player is 127.0.0.1
+        # and one kick shuts everybody out for a minute.
+        proxy_set_header X-Real-IP $remote_addr;
         proxy_read_timeout 7d;
     }
 }

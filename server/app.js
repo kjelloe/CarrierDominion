@@ -42,6 +42,14 @@ import {
 } from './lobby.js';
 import { createHolder, expired, findHold, holdSeat, isHeld, reclaim, release } from './reconnect.js';
 import { admit, banAddress, createDoorman } from './doorman.js';
+import {
+  HEARTBEAT_MS,
+  MAX_PAYLOAD,
+  clientAddress,
+  createMeter,
+  originAllowed,
+  overLimit,
+} from './guard.js';
 import { resumeGame, saveGame, saveLogOnly, writeSave } from './save.js';
 import { createWatch, watchReport, watchTick } from './watch.js';
 
@@ -97,6 +105,7 @@ function createApp(options) {
     httpServer: 0,
     wss: 0,
     clock: 0,
+    heartbeat: 0,
     // The playtest watchdog, when it is asked for: reads the state every tick
     // and never writes it, so it cannot change a war it is watching.
     watch: options.watch === true ? createWatch({ stuckAfter: options.stuckAfter }) : 0,
@@ -386,7 +395,16 @@ function createApp(options) {
     });
   });
 
-  app.wss = new WebSocketServer({ server: app.httpServer });
+  app.wss = new WebSocketServer({
+    server: app.httpServer,
+    maxPayload: MAX_PAYLOAD,
+    // Refused at the upgrade, before a seat or a token is looked at: another
+    // website's page has no business driving a visitor's browser into the war.
+    verifyClient: (info, done) => {
+      if (originAllowed(info.req.headers.origin, info.req.headers.host)) done(true);
+      else done(false, 403, 'origin not allowed');
+    },
+  });
 
   app.wss.on('connection', (socket, req) => {
     sweepHeldSeats();
@@ -410,7 +428,7 @@ function createApp(options) {
     // ruling that they get their ship back would not survive. A spectator
     // presents no token, so watching a war in progress needs the code too.
     const refusal = admit(app.doorman, {
-      address: req.socket === undefined ? '' : req.socket.remoteAddress,
+      address: clientAddress(req),
       hasToken: held === -1 ? 0 : 1,
       roomCode: app.lobby === 0 ? '' : app.lobby.code,
       started: app.lobby !== 0 && app.lobby.status !== 'lobby' ? 1 : 0,
@@ -437,7 +455,7 @@ function createApp(options) {
     // The address is kept on the SEAT. Reaching into `socket._socket` for it
     // later works today and is one ws upgrade away from being undefined, which
     // would silently turn every kick into a kick with no ban.
-    const address = req.socket === undefined ? '' : req.socket.remoteAddress;
+    const address = clientAddress(req);
     const seat = returning === -1
       ? { socket: socket, team: claimed, vote: NO_VOTE, token: app.holder.tokenFn(), address: address }
       : {
@@ -496,7 +514,20 @@ function createApp(options) {
       });
     }
 
+    socket.alive = 1;
+    socket.on('pong', () => { socket.alive = 1; });
+    const meter = createMeter(nowMs());
     socket.on('message', (raw) => {
+      // Over the rate, the socket is told why and closed. NOT a host's kick:
+      // there is no ban and the seat is held as for any drop, so a page that
+      // misbehaved once can be reloaded straight back into its own carrier.
+      if (meter.flooded === 1) return;
+      if (overLimit(meter, nowMs()) === 1) {
+        meter.flooded = 1;
+        send(socket, { type: 'kicked', reason: 'too many messages' });
+        socket.close(1008, 'too many messages');
+        return;
+      }
       let message;
       try {
         message = JSON.parse(raw.toString());
@@ -851,13 +882,30 @@ function createApp(options) {
     return new Promise((resolve) => {
       app.httpServer.listen(port, host, () => {
         startClock(app.clock);
+        app.heartbeat = setInterval(beat, options.heartbeatMs ?? HEARTBEAT_MS);
         resolve(app.httpServer.address());
       });
     });
   };
 
+  // A half-open connection - a laptop lid shut on the wifi - used to hold its
+  // seat, and keep the AI off that carrier, until the OS gave up on the TCP
+  // connection, which can be hours. A socket that missed the previous ping is
+  // terminated; `close` then holds the seat for the grace window as usual.
+  function beat() {
+    for (const socket of app.wss.clients) {
+      if (socket.alive === 0) {
+        socket.terminate();
+        continue;
+      }
+      socket.alive = 0;
+      socket.ping();
+    }
+  }
+
   app.close = function close() {
     stopClock(app.clock);
+    clearInterval(app.heartbeat);
     // The last word on disk is the war as it stood when the process left.
     app.saveNow();
     for (const seat of app.seats.slice()) seat.socket.terminate();

@@ -5,6 +5,43 @@ golden hash and why.
 
 ---
 
+## 2026-10-11 — What a socket may cost
+
+Requests C3–C6 from the Unity port, in a new pure module `server/guard.js`. It
+is separate from the doorman, which decides who may sit down; the guard
+decides how much any socket may ask of the process.
+
+- `maxPayload` 4 KB (it was ws's 100 MiB default).
+- 200 messages per 10 s per socket. Over it, the socket is sent `kicked` with
+  `too many messages` and closed. I checked the client before picking the
+  number: every command is a press or a click and `bindInput` drops
+  auto-repeat, so the limit is about 40 times anything a hand can do. It is
+  deliberately not the host's kick: no ban, and the seat is held.
+- A ping every 30 s; a socket that missed the last pong is terminated, and its
+  seat is held for the grace window like any drop. A half-open connection used
+  to keep a carrier away from the AI until TCP gave up.
+- An origin check at the upgrade: no `Origin` is let in (native clients),
+  otherwise host:port must match `Host`, or 403. Schemes are ignored because TLS
+  ends at the proxy.
+
+**The omission: behind the proxy, a kick banned everybody.** Every proxied
+socket arrives from 127.0.0.1, and the ban keyed on `remoteAddress`. The
+doorman's own comment worried about one NAT. The proxy made the whole
+internet one address. `clientAddress()` believes `X-Real-IP` from loopback
+and only from loopback, so a LAN client cannot choose where its ban lands.
+The live nginx (game-ops) already sends `X-Real-IP` and `Host`. DEPLOYING.md's
+sample sent neither, and without `Host` the origin check would have refused
+every browser, so the sample now has both, with the reason beside each.
+
+Two of my own tests raced on the first full run: the client saw its close
+before the server had run the drop. Both now wait for the server's seat list
+to empty. 15 tests added (5 guard unit tests, 5 socket tests), 627 pass, the
+same 3 pre-existing failures. Smoke and the door/lobby/rejoin/second_war probes
+pass; every probe is a real page sending a real `Origin`, so the origin check
+is exercised there too.
+
+---
+
 ## 2026-10-11 — Watching on purpose, and a door that looks before it takes
 
 The Unity port (`../unityworks/specs/server_change_requests.md`, C1/C2/C8/C9)

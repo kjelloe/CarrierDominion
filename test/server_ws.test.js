@@ -18,8 +18,8 @@ async function withServer(run) {
   }
 }
 
-function connect(wsUrl) {
-  const socket = new WebSocket(wsUrl);
+function connect(wsUrl, options) {
+  const socket = new WebSocket(wsUrl, options);
   const inbox = [];
   const waiters = [];
   socket.on('message', (raw) => {
@@ -967,6 +967,131 @@ test('every seat change is one line in the server log', async () => {
     assert.match(text, /^seat 0 held for 90s/m);
     assert.match(text, /^observer left/m);
     assert.match(text, /^seat 0 reclaimed \(native\)/m);
+  } finally {
+    await app.close();
+  }
+});
+
+// --- what a socket may cost (requests C3-C6 from the Unity port) ------------
+
+function closed(sock) {
+  if (sock.socket.readyState === WebSocket.CLOSED) return Promise.resolve();
+  return new Promise((resolve) => sock.socket.once('close', resolve));
+}
+
+// The client can see its close before the server has run the drop.
+async function seatsEmpty(app) {
+  for (let i = 0; i < 50 && app.seats.length > 0; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+
+test('a frame larger than any real message closes the socket, not the server', async () => {
+  await withServer(async (app, _httpUrl, wsUrl) => {
+    const sock = connect(wsUrl);
+    await sock.open();
+    await sock.next((m) => m.type === 'welcome');
+    sock.send({ type: 'lobby_say', text: 'x'.repeat(8192) });
+    await closed(sock);
+    const healthy = connect(wsUrl);
+    await healthy.open();
+    assert.equal((await healthy.next((m) => m.type === 'welcome')).type, 'welcome');
+    assert.equal(app.halted, '');
+    healthy.close();
+  });
+});
+
+test('a socket that floods is told why and closed, and its seat is held', async () => {
+  await withServer(async (app, _httpUrl, wsUrl) => {
+    const sock = connect(wsUrl);
+    await sock.open();
+    const welcome = await sock.next((m) => m.type === 'welcome');
+    for (let i = 0; i < 260; i++) sock.socket.send('{"type":"noise"}');
+    const kicked = await sock.next((m) => m.type === 'kicked');
+    assert.match(kicked.reason, /too many/);
+    await closed(sock);
+    await seatsEmpty(app);
+    // Not a host's kick: no ban, and the seat waits for its token.
+    assert.equal(app.doorman.bans.length, 0);
+    const back = connect(`${wsUrl}/?token=${welcome.token}`);
+    await back.open();
+    const resumed = await back.next((m) => m.type === 'welcome');
+    assert.equal(resumed.resumed, 1);
+    back.close();
+  });
+});
+
+test('another website cannot open a socket; this page and a native client can', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const host = wsUrl.replace('ws://', '');
+    const foreign = new WebSocket(wsUrl, { origin: 'https://evil.example' });
+    const status = await new Promise((resolve) => {
+      foreign.on('unexpected-response', (_req, res) => resolve(res.statusCode));
+      foreign.on('open', () => resolve('open'));
+    });
+    assert.equal(status, 403);
+
+    const page = connect(wsUrl, { origin: `http://${host}` });
+    await page.open();
+    await page.next((m) => m.type === 'welcome');
+    const native = connect(wsUrl);
+    await native.open();
+    await native.next((m) => m.type === 'welcome');
+    page.close();
+    native.close();
+  });
+});
+
+test('a peer that stops answering pings is dropped, and its seat is held', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, heartbeatMs: 100 });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const silent = connect(`ws://127.0.0.1:${address.port}`, { autoPong: false });
+    await silent.open();
+    const welcome = await silent.next((m) => m.type === 'welcome');
+    await closed(silent);
+    await seatsEmpty(app);
+    assert.equal(app.seats.length, 0);
+    assert.equal(app.holder.held.length, 1);
+    assert.equal(app.holder.held[0].team, welcome.team);
+
+    // A live peer answers and stays.
+    const live = connect(`ws://127.0.0.1:${address.port}`);
+    await live.open();
+    await live.next((m) => m.type === 'welcome');
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    assert.equal(live.socket.readyState, WebSocket.OPEN);
+    live.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test('behind the proxy, a kick bans the player and not everybody', async () => {
+  // Every proxied socket arrives from 127.0.0.1, so a ban on remoteAddress
+  // shut the whole internet out for a minute.
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-proxy-kick' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const url = `ws://127.0.0.1:${address.port}`;
+    const host = connect(url, { headers: { 'x-real-ip': '203.0.113.1' } });
+    await host.open();
+    await host.next((m) => m.type === 'welcome');
+    const guest = connect(url, { headers: { 'x-real-ip': '203.0.113.2' } });
+    await guest.open();
+    await guest.next((m) => m.type === 'welcome');
+    host.send({ type: 'kick', team: 1 });
+    await guest.next((m) => m.type === 'kicked');
+
+    const again = connect(url, { headers: { 'x-real-ip': '203.0.113.2' } });
+    const refused = await again.next((m) => m.type === 'rejected');
+    assert.match(refused.reason, /removed/);
+    const other = connect(url, { headers: { 'x-real-ip': '203.0.113.3' } });
+    await other.open();
+    const welcome = await other.next((m) => m.type === 'welcome');
+    assert.equal(welcome.team, 1, 'the kick banned a different player too');
+    other.close();
+    host.close();
   } finally {
     await app.close();
   }
