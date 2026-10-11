@@ -54,6 +54,13 @@ import { resumeGame, saveGame, saveLogOnly, writeSave } from './save.js';
 import { createWatch, watchReport, watchTick } from './watch.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+
+// The wire protocol's version, sent in every `welcome` (request G1/C7 from the
+// Unity port, whose builds lag behind deploys). Bump it on any change to what
+// goes over the socket that is not purely additive - a renamed, removed or
+// retyped field. A new field is not a bump. The browser client never sends
+// `?proto=`: it is served by this same process, so it is always current.
+const PROTOCOL = 1;
 const ROOT = join(HERE, '..');
 
 // `lobby: true` holds the war in a lobby until the host starts it. Off by
@@ -407,6 +414,15 @@ function createApp(options) {
   });
 
   app.wss.on('connection', (socket, req) => {
+    // A client built against another protocol is told so and turned away
+    // before it is seated or spends a token: decoding a war it does not
+    // understand would fail somewhere far less readable than this.
+    const proto = paramFrom(req, 'proto');
+    if (proto !== '' && proto !== String(PROTOCOL)) {
+      send(socket, { type: 'rejected', reason: `protocol ${PROTOCOL} required, client has ${proto}` });
+      socket.close();
+      return;
+    }
     sweepHeldSeats();
     // `?spectate=1` asks to watch and never to sail (request G2/C1 from the
     // Unity port: a monitor, a smoke test or a spectator view must not take a
@@ -492,6 +508,7 @@ function createApp(options) {
       // Keep this: presenting it after a drop is what gets this seat back.
       token: seat.token,
       resumed: returning === -1 ? 0 : 1,
+      proto: PROTOCOL,
     });
     if (inLobby()) {
       if (seat.name === undefined) seat.name = seat.team === -1 ? 'Observer' : `Commander ${seat.team + 1}`;
@@ -673,6 +690,7 @@ function createApp(options) {
         speed: app.clock.speed,
         speedLocked: playerSeats() > 1 ? 1 : 0,
         lobby: 0,
+        proto: PROTOCOL,
       });
     }
     broadcast(stepGame(app.game));
@@ -709,6 +727,7 @@ function createApp(options) {
         lobby: 1,
         token: other.token,
         resumed: 0,
+        proto: PROTOCOL,
       });
     }
     broadcastLobby();
@@ -917,4 +936,4 @@ function createApp(options) {
   return app;
 }
 
-export { createApp, ROOT };
+export { createApp, PROTOCOL, ROOT };

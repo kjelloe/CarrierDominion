@@ -5,6 +5,27 @@ golden hash and why.
 
 ---
 
+## 2026-10-11 — The protocol has a version
+
+Request G1/C7 from the Unity port, whose builds lag behind deploys. Every
+`welcome` now ends with `proto: 1` (`PROTOCOL` in `server/app.js`). There are
+three of them, sent on connect, at war start and on a reopened room, and all
+three carry it. The existing reopen test now asserts the two that only it
+reaches; a welcome that only some paths send is the kind of drift a mirrored
+codec finds the hard way.
+
+`?proto=<n>` that differs is refused with
+`protocol 1 required, client has <n>`, BEFORE the token lookup and the door,
+so a stale client is never seated and never spends a hold. No `proto` is
+accepted: the browser client is served by this process and is always
+current, so it does not send one. Bump rule (in the constant's comment and
+docs/03): any change that is not purely additive.
+
+2 new tests plus 2 assertions in the reopen test. 629 pass, the same 3
+pre-existing failures; smoke and second_war green.
+
+---
+
 ## 2026-10-11 — What a socket may cost
 
 Requests C3–C6 from the Unity port, in a new pure module `server/guard.js`. It

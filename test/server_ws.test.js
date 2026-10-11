@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 
-import { createApp } from '../server/app.js';
+import { createApp, PROTOCOL } from '../server/app.js';
 import { loadRules } from '../server/rules.js';
 import { banAddress } from '../server/doorman.js';
 
@@ -462,7 +462,8 @@ test('the table gets its room back when the war ends, and fights again', async (
     // First war of the evening.
     client.send({ type: 'lobby_ready', ready: 1 });
     client.send({ type: 'lobby_start' });
-    await client.next((m) => m.type === 'welcome' && m.lobby === 0);
+    const sailing = await client.next((m) => m.type === 'welcome' && m.lobby === 0);
+    assert.equal(sailing.proto, PROTOCOL, 'the war-start welcome lost its protocol version');
     await client.next((m) => m.type === 'snapshot');
 
     // Mid-war the room stays shut: finishing and abandoning are different.
@@ -476,7 +477,8 @@ test('the table gets its room back when the war ends, and fights again', async (
     app.game.state.winReason = 2;
     let mark = client.mark();
     client.send({ type: 'lobby_reopen' });
-    await client.nextAfter(mark, (m) => m.type === 'welcome' && m.lobby === 1);
+    const reopened = await client.nextAfter(mark, (m) => m.type === 'welcome' && m.lobby === 1);
+    assert.equal(reopened.proto, PROTOCOL, 'the reopened room\'s welcome lost its protocol version');
     const room = await client.nextAfter(mark, (m) => m.type === 'lobby');
     assert.equal(room.lobby.code, code, 'the join code changed between wars');
     assert.equal(room.lobby.status, 'lobby');
@@ -1095,4 +1097,31 @@ test('behind the proxy, a kick bans the player and not everybody', async () => {
   } finally {
     await app.close();
   }
+});
+
+// --- the protocol version (request G1/C7 from the Unity port) ---------------
+
+test('the welcome says which protocol this server speaks', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const sock = connect(wsUrl);
+    const welcome = await sock.next((m) => m.type === 'welcome');
+    assert.equal(welcome.proto, PROTOCOL);
+    assert.ok(Number.isInteger(PROTOCOL) && PROTOCOL >= 1);
+    sock.close();
+  });
+});
+
+test('a client built for another protocol is told so and turned away unseated', async () => {
+  await withServer(async (app, _httpUrl, wsUrl) => {
+    const stale = connect(`${wsUrl}/?proto=${PROTOCOL + 1}`);
+    const refused = await stale.next((m) => m.type === 'rejected');
+    assert.equal(refused.reason, `protocol ${PROTOCOL} required, client has ${PROTOCOL + 1}`);
+    await closed(stale);
+    assert.equal(app.seats.length, 0, 'a refused client was seated');
+
+    const current = connect(`${wsUrl}/?proto=${PROTOCOL}`);
+    const welcome = await current.next((m) => m.type === 'welcome');
+    assert.equal(welcome.team, 0);
+    current.close();
+  });
 });

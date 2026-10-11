@@ -61,6 +61,15 @@ Only `shared/view.js` output, per team, every tick:
 - **Events** are filtered too, so an explosion you could not have seen does not
   arrive as a sound cue.
 
+**The protocol has a version.** Every `welcome` (on connect, at war start, on
+a reopened room) carries `proto` (`PROTOCOL` in `server/app.js`, now 1). It
+is bumped on any wire change that is not purely additive; a new field is not a
+bump. A client may send `?proto=<n>`: a different number gets
+`rejected` with `protocol <server> required, client has <n>` and is closed
+before it is seated or spends a token. No `proto` is accepted. That is the
+browser client, which this same process serves, so it is always current. The
+Unity port, whose builds lag behind deploys, is what asked for it.
+
 Detection is radar range only (owner ruling): there is no separate visual
 sense. A ship with a wrecked topside goes blind, which is the single most
 expensive damage state in the game — though the chart keeps its ghosts.
