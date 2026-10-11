@@ -50,6 +50,7 @@ import {
   originAllowed,
   overLimit,
 } from './guard.js';
+import { nativeSource, serveNative } from './native.js';
 import { resumeGame, saveGame, saveLogOnly, writeSave } from './save.js';
 import { createWatch, watchReport, watchTick } from './watch.js';
 
@@ -161,6 +162,9 @@ function createApp(options) {
     // Observers on or off (ruling 2026-08-23): a room decides at its own
     // table; a lobbyless server takes the boot option, on by default.
     observersDefault: options.observers === 0 ? 0 : 1,
+    // Where the native client's builds are offered from (request C10):
+    // NATIVE_DOWNLOADS, a folder, a file:// URL or an http(s):// URL.
+    native: nativeSource(options.nativeDownloads, ROOT),
   };
 
   // A resumed war is already under way, so its room opens in `running` - not
@@ -384,13 +388,13 @@ function createApp(options) {
     }
     // URL paths mirror the repository layout, so a relative import written for
     // Node ("../engine/game.js") resolves to the same file in the browser.
-    serveStatic(req, res, [
+    serveNative(req, res, app.native).then((handled) => handled || serveStatic(req, res, [
       { prefix: '/data/', dir: join(ROOT, 'data') },
       { prefix: '/engine/', dir: join(ROOT, 'engine') },
       { prefix: '/shared/', dir: join(ROOT, 'shared') },
       { prefix: '/client/', dir: join(ROOT, 'client') },
       { prefix: '/', dir: join(ROOT, 'client') },
-    ]).then((handled) => {
+    ])).then((handled) => {
       if (!handled) {
         res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
         res.end('not found');

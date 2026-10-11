@@ -25,6 +25,7 @@ import { createScene, resetWorld, renderView, resize, ownCarrierOf, pickSea, TEA
 import {
   createInstruments, drawFlightInstruments, drawInstruments, forgetPanelHeight, helmHitAt,
 } from './render/instruments.js';
+import { loadNativeLinks } from './native.js';
 import { createSound, playEvents, playWarning, startAmbience, toggleMute, wakeSound } from './sound.js';
 import { createDamagePanel, renderDamagePanel, toggleDamagePanel } from './panels/damage.js';
 import {
@@ -2146,6 +2147,7 @@ async function main() {
   document.getElementById('title-card').textContent = state.t('start.title');
   document.getElementById('rotate-gate').textContent = state.t('touch.rotate');
   renderHelp(state.t);
+  loadNativeLinks(state.t);
   document.getElementById('help-button').addEventListener('click', toggleHelp);
   document.getElementById('debug-button').addEventListener('click', toggleDebug);
   document.getElementById('msg-button').addEventListener('click', () => showConsole('log'));

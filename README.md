@@ -23,6 +23,7 @@ PORT=9000 SEED=42 ./run.sh
 RESUME=1 ./run.sh     # pick the saved war back up exactly where it stood
 RESUME=auto ./run.sh  # resume if the save still replays, fresh war if not
 SAVE=0 ./run.sh       # without the 30-second autosave (data/autosave.json)
+NATIVE_DOWNLOADS=../unityworks/dist ./run.sh   # offer the native (Unity) client on the menu
 ```
 
 | URL | What it does |
@@ -35,6 +36,7 @@ SAVE=0 ./run.sh       # without the 30-second autosave (data/autosave.json)
 | `/?style=retro\|modern\|hybrid` | art direction (default `retro`) - cosmetic only, same war, same hash |
 | `/healthz` | tick, state hash, seats (players and observers), status, whether a room is waiting, rss - for monitoring |
 | `/watch` | the playtest watchdog's findings, if it is running |
+| `/native.json` | what the menu offers for the native client (`none`, a `url`, or a `folder`'s files); `/native/<file>` downloads one |
 
 Controls:
 

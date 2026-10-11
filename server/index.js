@@ -12,8 +12,13 @@
 // WATCH=1 (also the default) runs the playtest watchdog: it reads the state
 // every tick looking for values that should be impossible, and serves what it
 // found at /watch. It never writes state, so it cannot change the war.
+//
+// NATIVE_DOWNLOADS (unset by default) offers the native client on the start
+// menu and in the war room: a folder (absolute or relative to the repo, served
+// under /native/), a file:// URL, or an http(s):// URL linked as is.
 
 import { createApp } from './app.js';
+import { nativeListing } from './native.js';
 import { loadRules } from './rules.js';
 import { readSave } from './save.js';
 
@@ -55,6 +60,7 @@ const app = createApp({
   resume: resume,
   bootId: `${SEED}-${PORT}-${Date.now()}`,
   noteFn: (text) => process.stdout.write(text),
+  nativeDownloads: process.env.NATIVE_DOWNLOADS ?? '',
 });
 
 if (resume !== 0 && app.resumed === 0) {
@@ -63,7 +69,7 @@ if (resume !== 0 && app.resumed === 0) {
   process.stderr.write('starting a fresh war instead (RESUME=auto).\n');
 }
 
-app.listen(PORT, HOST).then(() => {
+app.listen(PORT, HOST).then(async () => {
   process.stdout.write(`Carrier Dominion on http://${HOST}:${PORT}  seed ${app.seed}  speed x${SPEED}\n`);
   if (app.resumed === 1) {
     process.stdout.write(`Resumed the saved war at tick ${app.game.state.tick}.\n`);
@@ -73,6 +79,15 @@ app.listen(PORT, HOST).then(() => {
     // out of app.health() so it cannot be published by accident, and a second
     // place that reaches into app.lobby.code directly is how that comes undone.
     process.stdout.write(`War room open - join code ${app.joinCode()}\n`);
+  }
+  // Said once at boot, because a typo in the path otherwise only shows as a
+  // link that is not on the page. Not fatal: a tunnelled disk may mount later.
+  if (app.native.kind === 'url') {
+    process.stdout.write(`Native client linked at ${app.native.url}\n`);
+  } else if (app.native.kind === 'folder') {
+    const listing = await nativeListing(app.native);
+    const count = listing.kind === 'folder' ? listing.files.length : 0;
+    process.stdout.write(`Native client from ${app.native.dir}: ${count} file(s) on offer now\n`);
   }
   if (WATCH) {
     process.stdout.write(`Watchdog on - findings at http://${HOST}:${PORT}/watch\n`);

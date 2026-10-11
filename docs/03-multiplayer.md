@@ -223,6 +223,37 @@ who may sit down, the guard decides how much any socket may ask of the process.
   because behind TLS the page is https and the upgrade arrives as http. This
   needs the proxy to pass `Host` through (DEPLOYING.md).
 
+## The native client's downloads
+
+`server/native.js` (request C10 from the Unity port). `NATIVE_DOWNLOADS` names
+where the Unity builds are: a folder (absolute, or relative to the repo), a
+`file://` URL, or an `http(s)://` URL. The browser page shows one quiet line
+under the start menu and the war room. For a folder that line lists each
+build with its size; for a URL it is one link. It is hidden on touch screens,
+because the builds are Windows and Linux and a phone that followed an invite
+belongs in the browser game.
+
+- **A folder is served by this process** under `/native/` and is not copied
+  anywhere public. The owner tunnels a remote disk onto the box. It is read
+  on every request, so a disk that mounts after boot counts, and one that
+  goes away makes the line disappear rather than leaving a broken link.
+- **Only `CarrierDominion*` files are offered.** `unityworks/scripts/package.sh`
+  writes every game's zips into one `dist/`, and this page must not hand out
+  boombrawl. A name must also be plain (no separators, no leading dot), and
+  only a name in the current listing is ever opened. That is the whole
+  traversal defence, so nothing under `/native/` is decoded or joined
+  blind.
+- A read error mid-file (the tunnel drops) ends that one response. There are
+  no range requests, so a cut download starts again.
+
+**The menu now scrolls whenever it is taller than the window.** It used to be
+centred by flex `align-items: center`, which cuts off both ends of content
+taller than the window where no scrollbar can reach. Only the
+`max-height: 620px` rule scrolled, so between 621 and about 700 px tall the
+war room's chat line sat below the edge, out of reach. `#start-inner` is now
+centred by auto margins, which centre it when it fits and let it scroll when
+it does not.
+
 ## Saving and resuming
 
 There is no save format to design, so none was designed: a war IS its seed

@@ -150,6 +150,8 @@
   "start.styleRemaster": "remaster",
   "start.begin": "START",
   "start.note": "klikk en linje for å endre - ENTER for å seile",
+  "start.native": "skrivebordsutgave (Windows, Linux):",
+  "start.nativeLink": "last ned",
   "panel.helm": "ROR",
   "panel.scope": "RADAR",
   "panel.ship": "SKIP",

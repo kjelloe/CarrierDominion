@@ -28,6 +28,7 @@ Everything is environment variables, all optional:
 | `WATCH` | 1 | the playtest watchdog, served at `/watch` |
 | `SAVE` | data/autosave.json | war autosave every 30 s and on shutdown; `0` disables |
 | `RESUME` | 0 | `1` resumes the autosave strictly (exits with the reason if it cannot); `auto` resumes when possible and starts fresh with a notice when not |
+| `NATIVE_DOWNLOADS` | unset | the native client's builds, linked on the start menu and in the war room: a folder (absolute or relative to the repo; its `CarrierDominion*` files are served under `/native/`), a `file://` URL, or an `http(s)://` URL linked as is. Read on every request, so a tunnelled disk may mount after boot; the boot log says how many files it found |
 
 ## Who may join
 
@@ -147,6 +148,7 @@ name. Deploy engine-changing releases between wars, or accept the fresh start.
 |---|---|
 | `/healthz` | tick, state hash, seats, status (`lobby`/`running`), whether a room is waiting (`hasJoinCode`), whether this boot resumed, rss |
 | `/watch` | the playtest watchdog's findings — impossible values, stalls, slow ticks — one line per kind with the first tick and a count |
+| `/native.json` | what the menu offers for the native client; `/native/<file>` streams one build (no range requests: a cut download restarts) |
 
 A monitor should read `status` from `/healthz`, not the tick: a war waiting in
 its room does not tick, and that is health, not a hang.

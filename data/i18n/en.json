@@ -150,6 +150,8 @@
   "start.styleRemaster": "remaster",
   "start.begin": "BEGIN",
   "start.note": "click a line to change it - ENTER to sail",
+  "start.native": "native client (Windows, Linux):",
+  "start.nativeLink": "download",
   "panel.helm": "HELM",
   "panel.scope": "SCOPE",
   "panel.ship": "SHIP",

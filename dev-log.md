@@ -5,6 +5,50 @@ golden hash and why.
 
 ---
 
+## 2026-10-11 — The native client, offered from the menu
+
+Request C10 from the Unity port, boombrawl's B4 for this game. The owner
+approved it on 2026-10-11. `NATIVE_DOWNLOADS` is a folder, a `file://` URL or
+an `http(s)://` URL. `server/native.js` answers `/native.json` (what the page
+should show) and `/native/<file>` (the build, streamed), and
+`client/native.js` puts one line under the start menu and the war room.
+
+Decided while designing, each because the plain version was wrong for how
+the owner actually ships:
+
+- **Read on every request, not at boot.** The builds live on a remote disk
+  tunnelled onto the box, which may mount after the server starts. The boot
+  log still says what it found, because a typo otherwise looks like a
+  missing link.
+- **Only `CarrierDominion*` files.** `package.sh` writes every game's zips
+  into one `dist/`; pointing both servers at it must not have this page offer
+  boombrawl.
+- **No decoding, no joining blind.** A requested name must be plain and must
+  be in the folder's current listing, so traversal has nothing to work with
+  (tested with `..%2F`, `%2E%2E`, dotfiles, the other game's zip and a name
+  that is not there).
+- **A tunnel that drops mid-file ends one download**, not the process.
+- **Hidden on touch screens.** The builds are Windows and Linux, and a phone
+  that followed an invite should play in the browser.
+
+**Found on the way: the war room did not fit, and could not scroll.**
+`#start-panel` centred its box with flex `align-items: center`, which clips
+both ends of anything taller than the window, out of a scrollbar's reach. Only
+the `max-height: 620px` rule scrolled. Measured at 1280x640, the chat input's
+bottom was at 678 px in a 640 px window, unreachable, before the new line
+added anything. The box is now centred by auto margins: centred when it fits,
+scrollable when it does not. At 720 px the native line sits just below the
+fold, one scroll away. The menu looks the same as before.
+
+8 tests in `test/server_native.test.js`, and
+`debugging/probes/native_link.mjs` (menu, war room, a real download, phone
+hidden, nothing configured). 637 tests pass, the same 3 pre-existing
+failures. Smoke clean. Probe sweep 38 of 39: `playtest_round1` is the
+pre-existing failure; `flavour_pack`, failing in the last sweep, passed this
+time, so it is flaky rather than broken.
+
+---
+
 ## 2026-10-11 — What the port found by copying us line by line
 
 The Unity port copies the browser client exactly, so it read code nobody had
