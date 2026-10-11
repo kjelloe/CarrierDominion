@@ -148,7 +148,7 @@ name. Deploy engine-changing releases between wars, or accept the fresh start.
 |---|---|
 | `/healthz` | tick, state hash, seats, status (`lobby`/`running`), whether a room is waiting (`hasJoinCode`), whether this boot resumed, rss |
 | `/watch` | the playtest watchdog's findings — impossible values, stalls, slow ticks — one line per kind with the first tick and a count |
-| `/native.json` | what the menu offers for the native client; `/native/<file>` streams one build (no range requests: a cut download restarts) |
+| `/native.json` | what the menu offers for the native client; `/native/<file>` streams one build, resumable (single `Range: bytes=` span; 416 past the end) |
 
 A monitor should read `status` from `/healthz`, not the tick: a war waiting in
 its room does not tick, and that is health, not a hang.

@@ -5,6 +5,68 @@ golden hash and why.
 
 ---
 
+## 2026-10-11 — The suite is green again, and a war that stood still had no words
+
+Asked to fix what was left outstanding, then hunt omissions.
+
+**The three failures from 527e5f1 (rulings 39.1a/b, 39.2a), which landed
+without a repin.**
+
+- *The two pins.* The commit added `lastProgressTick` and five params, so both
+  hashes had to move. The question a repin must answer is whether the war
+  changed or only its shape. `repin_m0a --check` reported a "behaviour" drift
+  at tick 1, but the behaviour hash only drops `rulesHash`, and new state
+  fields move it too. So I recomputed it with the six new fields removed: all
+  300 M0-A ticks match the old pin, and the islands and carriers hash
+  identically before and after (`65722259e06ef368`, checked in a worktree at
+  527e5f1~1). Shape only; repinned, and the golden hash updated by hand with
+  that evidence in its comment.
+- *"A war that stops moving is called" was failing honestly.* A neutral
+  battery fires on tick 1 of every fresh war, because a carrier spawns in its
+  reach. The test jumps the clock to the cap without ever ticking, which makes
+  the cap tick that first tick, so a shot (progress) landed on the tick being
+  judged and the war was rightly not stalled. The rule was right and the setup
+  was wrong; the test now switches the batteries off.
+
+**`playtest_round1` was failing, not flaky.** Its Manta was SHOT DOWN
+mid-dive. Finding that took three wrong turns, worth recording: the probe runs
+`?mode=solo`, so the war is in the browser and nothing on the in-process
+server (rules, command log, shots) was the war at all. Read from the page's
+own views, island 1's neutral battery put two rounds into her (45 + 45 of 60
+hp) as the probe's 4-second holds at x8, about 640 ticks, flew her into its
+reach. The island teeth arrived after the probe was written. It now drops to
+x1 for the stick (about 180 ticks; still metres of climb), checks the rate it
+got, and reports a lost Manta in words rather than throwing on `.z`.
+
+**`flavour_pack` was a race:** the signals log is drawn on the next animation
+frame, and the probe read it the moment `i` was pressed. It now waits up to
+3 s for the first line. Three runs in a row green.
+
+**Resumable downloads** on `/native/<file>`: one `Range: bytes=` span
+(start-end, open-ended or suffix) is answered 206, a span past the end gets
+416, and multipart ranges are refused. Two tests.
+
+Omissions found:
+
+- **WIN_STALLED had no words.** The engine's comment says "the ending screen
+  says which it was", but the HUD and the war-over screen each kept their own
+  copy of the reason list, and neither had a 7th entry, so a stalled war ended
+  "somehow". The list is now one (`WIN_KEYS` in hud.js) with `war.byStall`
+  in both languages, and a test walks every `WIN_*` the engine exports.
+- **The rulings were in the code and nowhere else.** docs/02 (the six routes,
+  the lifeline under Endurance), docs/06 (a section for 39.1a/b and 39.2a),
+  the README's "Winning", PLAYTEST step 26 and the war room's own label
+  ("two thirds of the claimed islands") all described the old rule. docs/09
+  still listed §39.1, §39.2 and the heartbeat (§37.2, built this morning) as
+  open; they are struck through, and the ban-address row notes the proxy fix.
+  Section D now warns that the ruleset era moved (57f588c895da27c5 to
+  5ee697205122cb5a), so new matrix CSVs must not be pooled with the old.
+
+643 tests, 0 failing, for the first time since 527e5f1. Smoke clean; probe
+sweep 39 of 39 first time.
+
+---
+
 ## 2026-10-11 — The native client, offered from the menu
 
 Request C10 from the Unity port, boombrawl's B4 for this game. The owner

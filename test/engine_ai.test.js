@@ -138,7 +138,13 @@ test('a war that stops moving is called rather than run forever', () => {
   // Ruling 39.1b. 18 of 300 measured wars sat with nothing happening for up to
   // 519,804 ticks; "the game never ends" is the one outcome a player can do
   // nothing about.
-  let state = createInitialState(SEED, withoutAi(rules));
+  //
+  // Neutral batteries off. A carrier spawns inside one's reach and it fires on
+  // the first tick a war ever runs - and jumping the clock straight to the cap
+  // makes THIS that first tick, so the shot (which is progress) landed on the
+  // very tick being judged and the war was rightly not stalled.
+  const quiet = withoutAi({ ...rules, rules: { ...rules.rules, neutralSiloRounds: 0 } });
+  let state = createInitialState(SEED, quiet);
   state.lastProgressTick = 0;
   state.tick = rules.rules.stallCapTicks;
   state = drive(state, 1);

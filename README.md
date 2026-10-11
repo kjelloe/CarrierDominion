@@ -159,9 +159,13 @@ fitted out from stores. Nothing a unit takes aboard is conjured.
 
 ## Winning
 
-Four ways, resolved in this order: nobody left afloat (a draw), last carrier
-afloat, the point cap if the host set one, two thirds of the islands, and the
-time cap if the host set one — highest score, level is a draw.
+Six ways, resolved in this order: nobody left afloat (a draw), last carrier
+afloat, the point cap if the host set one, the islands (two thirds of those
+anybody has claimed, at least three, and twice the runner-up), the time cap if
+the host set one (highest score, level is a draw), and finally a war in which
+nothing has happened for five hours of game time is called for whoever leads.
+A carrier that runs dry draws a slow trickle of fuel from its team's islands,
+enough to get home.
 
 Team 1 is played by an AI that does everything you do: picks islands, puts a
 Walrus ashore, decides what each island is for and what to build on it, flies

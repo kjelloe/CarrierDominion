@@ -190,7 +190,8 @@ says what to do and what should happen; anything else is a finding.
 
 ### G. Finishing it
 
-26. **Win it.** Hold two thirds of the islands, or sink the enemy carrier.
+26. **Win it.** Hold two thirds of the islands anybody has claimed (at least
+    three, and twice what they hold), or sink the enemy carrier.
 27. **The ending screen** shows the scoreboard the fog was hiding, the
     islands, and how long the war ran.
 28. **`ESC` twice** surrenders, if you would rather see that ending.

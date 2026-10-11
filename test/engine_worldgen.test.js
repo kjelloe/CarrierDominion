@@ -59,8 +59,15 @@ const rules = loadRules();
 // The MAP itself has not changed since the first pin: islands, nodes and
 // start positions are byte-identical throughout (the ring-walk fix touches
 // only tables of more than four teams, which no pin covers).
+//
+// Moved 2026-10-11 for rulings 39.1a/b and 39.2a (the fuel lifeline, the
+// stall rule, the claimed-islands victory; landed in 527e5f1 without a
+// repin): state.lastProgressTick and five params. State shape only - the
+// islands and carriers hash identically before and after (65722259e06ef368),
+// and the M0-A trajectory with those six fields removed matches the old
+// behaviour pin on all 300 ticks.
 const GOLDEN_SEED = 20260818;
-const GOLDEN_WORLD_HASH = 'da83a15d2154178a';
+const GOLDEN_WORLD_HASH = '43f6994fd525dd33';
 
 test('worldgen places the requested island count', () => {
   const generated = createIslands(GOLDEN_SEED, rules.world, rules.rules.unitsPerMetre);

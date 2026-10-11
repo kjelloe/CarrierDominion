@@ -79,6 +79,24 @@ await page.waitForFunction(
   { timeout: 90000 },
 );
 await page.waitForTimeout(400);
+// Down to x1 for the stick. At x8 the 4-second holds are ~640 ticks, which
+// flew her into island 1's battery: the neutral silos (the island teeth, added
+// after this probe) put two rounds into her mid-dive and the altitude read hit
+// a hull that was no longer flying. At x1 the whole test is ~180 ticks, long
+// before she reaches it - and 80 ticks of climb is still metres of altitude.
+for (let i = 0; i < 3; i++) {
+  await page.keyboard.press(',');
+  await page.waitForTimeout(200);
+}
+const rate = await page.evaluate(async () => {
+  const from = window.__lastView.tick;
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  return window.__lastView.tick - from;
+});
+if (rate > 30) {
+  console.log(`FAIL: still running at ${rate} ticks a second; the stick test needs x1`);
+  process.exitCode = 1;
+}
 await page.keyboard.press('t');
 await page.waitForTimeout(500);
 const before = await page.evaluate(
@@ -95,7 +113,14 @@ if (climbed <= before) {
 await page.keyboard.down('ArrowDown');
 await page.waitForTimeout(4000);
 await page.keyboard.up('ArrowDown');
-const dived = await page.evaluate(() => window.__lastView.units.find((u) => u.kind === 0 && u.state === 1).z);
+// -1 if she was lost on the way down: say so, rather than throwing on .z.
+const dived = await page.evaluate(
+  () => window.__lastView.units.find((u) => u.kind === 0 && u.state === 1)?.z ?? -1,
+);
+if (dived === -1) {
+  console.log('FAIL: the Manta was lost during the test, so the stick was never read');
+  process.exitCode = 1;
+}
 if (dived >= climbed) {
   console.log(`FAIL: ArrowDown did not dive (${climbed} -> ${dived})`);
   process.exitCode = 1;

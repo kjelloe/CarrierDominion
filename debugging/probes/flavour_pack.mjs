@@ -63,6 +63,14 @@ await page.waitForFunction(
 );
 await page.waitForTimeout(300);
 await page.keyboard.press('i');
+// The log is drawn by renderSignals() in the NEXT animation frame, not by the
+// key press, so reading it straight after `i` raced the frame and found the
+// panel open and empty about one run in two. Give it a moment to draw.
+await page.waitForFunction(
+  () => document.getElementById('log-body').children.length > 0,
+  undefined,
+  { timeout: 3000 },
+).catch(() => {});
 const signals = await page.evaluate(() => ({
   open: document.getElementById('log-panel').classList.contains('open'),
   lines: document.getElementById('log-body').children.length,

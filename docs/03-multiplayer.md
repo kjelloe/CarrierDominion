@@ -243,8 +243,10 @@ belongs in the browser game.
   only a name in the current listing is ever opened. That is the whole
   traversal defence, so nothing under `/native/` is decoded or joined
   blind.
-- A read error mid-file (the tunnel drops) ends that one response. There are
-  no range requests, so a cut download starts again.
+- A read error mid-file (the tunnel drops) ends that one response, and the
+  download **resumes**: one `Range: bytes=` span (start-end, open-ended or a
+  suffix) is answered `206`, and a span past the end gets `416`. Multipart
+  ranges are refused: nothing that resumes a single zip asks for them.
 
 **The menu now scrolls whenever it is taller than the window.** It used to be
 centred by flex `align-items: center`, which cuts off both ends of content

@@ -12,13 +12,12 @@
 // The model is a pure function of the view so it can be tested in Node; the
 // DOM below it is built once and filled in, never rebuilt per frame.
 
+import { WIN_KEYS } from '../hud.js';
+
 // What the screen says, as data. `t` is the i18n lookup.
 function outcomeModel(view, t) {
   const mine = view.winner === view.team;
   const draw = view.winner < 0;
-  const reasons = [
-    'war.unknown', 'war.byIslands', 'war.byCarrier', 'war.draw', 'war.byPoints', 'war.byTime',
-  ];
   const scores = [];
   for (const entry of view.scores ?? []) {
     scores.push(entry.id === view.team
@@ -30,7 +29,7 @@ function outcomeModel(view, t) {
   const totalSeconds = Math.floor(view.tick / (view.params.tickHz > 0 ? view.params.tickHz : 20));
   return {
     title: draw ? t('warover.drawTitle') : t(mine ? 'war.won' : 'war.lost'),
-    reason: t(reasons[view.winReason] ?? 'war.unknown'),
+    reason: t(WIN_KEYS[view.winReason] ?? 'war.unknown'),
     scores: scores,
     islands: t('warover.islands', { held: held, total: view.islands.length }),
     length: t('warover.length', {

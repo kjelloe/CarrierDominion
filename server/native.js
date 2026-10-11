@@ -89,6 +89,29 @@ async function nativeListing(source) {
   return files.length === 0 ? { kind: 'none' } : { kind: 'folder', files: files };
 }
 
+// One `bytes=` range, or 0 for the whole file, or -1 for one that cannot be
+// served. A build is a single zip, and download managers and browsers resume
+// with a single range, so multipart ranges are refused rather than written.
+function byteRange(header, size) {
+  if (typeof header !== 'string' || header === '') return 0;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (match === null || (match[1] === '' && match[2] === '')) return -1;
+  let start;
+  let end;
+  if (match[1] === '') {
+    // A suffix: the last N bytes.
+    const tail = Number(match[2]);
+    if (tail === 0) return -1;
+    start = Math.max(0, size - tail);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] === '' ? size - 1 : Math.min(Number(match[2]), size - 1);
+  }
+  if (start >= size || start > end) return -1;
+  return { start: start, end: end };
+}
+
 function sendJson(req, res, body) {
   const text = JSON.stringify(body);
   res.writeHead(200, {
@@ -126,17 +149,33 @@ async function serveNative(req, res, source) {
     refuse(res, 404);
     return true;
   }
-  res.writeHead(200, {
+  // Resumable: a build is a large zip coming over a tunnel, and a download cut
+  // at 90% should not start again from nothing.
+  const range = byteRange(req.headers.range, offered.size);
+  if (range === -1) {
+    res.writeHead(416, { 'content-range': `bytes */${offered.size}` });
+    res.end();
+    return true;
+  }
+  const headers = {
     'content-type': name.toLowerCase().endsWith('.zip') ? 'application/zip' : 'application/octet-stream',
-    'content-length': offered.size,
     'content-disposition': `attachment; filename="${name}"`,
+    'accept-ranges': 'bytes',
     'cache-control': 'no-cache',
-  });
+  };
+  if (range === 0) {
+    headers['content-length'] = offered.size;
+    res.writeHead(200, headers);
+  } else {
+    headers['content-length'] = range.end - range.start + 1;
+    headers['content-range'] = `bytes ${range.start}-${range.end}/${offered.size}`;
+    res.writeHead(206, headers);
+  }
   if (req.method === 'HEAD') {
     res.end();
     return true;
   }
-  const stream = createReadStream(join(source.dir, name));
+  const stream = createReadStream(join(source.dir, name), range === 0 ? {} : { start: range.start, end: range.end });
   // A tunnelled disk can drop mid-file. That ends this one download, cut
   // short where the length header will show it, and nothing else.
   stream.on('error', () => res.destroy());
@@ -144,4 +183,4 @@ async function serveNative(req, res, source) {
   return true;
 }
 
-export { PRODUCT, nativeSource, nativeListing, serveNative };
+export { PRODUCT, byteRange, nativeSource, nativeListing, serveNative };

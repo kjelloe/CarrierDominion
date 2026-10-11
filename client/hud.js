@@ -218,8 +218,12 @@ function describeSupply(t, view) {
   return parts.join(' - ');
 }
 
+// Indexed by engine/victory.js WIN_*. One list for the HUD and the war-over
+// screen: each kept its own, and the stall rule (WIN_STALLED, ruling 39.1b)
+// reached the ending screen as "somehow" in both.
 const WIN_KEYS = [
   'war.unknown', 'war.byIslands', 'war.byCarrier', 'war.draw', 'war.byPoints', 'war.byTime',
+  'war.byStall',
 ];
 
 // Silent unless the host switched a cap on, because in an uncapped war the
@@ -251,6 +255,7 @@ function describeIslands(t, view) {
 
 export {
   HUD_ROWS,
+  WIN_KEYS,
   createHud,
   setHud,
   tickFps,

@@ -181,11 +181,11 @@ here is forgotten.
 
 | # | Question | Recommendation |
 |---|---|---|
-| §39.1 | **The default config deadlocks 6% of wars** — both carriers at `fuel 0/0`, recoverable only with enough territory. Should running dry be recoverable, fatal, or left? | A fuel trickle from any owned island **plus** a long stop-loss so a truly dead war still ends |
-| §39.2 | **The island victory condition never fires above 8 islands** (zero island wins in 80 wars at 16/32/64). Scale the threshold, add a points/time ending, or cap the offered map size? | Scale it (a margin rather than an absolute fraction), with the room's existing point/time caps as the escape hatch. Do not ship 64×16 while it has produced no ending in twenty attempts |
-| §37.2 | A websocket **heartbeat**. There is none; `proxy_read_timeout 7d` covers the symptom, not a half-open socket | Build it, but after the playtest |
+| ~~§39.1~~ | Ruled 2026-09-06 (39.1a lifeline, 39.1b stall) and built in 527e5f1; see docs/06 | Re-run the 8×2 matrix to measure it (section D) |
+| ~~§39.2~~ | Ruled 2026-09-06 (39.2a: claimed islands, a minimum, twice the runner-up) and built in 527e5f1 | Re-run 16/32/64 to see island wins happen |
+| ~~§37.2~~ | Built 2026-10-11 as part of the Unity port's hardening (`server/guard.js`): a ping every 30 s, a missed pong terminates | — |
 | §37.3 | The `solo` tag in `games.json` — new vocabulary in that index | Keep, or drop if it looks out of place |
-| §38.1 | Is the **remote address** the right handle for a ban? One machine on a LAN; possibly a household behind one NAT | Leave it — the one-minute window bounds the cost |
+| §38.1 | Is the **remote address** the right handle for a ban? One machine on a LAN; possibly a household behind one NAT. (Behind the proxy it was 127.0.0.1 for EVERYONE until 2026-10-11; it is now the proxy's `X-Real-IP`) | Leave it — the one-minute window bounds the cost |
 | §38.2 | Should a kicked player be **told**, or silently dropped? | Told (built that way) |
 
 ## B. Decided, not yet done
@@ -214,9 +214,12 @@ Recorded so they are choices rather than oversights:
 
 ## D. Worth measuring next on the batch PC
 
-The matrix answered its question and raised sharper ones:
+The matrix answered its question and raised sharper ones. The ruleset era
+has moved since: the 440 wars ran on `57f588c895da27c5`, and the 39.1/39.2
+rulings make it `5ee697205122cb5a`, so a new run is a different game and
+must not be pooled with the old CSVs.
 
-- **Re-run 8×2 with more seeds** once §39.1 is ruled on: 6% needs a few hundred
+- **Re-run 8×2 with more seeds** now that §39.1 is ruled on and built: 6% needs a few hundred
   wars to move confidently, and the sweep now records *which* watchdog finding
   fired (`findingKinds`), so the next run is diagnosable from the CSV alone.
 - **Bisect the island count** between 8 and 16, where resolution falls from 94%

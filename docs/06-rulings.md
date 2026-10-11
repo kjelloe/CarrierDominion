@@ -33,7 +33,7 @@ by the original's ACCB pod, not hold-the-node; chase camera first.
 | 5 | Solo pause + compression ladder; LAN compression **votable** (settled by #24.5). |
 | 9 | **Two teams for v1** — but nothing may hard-code two. |
 | 13 | **Retro (1988) is the look**, look-only scope, `modern`/`hybrid` stay as references behind `?style=`. |
-| 15 | Win by islands (two thirds) or last carrier afloat (extended by #24.4). |
+| 15 | Win by islands (two thirds) or last carrier afloat (extended by #24.4; the island test reworked by 39.2a). |
 | 17 | **Ordnance must be reloaded** — rearming is a withdrawal from the ship's store; partial rearms are normal. |
 | 18 | **A Manta fires when somebody pulls the trigger** — a player or the AI agent flying it. Close-in mounts never wait. |
 | 19 | **1000 hull stands, plus damaged sections** — hit components and general hull, like the original. |
@@ -652,6 +652,25 @@ from `randomBytes(12)` rather than `Math.random`, and the socket's URL is
 parsed instead of searched, because `indexOf('token=')` also matched
 `?xtoken=` and read it as a seat token. R-010, the documentation drift, was
 closed on 2026-08-28.
+
+## The deadlock answers (2026-09-06)
+
+From the first full battery matrix (`docs/09`, §39), recorded in the code
+that implements them:
+
+- **39.1a, the lifeline.** Running dry stays a real cost, but it is no longer
+  a dead end. A team that owns an island with fuel in it trickles a stranded
+  carrier back up to a floor (5% of the bunker), debited from that island.
+  `engine/lifeline.js`.
+- **39.1b, the stall.** A war in which nothing has moved for 360,000 ticks is
+  called, with its own reason, for the leader or for nobody.
+  `engine/victory.js`, `PROGRESS_CODES` in `engine/events.js`.
+- **39.2a, the island victory.** Two thirds of the islands *claimed*, at least
+  three, and twice the runner-up. `engine/victory.js`.
+
+Landed in 527e5f1 without a repin. Both pins moved on state shape only: the
+map and the M0-A trajectory are byte-identical once the six new fields are
+set aside (dev-log 2026-10-11).
 
 ## The door (2026-08-31)
 

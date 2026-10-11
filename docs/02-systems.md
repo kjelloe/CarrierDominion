@@ -279,6 +279,16 @@ figures, and nothing strands. Higher figures were tried and rejected - at
 150 a long war finishes on 1-3%, which is a knife edge for a human
 quartermaster even though the AI survives it.
 
+**A ship that runs dry can always get home** (the lifeline, ruling 39.1a,
+`engine/lifeline.js`). Below `lifelineFloorPermil` of its bunker (5%) a carrier
+draws `lifelineFuelPerTick` every `lifelineEveryTicks` (1 per 10 ticks) from the
+richest island its team owns, debited from that island's own store. It stops at
+the floor, and with no owned island holding fuel there is no lifeline. It runs
+after the supply boat, so a hull the lighter just reached does not take it as
+well. It is enough to weigh anchor and reach a friendly shore, nowhere near
+enough to fight on. Before it, 18 of 300 default wars ended with both carriers
+at zero, the supply boat being the only way fuel reached a hull.
+
 The ship says so on the way down. At **25%** and again at **10%** the status
 line calls for the lighter, once per threshold, re-arming if a delivery lifts
 the bunker back through the mark. The engine's only fuel event fires at ZERO,
@@ -571,17 +581,31 @@ a salvo still on its way in is untouched.
 
 ## How a war ends
 
-Five routes, resolved in this order, which is part of the contract:
+Six routes, resolved in this order, which is part of the contract:
 
 1. **Annihilation** — nobody afloat. A draw, because two air groups can and do
    finish each other on the same tick, and without this the war never ends.
 2. **Last carrier afloat.**
 3. **Point cap**, if the host set one. Two sides past it on the same tick is a
    draw; there is no honest way to break it.
-4. **Islands** — two thirds of them, floored at one, because two thirds of a
-   one-island map rounds down to a threshold of nothing and a tiny test map
-   declared a winner on tick zero.
+4. **Islands** (ruling 39.2a, 2026-09-06) — a team must pass all three:
+   two thirds of the islands anybody has **claimed** (not of the whole
+   archipelago, which is why 440 measured wars at 16, 32 and 64 islands
+   produced no island win at all), at least `victoryMinIslands` (3)
+   outright, and **twice** what the next-best team holds. The margin is what
+   makes it a conquest: without it a war ended at tick 72,050 with the winner
+   on two islands of eight and five still neutral. The threshold is never
+   below one, because two thirds of a one-island map rounds to nothing.
 5. **Time cap**, if the host set one: highest score, and a level score is a draw.
+6. **The stall** (ruling 39.1b) — nothing has MOVED the war for
+   `stallCapTicks` (360,000, five hours at 1x): no hull lost, island taken or
+   converted, carrier sunk, shot fired, works built, hull replaced or turret
+   lost (`PROGRESS_CODES` in `engine/events.js`, one list shared with the sim
+   tools). The war is called for the leader, or for nobody when level, with
+   its own reason (`WIN_STALLED`), not a draw. The cap sits well above the
+   longest quiet stretch a healthy war has shown (243,022 ticks across 282
+   resolved wars), and exists because 18 of 300 measured wars sat still for
+   up to 519,804 ticks.
 
 Points: islands pay on the hundred-tick beat, a kill pays the shooter, sinking a
 carrier pays well, and a unit lost to an empty tank pays nobody — rewarding that

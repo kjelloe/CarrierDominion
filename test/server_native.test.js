@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 
 import { createApp, ROOT } from '../server/app.js';
 import { loadRules } from '../server/rules.js';
-import { nativeListing, nativeSource } from '../server/native.js';
+import { byteRange, nativeListing, nativeSource } from '../server/native.js';
 import { describeSize, nativeLinks } from '../client/native.js';
 
 const rules = loadRules();
@@ -145,4 +145,45 @@ test('the page line names each build with its size, or one link to the page', ()
   );
   assert.equal(describeSize(1536 * 1024), '1.5 MB');
   assert.equal(describeSize(1000), '0.1 MB');
+});
+
+test('a download cut short picks up where it stopped', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cd-native-'));
+  const bytes = Buffer.from(Array.from({ length: 1000 }, (_, i) => i % 251));
+  writeFileSync(join(dir, 'CarrierDominion-1-win64.zip'), bytes);
+  try {
+    await withNative(dir, async (base) => {
+      const url = `${base}/native/CarrierDominion-1-win64.zip`;
+      const whole = await fetch(url);
+      assert.equal(whole.headers.get('accept-ranges'), 'bytes');
+      await whole.arrayBuffer();
+
+      const rest = await fetch(url, { headers: { range: 'bytes=900-' } });
+      assert.equal(rest.status, 206);
+      assert.equal(rest.headers.get('content-range'), 'bytes 900-999/1000');
+      assert.deepEqual(Buffer.from(await rest.arrayBuffer()), bytes.subarray(900));
+
+      const middle = await fetch(url, { headers: { range: 'bytes=10-19' } });
+      assert.deepEqual(Buffer.from(await middle.arrayBuffer()), bytes.subarray(10, 20));
+
+      const beyond = await fetch(url, { headers: { range: 'bytes=1000-' } });
+      assert.equal(beyond.status, 416);
+      assert.equal(beyond.headers.get('content-range'), 'bytes */1000');
+    });
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test('ranges: one span, a suffix, an open end; nonsense and multipart refused', () => {
+  assert.equal(byteRange(undefined, 100), 0);
+  assert.deepEqual(byteRange('bytes=0-9', 100), { start: 0, end: 9 });
+  assert.deepEqual(byteRange('bytes=90-', 100), { start: 90, end: 99 });
+  assert.deepEqual(byteRange('bytes=-10', 100), { start: 90, end: 99 });
+  assert.deepEqual(byteRange('bytes=50-500', 100), { start: 50, end: 99 });
+  assert.equal(byteRange('bytes=100-', 100), -1);
+  assert.equal(byteRange('bytes=9-3', 100), -1);
+  assert.equal(byteRange('bytes=-0', 100), -1);
+  assert.equal(byteRange('bytes=0-1,5-6', 100), -1);
+  assert.equal(byteRange('items=0-1', 100), -1);
 });

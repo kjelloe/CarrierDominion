@@ -199,3 +199,22 @@ test('the war-over screen says who, how, and what it cost', async () => {
   assert.equal(draw.title, 'warover.drawTitle');
   assert.equal(draw.reason, 'war.draw');
 });
+
+test('every way a war can end has words, on the HUD and the ending screen', async () => {
+  // The stall rule (WIN_STALLED) went into the engine with no wording, and a
+  // war called for standing still ended "somehow". Every WIN_* the engine
+  // exports must name a key that is not the fallback.
+  const victory = await import('../engine/victory.js');
+  const { WIN_KEYS } = await import('../client/hud.js');
+  const { outcomeModel } = await import('../client/panels/warover.js');
+  const t = (key) => key;
+  for (const [name, value] of Object.entries(victory)) {
+    if (!name.startsWith('WIN_') || name === 'WIN_NONE') continue;
+    assert.ok(WIN_KEYS[value] !== undefined && WIN_KEYS[value] !== 'war.unknown',
+      `${name} (${value}) has no words`);
+    const model = outcomeModel({
+      team: 0, winner: -1, winReason: value, tick: 0, params: { tickHz: 20 }, scores: [], islands: [],
+    }, t);
+    assert.equal(model.reason, WIN_KEYS[value]);
+  }
+});
