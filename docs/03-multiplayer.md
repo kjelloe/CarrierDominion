@@ -163,6 +163,30 @@ why it needs the table's consent: an earlier build handed spectators team 0's
 view, which was a free channel for one side and consented to by nobody. With
 no ship to chase, the observer's camera defaults to the strategic pull-back.
 
+**Watching on purpose.** A socket that asks with `?spectate=1` is an observer
+even when seats are free: team -1, `spectator: true`, no `set_ai`, so it never
+takes a carrier off the machine (requested by the Unity port, which needs a
+spectator view, and by anything that monitors a hosted war). It is the same
+observer as the table-full one, so the same switch governs it. A closed door
+turns it away. It passes the same door as a newcomer: watching a war already in
+progress needs the code. It beats a token: a socket that asked to watch is not
+seated, not even at its own held seat, and the hold is left for the
+commander's next ordinary connection. Only the exact value `1` counts, parsed
+with the same `URL` parser as `token` and `code`.
+
+**The door looks before it takes.** A token's held seat is looked up, the door
+decides, and only then is the hold claimed. In the other order a refused
+socket, such as a banned address that another player shares behind one NAT,
+destroyed a hold it was never let in to use.
+
+**Who is at the table.** The process logs one line per seat change to stdout
+(`seat 0 taken (browser) - 1 playing, 0 watching`, `seat 0 held for 90s`,
+`seat 0 released to the AI`, `observer joined (asked to watch, native)`,
+`observer left`). `browser` or `native` is read from the `Origin` header,
+which a browser always sends and a native client does not. `createApp` is
+silent unless given `noteFn`. `/healthz` splits `seats` into `players` and
+`observers`.
+
 ## Saving and resuming
 
 There is no save format to design, so none was designed: a war IS its seed

@@ -4,6 +4,7 @@ import { WebSocket } from 'ws';
 
 import { createApp } from '../server/app.js';
 import { loadRules } from '../server/rules.js';
+import { banAddress } from '../server/doorman.js';
 
 const rules = loadRules();
 
@@ -765,6 +766,207 @@ test('and the room hands that stranger its join code', async () => {
     assert.equal(lobby.lobby.code, code,
       'if this now differs, the code stopped being broadcast - update docs/03 and ops/DEPLOY.md');
     sock.close();
+  } finally {
+    await app.close();
+  }
+});
+
+// --- watching on purpose (request C1/C2 from the Unity port) ----------------
+//
+// Every socket used to be seated on the lowest free team, which hands that
+// carrier from the AI to whoever connected - a monitor, a smoke test against
+// the hosted box, or a spectator view all stole a ship by saying hello.
+
+function setAiCommands(app) {
+  const queued = app.game.queue.map((entry) => entry.command);
+  return queued.concat(app.game.commandLog).filter((command) => command.type === 'set_ai');
+}
+
+test('asking to spectate at a table with free seats watches, and takes no carrier', async () => {
+  await withServer(async (app, _httpUrl, wsUrl) => {
+    const before = setAiCommands(app).length;
+    const watcher = connect(`${wsUrl}/?spectate=1`);
+    await watcher.open();
+    const welcome = await watcher.next((m) => m.type === 'welcome');
+    assert.equal(welcome.team, -1);
+    assert.equal(welcome.spectator, true);
+    const snapshot = await watcher.next((m) => m.type === 'snapshot');
+    assert.equal(snapshot.view.team, -1, 'a spectator was sent a seat\'s view');
+    assert.equal(setAiCommands(app).length, before, 'watching took a carrier off the AI');
+
+    // The seat it did not take is still the first one free.
+    const player = connect(wsUrl);
+    await player.open();
+    const seated = await player.next((m) => m.type === 'welcome');
+    assert.equal(seated.team, 0);
+    player.close();
+    watcher.close();
+  });
+});
+
+test('only spectate=1 asks to watch; a parameter that merely ends in it does not', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const sock = connect(`${wsUrl}/?nospectate=1`);
+    await sock.open();
+    const welcome = await sock.next((m) => m.type === 'welcome');
+    assert.equal(welcome.team, 0);
+    sock.close();
+  });
+});
+
+test('a table that takes no observers turns a spectator away at the door', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, observers: 0 });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const watcher = connect(`ws://127.0.0.1:${address.port}/?spectate=1`);
+    const refused = await watcher.next((m) => m.type === 'rejected');
+    assert.match(refused.reason, /observers/);
+    assert.equal(app.seats.length, 0);
+  } finally {
+    await app.close();
+  }
+});
+
+test('watching a war in progress needs the join code, like sailing in one', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-watch-code' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const host = connect(`ws://127.0.0.1:${address.port}`);
+    await host.open();
+    await host.next((m) => m.type === 'welcome');
+    host.send({ type: 'lobby_ready', ready: 1 });
+    host.send({ type: 'lobby_start' });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.notEqual(app.lobby.status, 'lobby', 'this test needs the war to have started');
+
+    const stranger = connect(`ws://127.0.0.1:${address.port}/?spectate=1`);
+    const refused = await stranger.next((m) => m.type === 'rejected');
+    assert.match(refused.reason, /join code/);
+
+    const friend = connect(`ws://127.0.0.1:${address.port}/?spectate=1&code=${app.joinCode()}`);
+    await friend.open();
+    const welcome = await friend.next((m) => m.type === 'welcome');
+    assert.equal(welcome.spectator, true);
+    assert.equal(welcome.team, -1, 'a spectator with the code was given the free seat');
+    friend.close();
+    host.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test('a spectator in the war room is an observer on the roster, not Commander 0', async () => {
+  const app = createApp({ seed: 20260818, rules: rules, lobby: true, bootId: 'boot-watch-room' });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const host = connect(`ws://127.0.0.1:${address.port}`);
+    await host.open();
+    await host.next((m) => m.type === 'welcome');
+    const watcher = connect(`ws://127.0.0.1:${address.port}/?spectate=1`);
+    await watcher.open();
+    const lobby = await watcher.next((m) => m.type === 'lobby' && m.lobby.seats.length === 2);
+    const entry = lobby.lobby.seats.find((seat) => seat.team === -1);
+    assert.equal(entry.name, 'Observer');
+    assert.equal(entry.host, 0, 'a spectator can never host');
+    watcher.close();
+    host.close();
+  } finally {
+    await app.close();
+  }
+});
+
+test('asking to spectate with a seat token watches, and leaves the seat held', async () => {
+  // A socket that asked to watch is never given a seat - not even its own.
+  // The hold is not consumed, so the commander's next ordinary connection
+  // still finds their carrier.
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const commander = connect(wsUrl);
+    await commander.open();
+    const first = await commander.next((m) => m.type === 'welcome');
+    commander.close();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const watcher = connect(`${wsUrl}/?spectate=1&token=${first.token}`);
+    await watcher.open();
+    const watching = await watcher.next((m) => m.type === 'welcome');
+    assert.equal(watching.team, -1);
+    assert.equal(watching.resumed, 0);
+
+    const back = connect(`${wsUrl}/?token=${first.token}`);
+    await back.open();
+    const resumed = await back.next((m) => m.type === 'welcome');
+    assert.equal(resumed.team, first.team, 'watching with the token used the hold up');
+    assert.equal(resumed.resumed, 1);
+    back.close();
+    watcher.close();
+  });
+});
+
+test('a socket the door refuses does not use up the held seat its token names', async () => {
+  // The door used to run AFTER the token had been reclaimed, so a refused
+  // socket - a banned address that is also another player's, behind one NAT -
+  // destroyed a hold it was never let in to use.
+  await withServer(async (app, _httpUrl, wsUrl) => {
+    const commander = connect(wsUrl);
+    await commander.open();
+    const first = await commander.next((m) => m.type === 'welcome');
+    commander.close();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    banAddress(app.doorman, '127.0.0.1');
+    banAddress(app.doorman, '::ffff:127.0.0.1');
+    const refused = connect(`${wsUrl}/?token=${first.token}`);
+    await refused.next((m) => m.type === 'rejected');
+    app.doorman.bans = [];
+
+    const back = connect(`${wsUrl}/?token=${first.token}`);
+    await back.open();
+    const resumed = await back.next((m) => m.type === 'welcome');
+    assert.equal(resumed.resumed, 1, 'the refused socket took the hold with it');
+    assert.equal(resumed.team, first.team);
+    back.close();
+  });
+});
+
+test('healthz tells the players from the people watching', async () => {
+  await withServer(async (_app, httpUrl, wsUrl) => {
+    const player = connect(wsUrl);
+    const watcher = connect(`${wsUrl}/?spectate=1`);
+    await player.next((m) => m.type === 'welcome');
+    await watcher.next((m) => m.type === 'welcome');
+    const body = await (await fetch(`${httpUrl}/healthz`)).json();
+    assert.equal(body.seats, 2);
+    assert.equal(body.players, 1);
+    assert.equal(body.observers, 1);
+    player.close();
+    watcher.close();
+  });
+});
+
+test('every seat change is one line in the server log', async () => {
+  const notes = [];
+  const app = createApp({ seed: 20260818, rules: rules, noteFn: (text) => notes.push(text) });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const wsUrl = `ws://127.0.0.1:${address.port}`;
+    const player = connect(wsUrl);
+    const first = await player.next((m) => m.type === 'welcome');
+    const watcher = connect(`${wsUrl}/?spectate=1`);
+    await watcher.next((m) => m.type === 'welcome');
+    player.close();
+    watcher.close();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const back = connect(`${wsUrl}/?token=${first.token}`);
+    await back.next((m) => m.type === 'welcome');
+    back.close();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const text = notes.join('');
+    assert.match(text, /^seat 0 taken \(native\) - 1 playing, 0 watching$/m);
+    assert.match(text, /^observer joined \(asked to watch, native\) - 1 playing, 1 watching$/m);
+    assert.match(text, /^seat 0 held for 90s/m);
+    assert.match(text, /^observer left/m);
+    assert.match(text, /^seat 0 reclaimed \(native\)/m);
   } finally {
     await app.close();
   }

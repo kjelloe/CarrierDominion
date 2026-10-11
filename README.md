@@ -33,7 +33,7 @@ SAVE=0 ./run.sh       # without the 30-second autosave (data/autosave.json)
 | `/` (no query) | the start menu, over a live diorama of an island assault: choose the war, then sail |
 | `/?graphics=low\|medium\|high` | override the auto-detected graphics tier |
 | `/?style=retro\|modern\|hybrid` | art direction (default `retro`) - cosmetic only, same war, same hash |
-| `/healthz` | tick, state hash, seats, status, join code, rss - for monitoring |
+| `/healthz` | tick, state hash, seats (players and observers), status, whether a room is waiting, rss - for monitoring |
 | `/watch` | the playtest watchdog's findings, if it is running |
 
 Controls:

@@ -54,6 +54,7 @@ const app = createApp({
   savePath: SAVE === '0' ? 0 : SAVE,
   resume: resume,
   bootId: `${SEED}-${PORT}-${Date.now()}`,
+  noteFn: (text) => process.stdout.write(text),
 });
 
 if (resume !== 0 && app.resumed === 0) {

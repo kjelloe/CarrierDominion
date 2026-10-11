@@ -40,7 +40,7 @@ import {
   setOption,
   setReady,
 } from './lobby.js';
-import { createHolder, expired, holdSeat, isHeld, reclaim, release } from './reconnect.js';
+import { createHolder, expired, findHold, holdSeat, isHeld, reclaim, release } from './reconnect.js';
 import { admit, banAddress, createDoorman } from './doorman.js';
 import { resumeGame, saveGame, saveLogOnly, writeSave } from './save.js';
 import { createWatch, watchReport, watchTick } from './watch.js';
@@ -108,6 +108,12 @@ function createApp(options) {
     // is exactly the "a probe that cries wolf gets ignored" lesson arriving
     // from the other direction.
     logFn: options.logFn ?? ((text) => process.stderr.write(text)),
+    // Who sat down and who got up, one line each (request C9): a LAN host, or
+    // a script checking that a browser and a native client share one war,
+    // otherwise has no way to see the table. Silent unless asked for, so the
+    // suite's hundreds of connections do not fill its output; server/index.js
+    // sends it to stdout.
+    noteFn: options.noteFn ?? (() => {}),
     doorman: createDoorman(options.nowFn ?? (() => Date.now())),
     holder: createHolder(
       options.nowFn ?? (() => Date.now()),
@@ -224,28 +230,14 @@ function createApp(options) {
     return -1;
   }
 
-  // The room's join code, if the socket brought one. Same parser as the token
-  // below and for the same reason: `indexOf('code=')` would also match
-  // `?joincode=` and `?xcode=` (review R-012).
-  function codeFrom(req) {
+  // One parameter from the socket's URL, or ''. Parsed rather than searched
+  // for: `indexOf('token=')` also matches `?xtoken=` and `?not-a-token=`, so a
+  // parameter that merely ENDED in the right letters was read as a seat token
+  // (review R-012). The base is a throwaway - only the query matters.
+  function paramFrom(req, name) {
     try {
       const url = new URL(String(req.url ?? ''), 'http://carrier.invalid');
-      return url.searchParams.get('code') ?? '';
-    } catch (error) {
-      return '';
-    }
-  }
-
-  // The token in the socket's URL, if it brought one back.
-  //
-  // Parsed rather than searched for. `indexOf('token=')` also matches
-  // `?xtoken=` and `?not-a-token=`, so a parameter that merely ENDED in the
-  // right letters was read as a seat token (review R-012). The base is a
-  // throwaway - only the query matters.
-  function tokenFrom(req) {
-    try {
-      const url = new URL(String(req.url ?? ''), 'http://carrier.invalid');
-      return url.searchParams.get('token') ?? '';
+      return url.searchParams.get(name) ?? '';
     } catch (error) {
       return '';
     }
@@ -270,7 +262,15 @@ function createApp(options) {
       if (app.lobby === 0 || app.lobby.status !== 'lobby') {
         enqueueCommand(app.game, { type: 'set_ai', team: record.team, active: 1 });
       }
+      noteSeat(`seat ${record.team} released to the AI`);
     }
+  }
+
+  // One seat-change line, with where the table stands after it.
+  function noteSeat(text) {
+    const players = playerSeats();
+    const observers = app.seats.length - players;
+    app.noteFn(`${text} - ${players} playing, ${observers} watching\n`);
   }
 
   function playerSeats() {
@@ -322,6 +322,9 @@ function createApp(options) {
       stateHash: snapshot === -1 ? '' : snapshot.stateHash,
       rulesHash: app.game.state.rulesHash,
       seats: app.seats.length,
+      // `seats` counts every socket, observers included; these split it.
+      players: playerSeats(),
+      observers: app.seats.length - playerSeats(),
       watching: app.watch === 0 ? 0 : app.watch.findings.length,
       // A monitor watching only the tick would read a lobby as a hung server,
       // because a war that has not started does not tick. Say which it is.
@@ -333,11 +336,11 @@ function createApp(options) {
       // no business on an endpoint built for a monitor. A monitor only ever
       // needed to know that a room is WAITING, which is what this says.
       //
-      // Be honest about what this buys: the code is a LABEL, not a lock. The
-      // server never verifies one and the client never sends one, so nothing
-      // gates a seat (docs/03; pinned by test/server_ws.test.js "a stranger
-      // with no token and no code is given a carrier"). Keeping the code off a
-      // public endpoint is defence in depth, not the door.
+      // What it guards: once a war has sailed, server/doorman.js refuses a
+      // newcomer - player or spectator - who does not present this code. An
+      // open lobby still seats anyone (docs/03, "The door"; pinned by
+      // test/server_ws.test.js "a stranger with no token and no code is given
+      // a carrier"), and the room broadcasts the code to everyone it admits.
       //
       // The code is not merely stripped on the way out, it is not in the
       // object at all: a field that must not be published cannot live in the
@@ -387,30 +390,40 @@ function createApp(options) {
 
   app.wss.on('connection', (socket, req) => {
     sweepHeldSeats();
+    // `?spectate=1` asks to watch and never to sail (request G2/C1 from the
+    // Unity port: a monitor, a smoke test or a spectator view must not take a
+    // carrier off the AI just by connecting). It beats a token as well: a
+    // socket that asked to watch is not given a seat, not even its own, and
+    // the hold is left for the commander's next ordinary connection.
+    const spectating = paramFrom(req, 'spectate') === '1';
+    const token = spectating ? '' : paramFrom(req, 'token');
     // Somebody coming back gets their own seat, with their own name on it, and
-    // takes the war back off the machine if it had been handed over.
-    const returning = reclaim(app.holder, tokenFrom(req));
+    // takes the war back off the machine if it had been handed over. Only
+    // LOOKED UP here; it is taken once the door has let them in.
+    const held = findHold(app.holder, token);
 
     // The door (owner rulings, 2026-08-31): a war IN PROGRESS needs the room's
     // join code, and a kicked address waits a minute. An open LOBBY is
     // deliberately still open - strangers wandering in before the table sails
     // is how a drop-in game works, and the kick is the answer to the ones who
     // should not stay. A returning commander's token beats both, or the
-    // ruling that they get their ship back would not survive.
+    // ruling that they get their ship back would not survive. A spectator
+    // presents no token, so watching a war in progress needs the code too.
     const refusal = admit(app.doorman, {
       address: req.socket === undefined ? '' : req.socket.remoteAddress,
-      hasToken: returning === -1 ? 0 : 1,
+      hasToken: held === -1 ? 0 : 1,
       roomCode: app.lobby === 0 ? '' : app.lobby.code,
       started: app.lobby !== 0 && app.lobby.status !== 'lobby' ? 1 : 0,
-      code: codeFrom(req),
+      code: paramFrom(req, 'code'),
     });
     if (refusal !== '') {
       send(socket, { type: 'rejected', reason: refusal });
       socket.close();
       return;
     }
+    const returning = held === -1 ? -1 : reclaim(app.holder, token);
 
-    const claimed = returning === -1 ? claimTeam() : returning.team;
+    const claimed = returning !== -1 ? returning.team : spectating ? -1 : claimTeam();
     // No seat and no observers allowed: the door is closed, and it says so.
     if (returning === -1 && claimed === -1 && !observersAllowed()) {
       send(socket, { type: 'rejected', reason: 'the table does not take observers' });
@@ -443,6 +456,11 @@ function createApp(options) {
       enqueueCommand(app.game, { type: 'set_ai', team: seat.team, active: 0 });
     }
     app.seats.push(seat);
+    // Native clients send no Origin header; a browser always does. That is
+    // the only hint a socket gives about what is on the other end.
+    const via = req.headers.origin === undefined ? 'native' : 'browser';
+    if (seat.team === -1) noteSeat(`observer joined (${spectating ? 'asked to watch' : 'table full'}, ${via})`);
+    else noteSeat(`seat ${seat.team} ${returning === -1 ? 'taken' : 'reclaimed'} (${via})`);
     send(socket, {
       type: 'welcome',
       team: seat.team,
@@ -458,7 +476,7 @@ function createApp(options) {
       resumed: returning === -1 ? 0 : 1,
     });
     if (inLobby()) {
-      if (seat.name === undefined) seat.name = `Commander ${seat.team + 1}`;
+      if (seat.name === undefined) seat.name = seat.team === -1 ? 'Observer' : `Commander ${seat.team + 1}`;
       seat.ready = 0;
       broadcastLobby();
     }
@@ -546,8 +564,14 @@ function createApp(options) {
       // leaving a hull nobody was flying in the meantime.
       if (seat.team !== -1 && seat.kicked !== 1) {
         holdSeat(app.holder, seat);
+        noteSeat(`seat ${seat.team} held for ${app.holder.graceMs / 1000}s`);
       } else if (seat.team !== -1 && !inLobby()) {
         enqueueCommand(app.game, { type: 'set_ai', team: seat.team, active: 1 });
+        noteSeat(`seat ${seat.team} released to the AI (kicked)`);
+      } else if (seat.team !== -1) {
+        noteSeat(`seat ${seat.team} freed (kicked)`);
+      } else {
+        noteSeat('observer left');
       }
       // Somebody leaving can complete a vote the rest had already agreed on.
       settleVote();

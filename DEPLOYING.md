@@ -44,6 +44,12 @@ Three rules (`server/doorman.js`):
 
 With `LOBBY=0` no code exists, so nothing is demanded.
 
+**Monitors and spectators connect with `?spectate=1`** on the socket URL. They
+watch and never take a seat, so a smoke test against the hosted war does not
+take a carrier off the AI. They pass the same door: a war in progress needs
+`&code=`, and a table with observers switched off refuses them. The process
+logs one line per seat change to stdout (journald, under the unit file below).
+
 If you want the whole site private, that is your proxy's job — HTTP basic auth
 in front of it costs nothing and this game will never fight you for it.
 

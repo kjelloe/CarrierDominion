@@ -5,6 +5,53 @@ golden hash and why.
 
 ---
 
+## 2026-10-11 — Watching on purpose, and a door that looks before it takes
+
+The Unity port (`../unityworks/specs/server_change_requests.md`, C1/C2/C8/C9)
+needs a spectator view, and every socket used to sit down at the lowest free
+team: a smoke test or a monitor against the hosted war took a carrier off the
+AI just by saying hello.
+
+`?spectate=1` is now an observer on request: team -1, the referee view, no
+`set_ai`. It is the same observer as the table-full one, so the table's
+observers switch governs it, and it goes through the same door: watching a war
+in progress needs the code (C2, decided as recommended). It beats a token,
+because "never given a seat" should mean never; the hold is left alone for the
+commander's next ordinary connection. The three hand-written URL parsers are
+one `paramFrom(req, name)`.
+
+Two things nobody had asked for, found while reading the handler:
+
+- **The door ran after the token was spent.** `reclaim()` splices the hold, and
+  it ran before `admit()`. A socket refused at the door with a valid token, for
+  example from a banned address shared with another player behind one NAT,
+  destroyed a hold it was never let in to use. `findHold()` looks the token up
+  without taking it; the door decides on that, and only an admitted socket
+  reclaims.
+- **An observer in the war room was "Commander 0"** (`team + 1` on team -1).
+  Rare while observers only arrived at a full table; routine once a spectator
+  view connects first. It is "Observer" now.
+
+C9: one stdout line per seat change through a new `noteFn`
+(`seat 0 taken (browser) - 1 playing, 0 watching`). browser/native is the
+`Origin` header, which is the only hint a socket gives and is exactly what
+`unityworks/scripts/mixed.sh` needs to tell a browser from the Unity player.
+Silent in `createApp` by default so the suite does not print hundreds of seat
+lines; `server/index.js` turns it on. `/healthz` gains `players` and
+`observers` beside `seats`, and README stopped claiming it carries the join
+code. C8: the comment that called the join code "a label, not a lock" now
+describes the door.
+
+The suite was not green before this slice: 527e5f1 ("Latest update", the
+lifeline and victory work) left three failures (the golden world hash, the
+M0-A trajectory, and "a war that stops moving is called"). None are touched
+here; they need the owner's repin decision. This slice adds 10 tests: 617
+pass, the same 3 fail. Smoke, door, lobby, rejoin and second_war probes are
+green. Playwright had not been installed in this checkout, so `npm run smoke`
+had been printing SKIP; `npm install` fixed that.
+
+---
+
 ## 2026-09-06 — The omission sweep: a kick nobody could see
 
 Asked for the follow-ups to be written down and for a hunt through what had

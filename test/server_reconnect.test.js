@@ -12,6 +12,7 @@ import {
   GRACE_MS,
   createHolder,
   expired,
+  findHold,
   holdSeat,
   isHeld,
   reclaim,
@@ -58,6 +59,16 @@ test('the same player comes back to the same seat, with their own name on it', (
   assert.equal(back.name, 'Nimitz');
   // And the hold is spent: the same token does not work twice.
   assert.equal(reclaim(h, record.token), -1);
+});
+
+test('looking a token up does not spend the hold it names', () => {
+  const h = holder();
+  const record = holdSeat(h, { team: 1, name: 'Nimitz' });
+  assert.equal(findHold(h, record.token), record);
+  assert.equal(findHold(h, record.token), record, 'a lookup used the hold up');
+  assert.equal(findHold(h, ''), -1);
+  assert.equal(findHold(h, 'token-nobody'), -1);
+  assert.notEqual(reclaim(h, record.token), -1);
 });
 
 test('a token nobody issued gets nothing', () => {

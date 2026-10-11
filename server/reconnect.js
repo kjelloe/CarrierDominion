@@ -45,6 +45,18 @@ function holdSeat(holder, seat) {
   return record;
 }
 
+// Would `reclaim` honour this token? Asks without taking the hold, because the
+// door decides AFTER it knows there is a token: reclaiming first and then
+// refusing the socket (a banned address behind the same NAT) would destroy a
+// hold that belongs to somebody else's seat.
+function findHold(holder, token) {
+  if (typeof token !== 'string' || token === '') return -1;
+  for (const record of holder.held) {
+    if (record.token === token) return record;
+  }
+  return -1;
+}
+
 // The same player, back. Returns the held record so the seat can be restored
 // with its name, or -1 when the token is unknown or has run out.
 function reclaim(holder, token) {
@@ -111,4 +123,4 @@ function release(holder, team) {
   return holder;
 }
 
-export { GRACE_MS, createHolder, holdSeat, reclaim, isHeld, expired, release };
+export { GRACE_MS, createHolder, holdSeat, findHold, reclaim, isHeld, expired, release };
