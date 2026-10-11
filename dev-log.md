@@ -5,6 +5,58 @@ golden hash and why.
 
 ---
 
+## 2026-10-11 — What the port found by copying us line by line
+
+The Unity port copies the browser client exactly, so it read code nobody had
+re-read since it was written and reported nine bugs (CB1–CB9 in
+`../unityworks/specs/server_change_requests.md`). All nine were real:
+
+- **CB1** The chart read `view.stockpileIsland`, which has never existed (it
+  is `view.resources.stockpileIsland`, as island.js, stores.js and hud.js
+  read it). The depot ring never drew, RESOURCES always said `STOCKPILE -`,
+  and NETWORK with topology off drew no star.
+- **CB2** The chart's ghost marks read `view.ghosts`; the view ships them as
+  `view.contacts`. Fixed on the client, so there is no wire change.
+- **CB3** LAY COURSE got class `off` with no `.chart-btn.off` rule to style it.
+- **CB4** The RESOURCES box allowed a fixed 92 px for the right column, which is
+  wider than that at 1280x720. It now reads `--col-right`, which
+  `syncColumnWidths` already publishes. That read is an inline string, not a
+  layout read.
+- **CB5** `surrenderArmedMs: 0` with `performance.now()` starting near 0: ONE
+  Escape in the first three seconds after load scuttled the ship. Now
+  `-Infinity`.
+- **CB6** The chat input was 14 px wider than its panel (`box-sizing`).
+- **CB7** `playWarning` returns false when muted or not yet woken, and the
+  gunsight used that return. A muted player never saw a missile lock. The
+  sight now reads `view.shots`, and M also stops the war room's surf loop.
+- **CB8** A neutral battery's round was `TEAM_COLOURS[-1]`: white, plus a
+  console warning per shot.
+- **CB9** The flight scope's conditions line was given `state.view.own`,
+  which is not a field, so the radar loss never showed while flying.
+
+**One more, found reading CB7's key handler: typing in the war-room chat
+pressed hotkeys.** The bindings listen on `window` and never asked where the
+key was aimed, so an `m` in a chat message muted the game and a space
+toggled pause. keydown and keyup now ignore keys aimed at a text field.
+Reported back to unityworks as CB10.
+
+None of these were visible to a unit test: they are canvas text, CSS and
+event targets. `debugging/probes/port_findings.mjs` wraps the 2D context's
+`fillText`/`strokeRect` and checks CB1, CB3, CB4, CB5, CB6 and CB10 in a
+browser. Against the old client it fails six of them, so it is not
+vacuous. Its CB2 line only proves `view.contacts` exists, because a war with a
+ghost in it is far from a fresh start. CB7, CB8 and CB9 are not probed: each
+needs a missile lock, a battery shot or a piloted craft on screen.
+
+Full probe sweep: 35 of 38 passed first time. `playtest_round5` passed only on
+retry. `flavour_pack` (the signals log shows 0 lines) and `playtest_round1`
+(`undefined.z` at line 98) fail identically in a worktree at 527e5f1, before
+this session's changes, so they are not this slice's. They are left for
+whoever repins after the lifeline work. 629 tests pass, the same 3
+pre-existing failures; smoke clean.
+
+---
+
 ## 2026-10-11 — The protocol has a version
 
 Request G1/C7 from the Unity port, whose builds lag behind deploys. Every

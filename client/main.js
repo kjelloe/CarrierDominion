@@ -135,7 +135,9 @@ const state = {
   soloSaveCleared: false,
   // Which low-fuel marks have already been announced (see warnOnFuel).
   fuelWarned: {},
-  surrenderArmedMs: 0,
+  // -Infinity, not 0: performance.now() starts near 0, so a 0 here read as
+  // "armed a moment ago" and one Escape in the first 3 s struck the colours.
+  surrenderArmedMs: -Infinity,
   lastTelemetry: 0,
   buildCosts: [0, 0, 0],
   lastFrameMs: 0,
@@ -1218,6 +1220,9 @@ function bindInput(level) {
   window.addEventListener('pointerdown', wake, { once: true });
   window.addEventListener('keydown', (event) => {
     if (event.repeat) return;
+    // Typing is not flying: the war room's chat line and the name field sit
+    // in the same window, and an M in a chat message used to mute the game.
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
     const key = event.key.toLowerCase();
     if (key === 'w') sendThrottle(state.throttle + THROTTLE_STEP);
     else if (key === 's') sendThrottle(state.throttle - THROTTLE_STEP);
@@ -1262,7 +1267,7 @@ function bindInput(level) {
     else if (key === 'escape') {
       const now = window.performance.now();
       if (now - state.surrenderArmedMs < 3000) {
-        state.surrenderArmedMs = 0;
+        state.surrenderArmedMs = -Infinity;
         if (state.carrierId >= 0) {
           state.transport.send({ type: 'surrender', carrierId: state.carrierId });
           setHud(state.hud, 'status', state.t('status.surrendered'));
@@ -1292,6 +1297,12 @@ function bindInput(level) {
     else if (key === 'm') {
       const muted = toggleMute(state.sound);
       setHud(state.hud, 'status', state.t(muted ? 'status.muted' : 'status.unmuted'));
+      // The war room's surf is a running loop, not a one-off tone, so muting
+      // has to stop it; unmuting under the menu starts it again.
+      if (muted && showcase.ambience !== null) {
+        showcase.ambience.stop();
+        showcase.ambience = null;
+      } else if (!muted && showcase.diorama !== null) armAmbience();
     }
     else if (key === 'l') toggleSupplyRun();
     else if (key === 'k') nominateDepot();
@@ -1306,6 +1317,7 @@ function bindInput(level) {
     event.preventDefault();
   });
   window.addEventListener('keyup', (event) => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
     const key = event.key.toLowerCase();
     if (key === 'a' || key === 'arrowleft') held.a = false;
     if (key === 'd' || key === 'arrowright') held.d = false;
@@ -1725,7 +1737,10 @@ function frame(nowMs) {
     state.lastTelemetry = link;
     if (link === 1) setHud(state.hud, 'status', state.t('status.telemetryWeak'));
   }
-  const locked = playWarning(state.sound, state.view, nowMs);
+  // The sight shows the lock whether or not anything can be heard: a muted
+  // player, or one who has not clicked yet, still needs to know.
+  playWarning(state.sound, state.view, nowMs);
+  const locked = state.view.shots.some((shot) => shot.warn === 1);
   document.getElementById('sight').classList.toggle('warn', locked);
   setHud(state.hud, 'islands', describeIslands(state.t, state.view));
   setHud(state.hud, 'score', describeScore(state.t, state.view));
@@ -1896,7 +1911,7 @@ function drawPanel(deltaSeconds) {
       ? ''
       : `${(Math.round(dist2D(unit.x, unit.y, own.x, own.y) / params.unitsPerMetre / 100) / 10)} km`;
     drawFlightInstruments(state.panel, state.view, unit, {
-      conditions: conditionsLine(state, state.view === undefined ? undefined : state.view.own),
+      conditions: conditionsLine(state, own),
       helmTitle: state.t(flying ? 'panel.flight' : 'panel.drive'),
       scopeTitle: state.t('panel.scope'),
       scopeRange: state.scopeRange * params.unitsPerMetre,

@@ -54,6 +54,16 @@ function fitChart(panel, view) {
   panel.centreY = Math.floor(size / 2);
 }
 
+// The right button column's width as main.js measured it (syncColumnWidths),
+// plus a margin. Not a constant: the column wraps into extra columns on a
+// short window, and a fixed 92px put the box's right third under MANTA,
+// LOADOUT and WALRUS at 1280x720. An inline custom property is a string
+// read, not a layout read, so this is free in the frame loop.
+function rightColumnPx() {
+  const published = parseInt(document.documentElement.style.getPropertyValue('--col-right'), 10);
+  return Number.isFinite(published) ? published + 16 : 92;
+}
+
 // The RESOURCES reading, drawn top-left over the chart: the archipelago by
 // role - yours, theirs and nobody's - the depot by name, and the sum of what
 // your own islands hold. The original showed the same three counts and its
@@ -79,7 +89,7 @@ function drawResources(panel, draw, colours, view, t) {
     if (island.stockMaterials >= 0) materials = materials + island.stockMaterials;
     if (island.stockOrdnance >= 0) ordnance = ordnance + island.stockOrdnance;
   }
-  const depot = view.islands.find((island) => island.id === view.stockpileIsland);
+  const depot = view.islands.find((island) => island.id === view.resources.stockpileIsland);
   const lines = [
     `${t('chart.resource')}  ${mine[0]} / ${theirs[0]}`,
     `${t('chart.factory')}  ${mine[1]} / ${theirs[1]}`,
@@ -100,8 +110,7 @@ function drawResources(panel, draw, colours, view, t) {
   const boxH = lines.length * 15 + 16;
   // Clear of BOTH action columns - they hold the left and right edges, and a
   // reading drawn under a row of buttons is a reading nobody reads.
-  const COLUMN = 92;
-  const boxX = panel.canvas.width - boxW - COLUMN;
+  const boxX = panel.canvas.width - boxW - rightColumnPx();
   // And below the top bar, which holds PAUSE and the tab row.
   const boxY = 48;
   draw.fillStyle = 'rgba(0, 0, 0, 0.78)';
@@ -264,7 +273,7 @@ function renderChart(panel, view, teamColour) {
   // your islands close enough to link, drawn solid, plus the cut-off ones
   // marked so a broken chain is visible rather than deduced. With topology
   // off the reach is 0 and the overlay falls back to the star.
-  const depotId = view.stockpileIsland;
+  const depotId = view.resources.stockpileIsland;
   const depot = view.islands.find((island) => island.id === depotId);
   if (panel.network) {
     const reach = view.params.networkLink ?? 0;
@@ -360,7 +369,7 @@ function renderChart(panel, view, teamColour) {
     drawTriangle(draw, at.x, at.y, 7,
       heading, carrier.contact === 1 ? colours.enemy : teamColour, carrier.contact === 1);
   }
-  for (const ghost of view.ghosts ?? []) {
+  for (const ghost of view.contacts) {
     const at = plot(panel, ghost.x, ghost.y);
     draw.globalAlpha = 0.5;
     draw.strokeStyle = colours.enemy;

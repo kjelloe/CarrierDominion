@@ -338,6 +338,8 @@
     }
     .chart-btn:hover { color: var(--hud-ink); border-color: var(--hud-ink); }
     .chart-btn.on { color: var(--hud-panel); background: var(--hud-ink); border-color: var(--hud-ink); }
+    .chart-btn.off { opacity: 0.35; cursor: default; }
+    .chart-btn.off:hover { color: var(--hud-dim); border-color: var(--hud-dim); }
     /* The signals log (the original's Messaging Computer): the last sixteen
        reports, with ages, behind a button - history you can read, where a
        toast is history you missed. */
@@ -708,7 +710,7 @@
     #lobby-log div { line-height: 1.5; }
     #lobby-log .who { color: var(--hud-dim); }
     #lobby-say {
-      width: 100%; margin-top: 6px; padding: 4px 6px;
+      width: 100%; box-sizing: border-box; margin-top: 6px; padding: 4px 6px;
       background: transparent; color: var(--hud-ink);
       border: 1px solid var(--hud-dim); font: 12px var(--hud-font);
     }

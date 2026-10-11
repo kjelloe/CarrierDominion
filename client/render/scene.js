@@ -432,7 +432,9 @@ function syncShots(view3d, view) {
     seen[shot.id] = true;
     let group = view3d.shots[shot.id];
     if (group === undefined) {
-      group = buildShot(TEAM_COLOURS[shot.team % TEAM_COLOURS.length]);
+      // A neutral island battery's round is team -1, and TEAM_COLOURS[-1] is
+      // undefined: it drew white and warned once per shot.
+      group = buildShot(shot.team < 0 ? NEUTRAL_NODE_COLOUR : TEAM_COLOURS[shot.team % TEAM_COLOURS.length]);
       view3d.shots[shot.id] = group;
       view3d.scene.add(group);
     }
