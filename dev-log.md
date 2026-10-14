@@ -50,6 +50,8 @@ CB20 against a 16-island LAN server (scene 28960 m = war). Gate 645/645 and
 smoke green; native_link, consoles, port_findings, mobile, playtest_round5,
 chart_and_chips and start_menu probes green.
 
+---
+
 ## 2026-10-11 — The suite is green again, and a war that stood still had no words
 
 Asked to fix what was left outstanding, then hunt omissions.
