@@ -223,6 +223,9 @@ function ownUnitView(state, unit) {
     overheated: unit.overheated,
     heatMax: heatMaxOf(state, unit),
     contact: 0,
+    // Where the hull is parked, or bound to park (CB25). An order, so it is
+    // own-hulls-only like the route; last, because the wire is mirrored.
+    landedIsland: unit.landedIsland,
   };
 }
 
@@ -276,6 +279,7 @@ function unitContactView(unit) {
     podGrams: 0,
     virusGrams: 0,
     contact: 1,
+    landedIsland: -1,
   };
 }
 

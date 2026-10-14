@@ -211,6 +211,7 @@ function createWsTransport(url) {
         else if (message.type === 'vote') handlers.onVote(message);
         else if (message.type === 'lobby') handlers.onLobby(message.lobby);
         else if (message.type === 'rejected') handlers.onRejected(message.reason);
+        else if (message.type === 'halted') handlers.onHalted(message.reason);
         else if (message.type === 'kicked') {
           // A kick is not a blip. Without this the socket closes, the retry
           // backoff treats it as a sleeping laptop and reconnects - straight

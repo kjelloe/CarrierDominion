@@ -10,15 +10,35 @@ function describeSize(bytes) {
   return mb >= 10 ? `${Math.round(mb)} MB` : `${Math.max(0.1, Math.round(mb * 10) / 10)} MB`;
 }
 
-// [{ label, href }] for a listing from the server, empty when there is none.
+// The zips carry no readme, so the line is a player's only instructions
+// (C11). The target is the name's suffix; the executables are Unity's names,
+// except a fastengine build's Linux binary, which has no extension.
+const NATIVE_TARGETS = [
+  { suffix: /-win64\.zip$/i, platform: 'start.nativeWindows', note: 'start.nativeRunWindows', exe: () => 'carrierdominion.exe' },
+  {
+    suffix: /-linux64\.zip$/i,
+    platform: 'start.nativeLinux',
+    note: 'start.nativeRun',
+    exe: (name) => (/-fe-/i.test(name) ? 'carrierdominion' : 'carrierdominion.x86_64'),
+  },
+];
+
+// [{ label, href, note }] for a listing from the server, empty when there is
+// none. `note` is '' where there is nothing to say (a linked page, an
+// unknown target).
 function nativeLinks(listing, t) {
   if (listing === null || typeof listing !== 'object') return [];
-  if (listing.kind === 'url') return [{ label: t('start.nativeLink'), href: listing.url }];
+  if (listing.kind === 'url') return [{ label: t('start.nativeLink'), href: listing.url, note: '' }];
   if (listing.kind !== 'folder' || !Array.isArray(listing.files)) return [];
-  return listing.files.map((file) => ({
-    label: `${file.name} (${describeSize(file.size)})`,
-    href: file.url,
-  }));
+  return listing.files.map((file) => {
+    const target = NATIVE_TARGETS.find((each) => each.suffix.test(file.name));
+    const size = `${file.name} (${describeSize(file.size)})`;
+    return {
+      label: target === undefined ? size : `${t(target.platform)} · ${size}`,
+      href: file.url,
+      note: target === undefined ? '' : t(target.note, { exe: target.exe(file.name) }),
+    };
+  });
 }
 
 function showNativeLinks(listing, t) {
@@ -28,8 +48,8 @@ function showNativeLinks(listing, t) {
   box.textContent = '';
   box.hidden = links.length === 0;
   if (links.length === 0) return;
-  const caption = document.createElement('span');
-  caption.textContent = `${t('start.native')} `;
+  const caption = document.createElement('div');
+  caption.textContent = t('start.native');
   box.append(caption);
   for (const link of links) {
     const anchor = document.createElement('a');
@@ -42,7 +62,20 @@ function showNativeLinks(listing, t) {
     } else {
       anchor.setAttribute('download', '');
     }
-    box.append(anchor);
+    const row = document.createElement('div');
+    row.append(anchor);
+    if (link.note !== '') {
+      const note = document.createElement('span');
+      note.className = 'note';
+      note.textContent = link.note;
+      row.append(note);
+    }
+    box.append(row);
+  }
+  if (links.some((link) => link.note !== '')) {
+    const keys = document.createElement('div');
+    keys.textContent = t('start.nativeKeys');
+    box.append(keys);
   }
 }
 

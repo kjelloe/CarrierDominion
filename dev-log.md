@@ -5,6 +5,51 @@ golden hash and why.
 
 ---
 
+## 2026-10-15 — Round 3 from the ports: the download line explains itself, and eight small truths
+
+Asked for C11, CB14, CB15 and CB19-CB26 from `unityworks/specs/server_change_requests.md`.
+
+- **C11.** The zips carry no readme, so the download line is the only
+  instructions a player gets. Each file now reads `Windows · <name> (size)` /
+  `Linux · …` from its `-win64`/`-linux64` suffix, with "Unzip and run
+  carrierdominion.exe" plus the SmartScreen steps for the unsigned Windows
+  build, "Unzip and run carrierdominion.x86_64" for Linux, and one closing
+  line for F11 / Alt+Enter. A fastengine `-fe-` Linux build's binary has no
+  extension (`fastengine/scripts/package.sh`), so it says `carrierdominion`.
+  Unknown targets show the bare name. Same wording as boombrawl's B6.
+- **CB14.** MSG was fixed at left 64px, and the top bar starts at 76px, so the
+  SQUADRON tab sat on it. MSG is now the first item of `#top-bar` rather than
+  a separate fixed box: the bar's flex layout keeps it clear at any width.
+- **CB15.** The chips start at `--col-left` + 12px, like `#console`.
+- **CB19.** A shared war proposed a speed and never sent it. The server's
+  vote (`server/vote.js`) has existed since 2026-08-20; the client still
+  carried the "until the voting slice exists" stub. It now sends `set_speed`
+  and says it was proposed.
+- **CB20.** A page that joins a running LAN war built its ocean from its OWN
+  rules' island count. The first snapshot now resizes the world when the
+  view's `params.sizeUnits` disagrees (no wire change: the field was already
+  there). `resetWorld` also never updated `view3d.sizeMetres`, so the sun
+  aimed at the old map after a second war of another size; fixed with it.
+- **CB21.** `halted` was dropped on the floor. It is a toast plus a line in
+  the signals log, since a toast is gone in seconds and the war will not move.
+- **CB22/23.** scene.js no longer claims to interpolate; `horizonBand`, read
+  by nothing, is gone (using it would have changed the retro art).
+- **CB24.** `stores.cost7` in both catalogues, and a test that every refit the
+  panel lists has a cost line that names `economy.json`'s price, so the prose
+  cannot drift from the ruleset silently.
+- **CB25.** Own unit records end with `landedIsland` (contacts: -1, since it
+  is also the destination of an inbound landing order, i.e. a plan). Added
+  last, as the Unity codec mirrors field order. No state change, no repin.
+- **CB26.** The chart reads `--panel-h` through `instruments.js`'s cached
+  `panelHeight()` instead of 196, and `fitChart` likewise.
+
+`debugging/probes/round3_findings.mjs` checks CB14/CB15 at 1280x720 and
+1920x1080 (MSG is what `elementFromPoint` finds at its centre; no chip
+overlaps a left-column button), CB26 at 1000x480 (canvas 356 = 480 - 124) and
+CB20 against a 16-island LAN server (scene 28960 m = war). Gate 645/645 and
+smoke green; native_link, consoles, port_findings, mobile, playtest_round5,
+chart_and_chips and start_menu probes green.
+
 ## 2026-10-11 — The suite is green again, and a war that stood still had no words
 
 Asked to fix what was left outstanding, then hunt omissions.

@@ -211,8 +211,10 @@
     body.menu #unit-chips { display: none; }
     /* Per-hull chips (the cockpit shot's Manta icons 1-3): what is out,
        which one is named, one click to name another. */
+    /* Clear of the left button column as it came out, as #console is: at
+       12px a chip sat half under SLOWER at 720 and 1080 px tall (CB15). */
     #unit-chips {
-      position: fixed; bottom: 202px; left: 12px; z-index: 7;
+      position: fixed; bottom: 202px; left: calc(var(--col-left, 64px) + 12px); z-index: 7;
       display: flex; gap: 4px; user-select: none;
     }
     .unit-chip {
@@ -343,8 +345,9 @@
     /* The signals log (the original's Messaging Computer): the last sixteen
        reports, with ages, behind a button - history you can read, where a
        toast is history you missed. */
+    /* First in the top row, not fixed beside it: at left 64px the console
+       strip started on top of it and only "MS" showed (CB14). */
     #msg-button {
-      position: fixed; top: 10px; left: 64px; z-index: 8;
       padding: 5px 10px; cursor: pointer; user-select: none;
       border: 1px solid var(--hud-dim); background: var(--hud-panel);
       color: var(--hud-dim); font: 11px/1.3 var(--hud-font); letter-spacing: 2px;
@@ -715,6 +718,7 @@
        none on a touch screen, which is where the browser game belongs. */
     #native-links { margin-top: 12px; font-size: 11px; color: var(--hud-dim); }
     #native-links a { color: var(--hud-ink); margin-right: 12px; }
+    #native-links > div { margin-top: 3px; }
     @media (pointer: coarse) { #native-links { display: none; } }
     #lobby-chat { margin-top: 16px; border-top: 1px solid var(--hud-dim); padding-top: 10px; }
     #lobby-log { min-height: 84px; max-height: 140px; overflow-y: auto; font-size: 12px; }
@@ -755,7 +759,6 @@
   <canvas id="panel"></canvas>
   <div id="hud" class="hidden"></div>
   <div id="debug-button">DBG</div>
-  <div id="msg-button">MSG</div>
   <div id="location"></div>
   <div id="drone-info"></div>
   <div id="toast"></div>
@@ -785,6 +788,7 @@
        the eye starts, the camera tabs beside them. Laid out by flex so a
        longer label - or a longer language - cannot make them collide. -->
   <div id="top-bar">
+    <div id="msg-button">MSG</div>
     <div id="console-tabs"></div>
     <div id="camera-tabs"></div>
     <div id="tier-chip"></div>

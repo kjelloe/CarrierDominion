@@ -1,9 +1,9 @@
 // client/render/scene.js - the three.js side of the client.
 //
 // Renders whatever the latest VIEW says, at whatever frame rate the browser
-// offers, interpolating between the 20 Hz snapshots. It knows nothing about
-// transports, commands, or the engine's internals - hand it a view, it draws
-// that view.
+// offers, drawing the newest 20 Hz snapshot as it is (no interpolation
+// between snapshots). It knows nothing about transports, commands, or the
+// engine's internals - hand it a view, it draws that view.
 
 import * as THREE from 'three';
 import { Sky } from '../vendor/Sky.js';
@@ -850,6 +850,7 @@ function resetWorld(view3d, sizeMetres) {
   if (view3d.oceanGrid !== 0) scene.add(view3d.oceanGrid);
   view3d.scene = scene;
   view3d.ocean = ocean;
+  view3d.sizeMetres = sizeMetres;
   if (wantsPhysicalSky(view3d.preset, view3d.style)) {
     addPhysicalSky(view3d);
     // A NEW war brings a new ocean object, so the reflection hook has to be

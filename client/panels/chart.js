@@ -13,6 +13,7 @@
 // know more than the seat does.
 
 import { islandName } from '../../shared/names.js';
+import { panelHeight } from '../render/instruments.js';
 
 const ROLE_LETTERS = ['R', 'F', 'D'];
 
@@ -48,7 +49,7 @@ function createChartPanel(ctx) {
 
 function fitChart(panel, view) {
   const size = view.params.sizeUnits;
-  const span = Math.min(window.innerWidth, window.innerHeight - 210);
+  const span = Math.min(window.innerWidth, window.innerHeight - panelHeight() - 14);
   panel.scale = size / Math.max(1, span - 60);
   panel.centreX = Math.floor(size / 2);
   panel.centreY = Math.floor(size / 2);
@@ -253,9 +254,12 @@ function drawTriangle(draw, x, y, size, headingRadians, colour, hollow) {
 function renderChart(panel, view, teamColour) {
   if (!panel.open || view === undefined) return;
   const canvas = panel.canvas;
-  if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight - 196) {
+  // Down to the instrument panel as the stylesheet sized it: a literal 196
+  // ran 72 px under the 124 px panel of a short window (CB26).
+  const height = window.innerHeight - panelHeight();
+  if (canvas.width !== window.innerWidth || canvas.height !== height) {
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - 196;
+    canvas.height = height;
   }
   const draw = panel.draw2d;
   const colours = panel.ctx.colours();

@@ -416,15 +416,12 @@ function deployPod() {
 }
 
 // Compression is a request, not a setting: solo obliges immediately, a shared
-// LAN war refuses until the voting slice exists, and either way the HUD only
-// changes when the transport confirms.
+// war puts it to the table's vote (server/vote.js), and either way the HUD
+// only changes when the transport confirms.
 function requestSpeed(multiplier) {
   if (!isSpeed(multiplier)) return;
-  if (state.speedLocked) {
-    // Not refused - proposed. The engine's answer arrives as a vote message.
-    setHud(state.hud, 'status', state.t('status.speedVote'));
-    return;
-  }
+  // Proposed, not refused: the tally comes back as a vote message (CB19).
+  if (state.speedLocked) setHud(state.hud, 'status', state.t('status.speedVote'));
   state.transport.setSpeed(multiplier);
 }
 
@@ -1605,9 +1602,12 @@ function onWelcome(message) {
 }
 
 function onSnapshot(message) {
-  if (state.pendingWorldReset && message.view !== undefined) {
+  // The scene starts at this page's own rules' size; a war joined already
+  // running may have another island count, so its first view resizes it (CB20).
+  const viewMetres = message.view === undefined ? -1 : Math.round(message.view.params.sizeUnits / 256);
+  if (viewMetres > 0 && (state.pendingWorldReset || viewMetres !== state.scene3d.sizeMetres)) {
     state.pendingWorldReset = false;
-    resetWorld(state.scene3d, Math.round(message.view.params.sizeUnits / 256));
+    resetWorld(state.scene3d, viewMetres);
   }
   state.view = message.view;
   // Sound follows the VIEW's events, which are already fog-filtered: you hear
@@ -1650,6 +1650,15 @@ function onSnapshot(message) {
 
 function onRejected(reason) {
   setHud(state.hud, 'status', state.t('status.rejected', { reason: reason }));
+}
+
+// The server stopped the war on a fault and keeps the seats connected (CB21).
+// A toast alone is gone in seconds and the frozen sea says nothing, so the
+// reason also goes in the signals log, where it stays.
+function onHalted(reason) {
+  const text = state.t('status.halted', { reason: reason });
+  setHud(state.hud, 'status', text);
+  state.signals.push({ tick: state.view === undefined ? 0 : state.view.tick, text: text });
 }
 
 // The transport passes one of THESE, not prose: anything else falls through to
@@ -2523,6 +2532,7 @@ async function main() {
     onVote: onVote,
     onLobby: onLobby,
     onRejected: onRejected,
+    onHalted: onHalted,
     onClosed: onClosed,
   });
   // Said AFTER the transport has settled: "connected" arrives a moment into

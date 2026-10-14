@@ -134,15 +134,36 @@ test('a web address is linked as it is, and nothing is served locally', async ()
   });
 });
 
-test('the page line names each build with its size, or one link to the page', () => {
-  const t = (key) => key;
+test('the page line names each build, its platform and how to start it, or one link to the page', () => {
+  const t = (key, vars) => (vars === undefined ? key : `${key}:${vars.exe}`);
   assert.deepEqual(nativeLinks({ kind: 'none' }, t), []);
   assert.deepEqual(nativeLinks(null, t), []);
-  assert.deepEqual(nativeLinks({ kind: 'url', url: 'https://x/' }, t), [{ label: 'start.nativeLink', href: 'https://x/' }]);
-  assert.deepEqual(
-    nativeLinks({ kind: 'folder', files: [{ name: 'CarrierDominion-1-win64.zip', size: 88 * 1048576, url: '/native/a' }] }, t),
-    [{ label: 'CarrierDominion-1-win64.zip (88 MB)', href: '/native/a' }],
-  );
+  assert.deepEqual(nativeLinks({ kind: 'url', url: 'https://x/' }, t),
+    [{ label: 'start.nativeLink', href: 'https://x/', note: '' }]);
+  const files = [
+    { name: 'CarrierDominion-2026.10.14-abc1234-win64.zip', size: 88 * 1048576, url: '/native/a' },
+    { name: 'CarrierDominion-2026.10.14-abc1234-linux64.zip', size: 1536 * 1024, url: '/native/b' },
+    { name: 'CarrierDominion-fe-2026.10.14-def5678-abc1234-linux64.zip', size: 1000, url: '/native/c' },
+    { name: 'CarrierDominion-2026.10.14-abc1234-mac.zip', size: 1048576, url: '/native/d' },
+  ];
+  assert.deepEqual(nativeLinks({ kind: 'folder', files: files }, t), [
+    {
+      label: 'start.nativeWindows · CarrierDominion-2026.10.14-abc1234-win64.zip (88 MB)',
+      href: '/native/a',
+      note: 'start.nativeRunWindows:carrierdominion.exe',
+    },
+    {
+      label: 'start.nativeLinux · CarrierDominion-2026.10.14-abc1234-linux64.zip (1.5 MB)',
+      href: '/native/b',
+      note: 'start.nativeRun:carrierdominion.x86_64',
+    },
+    {
+      label: 'start.nativeLinux · CarrierDominion-fe-2026.10.14-def5678-abc1234-linux64.zip (0.1 MB)',
+      href: '/native/c',
+      note: 'start.nativeRun:carrierdominion',
+    },
+    { label: 'CarrierDominion-2026.10.14-abc1234-mac.zip (1 MB)', href: '/native/d', note: '' },
+  ]);
   assert.equal(describeSize(1536 * 1024), '1.5 MB');
   assert.equal(describeSize(1000), '0.1 MB');
 });

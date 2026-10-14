@@ -137,3 +137,20 @@ test('Norwegian is actually translated, not a copy of English', () => {
   // Proper nouns and abbreviations legitimately match; most strings must not.
   assert.ok(same < total / 3, `${same} of ${total} Norwegian strings are identical to English`);
 });
+
+// The comm pod (what 7) read `stores.cost7` from no catalogue and showed the
+// key itself (CB24). The lines are prose, so they also have to say the price
+// the ruleset charges.
+test('every refit in the stores panel has a cost line with the ruleset\'s price', () => {
+  const panel = readFileSync(join(CLIENT_DIR, 'panels', 'stores.js'), 'utf8');
+  const refits = [...panel.matchAll(/\{ what: (\d+),/g)].map((m) => Number(m[1]));
+  assert.ok(refits.length >= 4, `found ${refits.length} refits in stores.js`);
+  const builds = JSON.parse(readFileSync(join(HERE, '..', 'data', 'economy.json'), 'utf8')).builds;
+  for (const what of refits) {
+    for (const lang of LANGS) {
+      const line = catalogs[lang][`stores.cost${what}`];
+      assert.notEqual(line, undefined, `${lang}.json lacks stores.cost${what}`);
+      assert.ok(line.startsWith(`${builds[what].materials} `), `${lang}.stores.cost${what} says "${line}"`);
+    }
+  }
+});

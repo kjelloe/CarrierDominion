@@ -336,3 +336,23 @@ test('the referee sees every hull that is out, including the ones nobody can sho
   assert.equal(refereeView(state).units.find((u) => u.id === unit.id), undefined,
     'a hull in the hangar is not on the map');
 });
+
+test('a hull parked on a runway says which island, and only to its own side', () => {
+  const state = createInitialState(SEED, rules);
+  state.carriers[1].x = state.carriers[0].x + 1000;
+  state.carriers[1].y = state.carriers[0].y;
+  for (const team of [0, 1]) {
+    const unit = state.units.find((u) => u.team === team);
+    unit.state = 4; // UNIT_LANDED
+    unit.landedIsland = 2;
+    unit.x = state.carriers[0].x + 900;
+    unit.y = state.carriers[0].y;
+  }
+  const view = buildView(state, 0);
+  const mine = view.units.find((u) => u.team === 0);
+  const theirs = view.units.find((u) => u.team === 1);
+  assert.equal(mine.landedIsland, 2);
+  assert.notEqual(theirs, undefined, 'the enemy hull should be on the scope for this test');
+  assert.equal(theirs.landedIsland, -1, 'where an enemy is bound is its plan, not a radar return');
+  assert.equal(Object.keys(mine).at(-1), 'landedIsland', 'new view fields go last: the Unity codec mirrors the order');
+});

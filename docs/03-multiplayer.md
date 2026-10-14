@@ -229,7 +229,11 @@ who may sit down, the guard decides how much any socket may ask of the process.
 where the Unity builds are: a folder (absolute, or relative to the repo), a
 `file://` URL, or an `http(s)://` URL. The browser page shows one quiet line
 under the start menu and the war room. For a folder that line lists each
-build with its size; for a URL it is one link. It is hidden on touch screens,
+build with its platform (from the `-win64`/`-linux64` suffix) and size, and
+says how to start it, because the zips carry no readme: unzip and run
+`carrierdominion.exe` (unsigned; SmartScreen: More info, then Run anyway) or
+`carrierdominion.x86_64` (a fastengine `-fe-` build: `carrierdominion`), and
+F11 or Alt+Enter for full screen. For a URL it is one link. It is hidden on touch screens,
 because the builds are Windows and Linux and a phone that followed an invite
 belongs in the browser game.
 
@@ -355,7 +359,8 @@ hash (ruling #13).
 The engine throws on purpose - `shared/fixed.js` raises on a bad multiply, the
 hashing walk raises on a dirty state - and those throws used to reach an
 unguarded `setInterval`, killing the process and with it the shutdown save.
-Now the clock stops, the table is told, `/healthz` reports `ok: false` with
+Now the clock stops, the table is told (a `halted` message with the reason,
+which the browser shows and keeps in the signals log), `/healthz` reports `ok: false` with
 the reason, and the war is written down. If the STATE is what broke, the
 ordinary save cannot be written at all (it hashes the state), so the command
 log goes to `<save>.halted` instead: recoverable by hand, deliberately not
