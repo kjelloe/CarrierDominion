@@ -1125,3 +1125,15 @@ test('a client built for another protocol is told so and turned away unseated', 
     current.close();
   });
 });
+
+test('a seat that arrives after the war halted is told why', async () => {
+  await withServer(async (app, _httpUrl, wsUrl) => {
+    app.halted = 'tick 7: injected';
+    const sock = connect(wsUrl);
+    await sock.open();
+    await sock.next((m) => m.type === 'welcome');
+    const halted = await sock.next((m) => m.type === 'halted');
+    assert.equal(halted.reason, 'tick 7: injected');
+    sock.close();
+  });
+});

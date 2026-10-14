@@ -20,7 +20,7 @@
   "hud.status": "status",
   "hud.paused": "PAUSED",
   "hud.aground": "AGROUND",
-  "hud.locked": "locked",
+  "hud.locked": "by vote",
   "hud.knots": "kn",
   "hud.degrees": "deg",
   "transport.local": "local (solo)",

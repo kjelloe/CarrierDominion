@@ -20,7 +20,7 @@
   "hud.status": "status",
   "hud.paused": "PAUSE",
   "hud.aground": "PÅ GRUNN",
-  "hud.locked": "låst",
+  "hud.locked": "ved avstemning",
   "hud.knots": "kn",
   "hud.degrees": "gr",
   "transport.local": "lokal (alene)",

@@ -534,6 +534,9 @@ function createApp(options) {
         view: viewFor(seat, snapshot),
       });
     }
+    // A seat that arrives after a fault would otherwise see a frozen war and
+    // no word of why: the halt was only ever broadcast to those present.
+    if (app.halted !== '') send(socket, { type: 'halted', reason: app.halted });
 
     socket.alive = 1;
     socket.on('pong', () => { socket.alive = 1; });

@@ -5,6 +5,25 @@ golden hash and why.
 
 ---
 
+## 2026-10-15 — What round 3 left out
+
+A review of `f7f403c` for omissions.
+
+- **A seat that joined after a halt was never told.** `broadcastHalt` reaches
+  the seats present at the fault; anyone who connected later (a reload, the
+  Unity client) saw a frozen war and no reason, so CB21's fix only helped
+  half the table. The connection handler now sends `halted` after the
+  snapshot when `app.halted` is set. One test.
+- **"locked" was a lie once CB19 landed.** The speed line said `x1 (locked)`
+  in a shared war, while the same press now proposes a speed to the table.
+  `hud.locked` reads "by vote" / "ved avstemning".
+- The transport's header listed four handlers; there are eight.
+
+Left as is, deliberately: a spectator who presses a speed key now sends
+`set_speed` and is answered `rejected: spectators do not vote on the clock`.
+That is the server's own words and true, where the old status claimed a
+proposal had been made.
+
 ## 2026-10-15 — Round 3 from the ports: the download line explains itself, and eight small truths
 
 Asked for C11, CB14, CB15 and CB19-CB26 from `unityworks/specs/server_change_requests.md`.

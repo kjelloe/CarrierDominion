@@ -3,7 +3,8 @@
 // Everything above this file - renderer, HUD, input - is written against the
 // transport interface and cannot tell solo from LAN apart:
 //
-//   connect(handlers)  handlers = { onWelcome, onSnapshot, onRejected, onClosed }
+//   connect(handlers)  handlers = { onWelcome, onSnapshot, onSpeed, onVote, onLobby,
+//                                   onRejected, onHalted, onClosed }
 //   send(command)
 //   setSpeed(multiplier)
 //   close()
