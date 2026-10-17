@@ -16,6 +16,10 @@
 // NATIVE_DOWNLOADS (unset by default) offers the native client on the start
 // menu and in the war room: a folder (absolute or relative to the repo, served
 // under /native/), a file:// URL, or an http(s):// URL linked as is.
+//
+// ABANDON_MS (600000) is how long a room may go without a human in a player
+// seat: the shared war is then saved and its room reopened, a private room
+// closed. MAX_ROOMS (4) caps the private rooms `?room=new` opens.
 
 import { createApp } from './app.js';
 import { nativeListing } from './native.js';
@@ -61,6 +65,8 @@ const app = createApp({
   bootId: `${SEED}-${PORT}-${Date.now()}`,
   noteFn: (text) => process.stdout.write(text),
   nativeDownloads: process.env.NATIVE_DOWNLOADS ?? '',
+  abandonMs: process.env.ABANDON_MS === undefined ? undefined : Number(process.env.ABANDON_MS),
+  maxRooms: process.env.MAX_ROOMS === undefined ? undefined : Number(process.env.MAX_ROOMS),
 });
 
 if (resume !== 0 && app.resumed === 0) {

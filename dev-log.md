@@ -5,6 +5,52 @@ golden hash and why.
 
 ---
 
+## 2026-10-18 — A war nobody is in gives its room back, and a table of one's own
+
+Requests C12 (P1) and C13 (P2) from the Unity port. The hosted server was
+found stuck on 2026-10-17: every human had left a war in progress, the AI
+flew both carriers, and the door asked every newcomer for a code nobody had.
+`reopenRoom` needs the war over AND the host present, so nothing reopened it.
+
+**The split.** `createApp` was one table and the process at once. It is now
+`createRoom` (war, room, clock, door, holds, watchdog; `accept(socket, req)`,
+`start`, `stop`, `checkAbandoned`) and `createApp`, which owns the HTTP and
+socket servers, the heartbeat and a 30 s sweep, and routes each socket. The
+shared room IS the returned `app`, so all 646 existing tests and the probes
+ran unchanged against it, which was the point of doing it this way rather
+than making a room list the primary object.
+
+**C12.** A room keeps `emptySinceMs`: set when the last player seat empties
+(observers do not count), cleared when one fills, and set at construction,
+which is what covers the boot case - holds live in memory, so a resumed war
+has nobody coming back for it. I read "also at boot" as "the window starts
+at boot" rather than "reopen at once": a deploy mid-evening would otherwise
+throw the table out of its war before anyone could rejoin with the code.
+After `ABANDON_MS` the shared room is saved, its holds cleared (a token gets
+past the door without the code, so the old war's tokens must not open seats
+in the next), and reopened through the same code as `reopenRoom`. Finished
+wars too. `/healthz` gains `abandoned`. Not done: a halted war stays halted,
+because its clock is stopped and restarting it is a different decision.
+
+Considered and dropped: moving the save aside on reopen so a restart does
+not resume the abandoned war. The replay viewer reads `/data/autosave.json`
+to play the last war back, and a resumed empty war reopens itself ten
+minutes later anyway.
+
+**C13.** `?room=new` opens a private room: a fresh boot id (its own code,
+checked against every open room), a random seed, observers off, enemy on,
+`savePath: 0`. `?code=` of a private room or a token one of them holds
+routes there; everything else is the shared room as before. `MAX_ROOMS`
+(4) private rooms, then `no free table`; `?spectate=1` with it is refused;
+a socket the new room's own door turns away (stale `proto`) takes the room
+with it. A private room is closed after `ABANDON_MS` without a player, in
+the lobby or mid-war, and since the sweep is not the war clock a halted one
+is closed too. `/healthz` gains `rooms`.
+
+`test/server_rooms.test.js`, nine tests with an injected clock. Gate
+655/655, smoke green; lobby, door, rejoin, second_war and shared_links
+probes green; a real `server/index.js` boot opened a room over a socket.
+
 ## 2026-10-15 — What round 3 left out
 
 A review of `f7f403c` for omissions.

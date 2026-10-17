@@ -151,6 +151,41 @@ not cost a war.
 The client reconnects on its own with backoff: `MAX_RETRIES = 6`, starting at
 800 ms and capping at 8 s.
 
+## Rooms nobody is in, and rooms of one's own
+
+`server/app.js` splits into `createRoom` (one table: war, room, clock, door,
+holds, watchdog) and `createApp`, the process: one HTTP server and one socket
+server in front of the **shared room** and up to `MAX_ROOMS` (4) **private
+rooms**. The shared room is the `app` object every test and script already
+used, so a lobbyless server on port 0 behaves exactly as before.
+
+- **An abandoned war gives its room back (C12).** A room tracks when the last
+  human left a player seat; observers do not count. After `ABANDON_MS` (10
+  minutes) with nobody, the shared room's war is saved one last time and the
+  room put back to `lobby` as `reopenRoom` does, with the log line
+  `war abandoned - room reopened`. Finished or not: a war the machine won on
+  its own has no host to reopen it either. The holds are cleared with it,
+  because a token gets past the door without the code and the abandoned
+  war's tokens must not open seats in the next one. The window starts at
+  boot too: holds live only in memory, so a war resumed by `RESUME=auto` has
+  nobody to wait for, and gets ten minutes for its players to come back with
+  the code before the room reopens. `/healthz` says `abandoned: 1` while a
+  war in progress has no human seated. A halted war is left alone (its clock
+  is stopped, and a new war in it would not tick); a lobbyless server has no
+  room to reopen and runs on.
+- **`?room=new` is a table of one's own (C13).** The hosted server has one
+  shared table, and a stranger without its code had no way to play while it
+  was taken. The socket that asks gets a fresh room: its own five-letter code
+  (a new boot id, in `lobby` as usual), a random seed, observers off, the
+  machine in every seat without a human, and no save file - only the shared
+  room is written to disk. Past the cap the answer is `rejected`
+  `no free table`; `?spectate=1` with it is `a new room needs a player`.
+  Friends join with the room's `?code=`, and a dropped player's `?token=`
+  leads back into the room holding it; every other socket goes to the shared
+  room. A private room nobody has sat in for `ABANDON_MS` is closed, war or
+  no war. `/healthz` counts them as `rooms`. The checks run every 30 s, apart
+  from the war clock, so a halted private room is still closed.
+
 ## Voting on the clock
 
 `server/vote.js`. Time compression is a shared decision, by owner ruling:

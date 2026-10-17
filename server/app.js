@@ -12,7 +12,7 @@
 // it, and shut it down without spawning a process.
 
 import { createServer } from 'node:http';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
@@ -34,6 +34,7 @@ import {
   canStart,
   createLobby,
   isHost,
+  joinCode,
   lobbyView,
   say,
   setName,
@@ -64,10 +65,31 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PROTOCOL = 1;
 const ROOT = join(HERE, '..');
 
+// One parameter from the socket's URL, or ''. Parsed rather than searched
+// for: `indexOf('token=')` also matches `?xtoken=` and `?not-a-token=`, so a
+// parameter that merely ENDED in the right letters was read as a seat token
+// (review R-012). The base is a throwaway - only the query matters.
+function paramFrom(req, name) {
+  try {
+    const url = new URL(String(req.url ?? ''), 'http://carrier.invalid');
+    return url.searchParams.get(name) ?? '';
+  } catch (error) {
+    return '';
+  }
+}
+
+// How long a room may go without a human in a player seat before it is given
+// up (requests C12, C13): the shared room's war is saved and the room reopened,
+// a private room is closed. Observers do not count; they are not sailing.
+const ABANDON_MS = 600000;
+
+// One table: a war, its room, its clock and its door. `createApp` puts one or
+// more of these behind a single HTTP server.
+//
 // `lobby: true` holds the war in a lobby until the host starts it. Off by
 // default so every existing caller - the tests, the probes, the smoke gate -
 // still gets a war that is already running; server/index.js turns it on.
-function createApp(options) {
+function createRoom(options) {
   const rules = options.rules;
   let seed = options.seed;
 
@@ -162,6 +184,13 @@ function createApp(options) {
     // Observers on or off (ruling 2026-08-23): a room decides at its own
     // table; a lobbyless server takes the boot option, on by default.
     observersDefault: options.observers === 0 ? 0 : 1,
+    // When the last human left a player seat, or -1 while one is seated.
+    // Starts at construction: holds live only in memory, so a war resumed at
+    // boot has nobody to wait for until somebody arrives (C12).
+    abandonMs: options.abandonMs ?? ABANDON_MS,
+    emptySinceMs: -1,
+    // A private room (C13) is closed when abandoned; the shared one reopens.
+    privateRoom: options.privateRoom === true ? 1 : 0,
     // Where the native client's builds are offered from (request C10):
     // NATIVE_DOWNLOADS, a folder, a file:// URL or an http(s):// URL.
     native: nativeSource(options.nativeDownloads, ROOT),
@@ -214,6 +243,11 @@ function createApp(options) {
 
   const AUTOSAVE_MS = 30000;
   const nowMs = options.nowFn ?? (() => Date.now());
+  app.emptySinceMs = nowMs();
+  if (app.privateRoom === 1 && app.lobby !== 0) {
+    app.lobby.options.observers = 0;
+    app.lobby.options.enemy = 1;
+  }
 
   function maybeAutosave() {
     if (app.savePath === 0 || inLobby()) return;
@@ -248,19 +282,6 @@ function createApp(options) {
       if (!taken.includes(t) && !isHeld(app.holder, t)) return t;
     }
     return -1;
-  }
-
-  // One parameter from the socket's URL, or ''. Parsed rather than searched
-  // for: `indexOf('token=')` also matches `?xtoken=` and `?not-a-token=`, so a
-  // parameter that merely ENDED in the right letters was read as a seat token
-  // (review R-012). The base is a throwaway - only the query matters.
-  function paramFrom(req, name) {
-    try {
-      const url = new URL(String(req.url ?? ''), 'http://carrier.invalid');
-      return url.searchParams.get(name) ?? '';
-    } catch (error) {
-      return '';
-    }
   }
 
   // A seat handed to the machine when its grace window runs out, so the other
@@ -371,53 +392,14 @@ function createApp(options) {
       speed: app.clock === 0 ? app.speed : app.clock.speed,
       uptimeS: Math.floor((Date.now() - app.startedAtMs) / 1000),
       rssMb: Math.round(process.memoryUsage().rss / 1048576),
+      // A war in progress that only the machine is playing: the room will be
+      // reopened when the abandon timer runs out (C12).
+      abandoned: app.lobby !== 0 && app.lobby.status === 'running' && playerSeats() === 0 ? 1 : 0,
     };
   };
 
-  app.httpServer = createServer((req, res) => {
-    // The watchdog's findings, for a playtest to read at the end - or during.
-    if (req.url === '/watch') {
-      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify(app.watch === 0 ? { watching: false } : watchReport(app.watch)));
-      return;
-    }
-    if (req.url === '/healthz') {
-      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify(app.health()));
-      return;
-    }
-    // URL paths mirror the repository layout, so a relative import written for
-    // Node ("../engine/game.js") resolves to the same file in the browser.
-    serveNative(req, res, app.native).then((handled) => handled || serveStatic(req, res, [
-      { prefix: '/data/', dir: join(ROOT, 'data') },
-      { prefix: '/engine/', dir: join(ROOT, 'engine') },
-      { prefix: '/shared/', dir: join(ROOT, 'shared') },
-      { prefix: '/client/', dir: join(ROOT, 'client') },
-      { prefix: '/', dir: join(ROOT, 'client') },
-    ])).then((handled) => {
-      if (!handled) {
-        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-        res.end('not found');
-      }
-    }).catch((error) => {
-      app.logFn(`static error: ${error.message}\n`);
-      if (!res.headersSent) res.writeHead(500);
-      res.end('server error');
-    });
-  });
-
-  app.wss = new WebSocketServer({
-    server: app.httpServer,
-    maxPayload: MAX_PAYLOAD,
-    // Refused at the upgrade, before a seat or a token is looked at: another
-    // website's page has no business driving a visitor's browser into the war.
-    verifyClient: (info, done) => {
-      if (originAllowed(info.req.headers.origin, info.req.headers.host)) done(true);
-      else done(false, 403, 'origin not allowed');
-    },
-  });
-
-  app.wss.on('connection', (socket, req) => {
+  // A socket the front has routed to this room.
+  app.accept = function accept(socket, req) {
     // A client built against another protocol is told so and turned away
     // before it is seated or spends a token: decoding a war it does not
     // understand would fail somewhere far less readable than this.
@@ -494,6 +476,7 @@ function createApp(options) {
       enqueueCommand(app.game, { type: 'set_ai', team: seat.team, active: 0 });
     }
     app.seats.push(seat);
+    if (seat.team !== -1) app.emptySinceMs = -1;
     // Native clients send no Origin header; a browser always does. That is
     // the only hint a socket gives about what is on the other end.
     const via = req.headers.origin === undefined ? 'native' : 'browser';
@@ -628,6 +611,7 @@ function createApp(options) {
       } else {
         noteSeat('observer left');
       }
+      if (playerSeats() === 0 && app.emptySinceMs === -1) app.emptySinceMs = nowMs();
       // Somebody leaving can complete a vote the rest had already agreed on.
       settleVote();
       // And in the lobby it can pass the host seat, or make the room ready.
@@ -635,7 +619,7 @@ function createApp(options) {
     };
     socket.on('close', drop);
     socket.on('error', drop);
-  });
+  };
 
   const LOBBY_TYPES = ['lobby_name', 'lobby_ready', 'lobby_option', 'lobby_start', 'lobby_say'];
 
@@ -713,6 +697,12 @@ function createApp(options) {
     if (app.lobby.status === 'lobby') return '';
     if (app.game.state.phase === 0) return 'the war is not over';
     if (!isHost(app.seats, seat)) return 'only the host reopens the room';
+    reopen();
+    return '';
+  }
+
+  // The room back to `lobby`, the war saved one last time and left behind.
+  function reopen() {
     app.saveNow();
     app.lobby.status = 'lobby';
     clearVotes(app.seats);
@@ -739,8 +729,27 @@ function createApp(options) {
     }
     broadcastLobby();
     broadcastVote();
-    return '';
   }
+
+  // Nobody has sat in a player seat for the abandon window (C12, C13). Said
+  // by the return value: 'reap' asks the front to close a private room; the
+  // shared room's war is saved and its room reopened here, so the next
+  // stranger walks into an open table instead of a door asking for a code
+  // nobody left behind. Finished or not: a war the machine won on its own
+  // has no host to reopen it either. A halted war is left as it is: its
+  // clock is stopped and a new war in it would not tick.
+  app.checkAbandoned = function checkAbandoned() {
+    if (app.emptySinceMs === -1 || nowMs() - app.emptySinceMs < app.abandonMs) return '';
+    if (app.privateRoom === 1) return 'reap';
+    if (app.lobby === 0 || app.lobby.status === 'lobby' || app.halted !== '') return '';
+    // The abandoned war's tokens must not open a seat in the next one: a
+    // token gets past the door without the code.
+    app.holder.held = [];
+    reopen();
+    app.emptySinceMs = nowMs();
+    app.noteFn('war abandoned - room reopened\n');
+    return '';
+  };
 
   // The host removes somebody from the table (owner ruling, 2026-08-31). The
   // open lobby is the deliberate half of the access rules; this is the other
@@ -904,11 +913,171 @@ function createApp(options) {
     }
   }, app.speed);
 
+  app.start = function start() {
+    startClock(app.clock);
+  };
+
+  // The last word on disk is the war as it stood when the room closed.
+  app.stop = function stop() {
+    stopClock(app.clock);
+    app.saveNow();
+    for (const seat of app.seats.slice()) seat.socket.terminate();
+  };
+
+  return app;
+}
+
+// Private rooms on demand (C13): beyond this many, `?room=new` is refused.
+// The shared room is not counted; it always exists.
+const MAX_ROOMS = 4;
+
+// The process: one HTTP server and one socket server in front of the shared
+// room - the `app` every caller already knows, with its war, seats and clock -
+// and up to MAX_ROOMS private rooms beside it. A socket is routed by its URL:
+// `?room=new` opens a private room, a private room's `?code=` or a token one
+// of them is holding leads back into it, and everything else is the shared
+// room, exactly as before there were rooms.
+function createApp(options) {
+  const app = createRoom(options);
+  app.rooms = [];
+  app.maxRooms = options.maxRooms ?? MAX_ROOMS;
+  const roomHealth = app.health;
+  app.health = function health() {
+    return { ...roomHealth(), rooms: app.rooms.length };
+  };
+
+  app.httpServer = createServer((req, res) => {
+    // The watchdog's findings, for a playtest to read at the end - or during.
+    if (req.url === '/watch') {
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(app.watch === 0 ? { watching: false } : watchReport(app.watch)));
+      return;
+    }
+    if (req.url === '/healthz') {
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(app.health()));
+      return;
+    }
+    // URL paths mirror the repository layout, so a relative import written for
+    // Node ("../engine/game.js") resolves to the same file in the browser.
+    serveNative(req, res, app.native).then((handled) => handled || serveStatic(req, res, [
+      { prefix: '/data/', dir: join(ROOT, 'data') },
+      { prefix: '/engine/', dir: join(ROOT, 'engine') },
+      { prefix: '/shared/', dir: join(ROOT, 'shared') },
+      { prefix: '/client/', dir: join(ROOT, 'client') },
+      { prefix: '/', dir: join(ROOT, 'client') },
+    ])).then((handled) => {
+      if (!handled) {
+        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end('not found');
+      }
+    }).catch((error) => {
+      app.logFn(`static error: ${error.message}\n`);
+      if (!res.headersSent) res.writeHead(500);
+      res.end('server error');
+    });
+  });
+
+  app.wss = new WebSocketServer({
+    server: app.httpServer,
+    maxPayload: MAX_PAYLOAD,
+    // Refused at the upgrade, before a seat or a token is looked at: another
+    // website's page has no business driving a visitor's browser into the war.
+    verifyClient: (info, done) => {
+      if (originAllowed(info.req.headers.origin, info.req.headers.host)) done(true);
+      else done(false, 403, 'origin not allowed');
+    },
+  });
+
+  app.wss.on('connection', (socket, req) => {
+    const room = routeFor(socket, req);
+    if (room !== -1) room.accept(socket, req);
+  });
+
+  function refuse(socket, reason) {
+    if (socket.readyState === socket.OPEN) socket.send(JSON.stringify({ type: 'rejected', reason: reason }));
+    socket.close();
+  }
+
+  // The room this socket belongs in, or -1 when it has already been dealt
+  // with: turned away, or seated in a room opened for it.
+  function routeFor(socket, req) {
+    if (paramFrom(req, 'room') === 'new') {
+      if (paramFrom(req, 'spectate') === '1') {
+        refuse(socket, 'a new room needs a player');
+        return -1;
+      }
+      if (app.rooms.length >= app.maxRooms) {
+        refuse(socket, 'no free table');
+        return -1;
+      }
+      return openRoom(socket, req);
+    }
+    const code = paramFrom(req, 'code');
+    const token = paramFrom(req, 'token');
+    for (const room of app.rooms) {
+      if (code !== '' && room.joinCode() === code) return room;
+      if (token !== '' && findHold(room.holder, token) !== -1) return room;
+    }
+    return app;
+  }
+
+  function codeTaken(code) {
+    if (app.joinCode() === code) return true;
+    return app.rooms.some((room) => room.joinCode() === code);
+  }
+
+  // A fresh table for the socket that asked, which it seats: its own code,
+  // its own seed, observers off, the machine in every empty seat, never
+  // written to disk. A socket the room's own door turns away (a stale
+  // protocol) takes the room with it.
+  function openRoom(socket, req) {
+    let bootId = '';
+    do {
+      bootId = `room-${randomBytes(6).toString('hex')}`;
+    } while (codeTaken(joinCode(bootId)));
+    const code = joinCode(bootId);
+    const room = createRoom({
+      seed: randomInt(1, 2147483647),
+      rules: options.rules,
+      lobby: true,
+      bootId: bootId,
+      privateRoom: true,
+      abandonMs: app.abandonMs,
+      logFn: app.logFn,
+      noteFn: (text) => app.noteFn(`room ${code}: ${text}`),
+      nowFn: options.nowFn,
+      tokenFn: options.tokenFn,
+    });
+    room.accept(socket, req);
+    if (room.seats.length === 0) {
+      room.stop();
+      return -1;
+    }
+    room.start();
+    app.rooms.push(room);
+    app.noteFn(`room ${code} opened - ${app.rooms.length} of ${app.maxRooms} private rooms\n`);
+    return -1;
+  }
+
+  // Once a sweep: the shared room reopens an abandoned war on its own; a
+  // private room nobody has sat in for the window is closed.
+  function sweepRooms() {
+    app.checkAbandoned();
+    for (const room of app.rooms.slice()) {
+      if (room.checkAbandoned() !== 'reap') continue;
+      room.stop();
+      app.rooms.splice(app.rooms.indexOf(room), 1);
+      app.noteFn(`room ${room.joinCode()} closed, abandoned - ${app.rooms.length} of ${app.maxRooms} private rooms\n`);
+    }
+  }
+
   app.listen = function listen(port, host) {
     return new Promise((resolve) => {
       app.httpServer.listen(port, host, () => {
-        startClock(app.clock);
+        app.start();
         app.heartbeat = setInterval(beat, options.heartbeatMs ?? HEARTBEAT_MS);
+        app.sweeper = setInterval(sweepRooms, options.sweepMs ?? HEARTBEAT_MS);
         resolve(app.httpServer.address());
       });
     });
@@ -930,11 +1099,10 @@ function createApp(options) {
   }
 
   app.close = function close() {
-    stopClock(app.clock);
     clearInterval(app.heartbeat);
-    // The last word on disk is the war as it stood when the process left.
-    app.saveNow();
-    for (const seat of app.seats.slice()) seat.socket.terminate();
+    clearInterval(app.sweeper);
+    for (const room of app.rooms) room.stop();
+    app.stop();
     return new Promise((resolve) => {
       app.wss.close(() => app.httpServer.close(() => resolve(true)));
     });
@@ -943,4 +1111,4 @@ function createApp(options) {
   return app;
 }
 
-export { createApp, PROTOCOL, ROOT };
+export { ABANDON_MS, MAX_ROOMS, createApp, PROTOCOL, ROOT };
