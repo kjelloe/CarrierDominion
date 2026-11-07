@@ -1553,7 +1553,18 @@ function onLobby(room) {
   }
 }
 
+// One line for the clock: the speed, whether it is the table's to decide,
+// and where an open vote stands.
+function showSpeed() {
+  setHud(state.hud, 'speedx', describeSpeed(state.speed)
+    + (state.speedLocked ? ` (${state.t('hud.locked')})` : '')
+    + (state.voteText === '' ? '' : ` - ${state.voteText}`));
+}
+
+// The server says where the table stands whenever a player sits down or gets
+// up, so the lock follows the table rather than the count at welcome time.
 function onVote(message) {
+  if (typeof message.players === 'number') state.speedLocked = message.players > 1;
   if (message.speed < 0) {
     state.voteText = '';
   } else {
@@ -1563,13 +1574,12 @@ function onVote(message) {
       players: message.players,
     });
   }
-  setHud(state.hud, 'speedx', describeSpeed(state.speed)
-    + (state.voteText === '' ? '' : ` - ${state.voteText}`));
+  showSpeed();
 }
 
 function onSpeed(multiplier) {
   state.speed = multiplier;
-  setHud(state.hud, 'speedx', describeSpeed(multiplier));
+  showSpeed();
 }
 
 function onWelcome(message) {
@@ -1590,8 +1600,7 @@ function onWelcome(message) {
   state.team = message.spectator ? 0 : message.team;
   state.speed = message.speed ?? 1;
   state.speedLocked = (message.speedLocked ?? 0) === 1;
-  setHud(state.hud, 'speedx', describeSpeed(state.speed)
-    + (state.speedLocked ? ` (${state.t('hud.locked')})` : ''));
+  showSpeed();
   setHud(state.hud, 'seat', (message.replay ?? 0) === 1
     ? state.t('seat.replay', { team: message.team })
     : (message.spectator

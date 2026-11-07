@@ -19,7 +19,8 @@
 //
 // ABANDON_MS (600000) is how long a room may go without a human in a player
 // seat: the shared war is then saved and its room reopened, a private room
-// closed. MAX_ROOMS (4) caps the private rooms `?room=new` opens.
+// closed; 0 never gives a room up. MAX_ROOMS (4) caps the private rooms
+// `?room=new` opens; 0 offers none.
 
 import { createApp } from './app.js';
 import { nativeListing } from './native.js';
@@ -43,6 +44,18 @@ const RESUME = process.env.RESUME ?? '0';
 const STRICT_RESUME = RESUME === '1';
 const WANT_RESUME = STRICT_RESUME || RESUME === 'auto';
 
+// A count from the environment, or undefined for the default. `Number('')` is
+// 0, so a variable cleared in a unit file used to mean "reopen a resumed war
+// on the first sweep" instead of "the default".
+function wholeNumber(name) {
+  const text = process.env[name];
+  if (text === undefined || text.trim() === '') return undefined;
+  const value = Number(text);
+  if (Number.isInteger(value) && value >= 0) return value;
+  process.stderr.write(`ignoring ${name}=${text}: not a whole number, using the default\n`);
+  return undefined;
+}
+
 let resume = 0;
 if (WANT_RESUME) {
   try {
@@ -65,8 +78,8 @@ const app = createApp({
   bootId: `${SEED}-${PORT}-${Date.now()}`,
   noteFn: (text) => process.stdout.write(text),
   nativeDownloads: process.env.NATIVE_DOWNLOADS ?? '',
-  abandonMs: process.env.ABANDON_MS === undefined ? undefined : Number(process.env.ABANDON_MS),
-  maxRooms: process.env.MAX_ROOMS === undefined ? undefined : Number(process.env.MAX_ROOMS),
+  abandonMs: wholeNumber('ABANDON_MS'),
+  maxRooms: wholeNumber('MAX_ROOMS'),
 });
 
 if (resume !== 0 && app.resumed === 0) {

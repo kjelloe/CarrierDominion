@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Carrier Dominion - deterministic real-time carrier warfare on procedural archipelagos.",
   "license": "MIT",
+  "author": "Kjell Erichsen",
   "engines": {
     "node": ">=20"
   },

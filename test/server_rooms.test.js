@@ -254,3 +254,29 @@ test('a private room nobody sits in is closed after the window, war or no war', 
     assert.equal(app.lobby.status, 'lobby', 'the shared room was touched');
   });
 });
+
+test('an abandon window of 0 never gives a room up', async () => {
+  const options = { seed: SEED, islands: 8, enemy: 0, ending: 0, speed: 1 };
+  const game = createGame(SEED, applyLobby(rules, options));
+  for (let i = 0; i < 10; i++) stepGame(game);
+  const saved = JSON.parse(JSON.stringify(saveGame(game, SEED, options)));
+  await withRooms({ resume: saved, abandonMs: 0 }, async ({ app, clock }) => {
+    clock.now += ABANDON_MS * 2;
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    assert.equal(app.lobby.status, 'running', 'a war resumed with the window off was reopened');
+  });
+});
+
+test('the first player of a room hears that a friend sat down, so the clock is the table\'s', async () => {
+  await withRooms({}, async ({ wsUrl }) => {
+    const mine = connect(`${wsUrl}/?room=new`);
+    const welcome = await mine.next((m) => m.type === 'welcome');
+    assert.equal(welcome.speedLocked, 0);
+    const code = (await mine.next((m) => m.type === 'lobby')).lobby.code;
+    const friend = connect(`${wsUrl}/?code=${code}`);
+    await friend.next((m) => m.type === 'welcome');
+    const told = await mine.next((m) => m.type === 'vote' && m.players === 2);
+    assert.equal(told.speed, -1, 'no proposal is open; this is only the head count');
+    await Promise.all([mine.close(), friend.close()]);
+  });
+});

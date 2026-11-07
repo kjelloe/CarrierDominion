@@ -5,6 +5,34 @@ golden hash and why.
 
 ---
 
+## 2026-11-07 — A licence with a name on it, and three answers for fastengine
+
+fastengine, following `c60c3e0`, asked for a named licence holder and three
+questions.
+
+- **LICENSE.** package.json said MIT with nobody's name, so release zips
+  could only credit "the authors". `LICENSE` is MIT, copyright 2026 Kjell
+  Erichsen (the owner's choice); `author` in package.json to match.
+- **The sweep lag (a).** Abandonment is noticed up to 30 s after the window,
+  because the sweep shares the heartbeat's interval. Intended: on a ten-minute
+  window it is noise, and `sweepMs` stays a test seam, not a setting.
+- **A cleared ABANDON_MS (b) was a real bug.** `index.js` passed
+  `Number(process.env.ABANDON_MS)`, and `Number('')` is 0, so a unit file
+  with `ABANDON_MS=` reopened a resumed war on the first sweep after boot,
+  skipping the window its players were promised. Empty or malformed now
+  means the default (with a line on stderr for malformed), and 0 means
+  "never give a room up", the same way `SAVE=0` means "never save".
+  `MAX_ROOMS` goes through the same parser; 0 offers no private rooms.
+- **speedLocked in a private room (c).** The flag in `welcome` is the head
+  count when that seat arrived, so the room's first player read "unlocked"
+  after a friend joined. Behaviour was always right (the server votes
+  whatever the flag says, and the LAN transport always sends `set_speed`),
+  but the HUD was not, in private rooms and the shared one alike. A player
+  sitting down now broadcasts a `vote` head count (dropping already did),
+  and the browser takes the lock from `players > 1`. Two vote tests had been
+  waiting for "the next vote message" and were satisfied by the new head
+  count; they now match on the speed proposed, which is what they meant.
+
 ## 2026-10-18 — A war nobody is in gives its room back, and a table of one's own
 
 Requests C12 (P1) and C13 (P2) from the Unity port. The hosted server was

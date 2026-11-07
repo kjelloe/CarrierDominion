@@ -503,11 +503,11 @@ function createRoom(options) {
       broadcastLobby();
     }
     // A seat arriving mid-vote resets it: everybody at the table has to agree,
-    // and this one has not been asked.
-    if (openProposal(app.seats) !== NO_VOTE) {
-      clearVotes(app.seats);
-      broadcastVote();
-    }
+    // and this one has not been asked. A new PLAYER is told to the table
+    // either way: `welcome.speedLocked` is the count when each seat arrived,
+    // so the first player of a room stayed "unlocked" after a friend joined.
+    if (openProposal(app.seats) !== NO_VOTE) clearVotes(app.seats);
+    if (seat.team !== -1 || openProposal(app.seats) !== NO_VOTE) broadcastVote();
     const snapshot = inLobby() ? -1 : latestSnapshot(app.game);
     if (snapshot !== -1) {
       send(socket, {
@@ -739,6 +739,7 @@ function createRoom(options) {
   // has no host to reopen it either. A halted war is left as it is: its
   // clock is stopped and a new war in it would not tick.
   app.checkAbandoned = function checkAbandoned() {
+    if (app.abandonMs <= 0) return '';
     if (app.emptySinceMs === -1 || nowMs() - app.emptySinceMs < app.abandonMs) return '';
     if (app.privateRoom === 1) return 'reap';
     if (app.lobby === 0 || app.lobby.status === 'lobby' || app.halted !== '') return '';

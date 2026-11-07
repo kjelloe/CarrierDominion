@@ -268,7 +268,9 @@ test('in a shared war the clock moves only when everybody agrees', async () => {
 
     // One voice is not enough - and the table is told where the vote stands.
     second.send({ type: 'set_speed', speed: 4 });
-    const standing = await first.next((m) => m.type === 'vote');
+    // Matched on the proposal: a player sitting down is also announced as a
+    // `vote` (the head count, speed -1), and that one is already in the inbox.
+    const standing = await first.next((m) => m.type === 'vote' && m.speed === 4);
     assert.equal(standing.speed, 4);
     assert.equal(standing.agreed, 1);
     assert.equal(standing.players, 2);
@@ -301,7 +303,7 @@ test('a vote everybody but one agreed on carries when that one leaves', async ()
     await second.next((m) => m.type === 'welcome');
 
     first.send({ type: 'set_speed', speed: 16 });
-    await second.next((m) => m.type === 'vote');
+    await second.next((m) => m.type === 'vote' && m.speed === 16);
     assert.equal(app.clock.speed, 1);
 
     // The seat that never voted goes. What is left is unanimous.

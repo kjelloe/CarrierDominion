@@ -28,8 +28,8 @@ Everything is environment variables, all optional:
 | `WATCH` | 1 | the playtest watchdog, served at `/watch` |
 | `SAVE` | data/autosave.json | war autosave every 30 s and on shutdown; `0` disables |
 | `RESUME` | 0 | `1` resumes the autosave strictly (exits with the reason if it cannot); `auto` resumes when possible and starts fresh with a notice when not |
-| `ABANDON_MS` | 600000 | how long a room may have no human in a player seat: the shared war is then saved and its room reopened to strangers, a private room closed |
-| `MAX_ROOMS` | 4 | private rooms `?room=new` may open beside the shared one |
+| `ABANDON_MS` | 600000 | how long a room may have no human in a player seat: the shared war is then saved and its room reopened to strangers, a private room closed; `0` never gives a room up. Empty or not a whole number means the default |
+| `MAX_ROOMS` | 4 | private rooms `?room=new` may open beside the shared one; `0` offers none |
 | `NATIVE_DOWNLOADS` | unset | the native client's builds, linked on the start menu and in the war room: a folder (absolute or relative to the repo; its `CarrierDominion*` files are served under `/native/`), a `file://` URL, or an `http(s)://` URL linked as is. Read on every request, so a tunnelled disk may mount after boot; the boot log says how many files it found |
 
 ## Who may join

@@ -195,6 +195,12 @@ Any player proposes a speed; the proposal is open until everyone has answered;
 one refusal ends it. Votes are cleared when the roster changes, because a vote
 cast by somebody who has since left is not consent.
 
+`welcome.speedLocked` is the head count when that seat arrived, so on its own
+it goes stale: the first player in a room stayed "unlocked" after a friend
+sat down. Every player who sits down or gets up is therefore told to the
+table as a `vote` message (`speed: -1` when nothing is proposed, `players`
+the count), and the browser takes the lock from that.
+
 The speed ladder is `shared/speeds.js` — the same rungs everywhere so a client
 cannot propose a rate the server has no name for.
 
