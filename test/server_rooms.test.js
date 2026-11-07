@@ -280,3 +280,30 @@ test('the first player of a room hears that a friend sat down, so the clock is t
     await Promise.all([mine.close(), friend.close()]);
   });
 });
+
+test('a halted war everybody left reopens too, and the next war ticks', async () => {
+  await withRooms({ logFn: () => {} }, async ({ app, clock, notes, wsUrl }) => {
+    const host = connect(wsUrl);
+    await host.next((m) => m.type === 'welcome');
+    await startWar(host);
+    // A float in the state: the hashing walk refuses it, as in server_save's halt test.
+    app.game.state.carriers[0].x = 0.5;
+    await host.next((m) => m.type === 'halted');
+    assert.equal(app.clock.running, false);
+    await host.close();
+    await until(() => app.seats.length === 0, 'the host left');
+    clock.now += ABANDON_MS;
+    await until(() => app.lobby.status === 'lobby', 'the halted war\'s room reopened');
+    assert.equal(app.halted, '');
+    assert.equal(app.health().ok, true);
+    assert.equal(app.clock.running, true, 'the next war would never tick');
+    assert.ok(notes.some((line) => line.startsWith('halted war abandoned')));
+
+    const next = connect(wsUrl);
+    await next.next((m) => m.type === 'welcome' && m.lobby === 1);
+    await startWar(next);
+    const snapshot = await next.next((m) => m.type === 'snapshot');
+    await next.next((m) => m.type === 'snapshot' && m.tick > snapshot.tick);
+    await next.close();
+  });
+});

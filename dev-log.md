@@ -5,6 +5,39 @@ golden hash and why.
 
 ---
 
+## 2026-11-07 — What the rooms work left out: a halted war, the wire in our own docs, an empty chip
+
+A review of docs, skills, tests and plans after C11-C13.
+
+- **A halted war everybody left was still a stuck server.** C12 skipped
+  halted wars on the grounds that their clock is stopped. That is the same
+  hand reset C12 was written to remove, just behind a different cause. A
+  halt keeps the seats so the table can read why; once nobody is in a
+  player seat for `ABANDON_MS`, the room now reopens, without another save
+  (the halt wrote the save or the `.halted` log already, and a broken
+  state only fails again), `halted` is cleared and the clock restarted:
+  the fault belonged to that war's state and the next war is a new game.
+  One test, which also starts the next war and watches it tick.
+- **The wire contract lived only in the other repo.** Nothing in this repo
+  said that two native clients mirror the protocol, where their requests
+  live, or how to change a field without breaking them. docs/03 gains
+  "Other clients mirror this wire" with the rules and the socket URL's
+  five parameters in one table (they were spread over four sections); the
+  slice skill gains rule 12; README points at it.
+- **Operators were not told about C12/C13.** DEPLOYING says an abandoned war
+  reopens on its own (replacing the stop/delete/start reset), halted
+  included, and what private rooms are and how their log lines read.
+- **The start menu showed an empty box** at the top left: `#tier-chip`,
+  whose text is written only once the war boots, sat in the top bar with a
+  border and nothing in it. Hidden on the menu with the camera tabs.
+- docs/00's "as of" date was two months old; docs/03 lists `landedIsland`
+  under own hulls; docs/09 section C records two choices: a closed private
+  room's token falls through to the shared door, and the browser has no
+  private room (it has solo).
+
+Gate 658/658, smoke green; consoles, shared_links, playtest_round5,
+solo_save, start_menu and native_link probes green.
+
 ## 2026-11-07 — A licence with a name on it, and three answers for fastengine
 
 fastengine, following `c60c3e0`, asked for a named licence holder and three

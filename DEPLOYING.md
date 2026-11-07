@@ -53,6 +53,20 @@ take a carrier off the AI. They pass the same door: a war in progress needs
 `&code=`, and a table with observers switched off refuses them. The process
 logs one line per seat change to stdout (journald, under the unit file below).
 
+**A war everybody left reopens on its own.** After `ABANDON_MS` (10 minutes)
+with no human in a player seat, the war is saved and its room goes back to
+the open lobby, so the next visitor is not asked for a code nobody has. This
+also applies after a restart, timed from boot. It replaces the old hand reset
+(stop, delete `data/autosave.json`, start). `/healthz` shows `abandoned: 1`
+in the meantime. A **halted** war reopens the same way once everybody has
+gone, and its clock restarts for the next war; the halt's own save or
+`.halted` log is left as it was.
+
+**Private rooms.** A client may open its own room with `?room=new`: its own
+code, the AI opposite, never saved, closed after `ABANDON_MS` without a
+player. At most `MAX_ROOMS` (4) at once; `/healthz` counts them as `rooms`.
+Their seat changes are logged prefixed `room <code>:`.
+
 If you want the whole site private, that is your proxy's job — HTTP basic auth
 in front of it costs nothing and this game will never fight you for it.
 

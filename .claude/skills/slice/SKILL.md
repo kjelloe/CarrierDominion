@@ -67,6 +67,15 @@ dev-log honest. This is the procedure.
     7; `isRefit()` now names the four. Ranges over ids are a promise that
     ids stay adjacent, and they never do.
 
+12. **The wire is mirrored by two other clients** (Unity, fastengine; see
+    docs/03 "Other clients mirror this wire"). New view or message fields
+    go at the END of their object; renaming, removing or reordering one
+    bumps `PROTOCOL`. Every wire change, message timing included, is listed
+    in the commit message, and a request from them is answered with a row
+    under "CarrierDominion status" in
+    `../unityworks/specs/server_change_requests.md` (edited, not committed:
+    that repo is theirs).
+
 ## Order of work
 
 1. **Write the test first**, and name it as a sentence about the game:

@@ -211,6 +211,11 @@ Recorded so they are choices rather than oversights:
   (docs/07) — a recorded trade against building a post-processing pass.
 - The **Luau/Roblox twin** and the **true mobile Low tier** (docs/08) —
   planning only until this version passes playtesting.
+- A **closed private room's token leads nowhere**: a player away longer than
+  `ABANDON_MS` finds their room gone, and the token falls through to the
+  shared room's door (C13).
+- The browser offers **no private room**: it has solo play in the tab for
+  that. `?room=new` is for the native clients, which cannot run the engine.
 
 ## D. Worth measuring next on the batch PC
 

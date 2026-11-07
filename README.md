@@ -38,6 +38,9 @@ NATIVE_DOWNLOADS=../unityworks/dist ./run.sh   # offer the native (Unity) client
 | `/watch` | the playtest watchdog's findings, if it is running |
 | `/native.json` | what the menu offers for the native client (`none`, a `url`, or a `folder`'s files); `/native/<file>` downloads one |
 
+The socket takes its own parameters (`token`, `code`, `spectate`, `proto`,
+`room=new`), listed in docs/03 under "Other clients mirror this wire".
+
 Controls:
 
 | Key | |

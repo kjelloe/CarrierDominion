@@ -1,6 +1,6 @@
 # Carrier Dominion — documentation
 
-What is actually built, as of 2026-08-30. These describe the code that exists;
+What is actually built, as of 2026-11-07. These describe the code that exists;
 they are not a plan. For the plan and the rulings behind it see
 [`../plan-version1.md`](../plan-version1.md); for what changed and why, in
 order, see [`../dev-log.md`](../dev-log.md).
@@ -9,7 +9,7 @@ order, see [`../dev-log.md`](../dev-log.md).
 |---|---|
 | [01-simulation.md](01-simulation.md) | The engine contract: determinism, the tick order, state shape, hashing, commands |
 | [02-systems.md](02-systems.md) | The war as built: combat, damage, islands, the economy, supply, capture |
-| [03-multiplayer.md](03-multiplayer.md) | Transports, fog, the war room, seat grace, the clock vote |
+| [03-multiplayer.md](03-multiplayer.md) | Transports, fog, the war room, seat grace, the clock vote, abandoned wars and private rooms, the socket parameters the native clients use |
 | [04-client.md](04-client.md) | Renderer, instruments, panels, sound, art direction |
 | [05-testing.md](05-testing.md) | The gate, the fixture, the probes, and the playtest watchdog |
 | [06-rulings.md](06-rulings.md) | The design of record: every owner ruling, dated, in one place |

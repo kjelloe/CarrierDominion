@@ -697,13 +697,15 @@ function createRoom(options) {
     if (app.lobby.status === 'lobby') return '';
     if (app.game.state.phase === 0) return 'the war is not over';
     if (!isHost(app.seats, seat)) return 'only the host reopens the room';
-    reopen();
+    reopen(true);
     return '';
   }
 
   // The room back to `lobby`, the war saved one last time and left behind.
-  function reopen() {
-    app.saveNow();
+  // A halted war is not saved again: the halt already wrote what could be
+  // written, and if the state is what broke, saving it only fails louder.
+  function reopen(save) {
+    if (save) app.saveNow();
     app.lobby.status = 'lobby';
     clearVotes(app.seats);
     for (const other of app.seats) {
@@ -736,19 +738,26 @@ function createRoom(options) {
   // shared room's war is saved and its room reopened here, so the next
   // stranger walks into an open table instead of a door asking for a code
   // nobody left behind. Finished or not: a war the machine won on its own
-  // has no host to reopen it either. A halted war is left as it is: its
-  // clock is stopped and a new war in it would not tick.
+  // has no host to reopen it either. Halted too: a fault stops the clock and
+  // keeps the seats, which is right while the table is there to read why,
+  // and is the same stuck server once they have gone. The fault belongs to
+  // that war's state; the next war is a new game, so the clock restarts.
   app.checkAbandoned = function checkAbandoned() {
     if (app.abandonMs <= 0) return '';
     if (app.emptySinceMs === -1 || nowMs() - app.emptySinceMs < app.abandonMs) return '';
     if (app.privateRoom === 1) return 'reap';
-    if (app.lobby === 0 || app.lobby.status === 'lobby' || app.halted !== '') return '';
+    if (app.lobby === 0 || app.lobby.status === 'lobby') return '';
+    const halted = app.halted !== '';
     // The abandoned war's tokens must not open a seat in the next one: a
     // token gets past the door without the code.
     app.holder.held = [];
-    reopen();
+    reopen(!halted);
     app.emptySinceMs = nowMs();
-    app.noteFn('war abandoned - room reopened\n');
+    if (halted) {
+      app.halted = '';
+      startClock(app.clock);
+    }
+    app.noteFn(halted ? 'halted war abandoned - room reopened, clock restarted\n' : 'war abandoned - room reopened\n');
     return '';
   };
 

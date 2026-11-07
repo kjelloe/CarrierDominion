@@ -44,7 +44,8 @@ already a phantom war in progress.
 
 Only `shared/view.js` output, per team, every tick:
 
-- **Own hulls** in full — fuel, hull, sections, magazines, orders.
+- **Own hulls** in full — fuel, hull, sections, magazines, orders, and the
+  island a Manta is parked on or bound for (`landedIsland`).
 - **Enemy hulls** only inside your own detection range, and then only as a
   contact: position, heading, kind. Not fuel, not damage, not what it is
   carrying.
@@ -170,9 +171,10 @@ used, so a lobbyless server on port 0 behaves exactly as before.
   boot too: holds live only in memory, so a war resumed by `RESUME=auto` has
   nobody to wait for, and gets ten minutes for its players to come back with
   the code before the room reopens. `/healthz` says `abandoned: 1` while a
-  war in progress has no human seated. A halted war is left alone (its clock
-  is stopped, and a new war in it would not tick); a lobbyless server has no
-  room to reopen and runs on.
+  war in progress has no human seated. A halted war reopens the same way,
+  without another save (the halt wrote what it could), and its clock is
+  restarted for the next war; a lobbyless server has no room to reopen and
+  runs on.
 - **`?room=new` is a table of one's own (C13).** The hosted server has one
   shared table, and a stranger without its code had no way to play while it
   was taken. The socket that asks gets a fresh room: its own five-letter code
@@ -264,7 +266,35 @@ who may sit down, the guard decides how much any socket may ask of the process.
   because behind TLS the page is https and the upgrade arrives as http. This
   needs the proxy to pass `Host` through (DEPLOYING.md).
 
-## The native client's downloads
+## Other clients mirror this wire
+
+Two native clients speak this protocol field for field: the Unity port
+(`unityworks/games/carrierdominion/Assets/Scripts/Codec.cs`, checked against
+captured traffic) and the fastengine port (`fastengine/games/carrierdominion/`,
+fixture tests). Their requests and our answers live in
+`unityworks/specs/server_change_requests.md`: requests per item, and a row
+per landed slice under "CarrierDominion status" saying what they must
+follow. So:
+
+- **Add view and message fields at the END** of their object; never rename,
+  remove or reorder one. A change that is not purely additive bumps
+  `PROTOCOL`.
+- **List every wire change in the commit message**, message timing included
+  (a `vote` that now also goes out on a join broke two of our own tests that
+  waited for "the next vote").
+- **Keep the capture scripts' entry point**: `createApp({ seed, rules })` on
+  port 0 with a throwaway state, no lobby.
+
+The socket URL's parameters, in one place:
+
+| Parameter | Meaning |
+|---|---|
+| `token=` | a held seat's token: the commander's own carrier back, past the door; also routes to the private room holding it |
+| `code=` | the room's join code: needed for a war in progress; a private room's code routes to it |
+| `spectate=1` | watch, never sail; beats `token` |
+| `proto=<n>` | refused unless it is `PROTOCOL` |
+| `room=new` | a private room of one's own (C13) |
+
 
 `server/native.js` (request C10 from the Unity port). `NATIVE_DOWNLOADS` names
 where the Unity builds are: a folder (absolute, or relative to the repo), a
@@ -405,4 +435,7 @@ which the browser shows and keeps in the signals log), `/healthz` reports `ok: f
 the reason, and the war is written down. If the STATE is what broke, the
 ordinary save cannot be written at all (it hashes the state), so the command
 log goes to `<save>.halted` instead: recoverable by hand, deliberately not
-auto-resumable, because an empty hash cannot be verified.
+auto-resumable, because an empty hash cannot be verified. The seats stay
+connected so the table can read why; once nobody is in a player seat for
+`ABANDON_MS`, the room reopens and the clock restarts for a new war (see
+"Rooms nobody is in").
