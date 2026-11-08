@@ -5,6 +5,34 @@ golden hash and why.
 
 ---
 
+## 2026-11-08 — A table is its own module, and a list that said it was generated
+
+The second review pass, and the split proposed at the end of the first.
+
+- **`server/room.js`.** `server/app.js` had grown to 1,100 lines doing two
+  jobs since C13: the process (HTTP, the socket server, routing, heartbeat,
+  sweep) and a table. `createRoom` moved to `server/room.js` with
+  `PROTOCOL`, `ROOT`, `ABANDON_MS` and `paramFrom`; app.js is the front at
+  222 lines and re-exports what callers imported from it, so no test, probe
+  or capture script changed an import. A pure move: no line of room logic
+  was edited. One import was missed on the way (`randomBytes`, used only by
+  the default token function, which every test overrides or never reaches)
+  and caught by reading the import list against the body, not by the suite.
+- **The env parser is testable.** `wholeNumberFrom` moved from index.js
+  (which starts a server on import, so nothing could test it) to app.js,
+  with a test: empty is the default, `0` is 0, nonsense is reported.
+- **docs/05's probe list "is generated from the directory".** It was not;
+  nine probes (door, mobile, native_link, playtest_round5, port_findings,
+  round3_findings, sea_grid, shared_links, solo_save) were missing. The list
+  is regenerated and `test/hygiene.test.js` now compares it with the
+  directory, so a probe added without a line fails the gate.
+- docs/03 "Saving and resuming" says only the shared room is written and
+  what a restart does with an abandoned war; PLAYTEST gains a walk-away
+  check with `ABANDON_MS=60000`; docs/00 and docs/03 name room.js.
+
+Gate 660/660, smoke green; lobby, door, rejoin, second_war, shared_links
+probes green.
+
 ## 2026-11-07 — What the rooms work left out: a halted war, the wire in our own docs, an empty chip
 
 A review of docs, skills, tests and plans after C11-C13.

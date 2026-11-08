@@ -296,16 +296,18 @@ The lobby bug is the clearest case for having them at all — every socket test
 passed, because socket tests write raw JSON and the bug was in how the *client*
 wrapped its messages. Two real browsers found it immediately.
 
-Current probes (the list is generated from the directory - three probes went
-stale here before anyone noticed):
+Current probes (`test/hygiene.test.js` compares this list with the directory:
+it said "generated" for months while nine probes went missing from it):
 
 `ai_trace`, `chart_and_chips`, `combat_shot`, `consoles`, `damage_board`,
-`flavour_pack`, `graphics_shots`, `gunsight`, `hammer_drone`, `island_board`,
-`late_war`, `lobby`, `playtest_round1`, `playtest_round2`, `playtest_round3`,
-`playtest_round4`, `rejoin`, `replay_view`, `scope_zoom`, `second_war`,
-`splash_shot`, `squadron`, `start_menu`, `strategic_probe`, `style_shots`,
-`touch_controls`, `turret_shot`, `war_over`, `war_trace`, `watch_run`,
-`weather`.
+`door`, `flavour_pack`, `graphics_shots`, `gunsight`, `hammer_drone`,
+`island_board`, `late_war`, `lobby`, `mobile`, `native_link`,
+`playtest_round1`, `playtest_round2`, `playtest_round3`, `playtest_round4`,
+`playtest_round5`, `port_findings`, `rejoin`, `replay_view`,
+`round3_findings`, `scope_zoom`, `sea_grid`, `second_war`, `shared_links`,
+`solo_save`, `splash_shot`, `squadron`, `start_menu`, `strategic_probe`,
+`style_shots`, `touch_controls`, `turret_shot`, `war_over`, `war_trace`,
+`watch_run`, `weather`.
 
 `graphics_shots` asserts the phase-2 pixel contract machine-checkably (docs/07 §3): mirror water, a blue
 zenith measured looking UP - the chase camera only ever sees the Preetham

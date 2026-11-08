@@ -63,3 +63,18 @@ test('no source file has a merge marker or a stray debugger', () => {
   }
   assert.deepEqual(bad, [], bad.join('\n  '));
 });
+
+// docs/05 lists the probes and said the list was generated from the
+// directory. Nothing generated it, and nine probes went missing from it.
+test('the probe list in docs/05 is the probes directory', () => {
+  const onDisk = readdirSync(join(ROOT, 'debugging', 'probes'))
+    .filter((name) => name.endsWith('.mjs'))
+    .map((name) => name.slice(0, -4))
+    .sort();
+  const doc = readFileSync(join(ROOT, 'docs', '05-testing.md'), 'utf8');
+  const start = doc.indexOf('Current probes');
+  assert.ok(start >= 0, 'docs/05 lost its probe list');
+  const block = doc.slice(start, doc.indexOf('\n\n', doc.indexOf('\n\n', start) + 2));
+  const listed = [...block.matchAll(/`([a-z0-9_]+)`/g)].map((m) => m[1]).sort();
+  assert.deepEqual(listed, onDisk);
+});

@@ -212,6 +212,11 @@ says what to do and what should happen; anything else is a finding.
   **REMOVE**. They should be told in plain words, not "disconnected", and they
   should not be able to rejoin for a minute. **Tell me if the wording is wrong
   or if they can get straight back in.**
+- **Walk away.** Start `ABANDON_MS=60000 ./run.sh --lan`, sail, and close
+  every tab. About a minute later (up to 30 s more) the log says
+  `war abandoned - room reopened`, and a fresh tab with no code walks into
+  the open war room instead of being asked for one. **Tell me if it reopens
+  while somebody is still playing.**
 - **Watch a war back.** `?mode=replay` replays the autosaved war through the
   same engine.
 - **A phone.** Landscape only — portrait is gated. One scrolling column of

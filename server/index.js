@@ -22,7 +22,7 @@
 // closed; 0 never gives a room up. MAX_ROOMS (4) caps the private rooms
 // `?room=new` opens; 0 offers none.
 
-import { createApp } from './app.js';
+import { createApp, wholeNumberFrom } from './app.js';
 import { nativeListing } from './native.js';
 import { loadRules } from './rules.js';
 import { readSave } from './save.js';
@@ -44,16 +44,10 @@ const RESUME = process.env.RESUME ?? '0';
 const STRICT_RESUME = RESUME === '1';
 const WANT_RESUME = STRICT_RESUME || RESUME === 'auto';
 
-// A count from the environment, or undefined for the default. `Number('')` is
-// 0, so a variable cleared in a unit file used to mean "reopen a resumed war
-// on the first sweep" instead of "the default".
 function wholeNumber(name) {
-  const text = process.env[name];
-  if (text === undefined || text.trim() === '') return undefined;
-  const value = Number(text);
-  if (Number.isInteger(value) && value >= 0) return value;
-  process.stderr.write(`ignoring ${name}=${text}: not a whole number, using the default\n`);
-  return undefined;
+  return wholeNumberFrom(process.env[name], (text) => {
+    process.stderr.write(`ignoring ${name}=${text}: not a whole number, using the default\n`);
+  });
 }
 
 let resume = 0;

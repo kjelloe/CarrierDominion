@@ -307,3 +307,19 @@ test('a halted war everybody left reopens too, and the next war ticks', async ()
     await next.close();
   });
 });
+
+test('a count from the environment: empty is the default, 0 is 0, nonsense is said and ignored', async () => {
+  const { wholeNumberFrom } = await import('../server/app.js');
+  const warned = [];
+  const warn = (text) => warned.push(text);
+  assert.equal(wholeNumberFrom(undefined, warn), undefined);
+  assert.equal(wholeNumberFrom('', warn), undefined, 'a cleared variable read as 0');
+  assert.equal(wholeNumberFrom('  ', warn), undefined);
+  assert.equal(wholeNumberFrom('0', warn), 0);
+  assert.equal(wholeNumberFrom('60000', warn), 60000);
+  assert.deepEqual(warned, []);
+  assert.equal(wholeNumberFrom('ten', warn), undefined);
+  assert.equal(wholeNumberFrom('-5', warn), undefined);
+  assert.equal(wholeNumberFrom('1.5', warn), undefined);
+  assert.deepEqual(warned, ['ten', '-5', '1.5']);
+});

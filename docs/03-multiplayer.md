@@ -63,7 +63,7 @@ Only `shared/view.js` output, per team, every tick:
   arrive as a sound cue.
 
 **The protocol has a version.** Every `welcome` (on connect, at war start, on
-a reopened room) carries `proto` (`PROTOCOL` in `server/app.js`, now 1). It
+a reopened room) carries `proto` (`PROTOCOL` in `server/room.js`, re-exported by `server/app.js`, now 1). It
 is bumped on any wire change that is not purely additive; a new field is not a
 bump. A client may send `?proto=<n>`: a different number gets
 `rejected` with `protocol <server> required, client has <n>` and is closed
@@ -154,9 +154,9 @@ The client reconnects on its own with backoff: `MAX_RETRIES = 6`, starting at
 
 ## Rooms nobody is in, and rooms of one's own
 
-`server/app.js` splits into `createRoom` (one table: war, room, clock, door,
-holds, watchdog) and `createApp`, the process: one HTTP server and one socket
-server in front of the **shared room** and up to `MAX_ROOMS` (4) **private
+The server is two modules: `server/room.js` has `createRoom` (one table: war,
+room, clock, door, holds, watchdog) and `server/app.js` has `createApp`, the
+process: one HTTP server and one socket server in front of the **shared room** and up to `MAX_ROOMS` (4) **private
 rooms**. The shared room is the `app` object every test and script already
 used, so a lobbyless server on port 0 behaves exactly as before.
 
@@ -340,6 +340,13 @@ the state hash it had. The server writes it every thirty seconds and on
 shutdown; `RESUME=1` replays the log through the same reducer and **refuses**
 if the result does not hash to what was saved — a save made under different
 rules or different code does not limp back as a subtly different war.
+
+Only the shared room is written; a private room (`?room=new`) never is. A war
+given up as abandoned is saved one last time and left in the file, so a
+restart with `RESUME=auto` brings it back, empty, and it reopens its room
+`ABANDON_MS` after boot unless somebody comes back for it. (Moving the file
+aside was considered and dropped: `?mode=replay` reads it to show the last
+war.)
 
 Seats do not survive the restart (tokens are per-process); players rejoin and
 claim their teams again. The AI keeps any seat the log says it holds, because

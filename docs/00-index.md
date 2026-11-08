@@ -38,7 +38,8 @@ engine/    the simulation. apply(state, command) -> state. Pure, integer-only,
            no I/O, no clock, no floats. Written in a Lua-portable JS subset.
 shared/    fixed-point maths, PRNG, trig tables, state hashing, view filtering,
            the speed ladder. Used verbatim by both the browser and the server.
-server/    http + ws + the tick clock, the war room, seat grace, the watchdog.
+server/    http + ws (app.js) in front of the tables (room.js): each one's tick
+           clock, war room, seat grace and watchdog.
            The ONLY place that reads a wall clock.
 client/    three.js renderer, instruments, panels, input, sound, transports.
            Floats live here and nowhere else.
