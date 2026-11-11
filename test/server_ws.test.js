@@ -143,6 +143,20 @@ test('a path traversal out of the served roots is refused', async () => {
   });
 });
 
+test('a malformed escape in a path is the client\'s mistake, not a server error', async () => {
+  const said = [];
+  const app = createApp({ seed: 20260818, rules: rules, logFn: (text) => said.push(text) });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const response = await fetch(`http://127.0.0.1:${address.port}/%E0%A4%A`);
+    assert.equal(response.status, 400);
+    assert.deepEqual(said, [], 'a bad request was logged as a server error');
+    assert.equal((await fetch(`http://127.0.0.1:${address.port}/healthz`)).status, 200);
+  } finally {
+    await app.close();
+  }
+});
+
 test('a joining client is seated and starts receiving its own view', async () => {
   await withServer(async (_app, _httpUrl, wsUrl) => {
     const client = connect(wsUrl);

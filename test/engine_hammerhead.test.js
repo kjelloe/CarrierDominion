@@ -146,3 +146,22 @@ test('a lost drone is rebuilt from chassis - after the airframes, and cheaper', 
   assert.equal(second.units.find((u) => u.id === manta.id).state, 0,
     'the airframe should have taken the parts first');
 });
+
+// A mark off the map was measured before it was refused, and a coordinate of
+// 2^32 or more puts `dist2D` past exact integers, which throws on purpose. On
+// the server that halts the war, so any seat could stop a shared one with a
+// single message. Every other command that takes a point checks the map
+// first; this one did not (found by fuzzing the vocabulary, 2026-11-12).
+test('a mark off the map is refused before anything measures it', () => {
+  const state = createInitialState(SEED, rules);
+  const rounds = state.carriers[0].hammerRounds;
+  for (const far of [state.params.sizeUnits + 1, 2 ** 32, Number.MAX_SAFE_INTEGER]) {
+    for (const mark of [{ x: far, y: 0 }, { x: 0, y: far }]) {
+      let next;
+      assert.doesNotThrow(() => {
+        next = apply(state, { type: 'fire_hammerhead', carrierId: 0, x: mark.x, y: mark.y });
+      }, `a mark at ${mark.x},${mark.y} threw`);
+      assert.equal(next.carriers[0].hammerRounds, rounds);
+    }
+  }
+});

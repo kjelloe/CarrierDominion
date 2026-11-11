@@ -5,6 +5,39 @@ golden hash and why.
 
 ---
 
+## 2026-11-12 — One message could stop a shared war, and the sibling servers' bugs checked here
+
+The third review pass. No new CarrierDominion requests; but the sibling
+servers' latest P1s were worth checking against this one: RetroMultiCiv's
+R13 (a non-ASCII lobby name reached a hashed string and the throw killed the
+process) and City Grid's CG3 (a malformed `%` escape in a URL killed it).
+
+- **The R13 class, here: `fire_hammerhead` could halt any war.** Names and
+  chat are stripped to printable ASCII in lobby.js and never enter state, so
+  the literal R13 does not apply. The same class does: a client's message
+  that makes a TICK throw, which halts the war (the R-005 guard keeps the
+  process alive but stops the clock). Validation is shape-only, integers,
+  and an integer can be 2^53. A fuzz of the whole vocabulary (every field of
+  every command at ±2^53, 2^32 and 1e300, applied and ticked 600 times)
+  found exactly one: the Hammerhead measured its mark with `dist2D` before
+  checking the map, and `dist2D` throws past exact integers, on purpose.
+  Every other command taking a point checks `params.sizeUnits` first; this
+  one now does too. Any seated player could have stopped a shared war with
+  one message. The fuzz is now part of `engine_authority_sweep.test.js`
+  (0.3 s: apply plus 20 ticks per case; the 600-tick run found nothing
+  slower), checked to fail with the fix taken out. Fixture unchanged: a
+  command that used to halt the war is not in any log anyone has.
+- **The CG3 class: survived, but cried wolf.** `/%E0%A4%A` reached
+  `decodeURIComponent` inside an async handler, so the promise chain caught
+  it and answered 500 while logging `static error: URI malformed`, a server
+  error for a client's typo. It is a 400 now, with nothing logged. One test.
+- docs/05 lists the new guard among the rule-keeping tests.
+
+Not done, noted: a name like "Åse" is stripped to "se" where RetroMultiCiv
+now folds it to "Ase". Cosmetic, and only in the war room.
+
+Gate 663/663, smoke green, `repin --check` reports the fixture unchanged.
+
 ## 2026-11-08 — A table is its own module, and a list that said it was generated
 
 The second review pass, and the split proposed at the end of the first.

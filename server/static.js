@@ -35,7 +35,16 @@ function insideRoot(root, candidate) {
 // roots: [{ prefix, dir }] checked in order. Returns true when it answered.
 async function serveStatic(req, res, roots) {
   const url = new URL(req.url, 'http://localhost');
-  let pathname = decodeURIComponent(url.pathname);
+  // A malformed escape (`/%E0%A4%A`) is the client's mistake: answered 400,
+  // not thrown up to the 500 handler, which logs it as a server error. City
+  // Grid's server died of the same request (CG3); here it only cried wolf.
+  let pathname;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' }).end('bad request');
+    return true;
+  }
   if (pathname.endsWith('/')) pathname += 'index.html';
 
   for (const root of roots) {

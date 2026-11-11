@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 import * as commands from '../engine/commands.js';
 import { checkAuthority } from '../engine/authority.js';
+import { apply } from '../engine/reducer.js';
 import { createInitialState } from '../engine/state.js';
 import { loadRules } from '../server/rules.js';
 
@@ -88,4 +89,37 @@ test('the vocabulary and this sweep cannot drift apart', () => {
   for (const type of Object.keys(PROBES)) {
     assert.ok(vocabulary.includes(type), `"${type}" is probed but no longer a command`);
   }
+});
+
+// What a seat may send must never THROW: a throw in a tick halts the war on
+// the server, so one malformed message from any seat would stop a shared war.
+// Validation is shape-only (integers), and an integer can be 2^53; the
+// Hammerhead measured a mark 2^32 away with dist2D before it checked the map,
+// and dist2D throws past exact integers (found 2026-11-12). Every integer
+// field of every probe, and every route point, is pushed to the extremes.
+test('no command a seat may send can throw, however large its numbers', () => {
+  const EXTREMES = [Number.MAX_SAFE_INTEGER, -Number.MAX_SAFE_INTEGER, 2 ** 32, 1e300];
+  const TICK = { type: 'advance_tick' };
+  const thrown = [];
+  for (const probe of Object.values(PROBES)) {
+    const keys = Object.keys(probe).filter((k) => k !== 'type');
+    for (const key of keys) {
+      const slots = Array.isArray(probe[key]) ? probe[key].map((_, i) => i) : [-1];
+      for (const slot of slots) {
+        for (const value of EXTREMES) {
+          const command = { ...probe, [key]: Array.isArray(probe[key]) ? probe[key].slice() : probe[key] };
+          if (slot === -1) command[key] = value;
+          else command[key][slot] = value;
+          if (commands.validateCommand(command) !== '' || checkAuthority(state, 0, command) !== '') continue;
+          try {
+            let next = apply(state, command);
+            for (let i = 0; i < 20; i++) next = apply(next, TICK);
+          } catch (error) {
+            thrown.push(`${probe.type}.${key}${slot === -1 ? '' : `[${slot}]`}=${value}: ${error.message}`);
+          }
+        }
+      }
+    }
+  }
+  assert.deepEqual(thrown, []);
 });

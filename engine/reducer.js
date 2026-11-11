@@ -192,6 +192,9 @@ const HAMMERHEAD_WEAPON = 9;
 
 function applyFireHammerhead(next, command) {
   if (next.phase !== PHASE_RUNNING) return reject(next);
+  // Before any distance is taken: a far enough mark overflows dist2D, which
+  // throws, and a throw in a tick halts the war.
+  if (command.x > next.params.sizeUnits || command.y > next.params.sizeUnits) return reject(next);
   const carrier = findCarrier(next, command.carrierId);
   if (carrier === -1 || carrier.hull <= 0) return reject(next);
   if (carrier.hammerRounds <= 0 || carrier.hammerCooldown > 0) return reject(next);
