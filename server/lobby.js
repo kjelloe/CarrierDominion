@@ -108,9 +108,22 @@ function isHost(seats, seat) {
   return hostSeat(seats) === seat;
 }
 
+// Letters with no ASCII decomposition, folded by hand; the rest lose their
+// accents to NFKD. Names and chat stay printable ASCII (every client can draw
+// it, and a stray surrogate cannot reach anything that hashes), but "Åse"
+// used to arrive as "se".
+const FOLDS = { 'æ': 'ae', 'Æ': 'AE', 'ø': 'o', 'Ø': 'O', 'ß': 'ss', 'đ': 'd', 'Đ': 'D', 'ł': 'l', 'Ł': 'L' };
+
+function printable(text) {
+  return text
+    .replace(/[æÆøØßđĐłŁ]/g, (letter) => FOLDS[letter])
+    .normalize('NFKD')
+    .replace(/[^ -~]/g, '');
+}
+
 function setName(seat, name) {
   if (typeof name !== 'string') return 'a name must be text';
-  const trimmed = name.slice(0, 24).replace(/[^ -~]/g, '').trim();
+  const trimmed = printable(name.slice(0, 24)).slice(0, 24).trim();
   seat.name = trimmed === '' ? seat.name : trimmed;
   return '';
 }
@@ -146,7 +159,7 @@ function setOption(lobby, seats, seat, key, value) {
 // anything a stranger can type.
 function say(lobby, seats, seat, text) {
   if (typeof text !== 'string') return 'a message must be text';
-  const clean = text.slice(0, CHAT_MAX).replace(/[^ -~]/g, '').trim();
+  const clean = printable(text.slice(0, CHAT_MAX)).slice(0, CHAT_MAX).trim();
   if (clean === '') return 'nothing to say';
   lobby.chat.push({
     team: seat.team,

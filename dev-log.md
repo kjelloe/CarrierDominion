@@ -33,10 +33,13 @@ process) and City Grid's CG3 (a malformed `%` escape in a URL killed it).
   error for a client's typo. It is a 400 now, with nothing logged. One test.
 - docs/05 lists the new guard among the rule-keeping tests.
 
-Not done, noted: a name like "Åse" is stripped to "se" where RetroMultiCiv
-now folds it to "Ase". Cosmetic, and only in the war room.
+And the one noticed item that was cheap: a war-room name or chat line
+stripped everything outside printable ASCII, so "Åse" arrived as "se". It is
+folded now (NFKD for accents, a short table for æ, ø, ß, đ, ł, which have
+no decomposition): "Åse Ødegård" reads "Ase Odegard", as RetroMultiCiv now
+does. Still printable ASCII on the wire. One test.
 
-Gate 663/663, smoke green, `repin --check` reports the fixture unchanged.
+Gate 664/664, smoke green, lobby probe green, `repin --check` reports the fixture unchanged.
 
 ## 2026-11-08 — A table is its own module, and a list that said it was generated
 

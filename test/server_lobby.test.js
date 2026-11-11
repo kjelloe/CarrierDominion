@@ -120,6 +120,20 @@ test('names are trimmed to something printable, and a blank one is ignored', () 
   assert.match(setName(seat, 42), /must be text/);
 });
 
+test('a Norwegian name keeps its letters as near as ASCII allows', () => {
+  const seat = { team: 0, name: 'Commander 1', ready: 0 };
+  setName(seat, 'Åse Ødegård');
+  assert.equal(seat.name, 'Ase Odegard', 'the letters were dropped rather than folded');
+  setName(seat, 'Bjørnæs');
+  assert.equal(seat.name, 'Bjornaes');
+  setName(seat, '\ud800🚢');
+  assert.equal(seat.name, 'Bjornaes', 'nothing printable is not a name');
+  const seats = room(0);
+  const room1 = lobby();
+  say(room1, seats, seats[0], 'på tide å seile');
+  assert.equal(room1.chat[0].text, 'pa tide a seile');
+});
+
 test('the room reads the same to everyone in it', () => {
   const seats = room(0, 1);
   const room1 = lobby();
