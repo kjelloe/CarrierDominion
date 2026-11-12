@@ -190,10 +190,12 @@ here is forgotten.
 
 ## B. Decided, not yet done
 
-- **Keeping the box current.** Live since 2026-09-27 at `527e5f1`; everything
-  since (the Unity port's hardening, C10-C13, the Hammerhead fix) ships with
-  the next `./ops/ssh-deploy.sh` from `dev_night`. The rules hash is still
-  `5ee697205122cb5a`, so the war on the box resumes across it.
+- **Keeping the box current.** Live since 2026-09-27. Its `/healthz` on
+  2026-11-13 had C9's `players`/`observers` but not C12/C13's `abandoned`/
+  `rooms`: a build between `a0048f3` and `c60c3e0`, up since about
+  2026-10-18. Abandoned wars, private rooms, the halted-war reopen and the
+  Hammerhead fix ship with the next `./ops/ssh-deploy.sh` from `dev_night`;
+  the rules hash is still `5ee697205122cb5a`, so the war resumes across it.
 - **A mobile playtest** on a real device. Frame rate cannot be measured here at
   all — headless renders in software (ruling 2026-08-23).
 - **PLAYTEST A5** — the one open *number* in docs/02: whether a 4 km
