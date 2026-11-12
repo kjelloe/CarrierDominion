@@ -151,6 +151,14 @@ Look for these shapes first — every one produced a real bug:
   written at a different time. When commands form a family, list them and
   check the predicate is the same across all of them, because the odd one out
   reads as a rule to whoever hits it.
+- **A check placed after the arithmetic it was meant to protect.** Every
+  command that takes a point refuses one off the map, except
+  `fire_hammerhead`, which measured its mark with `dist2D` first. Validation
+  only checks for integers, and an integer can be 2^53. Past exact integers
+  `dist2D` throws on purpose, the tick throws, and the server halts the war:
+  any seat could stop a shared war with one message (2026-11-12). Fuzz the
+  vocabulary rather than reading it; `engine_authority_sweep.test.js` now
+  does, and the same class killed RetroMultiCiv's server (R13).
 - **A guard applied to one caller and not its sibling.** The 2026-08-23
   review gave the DEVELOPED start a clearance walk so no carrier spawns
   inside a hostile battery. The DEFAULT start does the same thing - hands

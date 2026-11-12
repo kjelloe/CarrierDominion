@@ -157,12 +157,22 @@ repair priority between High, Medium and Low.
 
 ## The two top bars
 
-Along the top of the screen, left to right: the **console bar** — SQUADRON,
+Along the top of the screen, left to right: **MSG** (the signals log), the
+**console bar** — SQUADRON,
 STORES, DAMAGE, ISLAND, SIGNALS — then the **camera bar** — HELM, WEAPON,
 BIRDSEYE, CHART, DRONE. Screens on the left where the eye starts, ways of
 seeing beside them. One flex row lays out both, so a longer label (or a
 longer language) cannot make them collide; the first attempt pinned the
-camera bar at a fixed offset and overlapped by 75px.
+camera bar at a fixed offset and overlapped by 75px. MSG learned the same
+lesson late (CB14, 2026-10-15): it sat fixed at 64px, the bar starts at
+76px, and only "MS" showed; it is the bar's first item now. The tier chip
+at the end of the row is hidden on the start menu, where it is still empty.
+The **unit chips** at the bottom left start at the left button column's
+measured edge (`--col-left` + 12px, CB15), not at a fixed 12px.
+
+A war the server **halts** on a fault (docs/03) says so: the reason arrives
+as `halted`, shows as a status line and stays in the signals log, where a
+toast alone would be gone before anyone looked.
 
 **CHART lives on the camera bar and nowhere else** (playtest 2026-08-28). It
 was briefly on both, and the console's copy was the worse of the two: it
@@ -318,6 +328,15 @@ must never cost anyone the menu. It follows the page's style (`?style=`,
 default retro) and a fixed modest cost below the war's own tiers, so the
 menu never stutters on an integrated GPU. Probe: `splash_shot` (pixel
 variance, the cast count, and that nothing survives BEGIN).
+
+Under the menu and the war room sits one quiet line for the **native
+client** (`client/native.js`, C10/C11), when the server offers builds
+(`NATIVE_DOWNLOADS`, docs/03): each file named by platform from its
+`-win64`/`-linux64` suffix, with its size and how to start it, because the
+zips carry no readme: unzip and run `carrierdominion.exe` (unsigned:
+SmartScreen's More info, then Run anyway) or `carrierdominion.x86_64`, and
+F11 or Alt+Enter for full screen. Hidden on touch screens: a phone that
+followed an invite belongs in the browser game. Probe: `native_link`.
 
 ## Models
 
