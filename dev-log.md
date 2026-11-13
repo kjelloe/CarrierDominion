@@ -5,6 +5,37 @@ golden hash and why.
 
 ---
 
+## 2026-11-13 — A replay is the whole war, so it waits until the war is over
+
+The fourth review pass, and the sibling servers' P1s checked again.
+
+- **R1 here: the live war's record was served to anyone on the LAN.** A save
+  is the seed plus every order; replayed, it shows both sides. The default
+  `SAVE=data/autosave.json` sits in the served `/data/` folder, and the
+  replay viewer fetches exactly that, so any player could open
+  `?mode=replay` in a second tab mid-war and watch the enemy (or replay the
+  log by hand). Rule 2 says the client never sees state; this was state by
+  another door. The box was safe by accident: its save lives outside
+  `data/`, which also means it has never had a replay. Now the front
+  answers `403` for the save, its `.tmp` and its `.halted` while the war on
+  the server is being fought (`room.warInProgress()`: not in a lobby, not
+  decided), and the viewer says "its record opens when it is over". The
+  replay_view probe replayed a RUNNING war, which is the leak itself; it
+  now asserts the refusal, ends the war, and replays from a reopened room.
+  Not ruled, so docs/06 and docs/09 ask the owner to confirm the line.
+- **CG1 and CG2/R2 checked, clean.** No mutable module-level state in
+  engine/, shared/ or server/, which matters now that one process holds
+  several rooms; `advance_tick` is refused as server-owned and `set_ai` has
+  no carrier, so a seat cannot step the clock or take a seat from the AI.
+- **The box's version, read rather than assumed** (`72a1a35`, `6d1ff3a`).
+  I had told the owner it ran `527e5f1`, from a September note. Its public
+  endpoints say `05156b0`: `players` in /healthz, 206 on a range request, no
+  `NATIVE_TARGETS` in the served client. docs/09 says so.
+- docs/04 learned round 3's client side (`689d36e`); the engine-review skill
+  learned the Hammerhead's class; docs/09 records G4 as deferred by the owner.
+
+Gate 665/665, smoke green; replay_view, second_war, lobby, war_over green.
+
 ## 2026-11-12 — One message could stop a shared war, and the sibling servers' bugs checked here
 
 The third review pass. No new CarrierDominion requests; but the sibling

@@ -27,7 +27,14 @@ transport, not a format: `?mode=replay` fetches `/data/autosave.json`, folds
 the saved lobby options into the same ruleset, and walks the command log
 through the same reducer at war speed, building the view each tick. When the
 log runs out it closes with *"replay finished"*. Commands typed at a replay
-are ignored — history does not take the wheel.
+are ignored — history does not take the wheel. **Only a war that is over:**
+the save is the seed plus every order, so replaying it shows both sides
+through the fog. While the war on the server is still being fought (not in
+a lobby, not decided) the server answers `403` for the save, its `.tmp` and
+its `.halted`, and the viewer says the record opens when the war is over.
+Until 2026-11-13 the default `SAVE=data/autosave.json` let any LAN player
+watch the other side from a second tab (the leak RetroMultiCiv had as R1).
+The hosted box keeps its save outside `data/`, so it has no replay at all.
 
 ## The server is the only thing with a clock
 

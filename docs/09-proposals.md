@@ -187,6 +187,7 @@ here is forgotten.
 | §37.3 | The `solo` tag in `games.json` — new vocabulary in that index | Keep, or drop if it looks out of place |
 | §38.1 | Is the **remote address** the right handle for a ban? One machine on a LAN; possibly a household behind one NAT. (Behind the proxy it was 127.0.0.1 for EVERYONE until 2026-10-11; it is now the proxy's `X-Real-IP`) | Leave it — the one-minute window bounds the cost |
 | §38.2 | Should a kicked player be **told**, or silently dropped? | Told (built that way) |
+| Replay | `?mode=replay` now refuses a war still being fought (built 2026-11-13: its record shows both sides, rule 2). Is "only once it is over" the right line, or should a LAN host be able to replay mid-war? | Keep: any player can open the page, so a host-only exception needs a host check the page does not have |
 
 ## B. Decided, not yet done
 
@@ -219,6 +220,9 @@ Recorded so they are choices rather than oversights:
   shared room's door (C13).
 - The browser offers **no private room**: it has solo play in the tab for
   that. `?room=new` is for the native clients, which cannot run the engine.
+- **G4, in-game bug reports** (asked by the Unity port 2026-10-15): deferred
+  by the owner on 2026-10-16 pending a general reporting service outside the
+  game servers. Not to be built here until G4 is rewritten.
 
 ## D. Worth measuring next on the batch PC
 

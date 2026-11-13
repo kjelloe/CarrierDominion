@@ -12,7 +12,7 @@
 
 import { createServer } from 'node:http';
 import { randomBytes, randomInt } from 'node:crypto';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { WebSocketServer } from 'ws';
 
 import { serveStatic } from './static.js';
@@ -62,7 +62,7 @@ function createApp(options) {
       { prefix: '/shared/', dir: join(ROOT, 'shared') },
       { prefix: '/client/', dir: join(ROOT, 'client') },
       { prefix: '/', dir: join(ROOT, 'client') },
-    ])).then((handled) => {
+    ], recordShut)).then((handled) => {
       if (!handled) {
         res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
         res.end('not found');
@@ -84,6 +84,16 @@ function createApp(options) {
       else done(false, 403, 'origin not allowed');
     },
   });
+
+  // The save is the seed plus every order: replayed, it shows the whole war
+  // through the fog. Under the default SAVE=data/autosave.json it sits in
+  // the served /data/ folder, so while the war is being fought it, its .tmp
+  // and its .halted are refused; ?mode=replay opens once the war is over or
+  // the room has been reopened. (RetroMultiCiv's R1 was the same leak.)
+  function recordShut(filePath) {
+    if (app.savePath === 0 || !app.warInProgress()) return false;
+    return resolve(filePath).startsWith(resolve(app.savePath));
+  }
 
   app.wss.on('connection', (socket, req) => {
     const room = routeFor(socket, req);

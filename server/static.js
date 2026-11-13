@@ -33,7 +33,9 @@ function insideRoot(root, candidate) {
 }
 
 // roots: [{ prefix, dir }] checked in order. Returns true when it answered.
-async function serveStatic(req, res, roots) {
+// `shut(filePath)` may refuse one file that is there to serve (403) - the
+// war's own save while the war is still being fought.
+async function serveStatic(req, res, roots, shut = () => false) {
   const url = new URL(req.url, 'http://localhost');
   // A malformed escape (`/%E0%A4%A`) is the client's mistake: answered 400,
   // not thrown up to the 500 handler, which logs it as a server error. City
@@ -51,7 +53,7 @@ async function serveStatic(req, res, roots) {
     if (!pathname.startsWith(root.prefix)) continue;
     const relative = normalize(pathname.slice(root.prefix.length)).replace(/^([/\\])+/, '');
     const filePath = join(root.dir, relative);
-    if (!insideRoot(root.dir, filePath)) {
+    if (!insideRoot(root.dir, filePath) || shut(filePath)) {
       res.writeHead(403).end('forbidden');
       return true;
     }

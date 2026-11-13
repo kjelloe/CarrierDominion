@@ -30,7 +30,7 @@ NATIVE_DOWNLOADS=../unityworks/dist ./run.sh   # offer the native (Unity) client
 |---|---|
 | `/?mode=solo` | the engine runs **in the browser tab** - no server simulation |
 | `/?mode=lan` | the authoritative Node server simulates, the tab renders |
-| `/?mode=replay` | watch the autosaved war again: same reducer, same log, no hands on the wheel |
+| `/?mode=replay` | watch the autosaved war again once it is over: same reducer, same log, no hands on the wheel (refused while the war is being fought - it would show both sides) |
 | `/` (no query) | the start menu, over a live diorama of an island assault: choose the war, then sail |
 | `/?graphics=low\|medium\|high` | override the auto-detected graphics tier |
 | `/?style=retro\|modern\|hybrid` | art direction (default `retro`) - cosmetic only, same war, same hash |

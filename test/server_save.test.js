@@ -11,7 +11,7 @@ import { loadRules } from '../server/rules.js';
 import { createGame, enqueueCommand, stepGame } from '../engine/game.js';
 import { hashState } from '../shared/statehash.js';
 import { readSave, resumeGame, saveGame, writeSave } from '../server/save.js';
-import { createApp } from '../server/app.js';
+import { ROOT, createApp } from '../server/app.js';
 import { pump } from '../server/clock.js';
 
 const rules = loadRules();
@@ -256,5 +256,35 @@ test('a throwing tick halts the war, saves it, and leaves the server up', () => 
     }
   } finally {
     rmSync(folder, { recursive: true, force: true });
+  }
+});
+
+// A save is the seed plus every order, so replaying it shows the whole war
+// through the fog. Under the default SAVE=data/autosave.json it sat in the
+// served /data/ folder, so a LAN player could open ?mode=replay in a second
+// tab and watch the other side (the R1 class RetroMultiCiv had). The record
+// opens once the war is over; until then it, its .tmp and its .halted are
+// refused.
+test('the record of a war still being fought is not served', async () => {
+  const name = `_replay_guard_${process.pid}.json`;
+  const path = join(ROOT, 'data', name);
+  const app = createApp({ seed: SEED, rules: loadRules(), savePath: path });
+  const address = await app.listen(0, '127.0.0.1');
+  const base = `http://127.0.0.1:${address.port}`;
+  try {
+    pump(app.clock, app.clock.originMs + rules.rules.msPerTick * 3);
+    assert.equal(app.saveNow(), 1);
+    for (const asked of [`/data/${name}`, `/data/./${name}`, `/data//${name}`, `/data/${name}.tmp`]) {
+      const response = await fetch(`${base}${asked}`);
+      assert.equal(response.status, 403, `${asked} was answered ${response.status} mid-war`);
+    }
+    assert.equal((await fetch(`${base}/data/rules.json`)).status, 200, 'the rest of /data/ went dark too');
+    app.game.state.phase = 1;
+    const after = await fetch(`${base}/data/${name}`);
+    assert.equal(after.status, 200, 'a finished war\'s record stayed shut');
+    assert.equal((await after.json()).seed, SEED);
+  } finally {
+    await app.close();
+    rmSync(path, { force: true });
   }
 });

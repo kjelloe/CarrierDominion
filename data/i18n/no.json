@@ -260,6 +260,7 @@
   "stores.cost7": "1400 materialer",
   "seat.replay": "REPRISE - ser lag {team}",
   "status.noReplay": "ingen lagret krig å spille av - data/autosave.json er tom",
+  "status.replayLater": "krigen pågår fortsatt - opptaket åpnes når den er over",
   "status.replayDone": "slutten av opptaket - krigen sto her da den ble lagret",
   "start.game": "krigen",
   "start.gameStrategy": "strategi - fra null",

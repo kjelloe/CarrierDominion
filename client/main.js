@@ -2496,7 +2496,9 @@ async function main() {
     // war has been saved yet, and the honest answer is to say so and stop.
     const response = await fetch('/data/autosave.json');
     if (!response.ok) {
-      setHud(state.hud, 'status', state.t('status.noReplay'));
+      // 403: the war is still being fought, and its record would show it
+      // through the fog (server/app.js recordShut).
+      setHud(state.hud, 'status', state.t(response.status === 403 ? 'status.replayLater' : 'status.noReplay'));
       document.getElementById('debug-button').click();
       return;
     }

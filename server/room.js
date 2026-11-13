@@ -206,6 +206,11 @@ function createRoom(options) {
     return app.lobby !== 0 && app.lobby.status === 'lobby';
   }
 
+  // A war is on and not yet decided: not in a lobby, not over.
+  app.warInProgress = function warInProgress() {
+    return !inLobby() && app.game.state.phase === 0;
+  };
+
   function observersAllowed() {
     if (app.lobby !== 0) return app.lobby.options.observers === 1;
     return app.observersDefault === 1;
