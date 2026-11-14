@@ -187,6 +187,7 @@ here is forgotten.
 | §37.3 | The `solo` tag in `games.json` — new vocabulary in that index | Keep, or drop if it looks out of place |
 | §38.1 | Is the **remote address** the right handle for a ban? One machine on a LAN; possibly a household behind one NAT. (Behind the proxy it was 127.0.0.1 for EVERYONE until 2026-10-11; it is now the proxy's `X-Real-IP`) | Leave it — the one-minute window bounds the cost |
 | §38.2 | Should a kicked player be **told**, or silently dropped? | Told (built that way) |
+| Bandwidth | Views go out uncompressed every tick. Measured 2026-11-14 at tick 200: a snapshot is 16 KB at 8 islands and 49 KB at 64, so 0.3 to 1 MB/s per seat at 20 Hz; deflated, 2.2 KB and 6 KB. Turn on `perMessageDeflate` on the socket server (RetroMultiCiv's R4)? It is negotiated, so a client that does not offer it (the Unity and fastengine clients today) is sent exactly what it gets now | Yes, with a threshold of ~1 KB so votes and lobby messages stay plain; tell the allies so their clients can opt in. Costs CPU per seat per tick on the box: measure with four seats first |
 | Replay | `?mode=replay` now refuses a war still being fought (built 2026-11-13: its record shows both sides, rule 2). Is "only once it is over" the right line, or should a LAN host be able to replay mid-war? | Keep: any player can open the page, so a host-only exception needs a host check the page does not have |
 
 ## B. Decided, not yet done

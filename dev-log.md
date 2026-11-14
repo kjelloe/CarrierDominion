@@ -5,6 +5,18 @@ golden hash and why.
 
 ---
 
+## 2026-11-14 — The fifth pass: nothing broken, one number worth a ruling
+
+Checked the sibling servers' remaining classes against this one. CG7 (what
+the HTTP side serves): the box answers 404 for `/.git/config`,
+`/package.json`, `/server/app.js`, `/ops/…`, `/dev-log.md` and the save;
+only `client/`, `data/`, `engine/` and `shared/` are roots. R3 (`ws://`
+behind TLS): the client takes `wss` from `https:`. R4 (view size): views
+are sent uncompressed, 16 KB a tick at 8 islands and 49 KB at 64, so up to
+about 1 MB/s per seat; deflate makes them about 8x smaller. That is a cost
+on the box and a choice for the native clients, so it went to docs/09
+section A as a question rather than into the code.
+
 ## 2026-11-13 — A replay is the whole war, so it waits until the war is over
 
 The fourth review pass, and the sibling servers' P1s checked again.
