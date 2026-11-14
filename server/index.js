@@ -20,7 +20,8 @@
 // ABANDON_MS (600000) is how long a room may go without a human in a player
 // seat: the shared war is then saved and its room reopened, a private room
 // closed; 0 never gives a room up. MAX_ROOMS (4) caps the private rooms
-// `?room=new` opens; 0 offers none.
+// `?room=new` opens; 0 offers none. COMPRESS=0 turns off per-message deflate
+// for the sockets that ask for it.
 
 import { createApp, wholeNumberFrom } from './app.js';
 import { nativeListing } from './native.js';
@@ -74,6 +75,7 @@ const app = createApp({
   nativeDownloads: process.env.NATIVE_DOWNLOADS ?? '',
   abandonMs: wholeNumber('ABANDON_MS'),
   maxRooms: wholeNumber('MAX_ROOMS'),
+  compress: (process.env.COMPRESS ?? '1') !== '0',
 });
 
 if (resume !== 0 && app.resumed === 0) {

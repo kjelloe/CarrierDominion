@@ -5,6 +5,32 @@ golden hash and why.
 
 ---
 
+## 2026-11-14 — Four answers, and the views on the wire an eighth the size
+
+The owner ruled the four open questions in docs/09 A: replay only once the
+war is over (keep), the `solo` tag (keep), the ban by remote address (keep),
+and "optional compress".
+
+**Compression.** `perMessageDeflate` on the socket server, threshold 1 KB
+(votes and lobby messages stay plain), context kept per socket, because
+consecutive views are nearly the same text and that is where most of the
+gain is. On by default; `COMPRESS=0` turns it off. It is negotiated, so the
+Unity and fastengine clients, which do not offer the extension, get exactly
+the bytes they got before. "Optional" is honoured twice: per client by
+negotiation, per server by the switch. Measured before switching it on
+(docs/09 had said "measure with four seats first"): four seats at 64
+islands, 3.8 MB/s on the wire uncompressed and 0.45 MB/s compressed, for
+about 10% of a core more. That figure includes the four test clients
+decompressing in the same process, so the server's own share is lower. One
+test: a client that asks gets the extension, one that does not gets plain
+frames, and `compress: false` offers it to nobody.
+
+The Linux download could not be added from here: this machine has no deploy
+key for the box, and its download folder is not recorded in game-ops.
+
+Gate 666/666, smoke green; lobby, rejoin, second_war, door and
+round3_findings probes green with browsers negotiating deflate.
+
 ## 2026-11-14 — The fifth pass: nothing broken, one number worth a ruling
 
 Checked the sibling servers' remaining classes against this one. CG7 (what

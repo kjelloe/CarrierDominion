@@ -184,11 +184,11 @@ here is forgotten.
 | ~~§39.1~~ | Ruled 2026-09-06 (39.1a lifeline, 39.1b stall) and built in 527e5f1; see docs/06 | Re-run the 8×2 matrix to measure it (section D) |
 | ~~§39.2~~ | Ruled 2026-09-06 (39.2a: claimed islands, a minimum, twice the runner-up) and built in 527e5f1 | Re-run 16/32/64 to see island wins happen |
 | ~~§37.2~~ | Built 2026-10-11 as part of the Unity port's hardening (`server/guard.js`): a ping every 30 s, a missed pong terminates | — |
-| §37.3 | The `solo` tag in `games.json` — new vocabulary in that index | Keep, or drop if it looks out of place |
-| §38.1 | Is the **remote address** the right handle for a ban? One machine on a LAN; possibly a household behind one NAT. (Behind the proxy it was 127.0.0.1 for EVERYONE until 2026-10-11; it is now the proxy's `X-Real-IP`) | Leave it — the one-minute window bounds the cost |
+| ~~§37.3~~ | Ruled 2026-11-14: keep the `solo` tag in `games.json` | — |
+| ~~§38.1~~ | Ruled 2026-11-14: the remote address (the proxy's `X-Real-IP`) stays the handle for a one-minute ban | — |
 | §38.2 | Should a kicked player be **told**, or silently dropped? | Told (built that way) |
-| Bandwidth | Views go out uncompressed every tick. Measured 2026-11-14 at tick 200: a snapshot is 16 KB at 8 islands and 49 KB at 64, so 0.3 to 1 MB/s per seat at 20 Hz; deflated, 2.2 KB and 6 KB. Turn on `perMessageDeflate` on the socket server (RetroMultiCiv's R4)? It is negotiated, so a client that does not offer it (the Unity and fastengine clients today) is sent exactly what it gets now | Yes, with a threshold of ~1 KB so votes and lobby messages stay plain; tell the allies so their clients can opt in. Costs CPU per seat per tick on the box: measure with four seats first |
-| Replay | `?mode=replay` now refuses a war still being fought (built 2026-11-13: its record shows both sides, rule 2). Is "only once it is over" the right line, or should a LAN host be able to replay mid-war? | Keep: any player can open the page, so a host-only exception needs a host check the page does not have |
+| ~~Bandwidth~~ | Ruled 2026-11-14 ("optional compress") and built: `perMessageDeflate` with a 1 KB threshold, on by default, negotiated per socket, `COMPRESS=0` turns it off. Four seats at 64 islands: 3.8 MB/s down to 0.45 MB/s for about a tenth of a core | — |
+| ~~Replay~~ | Ruled 2026-11-14: a replay only once the war is over, as built on 2026-11-13 | — |
 
 ## B. Decided, not yet done
 

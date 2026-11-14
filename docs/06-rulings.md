@@ -178,9 +178,9 @@ Seven rulings in one message, all landed the same day unless marked:
   upgraded figure.
 - **Replay viewer**: yes. `?mode=replay` walks the autosave through the same
   reducer at war speed — a replay is a seed plus the command log, so the
-  viewer is a transport, not a format. (Not ruled, built 2026-11-13 under
-  rule 2: only a war that is over; mid-war the record would show both
-  sides. Owner to confirm.)
+  viewer is a transport, not a format. Only a war that is over (built
+  2026-11-13 under rule 2, ruled 2026-11-14): mid-war the record would show
+  both sides.
 - **Graphics phase 2**: go ahead (landed — docs/07 §3).
 - **CI**: added — `.github/workflows/gate.yml` runs tests, smoke and the
   battery on every push to `dev_night`/`dev`/`main`.
@@ -780,6 +780,16 @@ bottom of the column.
 - Everybody in a war needs a carrier: a room refuses to sail while a seated
   commander's team falls outside the table (2026-08-28). Observers are not
   owed a hull and never block a start.
+
+## Four answers (2026-11-14)
+
+- **Replay only once the war is over**: yes, as built (docs/03).
+- **§37.3, the `solo` tag** in `games.json`: keep it.
+- **§38.1, banning by remote address**: keep it. Behind the proxy that is
+  `X-Real-IP`, and the ban lasts a minute.
+- **Compression**: optional. Built as `perMessageDeflate`, on by default and
+  negotiated per socket, so a client that does not offer it is unaffected;
+  `COMPRESS=0` turns it off.
 
 ## Standing constraints that follow from the rulings
 

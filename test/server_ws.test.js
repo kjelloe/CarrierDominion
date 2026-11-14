@@ -1153,3 +1153,33 @@ test('a seat that arrives after the war halted is told why', async () => {
     sock.close();
   });
 });
+
+// Views go out every tick, 16 KB at 8 islands and 49 KB at 64 (measured
+// 2026-11-14); deflate makes them about 8x smaller. It is negotiated: a
+// client that does not offer it (the Unity and fastengine clients) is sent
+// exactly what it was sent before, and COMPRESS=0 turns it off.
+test('views are compressed for a client that asks, and plain for one that does not', async () => {
+  await withServer(async (_app, _httpUrl, wsUrl) => {
+    const asks = connect(wsUrl, { perMessageDeflate: true });
+    const plain = connect(wsUrl, { perMessageDeflate: false });
+    await Promise.all([asks.open(), plain.open()]);
+    assert.match(asks.socket.extensions, /permessage-deflate/);
+    assert.equal(plain.socket.extensions, '');
+    for (const sock of [asks, plain]) {
+      const snapshot = await sock.next((m) => m.type === 'snapshot');
+      assert.ok(snapshot.view.islands.length > 0);
+    }
+    asks.close();
+    plain.close();
+  });
+  const app = createApp({ seed: 20260818, rules: rules, compress: false });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const sock = connect(`ws://127.0.0.1:${address.port}`, { perMessageDeflate: true });
+    await sock.open();
+    assert.equal(sock.socket.extensions, '', 'COMPRESS=0 still compressed');
+    sock.close();
+  } finally {
+    await app.close();
+  }
+});

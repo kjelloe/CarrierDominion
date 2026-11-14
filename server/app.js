@@ -77,6 +77,12 @@ function createApp(options) {
   app.wss = new WebSocketServer({
     server: app.httpServer,
     maxPayload: MAX_PAYLOAD,
+    // A view is 16 KB a tick at 8 islands and 49 KB at 64; deflated, about an
+    // eighth (measured 2026-11-14). Negotiated, so a client that does not
+    // offer the extension gets plain frames as before. Context is kept per
+    // socket because consecutive views are nearly the same text, and that is
+    // where most of the gain is. Small messages (votes, the lobby) stay plain.
+    perMessageDeflate: options.compress === false ? false : { threshold: 1024 },
     // Refused at the upgrade, before a seat or a token is looked at: another
     // website's page has no business driving a visitor's browser into the war.
     verifyClient: (info, done) => {

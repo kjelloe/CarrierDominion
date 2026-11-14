@@ -272,6 +272,13 @@ who may sit down, the guard decides how much any socket may ask of the process.
   name the same host:port as `Host`, otherwise 403. Schemes are not compared,
   because behind TLS the page is https and the upgrade arrives as http. This
   needs the proxy to pass `Host` through (DEPLOYING.md).
+- **Compression** (ruled 2026-11-14): `perMessageDeflate`, for messages over
+  1 KB, negotiated per socket. A view is 16 KB a tick at 8 islands and 49 KB
+  at 64; deflated with the per-socket context kept, four seats at 64 islands
+  went from 3.8 MB/s to 0.45 MB/s for about a tenth of a core. A client that
+  does not offer the extension gets plain frames, exactly as before (.NET's
+  `ClientWebSocket` offers it only when `DangerousDeflateOptions` is set).
+  `COMPRESS=0` turns it off.
 
 ## Other clients mirror this wire
 
