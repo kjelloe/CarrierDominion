@@ -5,6 +5,33 @@ golden hash and why.
 
 ---
 
+## 2026-11-19 — A third client, its zips on our download line, and the box stuck again
+
+The review pass after CB27.
+
+- **bj-engine was a client nobody here had written down.** It is a third
+  native port (Rust) that mirrors the wire exactly, captures its fixtures
+  from this server in-process, pins a game commit (`GAME_COMMIT=45880f3`),
+  and copies the browser's rendering, which is how it found CB27. docs/03,
+  the slice skill's rule 12 and the memory said "two clients"; they say
+  three now, and where its pin lives.
+- **Its zips would have been described wrongly.** bj-engine plans to list
+  its builds on our `/native` line (its open item #78), and its dist holds
+  `carrierdominion-bj-…-linux64.zip`, `-win64.zip` and `-win64-dlss.zip`.
+  Our line told Linux players to run `carrierdominion.x86_64`, but bj-engine,
+  like fastengine, names the binary `carrierdominion`, and it did not see
+  the DLSS zip as Windows at all, so that one got neither a platform nor
+  the SmartScreen note. Engine builds (`-fe-`, `-bj-`) now get the
+  extensionless name, and `-win64-dlss` reads "Windows, NVIDIA RTX (DLSS)"
+  with the Windows note. Checked against the real zips' contents. The
+  name filter already took the lower-case `carrierdominion-bj` prefix.
+- **The box is stuck again.** Its public endpoints still say `05156b0`; it
+  restarted around 2026-11-15 and resumed a war that nobody is in, which
+  under that build never gives its room back. docs/09 calls the deploy
+  urgent now.
+
+Gate 666/666, smoke and native_link green.
+
 ## 2026-11-18 — The eye does not see itself (CB27, from bj-engine)
 
 A new ally, bj-engine, porting the browser client, reported that the DRONE

@@ -145,6 +145,8 @@ test('the page line names each build, its platform and how to start it, or one l
     { name: 'CarrierDominion-2026.10.14-abc1234-linux64.zip', size: 1536 * 1024, url: '/native/b' },
     { name: 'CarrierDominion-fe-2026.10.14-def5678-abc1234-linux64.zip', size: 1000, url: '/native/c' },
     { name: 'CarrierDominion-2026.10.14-abc1234-mac.zip', size: 1048576, url: '/native/d' },
+    { name: 'carrierdominion-bj-2026.11.18-bcff109-45880f3-linux64.zip', size: 1048576, url: '/native/e' },
+    { name: 'carrierdominion-bj-2026.11.18-bcff109-45880f3-win64-dlss.zip', size: 1048576, url: '/native/f' },
   ];
   assert.deepEqual(nativeLinks({ kind: 'folder', files: files }, t), [
     {
@@ -163,6 +165,18 @@ test('the page line names each build, its platform and how to start it, or one l
       note: 'start.nativeRun:carrierdominion',
     },
     { label: 'CarrierDominion-2026.10.14-abc1234-mac.zip (1 MB)', href: '/native/d', note: '' },
+    // bj-engine's builds: an extensionless Linux binary, and a DLSS variant
+    // of the Windows one that is still Windows.
+    {
+      label: 'start.nativeLinux · carrierdominion-bj-2026.11.18-bcff109-45880f3-linux64.zip (1 MB)',
+      href: '/native/e',
+      note: 'start.nativeRun:carrierdominion',
+    },
+    {
+      label: 'start.nativeWindowsDlss · carrierdominion-bj-2026.11.18-bcff109-45880f3-win64-dlss.zip (1 MB)',
+      href: '/native/f',
+      note: 'start.nativeRunWindows:carrierdominion.exe',
+    },
   ]);
   assert.equal(describeSize(1536 * 1024), '1.5 MB');
   assert.equal(describeSize(1000), '0.1 MB');

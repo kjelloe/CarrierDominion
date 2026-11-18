@@ -192,13 +192,14 @@ here is forgotten.
 
 ## B. Decided, not yet done
 
-- **Keeping the box current.** Live since 2026-09-27; read off the public
-  endpoints on 2026-11-13 it runs `05156b0` (resumable `/native/` downloads,
-  but not `f7f403c`'s download wording), up since about 2026-10-18. So
-  round 3 (C11, CB14-CB26), abandoned wars and private rooms (C12, C13), the
-  halted-war reopen, the Hammerhead fix and the name folding all ship with
-  the next `./ops/ssh-deploy.sh` from `dev_night`; the rules hash is still
-  `5ee697205122cb5a`, so the war resumes across it.
+- **Keeping the box current — now urgent.** Live since 2026-09-27; read off
+  its public endpoints on 2026-11-19 it still runs `05156b0`, restarted
+  about 2026-11-15, and has resumed a war (`status: running`) with **no
+  players**. That is the stuck state of 2026-10-17: under `05156b0` the war
+  never gives its room back, so every newcomer is asked for a code. The
+  next `./ops/ssh-deploy.sh` from `dev_night` ships C12 (the room reopens 10
+  minutes after boot with nobody in it) and everything since; the rules
+  hash is still `5ee697205122cb5a`, so the war resumes across it.
 - **A mobile playtest** on a real device. Frame rate cannot be measured here at
   all — headless renders in software (ruling 2026-08-23).
 - **PLAYTEST A5** — the one open *number* in docs/02: whether a 4 km

@@ -282,10 +282,13 @@ who may sit down, the guard decides how much any socket may ask of the process.
 
 ## Other clients mirror this wire
 
-Two native clients speak this protocol field for field: the Unity port
+Three native clients speak this protocol field for field: the Unity port
 (`unityworks/games/carrierdominion/Assets/Scripts/Codec.cs`, checked against
-captured traffic) and the fastengine port (`fastengine/games/carrierdominion/`,
-fixture tests). Their requests and our answers live in
+captured traffic), the fastengine port (`fastengine/games/carrierdominion/`,
+fixture tests) and the bj-engine port (Rust, `bj-engine/games/carrierdominion/`,
+fixtures captured from this server in-process and pinned to a game commit by
+`GAME_COMMIT` in its `smoke.env`). bj-engine also copies the browser's
+rendering, so a browser bug it finds is a bug in both (CB27). Their requests and our answers live in
 `unityworks/specs/server_change_requests.md`: requests per item, and a row
 per landed slice under "CarrierDominion status" saying what they must
 follow. So:
@@ -317,7 +320,9 @@ under the start menu and the war room. For a folder that line lists each
 build with its platform (from the `-win64`/`-linux64` suffix) and size, and
 says how to start it, because the zips carry no readme: unzip and run
 `carrierdominion.exe` (unsigned; SmartScreen: More info, then Run anyway) or
-`carrierdominion.x86_64` (a fastengine `-fe-` build: `carrierdominion`), and
+`carrierdominion.x86_64` (a fastengine `-fe-` or bj-engine `-bj-` build:
+`carrierdominion`; bj-engine's `-win64-dlss` zip reads "Windows, NVIDIA RTX
+(DLSS)"), and
 F11 or Alt+Enter for full screen. For a URL it is one link. It is hidden on touch screens,
 because the builds are Windows and Linux and a phone that followed an invite
 belongs in the browser game.

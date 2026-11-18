@@ -67,7 +67,8 @@ dev-log honest. This is the procedure.
     7; `isRefit()` now names the four. Ranges over ids are a promise that
     ids stay adjacent, and they never do.
 
-12. **The wire is mirrored by two other clients** (Unity, fastengine; see
+12. **The wire is mirrored by three other clients** (Unity, fastengine,
+    bj-engine; see
     docs/03 "Other clients mirror this wire"). New view or message fields
     go at the END of their object; renaming, removing or reordering one
     bumps `PROTOCOL`. Every wire change, message timing included, is listed

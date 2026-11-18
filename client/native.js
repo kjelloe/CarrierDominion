@@ -11,15 +11,20 @@ function describeSize(bytes) {
 }
 
 // The zips carry no readme, so the line is a player's only instructions
-// (C11). The target is the name's suffix; the executables are Unity's names,
-// except a fastengine build's Linux binary, which has no extension.
+// (C11). The target is the name's suffix. The executables are Unity's names;
+// the fastengine (`-fe-`) and bj-engine (`-bj-`) builds name their Linux
+// binary without an extension. bj-engine also ships a DLSS build of the
+// Windows one, which is first in the list so the plain suffix does not
+// claim it.
+const ENGINE_BUILD = /-(fe|bj)-/i;
 const NATIVE_TARGETS = [
+  { suffix: /-win64-dlss\.zip$/i, platform: 'start.nativeWindowsDlss', note: 'start.nativeRunWindows', exe: () => 'carrierdominion.exe' },
   { suffix: /-win64\.zip$/i, platform: 'start.nativeWindows', note: 'start.nativeRunWindows', exe: () => 'carrierdominion.exe' },
   {
     suffix: /-linux64\.zip$/i,
     platform: 'start.nativeLinux',
     note: 'start.nativeRun',
-    exe: (name) => (/-fe-/i.test(name) ? 'carrierdominion' : 'carrierdominion.x86_64'),
+    exe: (name) => (ENGINE_BUILD.test(name) ? 'carrierdominion' : 'carrierdominion.x86_64'),
   },
 ];
 

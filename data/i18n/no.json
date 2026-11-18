@@ -155,6 +155,7 @@
   "start.native": "skrivebordsutgave:",
   "start.nativeLink": "last ned",
   "start.nativeWindows": "Windows",
+  "start.nativeWindowsDlss": "Windows, NVIDIA RTX (DLSS)",
   "start.nativeLinux": "Linux",
   "start.nativeRun": "Pakk ut og kjør {exe}.",
   "start.nativeRunWindows": "Pakk ut og kjør {exe}. Utgaven er ikke signert: om SmartScreen advarer, klikk Mer info, så Kjør likevel.",

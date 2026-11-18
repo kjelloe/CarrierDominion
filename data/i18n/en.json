@@ -155,6 +155,7 @@
   "start.native": "native client:",
   "start.nativeLink": "download",
   "start.nativeWindows": "Windows",
+  "start.nativeWindowsDlss": "Windows, NVIDIA RTX (DLSS)",
   "start.nativeLinux": "Linux",
   "start.nativeRun": "Unzip and run {exe}.",
   "start.nativeRunWindows": "Unzip and run {exe}. The build is unsigned: if SmartScreen warns, click More info, then Run anyway.",
