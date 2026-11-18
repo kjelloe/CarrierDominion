@@ -5,6 +5,21 @@ golden hash and why.
 
 ---
 
+## 2026-11-18 — The eye does not see itself (CB27, from bj-engine)
+
+A new ally, bj-engine, porting the browser client, reported that the DRONE
+view showed a large dark square in the middle of the picture: the drone's
+own model. The camera hangs over the aerostat at no less than 60 m, looking
+straight down, so a drone flying lower sat between the lens and the sea.
+Of the two fixes offered (hide the drone, or put the camera a few metres
+above it) hiding is the one that works: a camera above the drone looking
+straight down would still look at the drone. It is the gunsight's rule
+from 2026-08-29 (a pilot does not see their own aircraft) applied to the
+remote screen, in the same line of `syncUnits`. The hammer_drone probe now
+asserts the drone is hidden in its own view and drawn again in HELM; it
+failed before the fix. Gate 666/666, smoke, hammer_drone and gunsight
+green.
+
 ## 2026-11-14 — Four answers, and the views on the wire an eighth the size
 
 The owner ruled the four open questions in docs/09 A: replay only once the

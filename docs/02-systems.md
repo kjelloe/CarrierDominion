@@ -355,7 +355,8 @@ that climbs to 600 m and drifts down over two minutes; by the kind rule it
 is AIR, so lasers and seekers can take the eye out, and it is exempt from
 the telemetry leash because it does not ride the relay, it *is* one. While
 it is up the **DRONE tab** stands on the camera row: straight down from
-the aerostat, north up, crosshair cursor, the console reading rounds and
+the aerostat, north up, the aerostat itself not drawn (it hung under the
+lens as a dark square, CB27), crosshair cursor, the console reading rounds and
 endurance — and **a click is the trigger**: a Hammerhead at the point,
 refused if the mark is outside the drone's 4 km picture or the missile's
 8 km reach, sixty damage in a sixty-metre blast, forty ordnance a round,

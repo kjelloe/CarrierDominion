@@ -388,7 +388,14 @@ function syncUnits(view3d, view) {
     // spike, which works for a ship you are standing ON. For a craft you ARE,
     // the honest answer is that you do not draw it: a pilot does not see their
     // own aircraft. It comes straight back the moment the view changes.
-    group.visible = !(view3d.gunsight === true && unit.id === view3d.followUnitId);
+    //
+    // The DRONE view is the same case from above (CB27, found by bj-engine):
+    // the camera hangs over the aerostat at no less than 60 m, so a drone
+    // flying lower was drawn between the lens and the sea as a dark square.
+    // The remote screen shows what the eye sees, not the eye.
+    const looking = (view3d.gunsight === true && unit.id === view3d.followUnitId)
+      || (view3d.droneView === true && unit.id === view3d.droneUnitId);
+    group.visible = !looking;
   }
   for (const id of Object.keys(view3d.units)) {
     if (seen[id] === undefined) {

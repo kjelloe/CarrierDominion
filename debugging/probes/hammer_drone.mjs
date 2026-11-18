@@ -53,6 +53,9 @@ const droneView = await page.evaluate(() => ({
   info: document.getElementById('drone-info').classList.contains('on'),
   infoText: document.getElementById('drone-info').textContent,
   rounds: window.__lastView.carriers.find((c) => c.team === window.__lastView.team).hammerRounds,
+  // CB27: the lens must not see the aerostat it hangs from. Below the 60 m
+  // floor the camera sat above the drone, and its body filled the picture.
+  eyeDrawn: window.__scene3d.units[window.__scene3d.droneUnitId]?.visible !== false,
 }));
 // The trigger: a click just off centre - under the eye, inside its picture.
 await page.mouse.click(640, 300);
@@ -64,9 +67,20 @@ const fired = await page.evaluate(() => ({
   shots: window.__lastView.shots.length,
 }));
 await page.screenshot({ path: join(SHOTS, 'hammer-drone.png') });
+// And it comes back the moment the view changes.
+await page.click('.cam-tab:has-text("HELM")');
+await page.waitForTimeout(300);
+const eyeBack = await page.evaluate(
+  () => window.__scene3d.units[window.__scene3d.droneUnitId]?.visible === true,
+);
 console.log(`tab hidden before ${tabHiddenBefore}; drone view ${droneView.view},`
   + ` console ${droneView.info} ("${droneView.infoText}"), rounds ${droneView.rounds}`);
 console.log(`after the click: rounds ${fired.rounds}, shots in the air ${fired.shots}`);
+console.log(`the drone's own body: drawn in its view ${droneView.eyeDrawn}, back in HELM ${eyeBack}`);
+if (droneView.eyeDrawn || !eyeBack) {
+  console.log('FAIL: CB27 - the DRONE view draws the drone itself, or HELM lost it');
+  failed = true;
+}
 
 const ok = !failed
   && tabHiddenBefore && droneView.view && droneView.info
