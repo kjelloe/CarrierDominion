@@ -151,6 +151,14 @@ Look for these shapes first — every one produced a real bug:
   written at a different time. When commands form a family, list them and
   check the predicate is the same across all of them, because the odd one out
   reads as a rule to whoever hits it.
+- **A cost that grows with the war and is paid at boot.** Resume replayed
+  the whole command log before the port opened. On the hosted box the war
+  had run to tick 17 million: four hours of 502s, which a deploy reported
+  as "failed to connect". An empty abandoned war kept in the save made it
+  worse, because every restart paid again for a war nobody was in. Ask of
+  anything done at start-up what it costs at the largest tick a real
+  server will reach, not the fixture's 300 (2026-11-19; the state now rides
+  in the save).
 - **A check placed after the arithmetic it was meant to protect.** Every
   command that takes a point refuses one off the map, except
   `fire_hammerhead`, which measured its mark with `dist2D` first. Validation

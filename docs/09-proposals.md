@@ -192,14 +192,15 @@ here is forgotten.
 
 ## B. Decided, not yet done
 
-- **Keeping the box current — now urgent.** Live since 2026-09-27; read off
-  its public endpoints on 2026-11-19 it still runs `05156b0`, restarted
-  about 2026-11-15, and has resumed a war (`status: running`) with **no
-  players**. That is the stuck state of 2026-10-17: under `05156b0` the war
-  never gives its room back, so every newcomer is asked for a code. The
-  next `./ops/ssh-deploy.sh` from `dev_night` ships C12 (the room reopens 10
-  minutes after boot with nobody in it) and everything since; the rules
-  hash is still `5ee697205122cb5a`, so the war resumes across it.
+- **Keeping the box current — urgent.** On 2026-11-19 the box still ran
+  `05156b0`, resumed on an empty war at tick 17 million (each restart
+  replays it for about four hours before the port opens). The deploy needs
+  four things, in order: move that save aside on the box (it predates the
+  state-carrying saves, so even the new code would replay it, in the
+  background, for hours); pull `dev_night` on the deploy machine; widen the
+  deploy script's zip pattern to `[Cc]arrier[Dd]ominion*.zip` (bj-engine's
+  zips are lower-case; that script is in game-ops); and put the three
+  ports' zips in `native/`. The rules hash is still `5ee697205122cb5a`.
 - **A mobile playtest** on a real device. Frame rate cannot be measured here at
   all — headless renders in software (ruling 2026-08-23).
 - **PLAYTEST A5** — the one open *number* in docs/02: whether a 4 km

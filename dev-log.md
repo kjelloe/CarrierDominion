@@ -5,6 +5,19 @@ golden hash and why.
 
 ---
 
+## 2026-11-19 — Review after the resume and selector work
+
+- The steps handed to the owner put about 450 MB of zips in `native/` inside
+  the repo; checked that `**/*.zip` keeps them out of git (it does), and
+  DEPLOYING says so beside `NATIVE_DOWNLOADS`, with the selector and the
+  case-insensitive name rule.
+- docs/09 lists the four deploy steps in the order that matters: move the
+  box's old log-only save aside first, or even the new code replays it for
+  hours in the background.
+- The engine-review skill gains the class the four-hour resume was: a cost
+  that grows with the war, paid at boot, judged at the fixture's 300 ticks
+  instead of the 17 million a real server reaches.
+
 ## 2026-11-19 — One engine at a time on the download line
 
 The owner asked how the bj-engine builds (Windows, Windows with DLSS, Linux)
