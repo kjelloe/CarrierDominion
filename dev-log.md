@@ -5,6 +5,49 @@ golden hash and why.
 
 ---
 
+## 2026-11-19 — Four hours to come back: the state rides in the save
+
+The deploy of 2026-11-19 looked like a failure ("failed to connect to port
+8135", nginx 502). It was the resume. The box had resumed an empty war at
+every restart, the war had reached tick 17 million, and resume replays the
+whole command log before the port opens, at about 1,000 ticks a second here:
+roughly four hours. Two of my own decisions made it worse. On 2026-11-08 I
+kept an abandoned war in the save file so `?mode=replay` could show it, and
+called the cost "a resumed empty war reopens itself ten minutes later
+anyway"; that ignored the replay time entirely. And nothing told anyone the
+server was busy rather than dead.
+
+The owner ruled all three fixes (keep the last 100 wars):
+
+1. **A war given up is closed.** `reopen()` (abandoned, or reopened by the
+   host) marks the save `closed` and copies it into an archive that keeps
+   the newest 100. A restart starts a fresh room. The closed save stays at
+   its path, so the replay viewer still has it. The archive lives beside
+   the save (`state/wars/` on the box), except that the default
+   `data/autosave.json` would put it in the served and deployed `data/`
+   folder, so there it is `saves/wars/` (already gitignored).
+2. **The port opens before a long replay.** A log-only save is replayed in a
+   worker thread; `/healthz` says `resuming`, sockets are refused with a
+   reason, saves are suppressed (they would write the placeholder war over
+   the real one; I wrote that bug on the first pass, in `stop()`, and caught
+   it reading the diff), and strict `RESUME=1` exits if the replay is refused.
+3. **The save carries the state.** `server/save.js` adds `state` to every
+   server save, and `checkpointGame` resumes from it when it hashes to the
+   saved hash, sits at the saved tick and was made under the same folded
+   rules. Otherwise the log is replayed as before. The trade, written into
+   docs/03: a state check cannot notice a CODE change, only a rules change.
+   The full-replay `resumeGame` is unchanged, and its tamper test still
+   holds. Solo saves (shared/savefile.js, localStorage) do not carry state.
+
+Six tests: instant resume from state; a damaged state falling back to the
+log while `/healthz` says resuming; a bad log refused after the replay; a
+stop mid-replay leaving the save intact; a closed save not resumed; the
+archive's pruning; plus the abandonment test now checks close and archive.
+Gate 672/672. The smoke gate failed twice in nine runs, both in the LAN half
+waiting on the HUD, with the machine at load 54 on 20 cores; it passed 3/3
+before the change and 5/5 after once the load eased, and nothing on its path
+touches resume. Recorded as load, not as fixed.
+
 ## 2026-11-19 — A third client, its zips on our download line, and the box stuck again
 
 The review pass after CB27.

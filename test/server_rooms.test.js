@@ -5,7 +5,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { WebSocket } from 'ws';
@@ -13,7 +13,7 @@ import { WebSocket } from 'ws';
 import { ABANDON_MS, createApp } from '../server/app.js';
 import { loadRules } from '../server/rules.js';
 import { applyLobby } from '../server/lobby.js';
-import { saveGame } from '../server/save.js';
+import { readSave, saveGame } from '../server/save.js';
 import { createGame, stepGame } from '../engine/game.js';
 
 const rules = loadRules();
@@ -111,6 +111,10 @@ test('a war everybody left is saved, and its room opens to the next stranger', a
       clock.now += 1;
       await until(() => app.lobby.status === 'lobby', 'the room reopened');
       assert.ok(existsSync(path), 'the abandoned war was not saved');
+      // Closed, so a restart opens a fresh room instead of replaying a war
+      // nobody is in (the hosted box spent four hours on one), and archived.
+      assert.equal(readSave(path).closed, 1, 'the abandoned save would be resumed at the next restart');
+      assert.equal(readdirSync(join(dir, 'wars')).length, 1, 'the abandoned war was not archived');
       assert.equal(app.holder.held.length, 0, 'the old war\'s tokens still open seats');
       assert.ok(notes.some((line) => line.startsWith('war abandoned - room reopened')));
       assert.equal(app.health().abandoned, 0);

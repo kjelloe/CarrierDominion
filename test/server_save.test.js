@@ -288,3 +288,110 @@ test('the record of a war still being fought is not served', async () => {
     rmSync(path, { force: true });
   }
 });
+
+// --- the state rides in the save, so resume does not cost the war's length ---
+// The hosted war reached tick 17 million; replaying it took about four hours
+// with the port shut (2026-11-19). The save now carries the state, the log
+// stays as the fallback, and a log-only save is replayed off the main thread.
+
+function longerGame(ticks) {
+  const game = playedGame();
+  for (let i = 0; i < ticks; i++) stepGame(game);
+  return game;
+}
+
+test('a save carries its state, so a war of any length comes back at once', async () => {
+  const game = playedGame();
+  const saved = JSON.parse(JSON.stringify(saveGame(game, SEED, 0)));
+  assert.equal(typeof saved.state, 'object', 'the save carries no state');
+  const app = createApp({ seed: 999, rules: loadRules(), resume: saved });
+  try {
+    assert.equal(app.resumed, 1, app.resumeProblem);
+    assert.equal(app.resuming, 0, 'a save with a good state was replayed anyway');
+    assert.equal(hashState(app.game.state), hashState(game.state));
+    assert.equal(app.game.commandLog.length, game.commandLog.length, 'the log was dropped on the way');
+  } finally {
+    await app.close();
+  }
+});
+
+test('a state that does not check out falls back to the log, replayed while the port answers', async () => {
+  const game = longerGame(1500);
+  const saved = JSON.parse(JSON.stringify(saveGame(game, SEED, 0)));
+  saved.state.carriers[0].x += 256;
+  const app = createApp({ seed: 999, rules: loadRules(), resume: saved });
+  const address = await app.listen(0, '127.0.0.1');
+  try {
+    const health = await (await fetch(`http://127.0.0.1:${address.port}/healthz`)).json();
+    assert.equal(health.status, 'resuming', 'the port was not answering during the replay');
+    assert.equal(await app.resumeDone, 1, app.resumeProblem);
+    assert.equal(hashState(app.game.state), hashState(game.state), 'the log did not bring back the war');
+    assert.equal(app.health().status, 'running');
+  } finally {
+    await app.close();
+  }
+});
+
+test('a log that does not reach its hash is refused after the replay, and a fresh war starts', async () => {
+  const game = playedGame();
+  const saved = JSON.parse(JSON.stringify(saveGame(game, SEED, 0)));
+  delete saved.state;
+  saved.commandLog[0].throttle = 100;
+  const app = createApp({ seed: 999, rules: loadRules(), resume: saved });
+  await app.listen(0, '127.0.0.1');
+  try {
+    assert.equal(await app.resumeDone, 0);
+    assert.match(app.resumeProblem, /does not reproduce/);
+    assert.equal(app.seed, 999, 'the refused war\'s seed stayed');
+    assert.equal(app.game.state.tick < 100, true);
+  } finally {
+    await app.close();
+  }
+});
+
+test('stopping during the replay leaves the save on disk as it was', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cd-save-'));
+  const path = join(dir, 'autosave.json');
+  try {
+    const game = longerGame(1500);
+    const saved = saveGame(game, SEED, 0);
+    delete saved.state;
+    writeSave(path, saved);
+    const app = createApp({ seed: 999, rules: loadRules(), resume: readSave(path), savePath: path });
+    await app.listen(0, '127.0.0.1');
+    await app.close();
+    const after = readSave(path);
+    assert.equal(after.tick, game.state.tick, 'the placeholder war was written over the one being restored');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a war given up is not resumed: its save is closed', async () => {
+  const saved = JSON.parse(JSON.stringify(saveGame(playedGame(), SEED, 0)));
+  saved.closed = 1;
+  const app = createApp({ seed: 999, rules: loadRules(), lobby: true, bootId: 'closed', resume: saved });
+  try {
+    assert.equal(app.resumed, 0);
+    assert.equal(app.resuming, 0);
+    assert.equal(app.closedSave, 1);
+    assert.equal(app.resumeProblem, '', 'a closed save is not a failure');
+    assert.equal(app.lobby.status, 'lobby');
+  } finally {
+    await app.close();
+  }
+});
+
+test('the archive keeps the newest wars and lets the oldest go', async () => {
+  const { archiveSave } = await import('../server/save.js');
+  const { readdirSync } = await import('node:fs');
+  const dir = mkdtempSync(join(tmpdir(), 'cd-wars-'));
+  try {
+    for (let i = 0; i < 5; i++) archiveSave({ seed: 1, tick: i }, dir, 3, `2026-11-19T00-00-0${i}`);
+    assert.deepEqual(readdirSync(dir).sort(), [
+      '2026-11-19T00-00-02-s1-t2.json', '2026-11-19T00-00-03-s1-t3.json', '2026-11-19T00-00-04-s1-t4.json',
+    ]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

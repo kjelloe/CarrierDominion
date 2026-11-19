@@ -10,7 +10,8 @@
 // "the server" and "a table" two different things.
 
 import { randomBytes } from 'node:crypto';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
+import { Worker } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 
 import { createGame, enqueueCommand, stepGame, latestSnapshot } from '../engine/game.js';
@@ -39,7 +40,9 @@ import { createHolder, expired, findHold, holdSeat, isHeld, reclaim, release } f
 import { admit, banAddress, createDoorman } from './doorman.js';
 import { clientAddress, createMeter, overLimit } from './guard.js';
 import { nativeSource } from './native.js';
-import { resumeGame, saveGame, saveLogOnly, writeSave } from './save.js';
+import {
+  archiveSave, checkpointGame, gameFromState, readSave, readableSave, saveGame, saveLogOnly, writeSave,
+} from './save.js';
 import { createWatch, watchTick } from './watch.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -70,6 +73,21 @@ function paramFrom(req, name) {
 // a private room is closed. Observers do not count; they are not sailing.
 const ABANDON_MS = 600000;
 
+// How many wars that were given up are kept beside the save (owner,
+// 2026-11-19). Each is the full save, log and state, so this is the disk's
+// whole budget for history.
+const ARCHIVE_KEEP = 100;
+
+// Where given-up wars go: beside the save, except when the save is inside the
+// served data/ folder (the default, data/autosave.json), where an archive
+// would be served to the world and shipped by the deploy's data/ allowlist.
+// There it is saves/wars/, which is neither served nor deployed.
+function archiveDirFor(savePath) {
+  const data = resolve(ROOT, 'data');
+  const where = resolve(savePath);
+  return where.startsWith(data + sep) ? join(ROOT, 'saves', 'wars') : join(dirname(where), 'wars');
+}
+
 // One table: a war, its room, its clock and its door. `createApp` puts one or
 // more of these behind a single HTTP server.
 //
@@ -82,24 +100,38 @@ function createRoom(options) {
 
   // A save on the table takes precedence over everything: a resumed war is
   // already running, so there is no lobby, and the seed comes from the save.
-  // A save that does not replay to its own hash is REFUSED - the reason is
-  // kept for /healthz and the log - and a fresh war starts instead, because
+  // Three ways back, fastest first (2026-11-19):
+  // - the save carries a state that checks out: resumed at once;
+  // - it carries only a log, or a state that does not check out: replayed in
+  //   a worker after the port opens, /healthz saying "resuming" meanwhile;
+  // - it is CLOSED (a war given up and archived): not resumed at all.
+  // A replay that does not reach its own hash is REFUSED - the reason is kept
+  // for /healthz and the log - and a fresh war starts instead, because
   // silently resuming a subtly different war is worse than admitting it.
   let resumedGame = -1;
   let resumeProblem = '';
+  let pendingReplay = 0;
+  let closedSave = 0;
   let speed = isSpeed(options.speed) ? options.speed : 1;
   if (options.resume !== undefined && options.resume !== 0) {
+    const saved = options.resume;
     const problem = { reason: '' };
-    resumedGame = resumeGame(options.resume, rules, problem);
-    if (resumedGame === -1) resumeProblem = problem.reason;
+    if (saved.closed === 1) closedSave = 1;
     else {
-      seed = options.resume.seed;
+      resumedGame = checkpointGame(saved, rules, problem);
+      if (resumedGame === -1 && readableSave(saved) === 1) pendingReplay = saved;
+      else if (resumedGame === -1) resumeProblem = problem.reason;
+    }
+    if (resumedGame !== -1 || pendingReplay !== 0) {
+      seed = saved.seed;
       // The war comes back at the speed its table chose, not at the process
       // environment's default.
-      const saved = options.resume.options;
-      if (saved !== 0 && saved !== undefined && isSpeed(saved.speed)) speed = saved.speed;
+      if (saved.options !== 0 && saved.options !== undefined && isSpeed(saved.options.speed)) {
+        speed = saved.options.speed;
+      }
     }
   }
+  const resuming = resumedGame !== -1 || pendingReplay !== 0;
 
   const app = {
     rules: rules,
@@ -108,12 +140,19 @@ function createRoom(options) {
     game: resumedGame === -1 ? createGame(seed, rules) : resumedGame,
     resumed: resumedGame === -1 ? 0 : 1,
     resumeProblem: resumeProblem,
+    // A log being replayed in the background: no seats, no ticks, no saves
+    // until it is done. `resumeDone` settles either way.
+    resuming: pendingReplay === 0 ? 0 : 1,
+    resumeDone: Promise.resolve(),
+    replayWorker: 0,
+    // The save on disk was a war given up: started fresh instead.
+    closedSave: closedSave,
     // Where the war is written, and when it last was. 0 means never write.
     savePath: options.savePath ?? 0,
     lastSaveMs: 0,
-    savedOptions: options.resume !== undefined && options.resume !== 0 && resumedGame !== -1
-      ? options.resume.options
-      : 0,
+    savedOptions: resuming ? options.resume.options : 0,
+    archiveDir: options.archiveDir ?? (options.savePath === undefined || options.savePath === 0
+      ? 0 : archiveDirFor(options.savePath)),
     seats: [],
     // Why the clock stopped, if it did. '' while all is well; /healthz
     // reports it so a watching operator sees a halt rather than a silence.
@@ -191,7 +230,7 @@ function createRoom(options) {
   // The room also inherits the options the war was actually started with, so
   // when the table takes the room back after finishing it, the dials read
   // what they were playing rather than the server's defaults.
-  if (resumedGame !== -1 && app.lobby !== 0) {
+  if (resuming && app.lobby !== 0) {
     app.lobby.status = 'running';
     if (app.savedOptions !== 0 && app.savedOptions !== undefined) {
       const saved = app.savedOptions;
@@ -219,7 +258,9 @@ function createRoom(options) {
   // Write the war to disk: seed + command log + the options it sailed under.
   // Nothing to save while the room is still arguing about what to fight.
   app.saveNow = function saveNow() {
-    if (app.savePath === 0 || inLobby()) return 0;
+    // While a log is replayed, the game in hand is a placeholder: saving it
+    // would write over the very war being brought back.
+    if (app.savePath === 0 || inLobby() || app.resuming === 1) return 0;
     // `saveGame` is inside the try as well as the write. It walks the state,
     // and the state is exactly what may be broken when this matters most -
     // the halt path calls saveNow precisely because something threw. An
@@ -361,7 +402,7 @@ function createRoom(options) {
       watching: app.watch === 0 ? 0 : app.watch.findings.length,
       // A monitor watching only the tick would read a lobby as a hung server,
       // because a war that has not started does not tick. Say which it is.
-      status: app.lobby === 0 ? 'running' : app.lobby.status,
+      status: app.resuming === 1 ? 'resuming' : (app.lobby === 0 ? 'running' : app.lobby.status),
       resumed: app.resumed,
       resumeProblem: app.resumeProblem,
       // NOT the code itself. /healthz is reachable from the internet by the
@@ -392,6 +433,11 @@ function createRoom(options) {
 
   // A socket the front has routed to this room.
   app.accept = function accept(socket, req) {
+    if (app.resuming === 1) {
+      send(socket, { type: 'rejected', reason: 'the war is being restored - try again in a minute' });
+      socket.close();
+      return;
+    }
     // A client built against another protocol is told so and turned away
     // before it is seated or spends a token: decoding a war it does not
     // understand would fail somewhere far less readable than this.
@@ -698,6 +744,7 @@ function createRoom(options) {
   // written, and if the state is what broke, saving it only fails louder.
   function reopen(save) {
     if (save) app.saveNow();
+    closeSave();
     app.lobby.status = 'lobby';
     clearVotes(app.seats);
     for (const other of app.seats) {
@@ -725,6 +772,27 @@ function createRoom(options) {
     broadcastVote();
   }
 
+  // The war on disk is over for this server: marked closed, so a restart
+  // opens a fresh room instead of replaying it (the hosted box spent four
+  // hours bringing back a war nobody was in), and archived. It stays at the
+  // save path, so ?mode=replay can still show it.
+  function closeSave() {
+    if (app.savePath === 0 || app.archiveDir === 0) return;
+    let saved;
+    try {
+      saved = readSave(app.savePath);
+    } catch (error) {
+      return;
+    }
+    saved.closed = 1;
+    try {
+      writeSave(app.savePath, saved);
+      archiveSave(saved, app.archiveDir, ARCHIVE_KEEP, new Date(nowMs()).toISOString().replace(/[:.]/g, '-'));
+    } catch (error) {
+      app.logFn(`closing the save failed: ${error.message}\n`);
+    }
+  }
+
   // Nobody has sat in a player seat for the abandon window (C12, C13). Said
   // by the return value: 'reap' asks the front to close a private room; the
   // shared room's war is saved and its room reopened here, so the next
@@ -735,7 +803,7 @@ function createRoom(options) {
   // and is the same stuck server once they have gone. The fault belongs to
   // that war's state; the next war is a new game, so the clock restarts.
   app.checkAbandoned = function checkAbandoned() {
-    if (app.abandonMs <= 0) return '';
+    if (app.abandonMs <= 0 || app.resuming === 1) return '';
     if (app.emptySinceMs === -1 || nowMs() - app.emptySinceMs < app.abandonMs) return '';
     if (app.privateRoom === 1) return 'reap';
     if (app.lobby === 0 || app.lobby.status === 'lobby') return '';
@@ -866,7 +934,7 @@ function createRoom(options) {
     // each one re-running the failing tick and re-writing the save. The
     // callback has to refuse on its own account.
     if (app.halted !== '') return;
-    if (inLobby()) return;
+    if (inLobby() || app.resuming === 1) return;
     // The engine THROWS on purpose - `shared/fixed.js` raises RangeError from
     // assertExact, isqrt, divFixed and mulDiv, and the hashing walk raises on
     // a dirty state. Those are the exact faults the watchdog exists to catch,
@@ -917,10 +985,54 @@ function createRoom(options) {
 
   app.start = function start() {
     startClock(app.clock);
+    if (pendingReplay !== 0) replayInBackground(pendingReplay);
   };
 
+  // The log, replayed off the main thread so the port answers meanwhile.
+  function replayInBackground(saved) {
+    app.resumeDone = new Promise((done) => {
+      const worker = new Worker(new URL('./resume_worker.js', import.meta.url), {
+        workerData: { saved: saved, rules: rules },
+      });
+      app.replayWorker = worker;
+      const finish = (message) => {
+        app.replayWorker = 0;
+        if (app.resuming === 0) return;
+        app.resuming = 0;
+        if (message.state !== undefined) {
+          app.game = gameFromState(message.state, saved.commandLog);
+          app.resumed = 1;
+          app.emptySinceMs = nowMs();
+          app.noteFn(`resumed the saved war at tick ${app.game.state.tick}\n`);
+        } else {
+          refuseResume(message.reason);
+        }
+        done(app.resumed);
+      };
+      worker.once('message', finish);
+      worker.once('error', (error) => finish({ reason: `the replay failed: ${error.message}` }));
+    });
+  }
+
+  // The log did not bring the war back: a fresh one, as at a plain boot.
+  function refuseResume(reason) {
+    app.resumeProblem = reason;
+    app.seed = options.seed;
+    app.game = createGame(options.seed, rules);
+    app.savedOptions = 0;
+    if (app.lobby !== 0) app.lobby.status = 'lobby';
+    app.noteFn(`cannot resume: ${reason} - a fresh war instead\n`);
+  }
+
   // The last word on disk is the war as it stood when the room closed.
+  // Stopped mid-replay, the save on disk is still the war: `resuming` stays
+  // set, so saveNow below refuses to write the placeholder over it.
   app.stop = function stop() {
+    if (app.replayWorker !== 0) {
+      app.replayWorker.removeAllListeners();
+      app.replayWorker.terminate();
+      app.replayWorker = 0;
+    }
     stopClock(app.clock);
     app.saveNow();
     for (const seat of app.seats.slice()) seat.socket.terminate();
@@ -929,4 +1041,4 @@ function createRoom(options) {
   return app;
 }
 
-export { ABANDON_MS, PROTOCOL, ROOT, createRoom, paramFrom };
+export { ABANDON_MS, ARCHIVE_KEEP, PROTOCOL, ROOT, createRoom, paramFrom };

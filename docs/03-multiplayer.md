@@ -352,20 +352,39 @@ it does not.
 
 ## Saving and resuming
 
-There is no save format to design, so none was designed: a war IS its seed
-plus its ordered command log (docs/01), and that is what `data/autosave.json`
-holds — plus the lobby options it sailed under, the tick it had reached, and
-the state hash it had. The server writes it every thirty seconds and on
-shutdown; `RESUME=1` replays the log through the same reducer and **refuses**
-if the result does not hash to what was saved — a save made under different
-rules or different code does not limp back as a subtly different war.
+A war IS its seed plus its ordered command log (docs/01), and that is what
+`data/autosave.json` holds — plus the lobby options it sailed under, the tick
+it had reached, the state hash it had, and, since 2026-11-19, **the state
+itself**. The server writes it every thirty seconds and on shutdown.
 
-Only the shared room is written; a private room (`?room=new`) never is. A war
-given up as abandoned is saved one last time and left in the file, so a
-restart with `RESUME=auto` brings it back, empty, and it reopens its room
-`ABANDON_MS` after boot unless somebody comes back for it. (Moving the file
-aside was considered and dropped: `?mode=replay` reads it to show the last
-war.)
+**Coming back** (`RESUME=1` strict, `RESUME=auto` the service setting):
+
+- **The state, if it checks out: at once.** It must hash to the saved hash,
+  sit at the saved tick, and have been made under the ruleset these data
+  files fold from the saved options. The hosted war had reached tick 17
+  million, and replaying its log took about four hours with the port shut
+  and nginx answering 502; this is why the state is in the save. What it
+  gives up: a state check cannot notice that the CODE changed, only the
+  rules. A deploy that changes how the war plays resumes the old state
+  under the new code.
+- **Otherwise the log, in the background.** A save from before 2026-11-19, or
+  one whose state does not check out, is replayed in a worker thread after
+  the port opens. Meanwhile `/healthz` says `"status":"resuming"` and a
+  socket is told `the war is being restored - try again in a minute`. The
+  replay **refuses** if it does not reach the saved hash, and a fresh war
+  starts instead (`RESUME=1` exits). Stopping the server mid-replay leaves
+  the save as it was.
+- **Not at all, if the war was given up.** A war abandoned (C12) or reopened
+  by its host is closed: its save is marked `closed`, and a copy goes to an
+  archive that keeps the last 100 (owner, 2026-11-19). A restart then opens
+  a fresh room. The archive sits beside the save (`<dir>/wars/`), except
+  for the default `data/autosave.json`, where it is `saves/wars/`: neither
+  served nor in the deploy's allowlist. The closed save stays at its path,
+  so `?mode=replay` still shows the last war.
+
+Only the shared room is written; a private room (`?room=new`) never is. The
+browser's solo saves (localStorage) carry no state: solo wars are short and
+storage is small.
 
 Seats do not survive the restart (tokens are per-process); players rejoin and
 claim their teams again. The AI keeps any seat the log says it holds, because

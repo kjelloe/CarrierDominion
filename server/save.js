@@ -12,11 +12,13 @@
 // the same path a fresh war takes, and the hash check catches a data file
 // that moved underneath the save.
 
-import { readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import {
-  SAVE_VERSION, gameFromState, readableSave, replayLog, saveGame, saveLogOnly,
+  SAVE_VERSION, gameFromState, readableSave, replayLog, saveGame as saveLog, saveLogOnly,
 } from '../shared/savefile.js';
+import { hashState } from '../shared/statehash.js';
 import { applyLobby } from './lobby.js';
 
 // The FORMAT and the REPLAY moved to shared/savefile.js on 2026-08-30, because
@@ -46,6 +48,58 @@ function resumeGame(saved, rules, problem) {
   return gameFromState(state, saved.commandLog);
 }
 
+// The server's save is the shared one plus the STATE itself (2026-11-19).
+// Replaying the log is exact but linear in the war's length: the hosted war
+// had reached tick 17 million, which is about four hours of replay before the
+// port opened. The state lets a resume be instant; the log stays, for the
+// replay viewer and as the fallback. Solo saves (shared/savefile.js) do not
+// carry it: they live in localStorage, and solo wars are short.
+function saveGame(game, seed, options) {
+  return { ...saveLog(game, seed, options), state: game.state };
+}
+
+// The instant resume: the saved state, if it still is what it says. It must
+// hash to the saved hash, sit at the saved tick, and have been made under the
+// ruleset this server would fold from the saved options. Anything else is -1
+// with a reason, and the caller falls back to replaying the log, which is the
+// check that also catches a CODE change; this one cannot, and that is the
+// trade made for resuming in a second instead of hours.
+function checkpointGame(saved, rules, problem) {
+  if (readableSave(saved) !== 1) {
+    problem.reason = 'not a save file this build understands';
+    return -1;
+  }
+  if (saved.state === null || typeof saved.state !== 'object') {
+    problem.reason = 'the save carries no state';
+    return -1;
+  }
+  const chosen = saved.options === 0 || saved.options === undefined ? rules : applyLobby(rules, saved.options);
+  try {
+    if (saved.state.rulesHash !== hashState(chosen)) {
+      problem.reason = 'the rules have changed since it was saved';
+      return -1;
+    }
+    if (saved.state.tick !== saved.tick || hashState(saved.state) !== saved.stateHash) {
+      problem.reason = 'the saved state does not match its own hash';
+      return -1;
+    }
+  } catch (error) {
+    problem.reason = `the saved state is not a state: ${error.message}`;
+    return -1;
+  }
+  return gameFromState(saved.state, saved.commandLog);
+}
+
+// A war given up (abandoned, or reopened by its host) is kept, but no longer
+// resumed: a copy goes into `dir`, named so they sort oldest first, and only
+// the newest `keep` stay (owner, 2026-11-19: the last 100).
+function archiveSave(saved, dir, keep, stamp) {
+  mkdirSync(dir, { recursive: true });
+  writeSave(join(dir, `${stamp}-s${saved.seed}-t${saved.tick}.json`), saved);
+  const kept = readdirSync(dir).filter((name) => name.endsWith('.json')).sort();
+  for (const name of kept.slice(0, Math.max(0, kept.length - keep))) unlinkSync(join(dir, name));
+}
+
 // Write-then-rename, so a crash mid-write leaves the previous save intact
 // rather than half a JSON file.
 function writeSave(path, saved) {
@@ -58,5 +112,6 @@ function readSave(path) {
 }
 
 export {
-  SAVE_VERSION, saveGame, saveLogOnly, replayWar, resumeGame, writeSave, readSave,
+  SAVE_VERSION, archiveSave, checkpointGame, saveGame, saveLogOnly, readableSave, replayWar, resumeGame,
+  writeSave, readSave, gameFromState,
 };

@@ -78,7 +78,9 @@ const app = createApp({
   compress: (process.env.COMPRESS ?? '1') !== '0',
 });
 
-if (resume !== 0 && app.resumed === 0) {
+if (app.closedSave === 1) {
+  process.stdout.write(`The saved war in ${SAVE} was given up; a fresh war room instead.\n`);
+} else if (resume !== 0 && app.resumed === 0 && app.resuming === 0) {
   process.stderr.write(`cannot resume: ${app.resumeProblem}\n`);
   if (STRICT_RESUME) process.exit(1);
   process.stderr.write('starting a fresh war instead (RESUME=auto).\n');
@@ -88,6 +90,16 @@ app.listen(PORT, HOST).then(async () => {
   process.stdout.write(`Carrier Dominion on http://${HOST}:${PORT}  seed ${app.seed}  speed x${SPEED}\n`);
   if (app.resumed === 1) {
     process.stdout.write(`Resumed the saved war at tick ${app.game.state.tick}.\n`);
+  }
+  // A save with only a log is replayed in the background; the port is open
+  // and /healthz says "resuming" until it is done.
+  if (app.resuming === 1) {
+    process.stdout.write(`Replaying the saved war to tick ${resume.tick} in the background; /healthz says "resuming" until then.\n`);
+    app.resumeDone.then((ok) => {
+      if (ok === 1 || !STRICT_RESUME) return;
+      process.stderr.write(`cannot resume: ${app.resumeProblem}\n`);
+      app.close().then(() => process.exit(1));
+    });
   }
   if (LOBBY && app.lobby !== 0) {
     // Through app.joinCode(), the one reader: the code was deliberately taken
