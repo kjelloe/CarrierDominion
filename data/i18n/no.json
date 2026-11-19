@@ -160,7 +160,6 @@
   "start.nativeRun": "Pakk ut og kjør {exe}.",
   "start.nativeRunWindows": "Pakk ut og kjør {exe}. Utgaven er ikke signert: om SmartScreen advarer, klikk Mer info, så Kjør likevel.",
   "start.nativeKeys": "F11 eller Alt+Enter bytter til og fra full skjerm.",
-  "start.engineUnity": "Unity",
   "start.engineFe": "fastengine - lett",
   "start.engineBj": "bj-engine - høy grafikk",
   "panel.helm": "ROR",

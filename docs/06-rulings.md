@@ -791,6 +791,17 @@ bottom of the column.
   negotiated per socket, so a client that does not offer it is unaffected;
   `COMPRESS=0` turns it off.
 
+## Five answers (2026-11-19)
+
+- **§38.2, a kicked player is told**, in plain words (as built).
+- **The download line offers fastengine and bj-engine, not Unity**:
+  "fastengine - light" and "bj-engine - high graphics", fastengine first.
+- **The room defaults stand**: a war is given up after 10 minutes without a
+  player (`ABANDON_MS`), up to 4 private rooms (`MAX_ROOMS`), the last 100
+  given-up wars archived.
+- **No in-game bug reports yet** (G4 stays deferred).
+- **Merging `dev_night` into `main`**: the owner's, after playtesting.
+
 ## Standing constraints that follow from the rulings
 
 - Style is data; nothing cosmetic may touch the simulation — two players on

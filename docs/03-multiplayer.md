@@ -314,20 +314,23 @@ The socket URL's parameters, in one place:
 
 
 `server/native.js` (request C10 from the Unity port). `NATIVE_DOWNLOADS` names
-where the Unity builds are: a folder (absolute, or relative to the repo), a
+where the native builds are: a folder (absolute, or relative to the repo), a
 `file://` URL, or an `http(s)://` URL. The browser page shows one quiet line
-under the start menu and the war room. For a folder that line lists each
-build with its platform (from the `-win64`/`-linux64` suffix) and size, and
-says how to start it, because the zips carry no readme: unzip and run
-`carrierdominion.exe` (unsigned; SmartScreen: More info, then Run anyway) or
-`carrierdominion.x86_64` (a fastengine `-fe-` or bj-engine `-bj-` build:
-`carrierdominion`; bj-engine's `-win64-dlss` zip reads "Windows, NVIDIA RTX
-(DLSS)"), and
-F11 or Alt+Enter for full screen. For a URL it is one link. When the folder
-holds more than one port's builds (Unity's untagged names, fastengine's
-`-fe-`, bj-engine's `-bj-`), the line carries a selector and shows one
-engine at a time, Unity first; the choice is remembered in the browser.
-Nothing changes on the server: `/native.json` lists every file as before. It is hidden on touch screens,
+under the start menu and the war room.
+
+For a folder, the line offers the **fastengine** (`-fe-`) and **bj-engine**
+(`-bj-`) builds, read off each zip's name; **Unity's builds are not offered**
+(owner, 2026-11-19). Unity's zips carry no engine tag, so an untagged name is
+simply not listed by the page, although `/native.json` still lists every
+`CarrierDominion*` file in the folder. With both engines present, a selector
+("fastengine - light", "bj-engine - high graphics") shows one engine's builds
+at a time, fastengine first, and the choice is remembered in the browser.
+Each build is named by platform (from the `-win64`/`-linux64` suffix;
+bj-engine's `-win64-dlss` reads "Windows, NVIDIA RTX (DLSS)") and size, and
+the line says how to start it, because the zips carry no readme: unzip and
+run `carrierdominion.exe` (unsigned; SmartScreen: More info, then Run
+anyway) or `carrierdominion`, and F11 or Alt+Enter for full screen. For a
+URL it is one link. It is hidden on touch screens,
 because the builds are Windows and Linux and a phone that followed an invite
 belongs in the browser game.
 

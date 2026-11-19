@@ -20,13 +20,14 @@ const SHOTS = join(HERE, '..', 'shots');
 mkdirSync(SHOTS, { recursive: true });
 
 const folder = mkdtempSync(join(tmpdir(), 'cd-native-probe-'));
-writeFileSync(join(folder, 'CarrierDominion-20261011-abc-win64.zip'), Buffer.alloc(3 * 1048576, 1));
-writeFileSync(join(folder, 'CarrierDominion-20261011-abc-linux64.zip'), Buffer.alloc(2 * 1048576, 1));
+writeFileSync(join(folder, 'CarrierDominion-fe-20261011-abc-def-win64.zip'), Buffer.alloc(3 * 1048576, 1));
+writeFileSync(join(folder, 'CarrierDominion-fe-20261011-abc-def-linux64.zip'), Buffer.alloc(2 * 1048576, 1));
 writeFileSync(join(folder, 'boombrawl-20261011-def-win64.zip'), Buffer.alloc(1024, 1));
 
 const offering = createApp({ seed: 20260818, rules: loadRules(), lobby: true, bootId: 'native-probe', nativeDownloads: folder });
 const offered = await offering.listen(0, '127.0.0.1');
-// Three ports' builds in one folder: the line offers one engine at a time.
+// Three ports' builds in one folder: the line offers fastengine's and
+// bj-engine's, one engine at a time, and not Unity's (owner, 2026-11-19).
 const shelf = mkdtempSync(join(tmpdir(), 'cd-native-shelf-'));
 for (const name of [
   'CarrierDominion-2026.10.15-f953990-win64.zip', 'CarrierDominion-2026.10.15-f953990-linux64.zip',
@@ -80,7 +81,7 @@ check('the link downloads', download.status === 200 && download.bytes > 0,
   `${download.status}, ${download.bytes} bytes`);
 await menu.page.screenshot({ path: join(SHOTS, 'native-link-menu.png') });
 check('one engine, no selector', await menu.page.evaluate(() => document.getElementById('native-engine') === null),
-  'the Unity-only folder');
+  'a fastengine-only folder');
 await menu.context.close();
 
 const room = await lineOn(`http://127.0.0.1:${offered.port}/?mode=lan`);
@@ -105,9 +106,9 @@ const picked = await shelfLine.page.evaluate(() => {
   seen.text = document.getElementById('native-links').textContent;
   return seen;
 });
-check('three engines, one selector', picked.options.join(',') === 'unity,fe,bj',
+check('two engines, one selector, no Unity', picked.options.join(',') === 'fe,bj',
   `options ${picked.options.join(',')}`);
-check('the first engine on offer is Unity', picked.first.length === 2 && picked.first.every((h) => !/-(fe|bj)-/i.test(h)),
+check('the first engine on offer is fastengine', picked.first.length === 2 && picked.first.every((h) => /-fe-/i.test(h)),
   picked.first.join(', '));
 check('choosing bj-engine shows its three builds', picked.bj.length === 3 && picked.bj.every((h) => /-bj-/i.test(h))
   && /NVIDIA RTX/.test(picked.text), picked.bj.join(', '));

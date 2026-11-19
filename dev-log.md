@@ -5,6 +5,23 @@ golden hash and why.
 
 ---
 
+## 2026-11-19 — Five answers: no Unity on the download line
+
+The owner ruled the open list: §38.2 (a kicked player is told) stands; the
+download line drops Unity and offers "fastengine - light" and "bj-engine -
+high graphics"; the room defaults stand (10 minutes, 4 private rooms, 100
+archived wars); no in-game reporting yet; merging is the owner's, after
+playtesting. All five are in docs/06, and §38.2 is struck in docs/09.
+
+Dropping Unity is done in the browser, as the selector was: Unity's zips
+carry no engine tag, so an untagged name is no engine and no line. The
+server's `/native.json` still lists every `CarrierDominion*` file in the
+folder, so the place to keep Unity builds off the box is the deploy's
+`native/` folder. With Unity gone, every offered Linux binary is
+`carrierdominion`, and the `.x86_64` case went with it. The probe's
+single-engine folder is now fastengine's, and its shelf checks two options,
+fastengine first.
+
 ## 2026-11-19 — Review after the resume and selector work
 
 - The steps handed to the owner put about 450 MB of zips in `native/` inside

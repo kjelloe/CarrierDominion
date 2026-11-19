@@ -23,7 +23,7 @@ PORT=9000 SEED=42 ./run.sh
 RESUME=1 ./run.sh     # pick the saved war back up exactly where it stood
 RESUME=auto ./run.sh  # resume if the save still replays, fresh war if not
 SAVE=0 ./run.sh       # without the 30-second autosave (data/autosave.json)
-NATIVE_DOWNLOADS=../unityworks/dist ./run.sh   # offer the native (Unity) client on the menu
+NATIVE_DOWNLOADS=native ./run.sh   # offer the native clients (fastengine, bj-engine zips) on the menu
 ```
 
 | URL | What it does |

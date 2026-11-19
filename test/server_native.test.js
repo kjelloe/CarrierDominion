@@ -134,6 +134,9 @@ test('a web address is linked as it is, and nothing is served locally', async ()
   });
 });
 
+// Owner, 2026-11-19: the line offers fastengine's and bj-engine's builds and
+// drops Unity's. Unity's zips carry no engine tag, so an untagged name is
+// simply not listed, whatever its target.
 test('the page line names each build, its platform and how to start it, or one link to the page', () => {
   const t = (key, vars) => (vars === undefined ? key : `${key}:${vars.exe}`);
   assert.deepEqual(nativeLinks({ kind: 'none' }, t), []);
@@ -142,36 +145,29 @@ test('the page line names each build, its platform and how to start it, or one l
     [{ label: 'start.nativeLink', href: 'https://x/', note: '', engine: '' }]);
   const files = [
     { name: 'CarrierDominion-2026.10.14-abc1234-win64.zip', size: 88 * 1048576, url: '/native/a' },
-    { name: 'CarrierDominion-2026.10.14-abc1234-linux64.zip', size: 1536 * 1024, url: '/native/b' },
-    { name: 'CarrierDominion-fe-2026.10.14-def5678-abc1234-linux64.zip', size: 1000, url: '/native/c' },
-    { name: 'CarrierDominion-2026.10.14-abc1234-mac.zip', size: 1048576, url: '/native/d' },
-    { name: 'carrierdominion-bj-2026.11.18-bcff109-45880f3-linux64.zip', size: 1048576, url: '/native/e' },
+    { name: 'CarrierDominion-fe-2026.10.14-def5678-abc1234-win64.zip', size: 88 * 1048576, url: '/native/b' },
+    { name: 'CarrierDominion-fe-2026.10.14-def5678-abc1234-linux64.zip', size: 1536 * 1024, url: '/native/c' },
+    { name: 'CarrierDominion-fe-2026.10.14-def5678-abc1234-mac.zip', size: 1048576, url: '/native/d' },
+    { name: 'carrierdominion-bj-2026.11.18-bcff109-45880f3-linux64.zip', size: 1000, url: '/native/e' },
     { name: 'carrierdominion-bj-2026.11.18-bcff109-45880f3-win64-dlss.zip', size: 1048576, url: '/native/f' },
   ];
   assert.deepEqual(nativeLinks({ kind: 'folder', files: files }, t), [
     {
-      label: 'start.nativeWindows · CarrierDominion-2026.10.14-abc1234-win64.zip (88 MB)',
-      href: '/native/a',
-      engine: 'unity',
+      label: 'start.nativeWindows · CarrierDominion-fe-2026.10.14-def5678-abc1234-win64.zip (88 MB)',
+      href: '/native/b',
+      engine: 'fe',
       note: 'start.nativeRunWindows:carrierdominion.exe',
     },
     {
-      label: 'start.nativeLinux · CarrierDominion-2026.10.14-abc1234-linux64.zip (1.5 MB)',
-      href: '/native/b',
-      engine: 'unity',
-      note: 'start.nativeRun:carrierdominion.x86_64',
-    },
-    {
-      label: 'start.nativeLinux · CarrierDominion-fe-2026.10.14-def5678-abc1234-linux64.zip (0.1 MB)',
+      label: 'start.nativeLinux · CarrierDominion-fe-2026.10.14-def5678-abc1234-linux64.zip (1.5 MB)',
       href: '/native/c',
       engine: 'fe',
       note: 'start.nativeRun:carrierdominion',
     },
-    { label: 'CarrierDominion-2026.10.14-abc1234-mac.zip (1 MB)', href: '/native/d', note: '', engine: 'unity' },
-    // bj-engine's builds: an extensionless Linux binary, and a DLSS variant
-    // of the Windows one that is still Windows.
+    { label: 'CarrierDominion-fe-2026.10.14-def5678-abc1234-mac.zip (1 MB)', href: '/native/d', note: '', engine: 'fe' },
+    // bj-engine's DLSS build of the Windows client is still Windows.
     {
-      label: 'start.nativeLinux · carrierdominion-bj-2026.11.18-bcff109-45880f3-linux64.zip (1 MB)',
+      label: 'start.nativeLinux · carrierdominion-bj-2026.11.18-bcff109-45880f3-linux64.zip (0.1 MB)',
       href: '/native/e',
       engine: 'bj',
       note: 'start.nativeRun:carrierdominion',
@@ -183,6 +179,7 @@ test('the page line names each build, its platform and how to start it, or one l
       note: 'start.nativeRunWindows:carrierdominion.exe',
     },
   ]);
+  assert.deepEqual(nativeLinks({ kind: 'folder', files: [files[0]] }, t), [], 'a Unity build was offered');
   assert.equal(describeSize(1536 * 1024), '1.5 MB');
   assert.equal(describeSize(1000), '0.1 MB');
 });
@@ -244,7 +241,7 @@ test('each build names its engine, and the engines on offer come in a fixed orde
     ],
   };
   const links = nativeLinks(listing, t);
-  assert.deepEqual(links.map((link) => link.engine), ['bj', 'fe', 'unity', 'bj']);
-  assert.deepEqual(nativeEngines(links), ['unity', 'fe', 'bj']);
+  assert.deepEqual(links.map((link) => link.engine), ['bj', 'fe', 'bj']);
+  assert.deepEqual(nativeEngines(links), ['fe', 'bj']);
   assert.deepEqual(nativeEngines(nativeLinks({ kind: 'url', url: 'https://x/' }, t)), []);
 });

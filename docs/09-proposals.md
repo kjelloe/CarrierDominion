@@ -186,7 +186,7 @@ here is forgotten.
 | ~~§37.2~~ | Built 2026-10-11 as part of the Unity port's hardening (`server/guard.js`): a ping every 30 s, a missed pong terminates | — |
 | ~~§37.3~~ | Ruled 2026-11-14: keep the `solo` tag in `games.json` | — |
 | ~~§38.1~~ | Ruled 2026-11-14: the remote address (the proxy's `X-Real-IP`) stays the handle for a one-minute ban | — |
-| §38.2 | Should a kicked player be **told**, or silently dropped? | Told (built that way) |
+| ~~§38.2~~ | Ruled 2026-11-19: a kicked player is told (as built) | — |
 | ~~Bandwidth~~ | Ruled 2026-11-14 ("optional compress") and built: `perMessageDeflate` with a 1 KB threshold, on by default, negotiated per socket, `COMPRESS=0` turns it off. Four seats at 64 islands: 3.8 MB/s down to 0.45 MB/s for about a tenth of a core | — |
 | ~~Replay~~ | Ruled 2026-11-14: a replay only once the war is over, as built on 2026-11-13 | — |
 
@@ -199,8 +199,8 @@ here is forgotten.
   state-carrying saves, so even the new code would replay it, in the
   background, for hours); pull `dev_night` on the deploy machine; widen the
   deploy script's zip pattern to `[Cc]arrier[Dd]ominion*.zip` (bj-engine's
-  zips are lower-case; that script is in game-ops); and put the three
-  ports' zips in `native/`. The rules hash is still `5ee697205122cb5a`.
+  zips are lower-case; that script is in game-ops); and put the fastengine
+  and bj-engine zips in `native/` (Unity's are no longer offered). The rules hash is still `5ee697205122cb5a`.
 - **A mobile playtest** on a real device. Frame rate cannot be measured here at
   all — headless renders in software (ruling 2026-08-23).
 - **PLAYTEST A5** — the one open *number* in docs/02: whether a 4 km
@@ -225,7 +225,8 @@ Recorded so they are choices rather than oversights:
   that. `?room=new` is for the native clients, which cannot run the engine.
 - **G4, in-game bug reports** (asked by the Unity port 2026-10-15): deferred
   by the owner on 2026-10-16 pending a general reporting service outside the
-  game servers. Not to be built here until G4 is rewritten.
+  game servers, and again on 2026-11-19 ("no reporting yet"). Not to be
+  built here until G4 is rewritten.
 
 ## D. Worth measuring next on the batch PC
 

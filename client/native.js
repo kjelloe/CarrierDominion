@@ -11,34 +11,27 @@ function describeSize(bytes) {
 }
 
 // The zips carry no readme, so the line is a player's only instructions
-// (C11). The target is the name's suffix. The executables are Unity's names;
-// the fastengine (`-fe-`) and bj-engine (`-bj-`) builds name their Linux
-// binary without an extension. bj-engine also ships a DLSS build of the
-// Windows one, which is first in the list so the plain suffix does not
-// claim it.
-const ENGINE_BUILD = /-(fe|bj)-/i;
+// (C11). The target is the name's suffix; both engines name their binary
+// `carrierdominion` (no extension on Linux). bj-engine also ships a DLSS
+// build of the Windows one, which is first in the list so the plain suffix
+// does not claim it.
 const NATIVE_TARGETS = [
-  { suffix: /-win64-dlss\.zip$/i, platform: 'start.nativeWindowsDlss', note: 'start.nativeRunWindows', exe: () => 'carrierdominion.exe' },
-  { suffix: /-win64\.zip$/i, platform: 'start.nativeWindows', note: 'start.nativeRunWindows', exe: () => 'carrierdominion.exe' },
-  {
-    suffix: /-linux64\.zip$/i,
-    platform: 'start.nativeLinux',
-    note: 'start.nativeRun',
-    exe: (name) => (ENGINE_BUILD.test(name) ? 'carrierdominion' : 'carrierdominion.x86_64'),
-  },
+  { suffix: /-win64-dlss\.zip$/i, platform: 'start.nativeWindowsDlss', note: 'start.nativeRunWindows', exe: 'carrierdominion.exe' },
+  { suffix: /-win64\.zip$/i, platform: 'start.nativeWindows', note: 'start.nativeRunWindows', exe: 'carrierdominion.exe' },
+  { suffix: /-linux64\.zip$/i, platform: 'start.nativeLinux', note: 'start.nativeRun', exe: 'carrierdominion' },
 ];
 
-// Which port built a zip, read off its name as the target is: fastengine's
-// carry `-fe-`, bj-engine's `-bj-`, and Unity's carry no tag. In the order
-// the selector offers them.
+// Which port built a zip, read off its name as the target is, in the order
+// the selector offers them. Unity's builds carry no tag and are not offered
+// (owner, 2026-11-19): an untagged name is no engine, and no line.
 const ENGINES = [
-  { id: 'unity', test: (name) => !ENGINE_BUILD.test(name), label: 'start.engineUnity' },
-  { id: 'fe', test: (name) => /-fe-/i.test(name), label: 'start.engineFe' },
-  { id: 'bj', test: (name) => /-bj-/i.test(name), label: 'start.engineBj' },
+  { id: 'fe', tag: /-fe-/i, label: 'start.engineFe' },
+  { id: 'bj', tag: /-bj-/i, label: 'start.engineBj' },
 ];
 
 function engineOf(name) {
-  return ENGINES.find((engine) => engine.test(name)).id;
+  const engine = ENGINES.find((each) => each.tag.test(name));
+  return engine === undefined ? '' : engine.id;
 }
 
 // [{ label, href, note, engine }] for a listing from the server, empty when
@@ -48,13 +41,13 @@ function nativeLinks(listing, t) {
   if (listing === null || typeof listing !== 'object') return [];
   if (listing.kind === 'url') return [{ label: t('start.nativeLink'), href: listing.url, note: '', engine: '' }];
   if (listing.kind !== 'folder' || !Array.isArray(listing.files)) return [];
-  return listing.files.map((file) => {
+  return listing.files.filter((file) => engineOf(file.name) !== '').map((file) => {
     const target = NATIVE_TARGETS.find((each) => each.suffix.test(file.name));
     const size = `${file.name} (${describeSize(file.size)})`;
     return {
       label: target === undefined ? size : `${t(target.platform)} · ${size}`,
       href: file.url,
-      note: target === undefined ? '' : t(target.note, { exe: target.exe(file.name) }),
+      note: target === undefined ? '' : t(target.note, { exe: target.exe }),
       engine: engineOf(file.name),
     };
   });
