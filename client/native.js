@@ -28,12 +28,25 @@ const NATIVE_TARGETS = [
   },
 ];
 
-// [{ label, href, note }] for a listing from the server, empty when there is
-// none. `note` is '' where there is nothing to say (a linked page, an
-// unknown target).
+// Which port built a zip, read off its name as the target is: fastengine's
+// carry `-fe-`, bj-engine's `-bj-`, and Unity's carry no tag. In the order
+// the selector offers them.
+const ENGINES = [
+  { id: 'unity', test: (name) => !ENGINE_BUILD.test(name), label: 'start.engineUnity' },
+  { id: 'fe', test: (name) => /-fe-/i.test(name), label: 'start.engineFe' },
+  { id: 'bj', test: (name) => /-bj-/i.test(name), label: 'start.engineBj' },
+];
+
+function engineOf(name) {
+  return ENGINES.find((engine) => engine.test(name)).id;
+}
+
+// [{ label, href, note, engine }] for a listing from the server, empty when
+// there is none. `note` is '' where there is nothing to say (a linked page,
+// an unknown target); `engine` is '' for a linked page.
 function nativeLinks(listing, t) {
   if (listing === null || typeof listing !== 'object') return [];
-  if (listing.kind === 'url') return [{ label: t('start.nativeLink'), href: listing.url, note: '' }];
+  if (listing.kind === 'url') return [{ label: t('start.nativeLink'), href: listing.url, note: '', engine: '' }];
   if (listing.kind !== 'folder' || !Array.isArray(listing.files)) return [];
   return listing.files.map((file) => {
     const target = NATIVE_TARGETS.find((each) => each.suffix.test(file.name));
@@ -42,10 +55,41 @@ function nativeLinks(listing, t) {
       label: target === undefined ? size : `${t(target.platform)} · ${size}`,
       href: file.url,
       note: target === undefined ? '' : t(target.note, { exe: target.exe(file.name) }),
+      engine: engineOf(file.name),
     };
   });
 }
 
+// The engines that have something on offer, in the selector's order.
+function nativeEngines(links) {
+  return ENGINES.map((engine) => engine.id).filter((id) => links.some((link) => link.engine === id));
+}
+
+// The viewer's last choice, kept in this browser only; any failure of
+// storage simply means the first engine on offer.
+const ENGINE_KEY = 'carrier-dominion-native-engine';
+
+function rememberedEngine(engines) {
+  try {
+    const kept = window.localStorage.getItem(ENGINE_KEY);
+    if (engines.includes(kept)) return kept;
+  } catch (error) {
+    // Storage off: the default below.
+  }
+  return engines[0];
+}
+
+function rememberEngine(id) {
+  try {
+    window.localStorage.setItem(ENGINE_KEY, id);
+  } catch (error) {
+    // Storage off: the choice lasts as long as the page.
+  }
+}
+
+// Up to three ports times three targets is too many lines, so with more than
+// one engine on offer the line carries a selector and shows that engine's
+// builds only. With one engine it reads as it always did.
 function showNativeLinks(listing, t) {
   const box = document.getElementById('native-links');
   if (box === null) return;
@@ -53,15 +97,40 @@ function showNativeLinks(listing, t) {
   box.textContent = '';
   box.hidden = links.length === 0;
   if (links.length === 0) return;
+  const engines = nativeEngines(links);
   const caption = document.createElement('div');
   caption.textContent = t('start.native');
   box.append(caption);
+  const list = document.createElement('div');
+  if (engines.length > 1) {
+    const picker = document.createElement('select');
+    picker.id = 'native-engine';
+    for (const id of engines) {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = t(ENGINES.find((engine) => engine.id === id).label);
+      picker.append(option);
+    }
+    picker.value = rememberedEngine(engines);
+    picker.addEventListener('change', () => {
+      rememberEngine(picker.value);
+      showRows(list, links.filter((link) => link.engine === picker.value), listing.kind, t);
+    });
+    caption.append(' ', picker);
+  }
+  box.append(list);
+  const chosen = engines.length > 1 ? rememberedEngine(engines) : '';
+  showRows(list, chosen === '' ? links : links.filter((link) => link.engine === chosen), listing.kind, t);
+}
+
+function showRows(list, links, kind, t) {
+  list.textContent = '';
   for (const link of links) {
     const anchor = document.createElement('a');
     anchor.href = link.href;
     anchor.textContent = link.label;
     // A folder's files download; a linked page opens beside the game.
-    if (listing.kind === 'url') {
+    if (kind === 'url') {
       anchor.target = '_blank';
       anchor.rel = 'noopener';
     } else {
@@ -75,12 +144,12 @@ function showNativeLinks(listing, t) {
       note.textContent = link.note;
       row.append(note);
     }
-    box.append(row);
+    list.append(row);
   }
   if (links.some((link) => link.note !== '')) {
     const keys = document.createElement('div');
     keys.textContent = t('start.nativeKeys');
-    box.append(keys);
+    list.append(keys);
   }
 }
 
@@ -95,4 +164,4 @@ async function loadNativeLinks(t) {
   }
 }
 
-export { describeSize, nativeLinks, loadNativeLinks };
+export { describeSize, nativeEngines, nativeLinks, loadNativeLinks };

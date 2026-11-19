@@ -323,7 +323,11 @@ says how to start it, because the zips carry no readme: unzip and run
 `carrierdominion.x86_64` (a fastengine `-fe-` or bj-engine `-bj-` build:
 `carrierdominion`; bj-engine's `-win64-dlss` zip reads "Windows, NVIDIA RTX
 (DLSS)"), and
-F11 or Alt+Enter for full screen. For a URL it is one link. It is hidden on touch screens,
+F11 or Alt+Enter for full screen. For a URL it is one link. When the folder
+holds more than one port's builds (Unity's untagged names, fastengine's
+`-fe-`, bj-engine's `-bj-`), the line carries a selector and shows one
+engine at a time, Unity first; the choice is remembered in the browser.
+Nothing changes on the server: `/native.json` lists every file as before. It is hidden on touch screens,
 because the builds are Windows and Linux and a phone that followed an invite
 belongs in the browser game.
 

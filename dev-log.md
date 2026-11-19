@@ -5,6 +5,33 @@ golden hash and why.
 
 ---
 
+## 2026-11-19 — One engine at a time on the download line
+
+The owner asked how the bj-engine builds (Windows, Windows with DLSS, Linux)
+and the fastengine ones can be offered beside Unity's, with a selector.
+
+The server already offers any `CarrierDominion*` zip (case-insensitive) in
+the `NATIVE_DOWNLOADS` folder, so nothing changes there. The browser now
+reads each zip's engine off its name, as it reads the target: `-fe-` is
+fastengine, `-bj-` is bj-engine, untagged is Unity. With more than one
+engine on offer the line carries a `<select>` (Unity, then fastengine, then
+bj-engine, as present) and shows that engine's builds; the choice is kept
+in localStorage, a per-viewer convenience that falls back to the first
+engine. With one engine it reads exactly as before. The names are given
+short descriptions ("fastengine - light", "bj-engine - high graphics"),
+taken from what the ports measure and are for.
+
+The probe gains a folder of seven builds from three engines: three options
+in order, Unity first, bj-engine's three builds with the DLSS wording, and
+the choice surviving a reload. One check I wrote first passed for the wrong
+reason: it evaluated a page whose context was already closed, and the
+`.catch(() => true)` I had put on it turned the exception into an "ok".
+It now runs before the page closes, with no catch.
+
+What the box needs is outside this repo: the deploy script syncs
+`native/CarrierDominion*.zip`, case-sensitively, and bj-engine names its
+zips `carrierdominion-bj-...`, so they would not ship.
+
 ## 2026-11-19 — Four hours to come back: the state rides in the save
 
 The deploy of 2026-11-19 looked like a failure ("failed to connect to port

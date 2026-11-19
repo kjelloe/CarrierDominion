@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { createApp, ROOT } from '../server/app.js';
 import { loadRules } from '../server/rules.js';
 import { byteRange, nativeListing, nativeSource } from '../server/native.js';
-import { describeSize, nativeLinks } from '../client/native.js';
+import { describeSize, nativeEngines, nativeLinks } from '../client/native.js';
 
 const rules = loadRules();
 
@@ -139,7 +139,7 @@ test('the page line names each build, its platform and how to start it, or one l
   assert.deepEqual(nativeLinks({ kind: 'none' }, t), []);
   assert.deepEqual(nativeLinks(null, t), []);
   assert.deepEqual(nativeLinks({ kind: 'url', url: 'https://x/' }, t),
-    [{ label: 'start.nativeLink', href: 'https://x/', note: '' }]);
+    [{ label: 'start.nativeLink', href: 'https://x/', note: '', engine: '' }]);
   const files = [
     { name: 'CarrierDominion-2026.10.14-abc1234-win64.zip', size: 88 * 1048576, url: '/native/a' },
     { name: 'CarrierDominion-2026.10.14-abc1234-linux64.zip', size: 1536 * 1024, url: '/native/b' },
@@ -152,29 +152,34 @@ test('the page line names each build, its platform and how to start it, or one l
     {
       label: 'start.nativeWindows · CarrierDominion-2026.10.14-abc1234-win64.zip (88 MB)',
       href: '/native/a',
+      engine: 'unity',
       note: 'start.nativeRunWindows:carrierdominion.exe',
     },
     {
       label: 'start.nativeLinux · CarrierDominion-2026.10.14-abc1234-linux64.zip (1.5 MB)',
       href: '/native/b',
+      engine: 'unity',
       note: 'start.nativeRun:carrierdominion.x86_64',
     },
     {
       label: 'start.nativeLinux · CarrierDominion-fe-2026.10.14-def5678-abc1234-linux64.zip (0.1 MB)',
       href: '/native/c',
+      engine: 'fe',
       note: 'start.nativeRun:carrierdominion',
     },
-    { label: 'CarrierDominion-2026.10.14-abc1234-mac.zip (1 MB)', href: '/native/d', note: '' },
+    { label: 'CarrierDominion-2026.10.14-abc1234-mac.zip (1 MB)', href: '/native/d', note: '', engine: 'unity' },
     // bj-engine's builds: an extensionless Linux binary, and a DLSS variant
     // of the Windows one that is still Windows.
     {
       label: 'start.nativeLinux · carrierdominion-bj-2026.11.18-bcff109-45880f3-linux64.zip (1 MB)',
       href: '/native/e',
+      engine: 'bj',
       note: 'start.nativeRun:carrierdominion',
     },
     {
       label: 'start.nativeWindowsDlss · carrierdominion-bj-2026.11.18-bcff109-45880f3-win64-dlss.zip (1 MB)',
       href: '/native/f',
+      engine: 'bj',
       note: 'start.nativeRunWindows:carrierdominion.exe',
     },
   ]);
@@ -221,4 +226,25 @@ test('ranges: one span, a suffix, an open end; nonsense and multipart refused', 
   assert.equal(byteRange('bytes=-0', 100), -1);
   assert.equal(byteRange('bytes=0-1,5-6', 100), -1);
   assert.equal(byteRange('items=0-1', 100), -1);
+});
+
+// Three ports build the native client (Unity, fastengine, bj-engine), each
+// for two or three targets: listed together that is eight lines, so the line
+// offers one engine at a time. The engine is read off the name, as the
+// target is; nothing on the server changes.
+test('each build names its engine, and the engines on offer come in a fixed order', () => {
+  const t = (key, vars) => (vars === undefined ? key : `${key}:${vars.exe}`);
+  const listing = {
+    kind: 'folder',
+    files: [
+      { name: 'carrierdominion-bj-2026.11.18-bcff109-45880f3-win64.zip', size: 1, url: '/native/a' },
+      { name: 'CarrierDominion-fe-2026.10.15-e26e07d-f14d329-linux64.zip', size: 1, url: '/native/b' },
+      { name: 'CarrierDominion-2026.10.15-f953990-win64.zip', size: 1, url: '/native/c' },
+      { name: 'carrierdominion-bj-2026.11.18-bcff109-45880f3-win64-dlss.zip', size: 1, url: '/native/d' },
+    ],
+  };
+  const links = nativeLinks(listing, t);
+  assert.deepEqual(links.map((link) => link.engine), ['bj', 'fe', 'unity', 'bj']);
+  assert.deepEqual(nativeEngines(links), ['unity', 'fe', 'bj']);
+  assert.deepEqual(nativeEngines(nativeLinks({ kind: 'url', url: 'https://x/' }, t)), []);
 });

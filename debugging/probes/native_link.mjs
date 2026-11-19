@@ -26,6 +26,16 @@ writeFileSync(join(folder, 'boombrawl-20261011-def-win64.zip'), Buffer.alloc(102
 
 const offering = createApp({ seed: 20260818, rules: loadRules(), lobby: true, bootId: 'native-probe', nativeDownloads: folder });
 const offered = await offering.listen(0, '127.0.0.1');
+// Three ports' builds in one folder: the line offers one engine at a time.
+const shelf = mkdtempSync(join(tmpdir(), 'cd-native-shelf-'));
+for (const name of [
+  'CarrierDominion-2026.10.15-f953990-win64.zip', 'CarrierDominion-2026.10.15-f953990-linux64.zip',
+  'CarrierDominion-fe-2026.10.15-e26e07d-f14d329-win64.zip', 'CarrierDominion-fe-2026.10.15-e26e07d-f14d329-linux64.zip',
+  'carrierdominion-bj-2026.11.18-bcff109-45880f3-win64.zip', 'carrierdominion-bj-2026.11.18-bcff109-45880f3-win64-dlss.zip',
+  'carrierdominion-bj-2026.11.18-bcff109-45880f3-linux64.zip',
+]) writeFileSync(join(shelf, name), Buffer.alloc(1024, 1));
+const many = createApp({ seed: 20260818, rules: loadRules(), nativeDownloads: shelf });
+const manyAddress = await many.listen(0, '127.0.0.1');
 const bare = createApp({ seed: 20260818, rules: loadRules() });
 const bareAddress = await bare.listen(0, '127.0.0.1');
 const browser = await chromium.launch();
@@ -69,6 +79,8 @@ const download = await menu.page.evaluate(async (href) => {
 check('the link downloads', download.status === 200 && download.bytes > 0,
   `${download.status}, ${download.bytes} bytes`);
 await menu.page.screenshot({ path: join(SHOTS, 'native-link-menu.png') });
+check('one engine, no selector', await menu.page.evaluate(() => document.getElementById('native-engine') === null),
+  'the Unity-only folder');
 await menu.context.close();
 
 const room = await lineOn(`http://127.0.0.1:${offered.port}/?mode=lan`);
@@ -79,6 +91,33 @@ await room.context.close();
 const phone = await lineOn(`http://127.0.0.1:${offered.port}/`, { hasTouch: true, isMobile: true, viewport: { width: 740, height: 360 } });
 check('a touch screen gets no line', !phone.line.visible, `visible ${phone.line.visible}`);
 await phone.context.close();
+
+const shelfLine = await lineOn(`http://127.0.0.1:${manyAddress.port}/`);
+const picked = await shelfLine.page.evaluate(() => {
+  const picker = document.getElementById('native-engine');
+  const hrefs = () => [...document.querySelectorAll('#native-links a')].map((a) => a.getAttribute('href'));
+  const seen = { options: picker === null ? [] : [...picker.options].map((o) => o.value), first: hrefs() };
+  if (picker !== null) {
+    picker.value = 'bj';
+    picker.dispatchEvent(new Event('change'));
+  }
+  seen.bj = hrefs();
+  seen.text = document.getElementById('native-links').textContent;
+  return seen;
+});
+check('three engines, one selector', picked.options.join(',') === 'unity,fe,bj',
+  `options ${picked.options.join(',')}`);
+check('the first engine on offer is Unity', picked.first.length === 2 && picked.first.every((h) => !/-(fe|bj)-/i.test(h)),
+  picked.first.join(', '));
+check('choosing bj-engine shows its three builds', picked.bj.length === 3 && picked.bj.every((h) => /-bj-/i.test(h))
+  && /NVIDIA RTX/.test(picked.text), picked.bj.join(', '));
+await shelfLine.page.screenshot({ path: join(SHOTS, 'native-link-engines.png') });
+await shelfLine.page.reload({ waitUntil: 'load' });
+await shelfLine.page.waitForSelector('#native-engine', { timeout: 20000 });
+await shelfLine.page.waitForTimeout(500);
+const after = await shelfLine.page.evaluate(() => document.getElementById('native-engine').value);
+check('the choice is remembered', after === 'bj', `after a reload: ${after}`);
+await shelfLine.context.close();
 
 const none = await lineOn(`http://127.0.0.1:${bareAddress.port}/`);
 check('nothing configured, no line', !none.line.visible && none.line.text === '', `visible ${none.line.visible}`);
@@ -91,5 +130,7 @@ if (failed) {
 await browser.close();
 await offering.close();
 await bare.close();
+await many.close();
 rmSync(folder, { recursive: true });
+rmSync(shelf, { recursive: true });
 console.log('the native client line, checked on the menu, in the room and on a phone');

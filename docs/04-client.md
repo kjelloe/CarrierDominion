@@ -335,8 +335,11 @@ client** (`client/native.js`, C10/C11), when the server offers builds
 `-win64`/`-linux64` suffix, with its size and how to start it, because the
 zips carry no readme: unzip and run `carrierdominion.exe` (unsigned:
 SmartScreen's More info, then Run anyway) or `carrierdominion.x86_64`, and
-F11 or Alt+Enter for full screen. Hidden on touch screens: a phone that
-followed an invite belongs in the browser game. Probe: `native_link`.
+F11 or Alt+Enter for full screen. With more than one port's builds in the
+folder (Unity, fastengine `-fe-`, bj-engine `-bj-`) a selector picks the
+engine, one engine's builds at a time, remembered per browser. Hidden on
+touch screens: a phone that followed an invite belongs in the browser game.
+Probe: `native_link`.
 
 ## Models
 
